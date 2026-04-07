@@ -11,10 +11,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.Shadow
+import com.kyant.shapes.RoundedRectangle
 import top.yukonga.miuix.kmp.basic.Text
 
 @Composable
 fun FrostedBlock(
+    backdrop: Backdrop?,
     title: String,
     subtitle: String,
     body: String,
@@ -24,7 +30,23 @@ fun FrostedBlock(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(Color.White.copy(alpha = 0.62f))
+            .then(
+                if (backdrop != null) {
+                    Modifier.drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { RoundedRectangle(22.dp) },
+                        effects = {},
+                        highlight = { Highlight.Default.copy(alpha = 0.75f) },
+                        shadow = { Shadow.Default.copy(color = Color.Black.copy(alpha = 0.08f)) },
+                        onDrawSurface = {
+                            drawRect(Color.White.copy(alpha = 0.52f))
+                        }
+                    )
+                } else {
+                    Modifier.background(Color.White.copy(alpha = 0.62f))
+                }
+            )
+            .background(Color.White.copy(alpha = 0.08f))
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

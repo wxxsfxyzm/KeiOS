@@ -1,6 +1,7 @@
 package com.example.keios.ui.page.main
 
 import android.content.pm.PackageInfo
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
-import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
 @Composable
@@ -37,7 +38,10 @@ fun MainScreen(
 ) {
     var currentPage by remember { mutableStateOf(BottomPage.Home) }
     var clickCount by remember { mutableIntStateOf(0) }
-    val backdrop = rememberLayerBackdrop()
+    val manufacturer = Build.MANUFACTURER.lowercase()
+    val brand = Build.BRAND.lowercase()
+    val isBackdropSafe = !(manufacturer.contains("xiaomi") || brand.contains("xiaomi") || brand.contains("redmi") || brand.contains("poco"))
+    val backdrop: Backdrop? = if (isBackdropSafe) rememberLayerBackdrop() else null
 
     Box(
         modifier = Modifier
@@ -48,17 +52,18 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 18.dp)
-                .layerBackdrop(backdrop)
                 .padding(WindowInsets.safeDrawing.union(WindowInsets.navigationBars).asPaddingValues())
         ) {
             Spacer(modifier = Modifier.height(14.dp))
             if (currentPage == BottomPage.Home) {
                 HomePage(
+                    backdrop = backdrop,
                     clickCount = clickCount,
                     onPrimaryAction = { clickCount++ }
                 )
             } else {
                 AboutPage(
+                    backdrop = backdrop,
                     appLabel = appLabel,
                     packageInfo = packageInfo,
                     shizukuStatus = shizukuStatus,

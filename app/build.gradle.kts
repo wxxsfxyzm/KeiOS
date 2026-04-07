@@ -39,7 +39,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.keios"
-        minSdk = 31
+        minSdk = 35
         targetSdk = 37
         versionCode = autoVersionCode
         versionName = autoVersionName
@@ -92,6 +92,7 @@ dependencies {
     implementation("top.yukonga.miuix.kmp:miuix-navigation3-ui-android:0.9.0")
     implementation("io.github.kyant0:backdrop:1.0.6")
     implementation("io.github.kyant0:capsule:2.1.3")
+    implementation("io.github.kyant0:shapes:1.2.0")
 
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
