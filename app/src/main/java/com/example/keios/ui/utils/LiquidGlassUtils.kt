@@ -1,5 +1,6 @@
 package com.example.keios.ui.utils
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -45,7 +46,19 @@ fun rememberCardBlurColors(): BlurColors {
     }
 }
 
-fun isLiquidGlassSupported(): Boolean = isRenderEffectSupported() || isRuntimeShaderSupported()
+private fun isBlurDenylistedDevice(): Boolean {
+    val manufacturer = Build.MANUFACTURER.lowercase()
+    val brand = Build.BRAND.lowercase()
+    return manufacturer.contains("xiaomi") ||
+        brand.contains("xiaomi") ||
+        brand.contains("redmi") ||
+        brand.contains("poco")
+}
+
+fun isLiquidGlassSupported(): Boolean {
+    if (isBlurDenylistedDevice()) return false
+    return isRenderEffectSupported() || isRuntimeShaderSupported()
+}
 
 fun Modifier.installerXLiquidGlass(
     backdrop: LayerBackdrop?,
