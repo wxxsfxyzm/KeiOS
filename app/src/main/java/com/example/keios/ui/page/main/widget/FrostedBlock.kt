@@ -18,7 +18,7 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop
 
 @Composable
 fun FrostedBlock(
-    backdrop: LayerBackdrop,
+    backdrop: LayerBackdrop?,
     title: String,
     subtitle: String,
     body: String,

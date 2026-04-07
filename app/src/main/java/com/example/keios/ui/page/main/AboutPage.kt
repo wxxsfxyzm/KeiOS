@@ -18,9 +18,9 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop
 
 @Composable
 fun AboutPage(
-    backdrop: LayerBackdrop,
+    backdrop: LayerBackdrop?,
     appLabel: String,
-    packageInfo: PackageInfo,
+    packageInfo: PackageInfo?,
     shizukuStatus: String,
     onCheckShizuku: () -> Unit
 ) {
@@ -52,10 +52,10 @@ fun AboutPage(
             title = appLabel,
             subtitle = "App Details",
             body = buildString {
-                val appInfo = packageInfo.applicationInfo
-                appendLine("Package: ${packageInfo.packageName}")
-                appendLine("Version: ${packageInfo.versionName ?: "unknown"}")
-                appendLine("VersionCode: ${packageInfo.longVersionCode}")
+                val appInfo = packageInfo?.applicationInfo
+                appendLine("Package: ${packageInfo?.packageName ?: "unknown"}")
+                appendLine("Version: ${packageInfo?.versionName ?: "unknown"}")
+                appendLine("VersionCode: ${packageInfo?.longVersionCode ?: "unknown"}")
                 appendLine("Min SDK: ${appInfo?.minSdkVersion ?: "unknown"}")
                 appendLine("Target SDK: ${appInfo?.targetSdkVersion ?: "unknown"}")
                 appendLine("Device API: ${Build.VERSION.SDK_INT}")

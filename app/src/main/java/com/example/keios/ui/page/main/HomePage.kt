@@ -16,7 +16,7 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop
 
 @Composable
 fun HomePage(
-    backdrop: LayerBackdrop,
+    backdrop: LayerBackdrop?,
     clickCount: Int,
     onPrimaryAction: () -> Unit
 ) {

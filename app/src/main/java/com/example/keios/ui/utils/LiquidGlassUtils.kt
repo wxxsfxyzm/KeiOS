@@ -45,25 +45,31 @@ fun rememberCardBlurColors(): BlurColors {
     }
 }
 
+fun isLiquidGlassSupported(): Boolean = isRenderEffectSupported() || isRuntimeShaderSupported()
+
 fun Modifier.installerXLiquidGlass(
-    backdrop: LayerBackdrop,
+    backdrop: LayerBackdrop?,
     blurColors: BlurColors,
     cornerRadiusDp: Int,
     blurRadius: Float,
     contentBlendMode: BlendMode = BlendMode.SrcOver,
 ): Modifier {
     val shape = RoundedCornerShape(cornerRadiusDp.dp)
-    val blurEnabled = isRenderEffectSupported() || isRuntimeShaderSupported()
-    return this
-        .textureBlur(
+    val blurEnabled = backdrop != null && isLiquidGlassSupported()
+    val blurPart = if (blurEnabled) {
+        this.textureBlur(
             backdrop = backdrop,
             shape = shape,
             blurRadius = blurRadius,
             noiseCoefficient = BlurDefaults.NoiseCoefficient,
             colors = blurColors,
             contentBlendMode = contentBlendMode,
-            enabled = blurEnabled
+            enabled = true
         )
-        .background(Color.White.copy(alpha = 0.16f), shape)
-        .border(1.dp, Color.White.copy(alpha = 0.20f), shape)
+    } else {
+        this
+    }
+    return blurPart
+        .background(Color.White.copy(alpha = if (blurEnabled) 0.16f else 0.10f), shape)
+        .border(1.dp, Color.White.copy(alpha = if (blurEnabled) 0.20f else 0.12f), shape)
 }

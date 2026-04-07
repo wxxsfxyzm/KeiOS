@@ -25,19 +25,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
+import com.example.keios.ui.utils.isLiquidGlassSupported
 import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 @Composable
 fun MainScreen(
     appLabel: String,
-    packageInfo: PackageInfo,
+    packageInfo: PackageInfo?,
     shizukuStatus: String,
     onCheckOrRequestShizuku: () -> Unit,
 ) {
     var currentPage by remember { mutableStateOf(BottomPage.Home) }
     var clickCount by remember { mutableIntStateOf(0) }
-    val backdrop = rememberLayerBackdrop()
+    val backdrop: LayerBackdrop? = if (isLiquidGlassSupported()) rememberLayerBackdrop() else null
 
     Box(
         modifier = Modifier
@@ -48,7 +50,7 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 18.dp)
-                .layerBackdrop(backdrop)
+                .then(if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier)
                 .padding(WindowInsets.safeDrawing.union(WindowInsets.navigationBars).asPaddingValues())
         ) {
             Spacer(modifier = Modifier.height(14.dp))

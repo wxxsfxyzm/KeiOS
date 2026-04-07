@@ -24,7 +24,7 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop
 
 @Composable
 fun FloatingBottomBar(
-    backdrop: LayerBackdrop,
+    backdrop: LayerBackdrop?,
     currentPage: BottomPage,
     onPageSelected: (BottomPage) -> Unit,
     modifier: Modifier = Modifier,
