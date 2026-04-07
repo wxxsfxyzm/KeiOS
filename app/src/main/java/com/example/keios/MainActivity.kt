@@ -5,11 +5,8 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,24 +29,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.keios.shizuku.ShizukuApiUtils
+import com.example.keios.ui.utils.installerXLiquidGlass
+import com.example.keios.ui.utils.rememberBottomBarBlurColors
+import com.example.keios.ui.utils.rememberCardBlurColors
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.blur.BlendColorEntry
-import top.yukonga.miuix.kmp.blur.BlurBlendMode
-import top.yukonga.miuix.kmp.blur.BlurColors
-import top.yukonga.miuix.kmp.blur.BlurDefaults
-import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
-import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
-import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Tasks
@@ -114,11 +106,13 @@ private fun KeiOSDemoScreen(
                 Spacer(modifier = Modifier.height(14.dp))
                 if (currentPage == BottomPage.Home) {
                     HomePage(
+                        backdrop = backdrop,
                         clickCount = clickCount,
                         onPrimaryAction = { clickCount++ }
                     )
                 } else {
                     AboutPage(
+                        backdrop = backdrop,
                         appLabel = appLabel,
                         packageInfo = packageInfo,
                         shizukuStatus = status,
@@ -142,6 +136,7 @@ private fun KeiOSDemoScreen(
 
 @Composable
 private fun HomePage(
+    backdrop: top.yukonga.miuix.kmp.blur.LayerBackdrop,
     clickCount: Int,
     onPrimaryAction: () -> Unit
 ) {
@@ -153,6 +148,7 @@ private fun HomePage(
 
         Spacer(modifier = Modifier.height(14.dp))
         FrostedBlock(
+            backdrop = backdrop,
             title = "Miuix UI Engine",
             subtitle = "Inspired by InstallerX-Revived settings style",
             body = "当前主页采用 Miuix 风格卡片布局，底部悬浮导航，权限入口已转移到“关于”页。",
@@ -160,6 +156,7 @@ private fun HomePage(
         )
         Spacer(modifier = Modifier.height(12.dp))
         FrostedBlock(
+            backdrop = backdrop,
             title = "Quick Stats",
             subtitle = "Session preview",
             body = "本次演示点击次数: $clickCount",
@@ -179,6 +176,7 @@ private fun HomePage(
 
 @Composable
 private fun AboutPage(
+    backdrop: top.yukonga.miuix.kmp.blur.LayerBackdrop,
     appLabel: String,
     packageInfo: PackageInfo,
     shizukuStatus: String,
@@ -192,6 +190,7 @@ private fun AboutPage(
         Spacer(modifier = Modifier.height(14.dp))
 
         FrostedBlock(
+            backdrop = backdrop,
             title = "Shizuku",
             subtitle = "Permission Center",
             body = shizukuStatus,
@@ -209,6 +208,7 @@ private fun AboutPage(
 
         Spacer(modifier = Modifier.height(12.dp))
         FrostedBlock(
+            backdrop = backdrop,
             title = appLabel,
             subtitle = "App Details",
             body = buildString {
@@ -228,16 +228,23 @@ private fun AboutPage(
 
 @Composable
 private fun FrostedBlock(
+    backdrop: top.yukonga.miuix.kmp.blur.LayerBackdrop,
     title: String,
     subtitle: String,
     body: String,
     accent: Color
 ) {
+    val cardBlurColors = rememberCardBlurColors()
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(Color.White.copy(alpha = 0.95f))
+            .installerXLiquidGlass(
+                backdrop = backdrop,
+                blurColors = cardBlurColors,
+                cornerRadiusDp = 22,
+                blurRadius = 52f
+            )
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -262,45 +269,17 @@ private fun FloatingBottomBar(
     onPageSelected: (BottomPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
-    val blurEnabled = isRenderEffectSupported() || isRuntimeShaderSupported()
-    val blurColors = remember(isDark) {
-        if (isDark) {
-            BlurColors(
-                blendColors = listOf(
-                    BlendColorEntry(Color(0x667A7A7A), BlurBlendMode.ColorBurn),
-                    BlendColorEntry(Color(0x33747474), BlurBlendMode.Overlay)
-                )
-            )
-        } else {
-            BlurColors(
-                blendColors = listOf(
-                    BlendColorEntry(Color(0x7F040404), BlurBlendMode.Overlay),
-                    BlendColorEntry(Color(0x26F1F1F1), BlurBlendMode.ColorDodge)
-                )
-            )
-        }
-    }
+    val bottomBarBlurColors = rememberBottomBarBlurColors()
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(999.dp))
-            .textureBlur(
+            .installerXLiquidGlass(
                 backdrop = backdrop,
-                shape = RoundedCornerShape(999.dp),
+                blurColors = bottomBarBlurColors,
+                cornerRadiusDp = 999,
                 blurRadius = 80f,
-                noiseCoefficient = BlurDefaults.NoiseCoefficient,
-                colors = blurColors,
-                contentBlendMode = BlendMode.SrcOver,
-                enabled = blurEnabled
-            )
-            .background(
-                if (isDark) Color(0xCC1A1B22) else Color(0xB3FFFFFF)
-            )
-            .border(
-                BorderStroke(1.dp, if (isDark) Color(0x33FFFFFF) else Color(0x55FFFFFF)),
-                RoundedCornerShape(999.dp)
             )
             .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)

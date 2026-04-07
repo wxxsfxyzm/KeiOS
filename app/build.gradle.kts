@@ -1,5 +1,33 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+fun runGitCommandOrNull(vararg args: String): String? {
+    return try {
+        val process = ProcessBuilder(listOf("git", *args))
+            .directory(rootDir)
+            .redirectErrorStream(true)
+            .start()
+        val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
+        val exitCode = process.waitFor()
+        if (exitCode == 0 && output.isNotEmpty()) output else null
+    } catch (_: Exception) {
+        null
+    }
+}
+
+val baseVersionName = "1.0"
+val gitCommitCount = runGitCommandOrNull("rev-list", "--count", "HEAD")?.toIntOrNull() ?: 1
+val gitShortHash = runGitCommandOrNull("rev-parse", "--short", "HEAD") ?: "nogit"
+val gitDirty = runGitCommandOrNull("status", "--porcelain").isNullOrBlank().not()
+val autoVersionCode = 10_000 + gitCommitCount
+val autoVersionName = buildString {
+    append(baseVersionName)
+    append(".")
+    append(gitCommitCount)
+    append("-")
+    append(gitShortHash)
+    if (gitDirty) append("-dirty")
+}
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -13,8 +41,8 @@ android {
         applicationId = "com.example.keios"
         minSdk = 31
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = autoVersionCode
+        versionName = autoVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
