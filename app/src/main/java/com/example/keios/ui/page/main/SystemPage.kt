@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -190,11 +192,9 @@ private object TopInfoKeys {
         "debug.device.battery_level_state",
         "debug.device.usb_state",
         "debug.hwui.skia_atrace_enabled",
-        "debug.tracing.battery_status",
         "debug.tracing.screen_brightness",
         "gsm.network.type",
         "gsm.operator.alpha",
-        "gsm.operator.iso-country",
         "gsm.operator.orig.alpha",
         "gsm.sim.state",
         "gsm.version.baseband",
@@ -205,7 +205,6 @@ private object TopInfoKeys {
         "persist.sys.computility.gpulevel",
         "persist.sys.computility.version",
         "persist.sys.device_config_gki",
-        "persist.sys.device_name",
         "persist.sys.grant_version",
         "persist.sys.locale",
         "persist.sys.memory.totalsize",
@@ -270,7 +269,6 @@ private object TopInfoKeys {
         "ro.build.description",
         "ro.build.display.id",
         "ro.build.fingerprint",
-        "ro.build.flavor",
         "ro.build.hardware.version",
         "ro.build.host",
         "ro.build.id",
@@ -327,7 +325,6 @@ private object TopInfoKeys {
         "ro.odm.build.media_performance_class",
         "ro.odm.build.version.incremental",
         "ro.opengles.version",
-        "ro.product.bootimage.cert",
         "ro.product.bootimage.marketname",
         "ro.product.brand",
         "ro.product.build.date",
@@ -368,12 +365,10 @@ private object TopInfoKeys {
         "ro.vendor.mi_sf.new_dynamic_refresh_rate",
         "ro.vendor.mi_support_zygote32_lazyload",
         "ro.zygote",
-        "rust.runtime_active",
         "rust.runtime_version",
         "sys.abreuse.size",
         "sys.debug.graphic_buffer_maxsize",
         "sys.ota.type",
-        "sys.power.starttimes",
         "sys.usb.adb.disabled",
         "sys.usb.config",
         "sys.usb.configfs",
@@ -407,7 +402,6 @@ private object TopInfoKeys {
         "java.runtime.version",
         "java.vm.version",
         "os.arch",
-        "os.name",
         "os.version",
         "user.language",
         "user.locale",
@@ -475,6 +469,66 @@ private object SystemInfoCache {
     }
 }
 
+private object SystemUiStateStore {
+    private const val KV_ID = "system_ui_state"
+    private const val KEY_TOP_INFO = "expanded_top_info"
+    private const val KEY_SYSTEM_TABLE = "expanded_system_table"
+    private const val KEY_SECURE_TABLE = "expanded_secure_table"
+    private const val KEY_GLOBAL_TABLE = "expanded_global_table"
+    private const val KEY_ANDROID_PROPS = "expanded_android_props"
+    private const val KEY_JAVA_PROPS = "expanded_java_props"
+    private const val KEY_LINUX_ENV = "expanded_linux_env"
+
+    fun topInfoExpanded(defaultValue: Boolean = true): Boolean =
+        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_TOP_INFO, defaultValue)
+
+    fun systemTableExpanded(defaultValue: Boolean = false): Boolean =
+        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_SYSTEM_TABLE, defaultValue)
+
+    fun secureTableExpanded(defaultValue: Boolean = false): Boolean =
+        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_SECURE_TABLE, defaultValue)
+
+    fun globalTableExpanded(defaultValue: Boolean = false): Boolean =
+        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_GLOBAL_TABLE, defaultValue)
+
+    fun androidPropsExpanded(defaultValue: Boolean = false): Boolean =
+        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_ANDROID_PROPS, defaultValue)
+
+    fun javaPropsExpanded(defaultValue: Boolean = false): Boolean =
+        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_JAVA_PROPS, defaultValue)
+
+    fun linuxEnvExpanded(defaultValue: Boolean = false): Boolean =
+        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_LINUX_ENV, defaultValue)
+
+    fun setTopInfoExpanded(value: Boolean) {
+        MMKV.mmkvWithID(KV_ID).encode(KEY_TOP_INFO, value)
+    }
+
+    fun setSystemTableExpanded(value: Boolean) {
+        MMKV.mmkvWithID(KV_ID).encode(KEY_SYSTEM_TABLE, value)
+    }
+
+    fun setSecureTableExpanded(value: Boolean) {
+        MMKV.mmkvWithID(KV_ID).encode(KEY_SECURE_TABLE, value)
+    }
+
+    fun setGlobalTableExpanded(value: Boolean) {
+        MMKV.mmkvWithID(KV_ID).encode(KEY_GLOBAL_TABLE, value)
+    }
+
+    fun setAndroidPropsExpanded(value: Boolean) {
+        MMKV.mmkvWithID(KV_ID).encode(KEY_ANDROID_PROPS, value)
+    }
+
+    fun setJavaPropsExpanded(value: Boolean) {
+        MMKV.mmkvWithID(KV_ID).encode(KEY_JAVA_PROPS, value)
+    }
+
+    fun setLinuxEnvExpanded(value: Boolean) {
+        MMKV.mmkvWithID(KV_ID).encode(KEY_LINUX_ENV, value)
+    }
+}
+
 private fun matches(row: InfoRow, query: String): Boolean {
     if (query.isBlank()) return true
     return row.key.contains(query, ignoreCase = true) || row.value.contains(query, ignoreCase = true)
@@ -483,6 +537,82 @@ private fun matches(row: InfoRow, query: String): Boolean {
 private fun filterRows(rows: List<InfoRow>, query: String): List<InfoRow> {
     if (query.isBlank()) return rows
     return rows.filter { matches(it, query) }
+}
+
+private enum class ValueTypeOrder(val rank: Int) {
+    BOOLEAN(0),
+    TIME(1),
+    NUMBER(2),
+    TEXT(3)
+}
+
+private fun detectValueType(value: String): ValueTypeOrder {
+    val v = value.trim()
+    val lower = v.lowercase()
+    if (lower == "true" || lower == "false") return ValueTypeOrder.BOOLEAN
+    val looksLikeTime = Regex("^\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}$").matches(v)
+    if (looksLikeTime) return ValueTypeOrder.TIME
+    if (v.toLongOrNull() != null || v.toDoubleOrNull() != null) return ValueTypeOrder.NUMBER
+    return ValueTypeOrder.TEXT
+}
+
+private fun sortRowsByType(rows: List<InfoRow>): List<InfoRow> {
+    return rows.sortedWith(
+        compareBy<InfoRow>(
+            { detectValueType(it.value).rank },
+            { it.key.lowercase() }
+        )
+    )
+}
+
+private data class TopInfoTopic(
+    val order: Int,
+    val title: String
+)
+
+private fun topInfoTopicOf(key: String): TopInfoTopic {
+    val k = key.lowercase()
+    return when {
+        k.startsWith("long_press_") -> TopInfoTopic(0, "按键长按")
+        k.contains("fbo") || k == "key_fbo_data" -> TopInfoTopic(1, "FBO")
+        k.contains("dex2oat") || k.contains("dexopt") -> TopInfoTopic(2, "Dex 优化")
+        k.startsWith("tango.") || k.contains("tango") -> TopInfoTopic(3, "Tango")
+        k.contains("aod") -> TopInfoTopic(4, "AOD")
+        k.contains("zygote") -> TopInfoTopic(5, "Zygote")
+        k.contains("density") -> TopInfoTopic(6, "显示密度")
+        k.contains("autofill") || k.contains("credential") -> TopInfoTopic(7, "自动填充与凭据")
+        k.startsWith("gsm.") || k.contains("gsm") -> TopInfoTopic(8, "GSM / 蜂窝网络")
+        k.contains("level") -> TopInfoTopic(9, "Level / 等级")
+        k.startsWith("adb_") || k.contains("adb") -> TopInfoTopic(10, "ADB / 调试")
+        k.startsWith("voice_") || k.contains("assistant") || k.contains("recognition") -> TopInfoTopic(11, "语音与助手")
+        k.startsWith("share_") -> TopInfoTopic(12, "共享相关")
+        k.contains("bluetooth") || k.contains("bt_") || k.contains("lc3") || k.contains("lea_") -> TopInfoTopic(13, "蓝牙音频")
+        k.contains("usb") -> TopInfoTopic(14, "USB")
+        k.contains("vulkan") || k.contains("opengl") || k.contains("egl") || k.contains("graphics") || k.contains("hwui") -> TopInfoTopic(15, "图形渲染")
+        k.startsWith("miui_") || k.startsWith("ro.miui") || k.startsWith("ro.mi.") || k.contains("xiaomi") -> TopInfoTopic(16, "MIUI / Xiaomi")
+        k.contains("version") || k.contains("build") || k.contains("fingerprint") || k.contains("security_patch") -> TopInfoTopic(17, "版本与构建")
+        k.contains("time") || k.contains("timestamp") -> TopInfoTopic(18, "时间戳")
+        k.startsWith("java.") || k.startsWith("android.") || k.startsWith("os.") || k.startsWith("user.") -> TopInfoTopic(19, "Java / 系统属性")
+        k.startsWith("env.") || k == "uname-a" || k == "proc.version" || k == "toybox --version" || k == "getenforce" -> TopInfoTopic(20, "Linux 环境")
+        else -> TopInfoTopic(99, "其他")
+    }
+}
+
+private fun sortTopInfoRows(rows: List<InfoRow>): List<InfoRow> {
+    return rows.sortedWith(
+        compareBy<InfoRow>(
+            { topInfoTopicOf(it.key).order },
+            { detectValueType(it.value).rank },
+            { it.key.lowercase() }
+        )
+    )
+}
+
+private fun groupTopInfoRows(rows: List<InfoRow>): List<Pair<String, List<InfoRow>>> {
+    val grouped = rows.groupBy { topInfoTopicOf(it.key) }
+    return grouped.entries
+        .sortedBy { it.key.order }
+        .map { entry -> entry.key.title to entry.value }
 }
 
 private fun isInvalidValue(raw: String): Boolean {
@@ -684,13 +814,13 @@ private fun buildTopInfoRows(
     val linuxMap = mapRows(linuxRows)
 
     val rows = mutableListOf<InfoRow>()
-    TopInfoKeys.system.forEach { key -> systemMap[key]?.let { rows += InfoRow("System.$key", it) } }
-    TopInfoKeys.secure.forEach { key -> secureMap[key]?.let { rows += InfoRow("Secure.$key", it) } }
-    TopInfoKeys.global.forEach { key -> globalMap[key]?.let { rows += InfoRow("Global.$key", it) } }
-    TopInfoKeys.android.forEach { key -> androidMap[key]?.let { rows += InfoRow("Android.$key", it) } }
-    TopInfoKeys.java.forEach { key -> javaMap[key]?.let { rows += InfoRow("Java.$key", it) } }
-    TopInfoKeys.linux.forEach { key -> linuxMap[key]?.let { rows += InfoRow("Linux.$key", it) } }
-    return cleanRows(rows)
+    TopInfoKeys.system.forEach { key -> systemMap[key]?.let { rows += InfoRow(key, it) } }
+    TopInfoKeys.secure.forEach { key -> secureMap[key]?.let { rows += InfoRow(key, it) } }
+    TopInfoKeys.global.forEach { key -> globalMap[key]?.let { rows += InfoRow(key, it) } }
+    TopInfoKeys.android.forEach { key -> androidMap[key]?.let { rows += InfoRow(key, it) } }
+    TopInfoKeys.java.forEach { key -> javaMap[key]?.let { rows += InfoRow(key, it) } }
+    TopInfoKeys.linux.forEach { key -> linuxMap[key]?.let { rows += InfoRow(key, it) } }
+    return sortTopInfoRows(cleanRows(rows))
 }
 
 private data class ExportSections(
@@ -781,13 +911,13 @@ fun SystemPage(
     val shizukuReady = shizukuStatus.contains("granted", ignoreCase = true)
     val cached = remember { SystemInfoCache.read() }
     var query by remember { mutableStateOf("") }
-    var topInfoExpanded by remember { mutableStateOf(true) }
-    var systemTableExpanded by remember { mutableStateOf(true) }
-    var secureTableExpanded by remember { mutableStateOf(false) }
-    var globalTableExpanded by remember { mutableStateOf(false) }
-    var androidPropsExpanded by remember { mutableStateOf(false) }
-    var javaPropsExpanded by remember { mutableStateOf(false) }
-    var linuxEnvExpanded by remember { mutableStateOf(false) }
+    var topInfoExpanded by remember { mutableStateOf(SystemUiStateStore.topInfoExpanded(defaultValue = true)) }
+    var systemTableExpanded by remember { mutableStateOf(SystemUiStateStore.systemTableExpanded(defaultValue = false)) }
+    var secureTableExpanded by remember { mutableStateOf(SystemUiStateStore.secureTableExpanded(defaultValue = false)) }
+    var globalTableExpanded by remember { mutableStateOf(SystemUiStateStore.globalTableExpanded(defaultValue = false)) }
+    var androidPropsExpanded by remember { mutableStateOf(SystemUiStateStore.androidPropsExpanded(defaultValue = false)) }
+    var javaPropsExpanded by remember { mutableStateOf(SystemUiStateStore.javaPropsExpanded(defaultValue = false)) }
+    var linuxEnvExpanded by remember { mutableStateOf(SystemUiStateStore.linuxEnvExpanded(defaultValue = false)) }
     val scrollState = rememberScrollState()
     var pendingExportContent by remember { mutableStateOf<String?>(null) }
     var exportPreparing by remember { mutableStateOf(false) }
@@ -852,6 +982,28 @@ fun SystemPage(
         updateSection(SectionKind.LINUX) { it.copy(loadedFresh = false) }
     }
 
+    LaunchedEffect(topInfoExpanded) {
+        withContext(Dispatchers.IO) { SystemUiStateStore.setTopInfoExpanded(topInfoExpanded) }
+    }
+    LaunchedEffect(systemTableExpanded) {
+        withContext(Dispatchers.IO) { SystemUiStateStore.setSystemTableExpanded(systemTableExpanded) }
+    }
+    LaunchedEffect(secureTableExpanded) {
+        withContext(Dispatchers.IO) { SystemUiStateStore.setSecureTableExpanded(secureTableExpanded) }
+    }
+    LaunchedEffect(globalTableExpanded) {
+        withContext(Dispatchers.IO) { SystemUiStateStore.setGlobalTableExpanded(globalTableExpanded) }
+    }
+    LaunchedEffect(androidPropsExpanded) {
+        withContext(Dispatchers.IO) { SystemUiStateStore.setAndroidPropsExpanded(androidPropsExpanded) }
+    }
+    LaunchedEffect(javaPropsExpanded) {
+        withContext(Dispatchers.IO) { SystemUiStateStore.setJavaPropsExpanded(javaPropsExpanded) }
+    }
+    LaunchedEffect(linuxEnvExpanded) {
+        withContext(Dispatchers.IO) { SystemUiStateStore.setLinuxEnvExpanded(linuxEnvExpanded) }
+    }
+
     LaunchedEffect(systemTableExpanded) {
         if (systemTableExpanded) ensureLoad(SectionKind.SYSTEM)
     }
@@ -890,13 +1042,14 @@ fun SystemPage(
     val prunedLinuxRows = remember(linuxRows) { removeTopInfoRows(SectionKind.LINUX, linuxRows) }
 
     val q = query.trim()
-    val filteredTopInfoRows = remember(q, topInfoRows) { filterRows(topInfoRows, q) }
-    val filteredSystemRows = remember(q, prunedSystemRows) { filterRows(prunedSystemRows, q) }
-    val filteredSecureRows = remember(q, prunedSecureRows) { filterRows(prunedSecureRows, q) }
-    val filteredGlobalRows = remember(q, prunedGlobalRows) { filterRows(prunedGlobalRows, q) }
-    val filteredAndroidRows = remember(q, prunedAndroidRows) { filterRows(prunedAndroidRows, q) }
-    val filteredJavaRows = remember(q, prunedJavaRows) { filterRows(prunedJavaRows, q) }
-    val filteredLinuxRows = remember(q, prunedLinuxRows) { filterRows(prunedLinuxRows, q) }
+    val filteredTopInfoRows = remember(q, topInfoRows) { sortRowsByType(filterRows(topInfoRows, q)) }
+    val filteredSystemRows = remember(q, prunedSystemRows) { sortRowsByType(filterRows(prunedSystemRows, q)) }
+    val filteredSecureRows = remember(q, prunedSecureRows) { sortRowsByType(filterRows(prunedSecureRows, q)) }
+    val filteredGlobalRows = remember(q, prunedGlobalRows) { sortRowsByType(filterRows(prunedGlobalRows, q)) }
+    val filteredAndroidRows = remember(q, prunedAndroidRows) { sortRowsByType(filterRows(prunedAndroidRows, q)) }
+    val filteredJavaRows = remember(q, prunedJavaRows) { sortRowsByType(filterRows(prunedJavaRows, q)) }
+    val filteredLinuxRows = remember(q, prunedLinuxRows) { sortRowsByType(filterRows(prunedLinuxRows, q)) }
+    val groupedTopInfoRows = remember(filteredTopInfoRows) { groupTopInfoRows(filteredTopInfoRows) }
 
     fun sectionSubtitle(section: SectionKind, size: Int): String {
         val state = sectionStates[section] ?: SectionState()
@@ -908,46 +1061,51 @@ fun SystemPage(
         }
     }
 
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Column(
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(text = "System", modifier = Modifier.padding(top = 6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "系统参数与属性", modifier = Modifier.padding(top = 4.dp))
+            Button(
+                onClick = {
+                    if (exportPreparing) return@Button
+                    exportPreparing = true
+                    scope.launch {
+                        val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                        val markdown = withContext(Dispatchers.IO) {
+                            val exportSections = buildExportSections(context, shizukuStatus, shizukuApiUtils)
+                            buildSystemMarkdown(generatedAt, shizukuStatus, exportSections)
+                        }
+                        val fileName = "keios-system-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())}.md"
+                        pendingExportContent = markdown
+                        exportPreparing = false
+                        exportLauncher.launch(fileName)
+                    }
+                }
+            ) {
+                Text(if (exportPreparing) "准备导出..." else "导出")
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        TextField(
+            value = query,
+            onValueChange = { query = it },
+            label = "搜索系统参数",
+            useLabelAsPlaceholder = true,
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(scrollState)
                 .padding(bottom = contentBottomPadding)
         ) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = {
-                        if (exportPreparing) return@Button
-                        exportPreparing = true
-                        scope.launch {
-                            val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-                            val markdown = withContext(Dispatchers.IO) {
-                                val exportSections = buildExportSections(context, shizukuStatus, shizukuApiUtils)
-                                buildSystemMarkdown(generatedAt, shizukuStatus, exportSections)
-                            }
-                            val fileName = "keios-system-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())}.md"
-                            pendingExportContent = markdown
-                            exportPreparing = false
-                            exportLauncher.launch(fileName)
-                        }
-                    }
-                ) {
-                    Text(if (exportPreparing) "准备导出..." else "导出 Markdown")
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "System", modifier = Modifier.padding(top = 6.dp))
-            Text(text = "系统参数与属性", modifier = Modifier.padding(top = 4.dp))
-            Spacer(modifier = Modifier.height(10.dp))
-            TextField(
-                value = query,
-                onValueChange = { query = it },
-                label = "搜索系统参数",
-                useLabelAsPlaceholder = true,
-                singleLine = true
-            )
-            Spacer(modifier = Modifier.height(14.dp))
+            Column(modifier = Modifier.fillMaxWidth()) {
 
             MiuixExpandableSection(
                 backdrop = backdrop,
@@ -956,8 +1114,19 @@ fun SystemPage(
                 expanded = topInfoExpanded,
                 onExpandedChange = { topInfoExpanded = it }
             ) {
-                if (filteredTopInfoRows.isEmpty()) Text(text = "No matched results.")
-                else filteredTopInfoRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
+                if (filteredTopInfoRows.isEmpty()) {
+                    Text(text = "No matched results.")
+                } else {
+                    groupedTopInfoRows.forEachIndexed { index, (type, rows) ->
+                        Text(
+                            text = type,
+                            modifier = Modifier.padding(top = if (index == 0) 0.dp else 8.dp, bottom = 2.dp)
+                        )
+                        rows.forEach { row ->
+                            MiuixInfoItem(row.key, row.value)
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1036,6 +1205,7 @@ fun SystemPage(
             ) {
                 if (filteredLinuxRows.isEmpty()) Text(text = "No matched results.")
                 else filteredLinuxRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
+            }
             }
         }
     }
