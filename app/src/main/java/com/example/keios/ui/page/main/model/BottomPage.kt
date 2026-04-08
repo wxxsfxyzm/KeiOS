@@ -13,6 +13,5 @@ enum class BottomPage(
     System("系统", MiuixIcons.Regular.Info),
     Mcp("MCP", MiuixIcons.Regular.Tasks),
     GitHub("GitHub", MiuixIcons.Regular.Tasks),
-    About("关于", MiuixIcons.Regular.Info),
-    Settings("设置", MiuixIcons.Regular.Info)
+    About("关于", MiuixIcons.Regular.Info)
 }

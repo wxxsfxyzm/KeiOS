@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.kyant.backdrop.Backdrop
+import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -24,7 +26,8 @@ fun HomePage(
     mcpRunning: Boolean,
     mcpPort: Int,
     shizukuApiVersion: String,
-    mcpConnectedClients: Int
+    mcpConnectedClients: Int,
+    onOpenSettings: () -> Unit
 ) {
     val shizukuGranted = shizukuStatus.contains("granted", ignoreCase = true)
     val accent = MiuixTheme.colorScheme.primary
@@ -39,8 +42,18 @@ fun HomePage(
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = "KeiOS", color = titleColor, modifier = Modifier.padding(top = 6.dp))
-        Text(text = "Dashboard", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(text = "KeiOS", color = titleColor)
+                Text(text = "Dashboard", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
+            }
+            Button(onClick = onOpenSettings) {
+                Text("设置")
+            }
+        }
 
         Spacer(modifier = Modifier.height(14.dp))
         FrostedBlock(

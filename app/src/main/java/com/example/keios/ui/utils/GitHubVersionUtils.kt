@@ -507,8 +507,9 @@ object GitHubVersionUtils {
             "snapshot"
         )
         if (markers.any { it in s }) return true
-        // Typical semantic pre-release marker: 1.2.3-xxx
-        return Regex("v?\\d+(?:\\.\\d+)+-[0-9a-z]+").containsMatchIn(s)
+        // Typical semantic pre-release marker: 1.2.3-alpha / 1.2.3-rc1
+        // Ignore pure numeric suffixes such as 2.0.3-634166068 (build metadata style).
+        return Regex("v?\\d+(?:\\.\\d+)+-[a-z][0-9a-z]*").containsMatchIn(s)
     }
 
     private fun qualifierRank(raw: String): Int {

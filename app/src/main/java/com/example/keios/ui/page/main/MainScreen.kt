@@ -55,6 +55,7 @@ fun MainScreen(
     mcpServerManager: McpServerManager,
 ) {
     var currentPage by remember { mutableStateOf(BottomPage.Home) }
+    var settingsVisible by remember { mutableStateOf(false) }
     var systemScrollToTopSignal by remember { mutableIntStateOf(0) }
     var aboutScrollToTopSignal by remember { mutableIntStateOf(0) }
     var mcpScrollToTopSignal by remember { mutableIntStateOf(0) }
@@ -93,14 +94,27 @@ fun MainScreen(
             Spacer(modifier = Modifier.height(14.dp))
             when (currentPage) {
                 BottomPage.Home -> {
-                    HomePage(
-                        backdrop = backdrop,
-                        shizukuStatus = shizukuStatus,
-                        mcpRunning = mcpUiState.running,
-                        mcpPort = mcpUiState.port,
-                        shizukuApiVersion = ShizukuApiUtils.API_VERSION,
-                        mcpConnectedClients = mcpUiState.connectedClients
-                    )
+                    if (settingsVisible) {
+                        SettingsPage(
+                            backdrop = backdrop,
+                            liquidBottomBarEnabled = liquidBottomBarEnabled,
+                            onLiquidBottomBarChanged = {
+                                liquidBottomBarEnabled = it
+                                UiPrefs.setLiquidBottomBarEnabled(it)
+                            },
+                            onBack = { settingsVisible = false }
+                        )
+                    } else {
+                        HomePage(
+                            backdrop = backdrop,
+                            shizukuStatus = shizukuStatus,
+                            mcpRunning = mcpUiState.running,
+                            mcpPort = mcpUiState.port,
+                            shizukuApiVersion = ShizukuApiUtils.API_VERSION,
+                            mcpConnectedClients = mcpUiState.connectedClients,
+                            onOpenSettings = { settingsVisible = true }
+                        )
+                    }
                 }
 
                 BottomPage.System -> {
@@ -145,16 +159,6 @@ fun MainScreen(
                     )
                 }
 
-                BottomPage.Settings -> {
-                    SettingsPage(
-                        backdrop = backdrop,
-                        liquidBottomBarEnabled = liquidBottomBarEnabled,
-                        onLiquidBottomBarChanged = {
-                            liquidBottomBarEnabled = it
-                            UiPrefs.setLiquidBottomBarEnabled(it)
-                        }
-                    )
-                }
             }
             Spacer(modifier = Modifier.height(bottomOverlayPadding))
         }
@@ -192,6 +196,7 @@ fun MainScreen(
                             githubScrollToTopSignal++
                         }
                     } else {
+                        settingsVisible = false
                         currentPage = selected
                     }
                 },

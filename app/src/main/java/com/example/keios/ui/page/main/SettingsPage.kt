@@ -23,14 +23,31 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun SettingsPage(
     backdrop: Backdrop?,
     liquidBottomBarEnabled: Boolean,
-    onLiquidBottomBarChanged: (Boolean) -> Unit
+    onLiquidBottomBarChanged: (Boolean) -> Unit,
+    onBack: () -> Unit
 ) {
     val accent = MiuixTheme.colorScheme.primary
     val titleColor = MiuixTheme.colorScheme.onBackground
     val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = "Settings", color = titleColor, modifier = Modifier.padding(top = 6.dp))
-        Text(text = "界面与样式", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(text = "Settings", color = titleColor)
+                Text(text = "界面与样式", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
+            }
+            Text(
+                text = "返回",
+                color = MiuixTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clickable { onBack() }
+                    .padding(top = 4.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(14.dp))
         FrostedBlock(
