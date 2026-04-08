@@ -93,7 +93,7 @@ fun McpPage(
         FrostedBlock(
             backdrop = backdrop,
             title = "Overview",
-            subtitle = "服务状态与通知状态",
+            subtitle = "服务状态总览",
             accent = primary,
             content = {
                 Row(modifier = Modifier.fillMaxWidth()) {
@@ -101,15 +101,12 @@ fun McpPage(
                         label = if (uiState.running) "Server Running" else "Server Stopped",
                         color = if (uiState.running) success else inactive
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    StatusPill(
-                        label = if (notificationPermissionGranted) "Notification Granted" else "Notification Required",
-                        color = if (notificationPermissionGranted) primary else warning
-                    )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                MiuixInfoItem("Endpoint", "${uiState.port} 端口 · MCP 协议")
-                MiuixInfoItem("Online Clients", uiState.connectedClients.toString())
+                MiuixInfoItem(
+                    "MCP Server",
+                    "${if (uiState.running) "运行中" else "未运行"} · 在线 ${uiState.connectedClients} · ${uiState.port} 端口 · MCP 协议"
+                )
                 MiuixInfoItem("Tools", uiState.tools.size.toString())
                 MiuixInfoItem("通知权限", if (notificationPermissionGranted) "已授权" else "未授权")
             }

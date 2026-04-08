@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
             packageManager.getPackageInfoCompat(packageName)
         }.getOrNull()
         localMcpService = LocalMcpService(
+            appContext = applicationContext,
             shizukuApiUtils = shizukuApiUtils,
             appVersionName = packageInfo?.versionName ?: "unknown",
             appVersionCode = packageInfo?.longVersionCode ?: -1L,

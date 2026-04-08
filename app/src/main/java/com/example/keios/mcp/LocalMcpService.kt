@@ -1,6 +1,10 @@
 package com.example.keios.mcp
 
+import android.content.Context
 import android.net.Uri
+import com.example.keios.ui.utils.GitHubTrackStore
+import com.example.keios.ui.utils.GitHubTrackedApp
+import com.example.keios.ui.utils.GitHubVersionUtils
 import com.example.keios.ui.utils.ShizukuApiUtils
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
@@ -20,6 +24,7 @@ data class McpToolMeta(
 )
 
 class LocalMcpService(
+    private val appContext: Context,
     private val shizukuApiUtils: ShizukuApiUtils,
     private val appVersionName: String,
     private val appVersionCode: Long,
@@ -29,6 +34,15 @@ class LocalMcpService(
     private data class InfoRow(
         val key: String,
         val value: String
+    )
+
+    private data class GitHubCheckRow(
+        val item: GitHubTrackedApp,
+        val localVersion: String,
+        val stableVersion: String,
+        val preReleaseVersion: String,
+        val status: String,
+        val hasUpdate: Boolean
     )
 
     companion object {
@@ -68,7 +82,10 @@ class LocalMcpService(
             McpToolMeta("keios.search_system_topinfo", "按关键字筛选 TopInfo（参数 query）"),
             McpToolMeta("keios.get_mcp_status", "读取 MCP 服务状态（端口、连接数、地址）"),
             McpToolMeta("keios.get_mcp_logs", "读取 MCP 最近日志"),
-            McpToolMeta("keios.get_mcp_config_template", "读取 MCP 客户端接入配置模板 JSON")
+            McpToolMeta("keios.get_mcp_config_template", "读取 MCP 客户端接入配置模板 JSON"),
+            McpToolMeta("keios.github_list_tracked", "读取 GitHub 已跟踪项目列表"),
+            McpToolMeta("keios.github_check_updates", "检查 GitHub 跟踪项目更新（支持参数 repoFilter）"),
+            McpToolMeta("keios.github_get_summary", "读取 GitHub 跟踪更新汇总（总数/可更新数）")
         )
     }
 
@@ -219,7 +236,173 @@ class LocalMcpService(
             CallToolResult(content = listOf(TextContent(config)))
         }
 
+        server.addTool(
+            name = "keios.github_list_tracked",
+            description = "Get tracked GitHub repos configured in KeiOS.",
+            inputSchema = ToolSchema(properties = buildJsonObject { })
+        ) { _ ->
+            val items = GitHubTrackStore.load()
+            val text = if (items.isEmpty()) {
+                "No tracked GitHub apps."
+            } else {
+                items.joinToString("\n") { item ->
+                    "${item.owner}/${item.repo} | ${item.appLabel} | ${item.packageName}"
+                }
+            }
+            CallToolResult(content = listOf(TextContent(text)))
+        }
+
+        server.addTool(
+            name = "keios.github_check_updates",
+            description = "Check tracked GitHub app versions. Optional argument: repoFilter.",
+            inputSchema = ToolSchema(
+                properties = buildJsonObject {
+                    put("repoFilter", buildJsonObject { put("type", JsonPrimitive("string")) })
+                }
+            )
+        ) { request ->
+            val repoFilter = request.arguments?.get("repoFilter")
+                ?.let { (it as? JsonPrimitive)?.contentOrNull }
+                .orEmpty()
+                .trim()
+            val checks = checkTrackedGitHub(repoFilter)
+            val text = if (checks.isEmpty()) {
+                "No tracked items matched."
+            } else {
+                checks.joinToString("\n") { row ->
+                    val repo = "${row.item.owner}/${row.item.repo}"
+                    val pre = if (row.preReleaseVersion.isNotBlank()) " | pre=${row.preReleaseVersion}" else ""
+                    "$repo | local=${row.localVersion} | stable=${row.stableVersion}$pre | status=${row.status} | update=${row.hasUpdate}"
+                }
+            }
+            CallToolResult(content = listOf(TextContent(text)))
+        }
+
+        server.addTool(
+            name = "keios.github_get_summary",
+            description = "Get summary for tracked GitHub update states.",
+            inputSchema = ToolSchema(properties = buildJsonObject { })
+        ) { _ ->
+            val checks = checkTrackedGitHub(repoFilter = "")
+            val total = checks.size
+            val updates = checks.count { it.hasUpdate }
+            val preRelease = checks.count { it.status.contains("预发", ignoreCase = true) || it.status.contains("pre", ignoreCase = true) }
+            val body = buildString {
+                appendLine("tracked=$total")
+                appendLine("hasUpdate=$updates")
+                appendLine("preReleaseState=$preRelease")
+                checks.sortedByDescending { it.hasUpdate }.take(20).forEach { row ->
+                    appendLine("${row.item.owner}/${row.item.repo}=${row.status}")
+                }
+            }.trim()
+            CallToolResult(content = listOf(TextContent(body)))
+        }
+
         return server
+    }
+
+    private fun checkTrackedGitHub(repoFilter: String): List<GitHubCheckRow> {
+        val items = GitHubTrackStore.load()
+        val filtered = if (repoFilter.isBlank()) {
+            items
+        } else {
+            items.filter {
+                "${it.owner}/${it.repo}".contains(repoFilter, ignoreCase = true) ||
+                    it.packageName.contains(repoFilter, ignoreCase = true) ||
+                    it.appLabel.contains(repoFilter, ignoreCase = true)
+            }
+        }
+        return filtered.map { item ->
+            runCatching { evaluateTrackedApp(item) }.getOrElse { err ->
+                GitHubCheckRow(
+                    item = item,
+                    localVersion = runCatching { GitHubVersionUtils.localVersionName(appContext, item.packageName) }.getOrDefault("unknown"),
+                    stableVersion = "unknown",
+                    preReleaseVersion = "",
+                    status = "检查失败: ${err.message ?: "unknown"}",
+                    hasUpdate = false
+                )
+            }
+        }
+    }
+
+    private fun evaluateTrackedApp(item: GitHubTrackedApp): GitHubCheckRow {
+        val local = runCatching {
+            GitHubVersionUtils.localVersionName(appContext, item.packageName)
+        }.getOrDefault("unknown")
+        val atomEntries = GitHubVersionUtils.fetchReleaseEntriesFromAtom(item.owner, item.repo, limit = 30)
+            .getOrDefault(emptyList())
+        val matchedEntry = atomEntries.firstOrNull {
+            GitHubVersionUtils.compareVersionToCandidates(local, it.candidates) == 0
+        }
+        val latestPreEntry = atomEntries.firstOrNull { it.isLikelyPreRelease }
+        val stableResult = GitHubVersionUtils.fetchLatestReleaseSignals(
+            owner = item.owner,
+            repo = item.repo,
+            atomEntriesHint = atomEntries
+        )
+
+        return stableResult.fold(
+            onSuccess = { stable ->
+                val cmp = GitHubVersionUtils.compareVersionToCandidates(local, stable.candidates)
+                val latestPreLabel = latestPreEntry?.title?.ifBlank { latestPreEntry.tag }.orEmpty()
+                val preVsStable = if (latestPreLabel.isNotBlank()) {
+                    GitHubVersionUtils.compareVersionToCandidates(latestPreLabel, stable.candidates)
+                } else {
+                    null
+                }
+                val preRelevant = latestPreEntry != null && (preVsStable == null || preVsStable > 0)
+                val localIsPre = matchedEntry?.isLikelyPreRelease == true
+                val preCmp = if (latestPreEntry != null) {
+                    GitHubVersionUtils.compareVersionToCandidates(local, latestPreEntry.candidates)
+                } else null
+                val hasPreUpdate = localIsPre && preRelevant && (preCmp?.let { it < 0 } == true)
+                val stableUpdate = cmp?.let { it < 0 } == true
+                val hasUpdate = hasPreUpdate || stableUpdate
+                val preReleaseDisplay = latestPreEntry?.title?.ifBlank { latestPreEntry.tag }.orEmpty()
+                val status = when {
+                    hasPreUpdate -> "预发有更新"
+                    stableUpdate -> "发现更新"
+                    localIsPre && preRelevant -> "预发行"
+                    hasUpdate.not() -> "已是最新"
+                    else -> "版本格式无法精确比较"
+                }
+                GitHubCheckRow(
+                    item = item,
+                    localVersion = local,
+                    stableVersion = stable.displayVersion,
+                    preReleaseVersion = when {
+                        localIsPre && preRelevant -> matchedEntry.title.ifBlank { matchedEntry.tag }
+                        preRelevant -> preReleaseDisplay
+                        else -> ""
+                    },
+                    status = status,
+                    hasUpdate = hasUpdate
+                )
+            },
+            onFailure = { err ->
+                if (matchedEntry != null) {
+                    val localIsPre = matchedEntry.isLikelyPreRelease
+                    GitHubCheckRow(
+                        item = item,
+                        localVersion = local,
+                        stableVersion = matchedEntry.title.ifBlank { matchedEntry.tag },
+                        preReleaseVersion = if (localIsPre) matchedEntry.title.ifBlank { matchedEntry.tag } else "",
+                        status = if (localIsPre) "预发行" else "已匹配发行",
+                        hasUpdate = false
+                    )
+                } else {
+                    GitHubCheckRow(
+                        item = item,
+                        localVersion = local,
+                        stableVersion = "unknown",
+                        preReleaseVersion = "",
+                        status = "检查失败: ${err.message ?: "unknown"}",
+                        hasUpdate = false
+                    )
+                }
+            }
+        )
     }
 
     private fun decodeRows(raw: String?): List<InfoRow> {
