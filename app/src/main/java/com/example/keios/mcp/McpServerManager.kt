@@ -1,5 +1,6 @@
 package com.example.keios.mcp
 
+import android.content.Context
 import com.tencent.mmkv.MMKV
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCallPipeline
@@ -53,6 +54,7 @@ data class McpServerUiState(
 }
 
 class McpServerManager(
+    private val appContext: Context,
     private val localMcpService: LocalMcpService
 ) {
     private object Prefs {
@@ -155,6 +157,7 @@ class McpServerManager(
                 connectedClients = 0,
                 lastError = null
             )
+            syncKeepAliveNotification(forceStart = true)
             appendLog("INFO", "MCP server started on $host:$port/mcp")
         }.onFailure {
             _uiState.value = _uiState.value.copy(
@@ -206,6 +209,7 @@ class McpServerManager(
             connectedClients = 0,
             lastError = null
         )
+        runCatching { McpKeepAliveService.stop(appContext) }
         appendLog("INFO", "MCP server stopped")
     }
 
@@ -223,6 +227,7 @@ class McpServerManager(
         if (running) {
             val sessions = runCatching { localMcpService.getOrCreateServer().sessions.size }.getOrDefault(0)
             _uiState.value = _uiState.value.copy(connectedClients = sessions)
+            syncKeepAliveNotification(forceStart = false)
             appendLog("INFO", "Snapshot refreshed: clients=$sessions")
         } else {
             appendLog("INFO", "Snapshot refreshed: server stopped")
@@ -233,6 +238,23 @@ class McpServerManager(
     fun refreshAddresses() {
         if (!_uiState.value.allowExternal) return
         _uiState.value = _uiState.value.copy(addresses = ipv4Addresses())
+    }
+
+    @Synchronized
+    fun sendTestNotification(): Result<Unit> {
+        val state = _uiState.value
+        return runCatching {
+            McpNotificationHelper.notifyTest(
+                context = appContext,
+                running = state.running,
+                port = state.port,
+                path = state.endpointPath,
+                clients = state.connectedClients
+            )
+            appendLog("INFO", "Test notification sent")
+        }.onFailure {
+            appendLog("ERROR", "Send test notification failed: ${it.message ?: it.javaClass.simpleName}")
+        }
     }
 
     @Synchronized
@@ -254,6 +276,7 @@ class McpServerManager(
                     val old = lastConnectedCount
                     lastConnectedCount = count
                     _uiState.value = _uiState.value.copy(connectedClients = count)
+                    syncKeepAliveNotification(forceStart = false)
                     if (count > old) {
                         appendLog("INFO", "Client connected, online=$count")
                     } else {
@@ -289,5 +312,22 @@ class McpServerManager(
             }
             result.distinct()
         }.getOrDefault(emptyList())
+    }
+
+    private fun syncKeepAliveNotification(forceStart: Boolean) {
+        val state = _uiState.value
+        if (!state.running) return
+        runCatching {
+            McpKeepAliveService.startOrUpdate(
+                context = appContext,
+                running = state.running,
+                port = state.port,
+                path = state.endpointPath,
+                clients = state.connectedClients,
+                forceStart = forceStart
+            )
+        }.onFailure {
+            appendLog("WARN", "KeepAlive notification update failed: ${it.message ?: it.javaClass.simpleName}")
+        }
     }
 }

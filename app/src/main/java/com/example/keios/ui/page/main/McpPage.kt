@@ -4,10 +4,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -16,11 +16,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -40,6 +40,8 @@ import top.yukonga.miuix.kmp.basic.TextField
 fun McpPage(
     backdrop: Backdrop?,
     mcpServerManager: McpServerManager,
+    notificationPermissionGranted: Boolean,
+    onRequestNotificationPermission: () -> Unit,
     contentBottomPadding: Dp = 72.dp,
     scrollToTopSignal: Int = 0
 ) {
@@ -48,10 +50,8 @@ fun McpPage(
     var portText by remember(uiState.port) { mutableStateOf(uiState.port.toString()) }
     var allowExternal by remember(uiState.allowExternal) { mutableStateOf(uiState.allowExternal) }
     var serverName by remember(uiState.serverName) { mutableStateOf(uiState.serverName) }
-    var endpointExpanded by remember { mutableStateOf(true) }
-    var toolsExpanded by remember { mutableStateOf(true) }
+    var configExpanded by remember { mutableStateOf(true) }
     var logsExpanded by remember { mutableStateOf(true) }
-    var usageExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     LaunchedEffect(scrollToTopSignal) {
@@ -81,10 +81,11 @@ fun McpPage(
         }
         Text(text = "MCP Server 功能", modifier = Modifier.padding(top = 4.dp))
         Spacer(modifier = Modifier.height(12.dp))
+
         FrostedBlock(
             backdrop = backdrop,
             title = "Overview",
-            subtitle = "MCP 服务总览",
+            subtitle = "服务状态与通知状态",
             accent = Color(0xFF4B8DFF),
             content = {
                 Row(modifier = Modifier.fillMaxWidth()) {
@@ -94,15 +95,15 @@ fun McpPage(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     StatusPill(
-                        label = if (uiState.allowExternal) "LAN Enabled" else "Local Only",
-                        color = if (uiState.allowExternal) Color(0xFF1565C0) else Color(0xFF9E9E9E)
+                        label = if (notificationPermissionGranted) "Notification Granted" else "Notification Required",
+                        color = if (notificationPermissionGranted) Color(0xFF1565C0) else Color(0xFFE65100)
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                MiuixInfoItem("Endpoint", uiState.localEndpoint)
-                MiuixInfoItem("Tools", uiState.tools.size.toString())
+                MiuixInfoItem("Endpoint", "${uiState.port} 端口 · MCP 协议")
                 MiuixInfoItem("Online Clients", uiState.connectedClients.toString())
-                MiuixInfoItem("Auth", "Bearer ${uiState.authToken.take(8)}...${uiState.authToken.takeLast(8)}")
+                MiuixInfoItem("Tools", uiState.tools.size.toString())
+                MiuixInfoItem("通知权限", if (notificationPermissionGranted) "已授权" else "未授权")
             }
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -169,48 +170,54 @@ fun McpPage(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        MiuixExpandableSection(
-            backdrop = backdrop,
-            title = "服务状态与地址",
-            subtitle = if (uiState.running) "运行中" else "未运行",
-            expanded = endpointExpanded,
-            onExpandedChange = { endpointExpanded = it }
-        ) {
-            MiuixInfoItem("Running", uiState.running.toString())
-            MiuixInfoItem("Host", uiState.host)
-            MiuixInfoItem("Port", uiState.port.toString())
-            MiuixInfoItem("Path", uiState.endpointPath)
-            MiuixInfoItem("Local Endpoint", uiState.localEndpoint)
-            MiuixInfoItem("Authorization", "Bearer ${uiState.authToken.take(8)}...${uiState.authToken.takeLast(8)}")
-            if (uiState.allowExternal) {
-                if (uiState.lanEndpoints.isEmpty()) {
-                    MiuixInfoItem("LAN Endpoint", "未检测到可用 IPv4 地址")
-                } else {
-                    uiState.lanEndpoints.forEachIndexed { index, endpoint ->
-                        MiuixInfoItem("LAN Endpoint ${index + 1}", endpoint)
-                    }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = {
+                    onRequestNotificationPermission()
+                    Toast.makeText(context, "已发起通知权限申请", Toast.LENGTH_SHORT).show()
                 }
+            ) {
+                Text(if (notificationPermissionGranted) "重新检查通知权限" else "申请通知权限")
             }
-            uiState.lastError?.let { MiuixInfoItem("Last Error", it) }
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    mcpServerManager.sendTestNotification()
+                        .onSuccess { Toast.makeText(context, "已发送 MCP 测试通知", Toast.LENGTH_SHORT).show() }
+                        .onFailure { Toast.makeText(context, "发送失败: ${it.message}", Toast.LENGTH_SHORT).show() }
+                }
+            ) {
+                Text("发送测试通知")
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         MiuixExpandableSection(
             backdrop = backdrop,
-            title = "快速复制配置",
-            subtitle = "MCP JSON",
-            expanded = true,
-            onExpandedChange = { }
+            title = "配置与工具",
+            subtitle = "Endpoint / JSON / Tools",
+            expanded = configExpanded,
+            onExpandedChange = { configExpanded = it }
         ) {
             val preferredEndpoint = when {
                 uiState.allowExternal && uiState.lanEndpoints.isNotEmpty() -> uiState.lanEndpoints.first()
                 else -> uiState.localEndpoint
             }
+            MiuixInfoItem("Running", uiState.running.toString())
+            MiuixInfoItem("Host", uiState.host)
+            MiuixInfoItem("Port", uiState.port.toString())
+            MiuixInfoItem("Path", uiState.endpointPath)
             MiuixInfoItem("推荐地址", preferredEndpoint)
-
+            MiuixInfoItem("Authorization", "Bearer ${uiState.authToken.take(8)}...${uiState.authToken.takeLast(8)}")
+            uiState.lastError?.let { MiuixInfoItem("Last Error", it) }
+            if (uiState.allowExternal && uiState.lanEndpoints.isNotEmpty()) {
+                uiState.lanEndpoints.forEachIndexed { index, endpoint ->
+                    MiuixInfoItem("LAN Endpoint ${index + 1}", endpoint)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = {
@@ -224,19 +231,6 @@ fun McpPage(
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = {
-                        val json = mcpServerManager.buildConfigJson("http://localhost:${uiState.port}${uiState.endpointPath}")
-                        copyToClipboard(context, "mcp-config-localhost", json)
-                        Toast.makeText(context, "localhost 配置已复制", Toast.LENGTH_SHORT).show()
-                    }
-                ) {
-                    Text("复制 localhost")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = {
                         mcpServerManager.regenerateAuthToken()
                         Toast.makeText(context, "Token 已重置，需重连客户端", Toast.LENGTH_SHORT).show()
                     }
@@ -244,17 +238,7 @@ fun McpPage(
                     Text("重置 Token")
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        MiuixExpandableSection(
-            backdrop = backdrop,
-            title = "MCP Tools",
-            subtitle = "${uiState.tools.size} 条",
-            expanded = toolsExpanded,
-            onExpandedChange = { toolsExpanded = it }
-        ) {
+            Spacer(modifier = Modifier.height(8.dp))
             uiState.tools.forEach { tool ->
                 MiuixInfoItem(tool.name, tool.description)
             }
@@ -277,28 +261,9 @@ fun McpPage(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Button(onClick = { mcpServerManager.clearLogs() }) {
-                    Text("清空日志")
-                }
+            Button(onClick = { mcpServerManager.clearLogs() }) {
+                Text("清空日志")
             }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        MiuixExpandableSection(
-            backdrop = backdrop,
-            title = "接入说明",
-            subtitle = "Claw / Inspector",
-            expanded = usageExpanded,
-            onExpandedChange = { usageExpanded = it }
-        ) {
-            MiuixInfoItem("Step 1", "点击“启动服务”")
-            MiuixInfoItem("Step 2", "在 Claw 中添加 MCP Streamable HTTP 连接")
-            MiuixInfoItem("Step 3", "地址填写 Local Endpoint 或 LAN Endpoint")
-            MiuixInfoItem("Step 4", "Authorization 填写 Bearer Token（可点“快速复制配置”）")
-            MiuixInfoItem("Step 5", "连接成功后可调用 keios.get_shizuku_status / keios.get_app_version")
-            MiuixInfoItem("Tip", "若 Claw 连接成功，Overview 的 Online Clients 会大于 0，日志也会记录连接变化")
         }
     }
 }

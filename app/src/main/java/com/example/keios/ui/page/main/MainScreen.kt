@@ -49,6 +49,8 @@ fun MainScreen(
     packageInfo: PackageInfo?,
     shizukuStatus: String,
     onCheckOrRequestShizuku: () -> Unit,
+    notificationPermissionGranted: Boolean,
+    onRequestNotificationPermission: () -> Unit,
     shizukuApiUtils: ShizukuApiUtils,
     mcpServerManager: McpServerManager,
 ) {
@@ -129,6 +131,8 @@ fun MainScreen(
                     McpPage(
                         backdrop = backdrop,
                         mcpServerManager = mcpServerManager,
+                        notificationPermissionGranted = notificationPermissionGranted,
+                        onRequestNotificationPermission = onRequestNotificationPermission,
                         contentBottomPadding = bottomOverlayPadding,
                         scrollToTopSignal = mcpScrollToTopSignal
                     )
