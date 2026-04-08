@@ -52,7 +52,7 @@ class McpKeepAliveService : Service() {
         path: String,
         clients: Int
     ): Notification {
-        return McpNotificationHelper.buildNotification(
+        return McpNotificationHelper.buildForegroundNotification(
             context = this,
             running = running,
             port = port,

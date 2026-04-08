@@ -3,6 +3,7 @@ package com.example.keios.mcp
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.Icon
+import com.example.keios.R
 import com.xzakota.hyper.notification.focus.FocusNotification
 
 object McpIslandNotificationBuilder {
@@ -13,16 +14,15 @@ object McpIslandNotificationBuilder {
         content: String,
         shortText: String
     ) = runCatching {
-        val appIconRes = context.applicationInfo.icon
-        val lightIcon = Icon.createWithResource(context, appIconRes).setTint(Color.BLACK)
-        val darkIcon = Icon.createWithResource(context, appIconRes).setTint(Color.WHITE)
+        val lightIcon = Icon.createWithResource(context, R.drawable.ic_notification_logo).setTint(Color.BLACK)
+        val darkIcon = Icon.createWithResource(context, R.drawable.ic_notification_logo).setTint(Color.WHITE)
 
         FocusNotification.buildV3 {
             val lightIconKey = createPicture("mcp_logo_light", lightIcon)
             val darkIconKey = createPicture("mcp_logo_dark", darkIcon)
 
             islandFirstFloat = true
-            enableFloat = false
+            enableFloat = true
             updatable = true
             ticker = shortText
             tickerPic = lightIconKey
