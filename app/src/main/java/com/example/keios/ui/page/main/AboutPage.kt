@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.FrostedBlock
+import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -30,7 +31,6 @@ import com.kyant.backdrop.Backdrop
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -197,12 +197,12 @@ fun AboutPage(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Button(
+        GlassTextButton(
+            backdrop = backdrop,
+            text = "检查 / 申请 Shizuku 权限",
             modifier = Modifier.fillMaxWidth(),
             onClick = onCheckShizuku
-        ) {
-            Text(text = "检查 / 申请 Shizuku 权限")
-        }
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 

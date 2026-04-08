@@ -22,18 +22,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.widget.FrostedBlock
+import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.kyant.backdrop.Backdrop
-import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -80,19 +79,16 @@ fun McpPage(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(text = "MCP", color = titleColor, modifier = Modifier.padding(top = 6.dp))
-            Button(
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = MiuixIcons.Regular.Refresh,
+                contentDescription = "刷新",
                 modifier = Modifier.padding(top = 2.dp),
                 onClick = {
                     mcpServerManager.refreshNow()
                     Toast.makeText(context, "已刷新", Toast.LENGTH_SHORT).show()
                 }
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Regular.Refresh,
-                    contentDescription = "刷新",
-                    tint = MiuixTheme.colorScheme.onPrimary
-                )
-            }
+            )
         }
         Text(text = "MCP Server 功能", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
         Spacer(modifier = Modifier.height(12.dp))
@@ -166,23 +162,29 @@ fun McpPage(
         Spacer(modifier = Modifier.height(10.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = { allowExternal = false }) {
-                Text(if (!allowExternal) "仅本机(已选)" else "仅本机")
-            }
+            GlassTextButton(
+                backdrop = backdrop,
+                text = if (!allowExternal) "仅本机(已选)" else "仅本机",
+                onClick = { allowExternal = false }
+            )
             Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = { allowExternal = true }) {
-                Text(if (allowExternal) "局域网(已选)" else "局域网")
-            }
+            GlassTextButton(
+                backdrop = backdrop,
+                text = if (allowExternal) "局域网(已选)" else "局域网",
+                onClick = { allowExternal = true }
+            )
         }
         Spacer(modifier = Modifier.height(10.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
-            Button(
+            GlassTextButton(
+                backdrop = backdrop,
+                text = "启动服务",
                 onClick = {
                     val port = portText.toIntOrNull()
                     if (port == null) {
                         Toast.makeText(context, "端口无效", Toast.LENGTH_SHORT).show()
-                        return@Button
+                        return@GlassTextButton
                     }
                     mcpServerManager.start(port = port, allowExternal = allowExternal)
                         .onSuccess {
@@ -193,40 +195,38 @@ fun McpPage(
                             Toast.makeText(context, "启动失败: ${it.message}", Toast.LENGTH_SHORT).show()
                         }
                 }
-            ) {
-                Text("启动服务")
-            }
+            )
             Spacer(modifier = Modifier.width(8.dp))
-            Button(
+            GlassTextButton(
+                backdrop = backdrop,
+                text = "停止服务",
                 onClick = {
                     mcpServerManager.stop()
                     Toast.makeText(context, "MCP 服务已停止", Toast.LENGTH_SHORT).show()
                 }
-            ) {
-                Text("停止服务")
-            }
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
-            Button(
+            GlassTextButton(
+                backdrop = backdrop,
+                text = if (notificationPermissionGranted) "重新检查通知权限" else "申请通知权限",
                 onClick = {
                     onRequestNotificationPermission()
                     Toast.makeText(context, "已发起通知权限申请", Toast.LENGTH_SHORT).show()
                 }
-            ) {
-                Text(if (notificationPermissionGranted) "重新检查通知权限" else "申请通知权限")
-            }
+            )
             Spacer(modifier = Modifier.width(8.dp))
-            Button(
+            GlassTextButton(
+                backdrop = backdrop,
+                text = "发送测试通知",
                 onClick = {
                     mcpServerManager.sendTestNotification()
                         .onSuccess { Toast.makeText(context, "已发送 MCP 测试通知", Toast.LENGTH_SHORT).show() }
                         .onFailure { Toast.makeText(context, "发送失败: ${it.message}", Toast.LENGTH_SHORT).show() }
                 }
-            ) {
-                Text("发送测试通知")
-            }
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -256,24 +256,24 @@ fun McpPage(
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
-                Button(
+                GlassTextButton(
+                    backdrop = backdrop,
+                    text = "复制当前配置",
                     onClick = {
                         val json = mcpServerManager.buildConfigJson(preferredEndpoint)
                         copyToClipboard(context, "mcp-config", json)
                         Toast.makeText(context, "MCP 配置已复制", Toast.LENGTH_SHORT).show()
                     }
-                ) {
-                    Text("复制当前配置")
-                }
+                )
                 Spacer(modifier = Modifier.width(8.dp))
-                Button(
+                GlassTextButton(
+                    backdrop = backdrop,
+                    text = "重置 Token",
                     onClick = {
                         mcpServerManager.regenerateAuthToken()
                         Toast.makeText(context, "Token 已重置，需重连客户端", Toast.LENGTH_SHORT).show()
                     }
-                ) {
-                    Text("重置 Token")
-                }
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
             uiState.tools.forEach { tool ->
@@ -298,9 +298,11 @@ fun McpPage(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { mcpServerManager.clearLogs() }) {
-                Text("清空日志")
-            }
+            GlassTextButton(
+                backdrop = backdrop,
+                text = "清空日志",
+                onClick = { mcpServerManager.clearLogs() }
+            )
         }
     }
 }

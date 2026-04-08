@@ -11,12 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.kyant.backdrop.Backdrop
-import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Settings
@@ -53,13 +52,12 @@ fun HomePage(
                 Text(text = "KeiOS", color = titleColor)
                 Text(text = "Dashboard", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
             }
-            Button(onClick = onOpenSettings) {
-                Icon(
-                    imageVector = MiuixIcons.Regular.Settings,
-                    contentDescription = "设置",
-                    tint = MiuixTheme.colorScheme.onPrimary
-                )
-            }
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = MiuixIcons.Regular.Settings,
+                contentDescription = "设置",
+                onClick = onOpenSettings
+            )
         }
 
         Spacer(modifier = Modifier.height(14.dp))

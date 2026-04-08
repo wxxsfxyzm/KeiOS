@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -42,7 +43,6 @@ import com.tencent.mmkv.MMKV
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -1148,9 +1148,11 @@ fun SystemPage(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(text = "系统参数与属性", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
-            Button(
+            GlassTextButton(
+                backdrop = backdrop,
+                text = if (exportPreparing) "准备导出..." else "导出",
                 onClick = {
-                    if (exportPreparing) return@Button
+                    if (exportPreparing) return@GlassTextButton
                     exportPreparing = true
                     scope.launch {
                         val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
@@ -1164,9 +1166,7 @@ fun SystemPage(
                         exportLauncher.launch(fileName)
                     }
                 }
-            ) {
-                Text(if (exportPreparing) "准备导出..." else "导出")
-            }
+            )
         }
         Spacer(modifier = Modifier.height(10.dp))
         TextField(

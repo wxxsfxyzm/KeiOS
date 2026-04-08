@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,12 +27,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -42,26 +40,19 @@ import com.example.keios.ui.utils.GitHubTrackedApp
 import com.example.keios.ui.utils.GitHubVersionUtils
 import com.example.keios.ui.utils.InstalledAppItem
 import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.highlight.Highlight
-import com.kyant.backdrop.shadow.Shadow
-import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.DropdownImpl
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -347,8 +338,7 @@ fun GitHubPage(
                     backdrop = backdrop,
                     icon = MiuixIcons.Regular.Refresh,
                     contentDescription = "检查",
-                    onClick = { refreshAllTracked(showToast = true) },
-                    modifier = Modifier.padding(top = 2.dp)
+                    onClick = { refreshAllTracked(showToast = true) }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 GlassIconButton(
@@ -467,19 +457,21 @@ fun GitHubPage(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            Button(onClick = { refreshItem(item, showToastOnError = true) }) {
-                                Text("刷新检查")
-                            }
+                            GlassTextButton(
+                                backdrop = backdrop,
+                                text = "刷新检查",
+                                onClick = { refreshItem(item, showToastOnError = true) }
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Button(
+                            GlassTextButton(
+                                backdrop = backdrop,
+                                text = "删除",
                                 onClick = {
                                     trackedItems.remove(item)
                                     checkStates.remove(item.id)
                                     saveTracked()
                                 }
-                            ) {
-                                Text("删除")
-                            }
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -492,11 +484,44 @@ fun GitHubPage(
         show = showAddSheet,
         title = "新增跟踪",
         onDismissRequest = { showAddSheet = false },
+        startAction = {
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = MiuixIcons.Regular.Close,
+                contentDescription = "关闭",
+                onClick = { showAddSheet = false }
+            )
+        },
         endAction = {
-            Text(
-                text = "关闭",
-                color = MiuixTheme.colorScheme.primary,
-                modifier = Modifier.clickable { showAddSheet = false }
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = MiuixIcons.Regular.Ok,
+                contentDescription = "确认新增",
+                onClick = {
+                    val app = selectedApp
+                    val parsed = GitHubVersionUtils.parseOwnerRepo(repoUrlInput)
+                    if (app == null || parsed == null) {
+                        Toast.makeText(context, "请填写正确仓库并选择 App", Toast.LENGTH_SHORT).show()
+                        return@GlassIconButton
+                    }
+                    val item = GitHubTrackedApp(
+                        repoUrl = repoUrlInput.trim(),
+                        owner = parsed.first,
+                        repo = parsed.second,
+                        packageName = app.packageName,
+                        appLabel = app.label
+                    )
+                    if (trackedItems.any { it.id == item.id }) {
+                        Toast.makeText(context, "该条目已存在", Toast.LENGTH_SHORT).show()
+                        return@GlassIconButton
+                    }
+                    trackedItems.add(item)
+                    saveTracked()
+                    refreshItem(item, showToastOnError = true)
+                    repoUrlInput = ""
+                    showAddSheet = false
+                    Toast.makeText(context, "已新增跟踪", Toast.LENGTH_SHORT).show()
+                }
             )
         }
     ) {
@@ -505,14 +530,6 @@ fun GitHubPage(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                StatusPill(
-                    label = if (!appListLoaded) "应用列表读取中" else if (appList.isNotEmpty()) "应用列表可用" else "应用列表受限",
-                    color = if (appList.isNotEmpty()) MiuixTheme.colorScheme.secondary else MiuixTheme.colorScheme.error
-                )
-                Button(onClick = { scope.launch { reloadApps() } }) { Text("刷新列表") }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
             TextField(
                 value = repoUrlInput,
                 onValueChange = { repoUrlInput = it },
@@ -534,9 +551,11 @@ fun GitHubPage(
                     text = "已选应用: ${selectedApp?.label ?: "未选择"}",
                     color = MiuixTheme.colorScheme.onBackgroundVariant
                 )
-                Button(onClick = { pickerExpanded = !pickerExpanded }) {
-                    Text(if (pickerExpanded) "收起列表" else "选择应用")
-                }
+                GlassTextButton(
+                    backdrop = backdrop,
+                    text = if (pickerExpanded) "收起列表" else "选择应用",
+                    onClick = { pickerExpanded = !pickerExpanded }
+                )
             }
             if (pickerExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -567,80 +586,6 @@ fun GitHubPage(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    val app = selectedApp
-                    val parsed = GitHubVersionUtils.parseOwnerRepo(repoUrlInput)
-                    if (app == null || parsed == null) {
-                        Toast.makeText(context, "请填写正确仓库并选择 App", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    val item = GitHubTrackedApp(
-                        repoUrl = repoUrlInput.trim(),
-                        owner = parsed.first,
-                        repo = parsed.second,
-                        packageName = app.packageName,
-                        appLabel = app.label
-                    )
-                    if (trackedItems.any { it.id == item.id }) {
-                        Toast.makeText(context, "该条目已存在", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    trackedItems.add(item)
-                    saveTracked()
-                    refreshItem(item, showToastOnError = true)
-                    repoUrlInput = ""
-                    showAddSheet = false
-                    Toast.makeText(context, "已新增跟踪", Toast.LENGTH_SHORT).show()
-                }
-            ) {
-                Text("新增并检查")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
         }
-    }
-}
-
-@Composable
-private fun GlassIconButton(
-    backdrop: Backdrop?,
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val iconTint = MiuixTheme.colorScheme.primary
-    val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
-    Box(
-        modifier = modifier
-            .width(40.dp)
-            .height(40.dp)
-            .clip(ContinuousCapsule)
-            .clickable(onClick = onClick)
-            .then(
-                if (backdrop != null) {
-                    Modifier.drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { ContinuousCapsule },
-                        effects = {
-                            vibrancy()
-                            blur(7.dp.toPx())
-                            lens(18.dp.toPx(), 18.dp.toPx())
-                        },
-                        highlight = { Highlight.Default.copy(alpha = 0.9f) },
-                        shadow = { Shadow.Default.copy(color = Color.Black.copy(alpha = 0.12f)) },
-                        onDrawSurface = { drawRect(Color.White.copy(alpha = 0.20f)) }
-                    )
-                } else {
-                    Modifier.background(fallbackSurface.copy(alpha = 0.9f))
-                }
-            ),
-        contentAlignment = androidx.compose.ui.Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = iconTint
-        )
     }
 }
