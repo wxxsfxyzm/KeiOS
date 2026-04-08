@@ -96,7 +96,8 @@ fun MainScreen(
                         backdrop = backdrop,
                         shizukuStatus = shizukuStatus,
                         mcpRunning = mcpUiState.running,
-                        mcpEndpoint = mcpUiState.localEndpoint
+                        mcpPort = mcpUiState.port,
+                        shizukuApiVersion = ShizukuApiUtils.API_VERSION
                     )
                 }
 

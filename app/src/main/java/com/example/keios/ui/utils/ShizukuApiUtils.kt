@@ -154,5 +154,6 @@ class ShizukuApiUtils(
 
     companion object {
         const val DEFAULT_REQUEST_CODE = 1001
+        const val API_VERSION = "13.1.5"
     }
 }

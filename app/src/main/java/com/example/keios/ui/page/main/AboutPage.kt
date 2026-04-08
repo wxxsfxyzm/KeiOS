@@ -96,7 +96,7 @@ fun AboutPage(
             AboutRow("Build Type", Build.TYPE),
             AboutRow("Build Tags", Build.TAGS),
             AboutRow("Miuix UI", "0.9.0"),
-            AboutRow("Shizuku API", "13.1.5")
+            AboutRow("Shizuku API", ShizukuApiUtils.API_VERSION)
         )
     }
 

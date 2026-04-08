@@ -49,6 +49,7 @@ fun McpPage(
     var serverName by remember(uiState.serverName) { mutableStateOf(uiState.serverName) }
     var endpointExpanded by remember { mutableStateOf(true) }
     var toolsExpanded by remember { mutableStateOf(true) }
+    var logsExpanded by remember { mutableStateOf(true) }
     var usageExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
@@ -85,6 +86,7 @@ fun McpPage(
                 Spacer(modifier = Modifier.height(8.dp))
                 MiuixInfoItem("Endpoint", uiState.localEndpoint)
                 MiuixInfoItem("Tools", uiState.tools.size.toString())
+                MiuixInfoItem("Online Clients", uiState.connectedClients.toString())
                 MiuixInfoItem("Auth", "Bearer ${uiState.authToken.take(8)}...${uiState.authToken.takeLast(8)}")
             }
         )
@@ -247,6 +249,30 @@ fun McpPage(
 
         MiuixExpandableSection(
             backdrop = backdrop,
+            title = "MCP Logs",
+            subtitle = "${uiState.logs.size} 条",
+            expanded = logsExpanded,
+            onExpandedChange = { logsExpanded = it }
+        ) {
+            if (uiState.logs.isEmpty()) {
+                MiuixInfoItem("Log", "暂无日志")
+            } else {
+                uiState.logs.asReversed().forEach { log ->
+                    MiuixInfoItem("${log.time} [${log.level}]", log.message)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { mcpServerManager.clearLogs() }) {
+                    Text("清空日志")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        MiuixExpandableSection(
+            backdrop = backdrop,
             title = "接入说明",
             subtitle = "Claw / Inspector",
             expanded = usageExpanded,
@@ -257,6 +283,7 @@ fun McpPage(
             MiuixInfoItem("Step 3", "地址填写 Local Endpoint 或 LAN Endpoint")
             MiuixInfoItem("Step 4", "Authorization 填写 Bearer Token（可点“快速复制配置”）")
             MiuixInfoItem("Step 5", "连接成功后可调用 keios.get_shizuku_status / keios.get_app_version")
+            MiuixInfoItem("Tip", "若 Claw 连接成功，Overview 的 Online Clients 会大于 0，日志也会记录连接变化")
         }
     }
 }
