@@ -97,4 +97,5 @@ dependencies {
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("com.tencent:mmkv:2.4.0")
     implementation("io.modelcontextprotocol:kotlin-sdk:0.11.0")
+    implementation("io.ktor:ktor-server-cio:3.3.3")
 }

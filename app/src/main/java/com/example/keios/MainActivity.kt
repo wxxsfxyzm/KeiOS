@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.runtime.mutableStateOf
 import com.example.keios.mcp.LocalMcpService
+import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.MainScreen
 import com.example.keios.ui.utils.ShizukuApiUtils
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
@@ -24,6 +25,7 @@ class MainActivity : ComponentActivity() {
     private var shizukuStatus = mutableStateOf("Shizuku status: initializing...")
     private val shizukuApiUtils = ShizukuApiUtils()
     private lateinit var localMcpService: LocalMcpService
+    private lateinit var mcpServerManager: McpServerManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +43,7 @@ class MainActivity : ComponentActivity() {
             appVersionName = packageInfo?.versionName ?: "unknown",
             appVersionCode = packageInfo?.longVersionCode ?: -1L
         )
+        mcpServerManager = McpServerManager(localMcpService)
         val controller = ThemeController(ColorSchemeMode.System)
 
         shizukuApiUtils.attach { status ->
@@ -56,13 +59,15 @@ class MainActivity : ComponentActivity() {
                     packageInfo = packageInfo,
                     shizukuStatus = shizukuStatus.value,
                     onCheckOrRequestShizuku = { shizukuApiUtils.requestPermissionIfNeeded() },
-                    shizukuApiUtils = shizukuApiUtils
+                    shizukuApiUtils = shizukuApiUtils,
+                    mcpServerManager = mcpServerManager
                 )
             }
         }
     }
 
     override fun onDestroy() {
+        runCatching { mcpServerManager.stop() }
         shizukuApiUtils.detach()
         super.onDestroy()
     }

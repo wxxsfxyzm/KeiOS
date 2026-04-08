@@ -11,5 +11,6 @@ enum class BottomPage(
 ) {
     Home("主页", MiuixIcons.Regular.Tasks),
     System("系统", MiuixIcons.Regular.Info),
+    Mcp("MCP", MiuixIcons.Regular.Tasks),
     About("关于", MiuixIcons.Regular.Info)
 }

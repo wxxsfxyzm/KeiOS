@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.utils.ShizukuApiUtils
@@ -38,10 +39,12 @@ fun MainScreen(
     shizukuStatus: String,
     onCheckOrRequestShizuku: () -> Unit,
     shizukuApiUtils: ShizukuApiUtils,
+    mcpServerManager: McpServerManager,
 ) {
     var currentPage by remember { mutableStateOf(BottomPage.Home) }
     var systemScrollToTopSignal by remember { mutableIntStateOf(0) }
     var aboutScrollToTopSignal by remember { mutableIntStateOf(0) }
+    var mcpScrollToTopSignal by remember { mutableIntStateOf(0) }
     val manufacturer = Build.MANUFACTURER.lowercase()
     val brand = Build.BRAND.lowercase()
     val isBackdropSafe = !(manufacturer.contains("xiaomi") || brand.contains("xiaomi") || brand.contains("redmi") || brand.contains("poco"))
@@ -93,6 +96,15 @@ fun MainScreen(
                         scrollToTopSignal = aboutScrollToTopSignal
                     )
                 }
+
+                BottomPage.Mcp -> {
+                    McpPage(
+                        backdrop = backdrop,
+                        mcpServerManager = mcpServerManager,
+                        contentBottomPadding = bottomOverlayPadding,
+                        scrollToTopSignal = mcpScrollToTopSignal
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(bottomOverlayPadding))
         }
@@ -107,6 +119,9 @@ fun MainScreen(
                     }
                     if (selected == BottomPage.About) {
                         aboutScrollToTopSignal++
+                    }
+                    if (selected == BottomPage.Mcp) {
+                        mcpScrollToTopSignal++
                     }
                 } else {
                     currentPage = selected

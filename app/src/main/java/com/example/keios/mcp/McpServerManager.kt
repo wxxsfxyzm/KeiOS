@@ -1,0 +1,210 @@
+package com.example.keios.mcp
+
+import com.tencent.mmkv.MMKV
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCallPipeline
+import io.ktor.server.cio.CIO
+import io.ktor.server.engine.EmbeddedServer
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.request.path
+import io.ktor.server.response.respond
+import io.modelcontextprotocol.kotlin.sdk.server.mcpStreamableHttp
+import java.net.Inet4Address
+import java.net.NetworkInterface
+import java.security.SecureRandom
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+data class McpServerUiState(
+    val running: Boolean = false,
+    val host: String = "127.0.0.1",
+    val port: Int = 38888,
+    val endpointPath: String = "/mcp",
+    val allowExternal: Boolean = false,
+    val addresses: List<String> = emptyList(),
+    val lastError: String? = null,
+    val tools: List<String> = emptyList(),
+    val authToken: String = "",
+    val serverName: String = "KeiOS MCP"
+) {
+    val localEndpoint: String
+        get() = "http://127.0.0.1:$port$endpointPath"
+
+    val lanEndpoints: List<String>
+        get() = addresses.map { "http://$it:$port$endpointPath" }
+}
+
+class McpServerManager(
+    private val localMcpService: LocalMcpService
+) {
+    private object Prefs {
+        private const val KV_ID = "mcp_server_prefs"
+        private const val KEY_AUTH_TOKEN = "auth_token"
+        private const val KEY_SERVER_NAME = "server_name"
+        private val random = SecureRandom()
+
+        private fun kv() = MMKV.mmkvWithID(KV_ID)
+
+        fun authToken(): String {
+            val cached = kv().decodeString(KEY_AUTH_TOKEN).orEmpty()
+            if (cached.isNotBlank()) return cached
+            val generated = generateToken()
+            kv().encode(KEY_AUTH_TOKEN, generated)
+            return generated
+        }
+
+        fun serverName(): String {
+            return kv().decodeString(KEY_SERVER_NAME, "KeiOS MCP").orEmpty().ifBlank { "KeiOS MCP" }
+        }
+
+        fun saveAuthToken(token: String) {
+            kv().encode(KEY_AUTH_TOKEN, token)
+        }
+
+        fun saveServerName(name: String) {
+            kv().encode(KEY_SERVER_NAME, name)
+        }
+
+        fun regenerateToken(): String {
+            val token = generateToken()
+            saveAuthToken(token)
+            return token
+        }
+
+        private fun generateToken(): String {
+            val bytes = ByteArray(32)
+            random.nextBytes(bytes)
+            return bytes.joinToString("") { b -> "%02x".format(b) }
+        }
+    }
+
+    private var engine: EmbeddedServer<*, *>? = null
+    private val _uiState = MutableStateFlow(
+        McpServerUiState(
+            tools = localMcpService.listLocalToolNames(),
+            authToken = Prefs.authToken(),
+            serverName = Prefs.serverName()
+        )
+    )
+    val uiState: StateFlow<McpServerUiState> = _uiState.asStateFlow()
+
+    @Synchronized
+    fun start(port: Int, allowExternal: Boolean): Result<Unit> {
+        if (port !in 1..65535) {
+            val message = "端口无效: $port"
+            _uiState.value = _uiState.value.copy(lastError = message)
+            return Result.failure(IllegalArgumentException(message))
+        }
+        return runCatching {
+            val host = if (allowExternal) "0.0.0.0" else "127.0.0.1"
+            val server = localMcpService.getOrCreateServer()
+            val token = _uiState.value.authToken
+            val newEngine = embeddedServer(
+                factory = CIO,
+                host = host,
+                port = port
+            ) {
+                intercept(ApplicationCallPipeline.Plugins) {
+                    val appCall = context
+                    if (!appCall.request.path().startsWith("/mcp")) return@intercept
+                    val authHeader = appCall.request.headers["Authorization"] ?: ""
+                    if (authHeader != "Bearer $token") {
+                        appCall.respond(HttpStatusCode.Unauthorized, "Unauthorized")
+                        finish()
+                    }
+                }
+                mcpStreamableHttp(path = "/mcp") { server }
+            }
+            stopInternal()
+            newEngine.start(wait = false)
+            engine = newEngine
+            _uiState.value = _uiState.value.copy(
+                running = true,
+                host = host,
+                port = port,
+                allowExternal = allowExternal,
+                addresses = if (allowExternal) ipv4Addresses() else emptyList(),
+                lastError = null
+            )
+        }.onFailure {
+            _uiState.value = _uiState.value.copy(
+                running = false,
+                lastError = it.message ?: it.javaClass.simpleName
+            )
+        }
+    }
+
+    @Synchronized
+    fun regenerateAuthToken() {
+        val token = Prefs.regenerateToken()
+        _uiState.value = _uiState.value.copy(authToken = token)
+    }
+
+    @Synchronized
+    fun updateServerName(name: String) {
+        val fixed = name.trim().ifBlank { "KeiOS MCP" }
+        Prefs.saveServerName(fixed)
+        _uiState.value = _uiState.value.copy(serverName = fixed)
+    }
+
+    fun buildConfigJson(url: String? = null): String {
+        val state = _uiState.value
+        val endpoint = url ?: state.localEndpoint
+        val escapedName = state.serverName.replace("\"", "\\\"")
+        return """
+{
+  "mcpServers": {
+    "$escapedName": {
+      "type": "streamablehttp",
+      "url": "$endpoint",
+      "headers": {
+        "Authorization": "Bearer ${state.authToken}"
+      }
+    }
+  }
+}
+        """.trim()
+    }
+
+    @Synchronized
+    fun stop() {
+        stopInternal()
+        _uiState.value = _uiState.value.copy(
+            running = false,
+            lastError = null
+        )
+    }
+
+    @Synchronized
+    fun refreshAddresses() {
+        if (!_uiState.value.allowExternal) return
+        _uiState.value = _uiState.value.copy(addresses = ipv4Addresses())
+    }
+
+    @Synchronized
+    private fun stopInternal() {
+        val current = engine ?: return
+        runCatching { current.stop(gracePeriodMillis = 500, timeoutMillis = 2_000) }
+        engine = null
+    }
+
+    private fun ipv4Addresses(): List<String> {
+        return runCatching {
+            val result = mutableListOf<String>()
+            val interfaces = NetworkInterface.getNetworkInterfaces() ?: return@runCatching emptyList()
+            while (interfaces.hasMoreElements()) {
+                val network = interfaces.nextElement()
+                if (!network.isUp || network.isLoopback) continue
+                val addresses = network.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val addr = addresses.nextElement()
+                    if (addr is Inet4Address && !addr.isLoopbackAddress) {
+                        result += addr.hostAddress.orEmpty()
+                    }
+                }
+            }
+            result.distinct()
+        }.getOrDefault(emptyList())
+    }
+}
