@@ -2,9 +2,11 @@ package com.example.keios.ui.page.main
 
 import android.content.Intent
 import android.net.Uri
+import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,11 +25,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.GlassIconButton
@@ -35,11 +41,13 @@ import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
+import com.example.keios.ui.utils.AppIconCache
 import com.example.keios.ui.utils.GitHubTrackStore
 import com.example.keios.ui.utils.GitHubTrackedApp
 import com.example.keios.ui.utils.GitHubVersionUtils
 import com.example.keios.ui.utils.InstalledAppItem
 import com.kyant.backdrop.Backdrop
+import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -105,6 +113,9 @@ fun GitHubPage(
     suspend fun reloadApps() {
         appList = withContext(Dispatchers.IO) {
             GitHubVersionUtils.queryInstalledLaunchableApps(context)
+        }
+        withContext(Dispatchers.IO) {
+            AppIconCache.preload(context, appList.map { it.packageName })
         }
         appListLoaded = true
     }
@@ -283,13 +294,13 @@ fun GitHubPage(
         GitHubSortMode.UpdateFirst -> filteredTracked.sortedWith(
             compareByDescending<GitHubTrackedApp> { checkStates[it.id]?.hasUpdate == true }
                 .thenByDescending { checkStates[it.id]?.hasPreReleaseUpdate == true }
-                .thenBy { "${it.owner}/${it.repo}".lowercase() }
+                .thenBy { it.appLabel.lowercase() }
         )
-        GitHubSortMode.NameAsc -> filteredTracked.sortedBy { "${it.owner}/${it.repo}".lowercase() }
+        GitHubSortMode.NameAsc -> filteredTracked.sortedBy { it.appLabel.lowercase() }
         GitHubSortMode.PreReleaseFirst -> filteredTracked.sortedWith(
             compareByDescending<GitHubTrackedApp> { checkStates[it.id]?.isPreRelease == true }
                 .thenByDescending { checkStates[it.id]?.hasUpdate == true }
-                .thenBy { "${it.owner}/${it.repo}".lowercase() }
+                .thenBy { it.appLabel.lowercase() }
         )
     }
 
@@ -382,8 +393,8 @@ fun GitHubPage(
                     var expanded by remember(item.id) { mutableStateOf(false) }
                     MiuixExpandableSection(
                         backdrop = backdrop,
-                        title = "${item.owner}/${item.repo}",
-                        subtitle = item.appLabel,
+                        title = item.appLabel,
+                        subtitle = "${item.owner}/${item.repo}",
                         expanded = expanded,
                         onExpandedChange = { expanded = it },
                         headerActions = {
@@ -424,6 +435,22 @@ fun GitHubPage(
                         }
                     ) {
                         val state = checkStates[item.id] ?: VersionCheckUi()
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            AppIcon(
+                                packageName = item.packageName,
+                                size = 36.dp
+                            )
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(item.appLabel, color = MiuixTheme.colorScheme.onBackground)
+                                Text(
+                                    item.packageName,
+                                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         MiuixInfoItem(
                             "仓库地址",
                             item.repoUrl,
@@ -575,17 +602,54 @@ fun GitHubPage(
                                     selectedApp = app
                                     pickerExpanded = false
                                 }
-                                .padding(vertical = 8.dp)
+                                .padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(app.label, color = MiuixTheme.colorScheme.onBackground)
-                                Text(app.packageName, color = MiuixTheme.colorScheme.onBackgroundVariant)
-                            }
+                            AppIcon(packageName = app.packageName, size = 30.dp)
+                            Text(
+                                text = "${app.label} · ${app.packageName}",
+                                color = MiuixTheme.colorScheme.onBackground,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun AppIcon(
+    packageName: String,
+    size: Dp
+) {
+    val context = LocalContext.current
+    val bitmapState = produceState<Bitmap?>(initialValue = AppIconCache.get(packageName), packageName) {
+        value = withContext(Dispatchers.IO) { AppIconCache.getOrLoad(context, packageName) }
+    }
+    val bitmap = bitmapState.value
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = packageName,
+            modifier = Modifier
+                .width(size)
+                .height(size)
+                .clip(ContinuousCapsule)
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .width(size)
+                .height(size)
+                .clip(ContinuousCapsule),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Text("App", color = MiuixTheme.colorScheme.onBackgroundVariant)
         }
     }
 }
