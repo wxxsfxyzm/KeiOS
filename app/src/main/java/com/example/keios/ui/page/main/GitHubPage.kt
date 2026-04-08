@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,9 +28,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
@@ -40,18 +42,31 @@ import com.example.keios.ui.utils.GitHubTrackedApp
 import com.example.keios.ui.utils.GitHubVersionUtils
 import com.example.keios.ui.utils.InstalledAppItem
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.Shadow
+import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.window.WindowBottomSheet
+import top.yukonga.miuix.kmp.window.WindowListPopup
 
 private data class VersionCheckUi(
     val loading: Boolean = false,
@@ -85,7 +100,7 @@ fun GitHubPage(
     var repoUrlInput by remember { mutableStateOf("") }
     var appSearch by remember { mutableStateOf("") }
     var pickerExpanded by remember { mutableStateOf(false) }
-    var addSectionExpanded by remember { mutableStateOf(false) }
+    var showAddSheet by remember { mutableStateOf(false) }
     var selectedApp by remember { mutableStateOf<InstalledAppItem?>(null) }
     var appList by remember { mutableStateOf<List<InstalledAppItem>>(emptyList()) }
     var appListLoaded by remember { mutableStateOf(false) }
@@ -295,56 +310,54 @@ fun GitHubPage(
                 modifier = Modifier.padding(top = 6.dp)
             )
             Row {
-                Box {
-                    Button(
-                        modifier = Modifier.padding(top = 2.dp),
+                Box(modifier = Modifier.padding(top = 2.dp)) {
+                    GlassIconButton(
+                        backdrop = backdrop,
+                        icon = MiuixIcons.Regular.Sort,
+                        contentDescription = "排序",
                         onClick = { showSortPopup = !showSortPopup }
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Regular.Sort,
-                            contentDescription = "排序",
-                            tint = MiuixTheme.colorScheme.onPrimary
-                        )
-                    }
+                    )
                     if (showSortPopup) {
-                        Popup(
-                            alignment = androidx.compose.ui.Alignment.TopEnd,
+                        WindowListPopup(
+                            show = showSortPopup,
+                            alignment = PopupPositionProvider.Align.End,
                             onDismissRequest = { showSortPopup = false },
-                            properties = PopupProperties(focusable = true)
+                            enableWindowDim = false
                         ) {
-                            MiuixExpandableSection(
-                                backdrop = backdrop,
-                                title = "排序方式",
-                                subtitle = sortMode.label,
-                                expanded = true,
-                                onExpandedChange = {}
-                            ) {
-                                GitHubSortMode.entries.forEach { mode ->
-                                    Button(
-                                        onClick = {
-                                            sortMode = mode
+                            ListPopupColumn {
+                                val modes = GitHubSortMode.entries
+                                modes.forEachIndexed { index, mode ->
+                                    DropdownImpl(
+                                        text = mode.label,
+                                        optionSize = modes.size,
+                                        isSelected = sortMode == mode,
+                                        index = index,
+                                        onSelectedIndexChange = { selectedIndex ->
+                                            sortMode = modes[selectedIndex]
                                             showSortPopup = false
                                         }
-                                    ) {
-                                        Text(if (sortMode == mode) "${mode.label} ✓" else mode.label)
-                                    }
-                                    Spacer(modifier = Modifier.height(6.dp))
+                                    )
                                 }
                             }
                         }
                     }
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    modifier = Modifier.padding(top = 2.dp),
-                    onClick = { refreshAllTracked(showToast = true) }
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Regular.Refresh,
-                        contentDescription = "检查",
-                        tint = MiuixTheme.colorScheme.onPrimary
-                    )
-                }
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = MiuixIcons.Regular.Refresh,
+                    contentDescription = "检查",
+                    onClick = { refreshAllTracked(showToast = true) },
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = MiuixIcons.Regular.AddCircle,
+                    contentDescription = "新增跟踪",
+                    onClick = { showAddSheet = true },
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
         }
         Text(
@@ -370,108 +383,6 @@ fun GitHubPage(
                 .verticalScroll(scrollState)
                 .padding(bottom = contentBottomPadding)
         ) {
-            MiuixExpandableSection(
-                backdrop = backdrop,
-                title = "新增跟踪",
-                subtitle = "输入 GitHub 仓库并绑定本机 App",
-                expanded = addSectionExpanded,
-                onExpandedChange = { addSectionExpanded = it }
-            ) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    StatusPill(
-                        label = if (!appListLoaded) "应用列表读取中" else if (appList.isNotEmpty()) "应用列表可用" else "应用列表受限",
-                        color = if (appList.isNotEmpty()) MiuixTheme.colorScheme.secondary else MiuixTheme.colorScheme.error
-                    )
-                    Button(onClick = { scope.launch { reloadApps() } }) { Text("刷新列表") }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = repoUrlInput,
-                    onValueChange = { repoUrlInput = it },
-                    label = "GitHub 项目地址",
-                    useLabelAsPlaceholder = true,
-                    singleLine = true
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = appSearch,
-                    onValueChange = { appSearch = it },
-                    label = "筛选本机 App（名称或包名）",
-                    useLabelAsPlaceholder = true,
-                    singleLine = true
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(
-                        text = "已选应用: ${selectedApp?.label ?: "未选择"}",
-                        color = MiuixTheme.colorScheme.onBackgroundVariant
-                    )
-                    Button(onClick = { pickerExpanded = !pickerExpanded }) {
-                        Text(if (pickerExpanded) "收起列表" else "选择应用")
-                    }
-                }
-                if (pickerExpanded) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    val filteredApps = appList.filter { app ->
-                        appSearch.isBlank() ||
-                            app.label.contains(appSearch, ignoreCase = true) ||
-                            app.packageName.contains(appSearch, ignoreCase = true)
-                    }.take(80)
-                    if (filteredApps.isEmpty()) {
-                        MiuixInfoItem("应用列表", "没有匹配结果")
-                    } else {
-                        filteredApps.forEach { app ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        selectedApp = app
-                                        pickerExpanded = false
-                                    }
-                                    .padding(vertical = 8.dp)
-                            ) {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    Text(app.label, color = MiuixTheme.colorScheme.onBackground)
-                                    Text(app.packageName, color = MiuixTheme.colorScheme.onBackgroundVariant)
-                                }
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        val app = selectedApp
-                        val parsed = GitHubVersionUtils.parseOwnerRepo(repoUrlInput)
-                        if (app == null || parsed == null) {
-                            Toast.makeText(context, "请填写正确仓库并选择 App", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        val item = GitHubTrackedApp(
-                            repoUrl = repoUrlInput.trim(),
-                            owner = parsed.first,
-                            repo = parsed.second,
-                            packageName = app.packageName,
-                            appLabel = app.label
-                        )
-                        if (trackedItems.any { it.id == item.id }) {
-                            Toast.makeText(context, "该条目已存在", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        trackedItems.add(item)
-                        saveTracked()
-                        refreshItem(item, showToastOnError = true)
-                        repoUrlInput = ""
-                        addSectionExpanded = false
-                        Toast.makeText(context, "已新增跟踪", Toast.LENGTH_SHORT).show()
-                    }
-                ) {
-                    Text("新增并检查")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
             if (trackedItems.isEmpty()) {
                 MiuixInfoItem("跟踪列表", "暂无条目，请先新增")
             } else if (filteredTracked.isEmpty()) {
@@ -575,5 +486,161 @@ fun GitHubPage(
                 }
             }
         }
+    }
+
+    WindowBottomSheet(
+        show = showAddSheet,
+        title = "新增跟踪",
+        onDismissRequest = { showAddSheet = false },
+        endAction = {
+            Text(
+                text = "关闭",
+                color = MiuixTheme.colorScheme.primary,
+                modifier = Modifier.clickable { showAddSheet = false }
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                StatusPill(
+                    label = if (!appListLoaded) "应用列表读取中" else if (appList.isNotEmpty()) "应用列表可用" else "应用列表受限",
+                    color = if (appList.isNotEmpty()) MiuixTheme.colorScheme.secondary else MiuixTheme.colorScheme.error
+                )
+                Button(onClick = { scope.launch { reloadApps() } }) { Text("刷新列表") }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            TextField(
+                value = repoUrlInput,
+                onValueChange = { repoUrlInput = it },
+                label = "GitHub 项目地址",
+                useLabelAsPlaceholder = true,
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            TextField(
+                value = appSearch,
+                onValueChange = { appSearch = it },
+                label = "筛选本机 App（名称或包名）",
+                useLabelAsPlaceholder = true,
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    text = "已选应用: ${selectedApp?.label ?: "未选择"}",
+                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                )
+                Button(onClick = { pickerExpanded = !pickerExpanded }) {
+                    Text(if (pickerExpanded) "收起列表" else "选择应用")
+                }
+            }
+            if (pickerExpanded) {
+                Spacer(modifier = Modifier.height(8.dp))
+                val filteredApps = appList.filter { app ->
+                    appSearch.isBlank() ||
+                        app.label.contains(appSearch, ignoreCase = true) ||
+                        app.packageName.contains(appSearch, ignoreCase = true)
+                }.take(80)
+                if (filteredApps.isEmpty()) {
+                    MiuixInfoItem("应用列表", "没有匹配结果")
+                } else {
+                    filteredApps.forEach { app ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedApp = app
+                                    pickerExpanded = false
+                                }
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(app.label, color = MiuixTheme.colorScheme.onBackground)
+                                Text(app.packageName, color = MiuixTheme.colorScheme.onBackgroundVariant)
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    val app = selectedApp
+                    val parsed = GitHubVersionUtils.parseOwnerRepo(repoUrlInput)
+                    if (app == null || parsed == null) {
+                        Toast.makeText(context, "请填写正确仓库并选择 App", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    val item = GitHubTrackedApp(
+                        repoUrl = repoUrlInput.trim(),
+                        owner = parsed.first,
+                        repo = parsed.second,
+                        packageName = app.packageName,
+                        appLabel = app.label
+                    )
+                    if (trackedItems.any { it.id == item.id }) {
+                        Toast.makeText(context, "该条目已存在", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    trackedItems.add(item)
+                    saveTracked()
+                    refreshItem(item, showToastOnError = true)
+                    repoUrlInput = ""
+                    showAddSheet = false
+                    Toast.makeText(context, "已新增跟踪", Toast.LENGTH_SHORT).show()
+                }
+            ) {
+                Text("新增并检查")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun GlassIconButton(
+    backdrop: Backdrop?,
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val iconTint = MiuixTheme.colorScheme.primary
+    val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
+    Box(
+        modifier = modifier
+            .width(40.dp)
+            .height(40.dp)
+            .clip(ContinuousCapsule)
+            .clickable(onClick = onClick)
+            .then(
+                if (backdrop != null) {
+                    Modifier.drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { ContinuousCapsule },
+                        effects = {
+                            vibrancy()
+                            blur(7.dp.toPx())
+                            lens(18.dp.toPx(), 18.dp.toPx())
+                        },
+                        highlight = { Highlight.Default.copy(alpha = 0.9f) },
+                        shadow = { Shadow.Default.copy(color = Color.Black.copy(alpha = 0.12f)) },
+                        onDrawSurface = { drawRect(Color.White.copy(alpha = 0.20f)) }
+                    )
+                } else {
+                    Modifier.background(fallbackSurface.copy(alpha = 0.9f))
+                }
+            ),
+        contentAlignment = androidx.compose.ui.Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = iconTint
+        )
     }
 }
