@@ -3,6 +3,7 @@ package com.example.keios.ui.page.main.widget
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
@@ -33,7 +34,9 @@ fun MiuixExpandableSection(
     subtitle: String,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
+    headerStartAction: (@Composable () -> Unit)? = null,
     headerActions: (@Composable () -> Unit)? = null,
+    onHeaderLongClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
@@ -75,10 +78,24 @@ fun MiuixExpandableSection(
             )
             .background(overlayColor, shape = RoundedCornerShape(16.dp))
     ) {
+        val headerModifier = if (onHeaderLongClick != null) {
+            Modifier.combinedClickable(
+                onClick = { onExpandedChange(!expanded) },
+                onLongClick = onHeaderLongClick
+            )
+        } else {
+            Modifier
+        }
         BasicComponent(
             title = title,
             summary = subtitle,
-            onClick = { onExpandedChange(!expanded) },
+            modifier = headerModifier,
+            startAction = headerStartAction,
+            onClick = if (onHeaderLongClick == null) {
+                { onExpandedChange(!expanded) }
+            } else {
+                null
+            },
             endActions = {
                 Row {
                     headerActions?.invoke()

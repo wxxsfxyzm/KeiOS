@@ -65,6 +65,7 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
+import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.window.WindowListPopup
 
 private data class VersionCheckUi(
@@ -106,6 +107,7 @@ fun GitHubPage(
     var hasAutoRequestedPermission by remember { mutableStateOf(false) }
     var showSortPopup by remember { mutableStateOf(false) }
     var sortMode by remember { mutableStateOf(GitHubSortMode.UpdateFirst) }
+    var pendingDeleteItem by remember { mutableStateOf<GitHubTrackedApp?>(null) }
 
     val trackedItems = remember { mutableStateListOf<GitHubTrackedApp>() }
     val checkStates = remember { mutableStateMapOf<String, VersionCheckUi>() }
@@ -397,6 +399,10 @@ fun GitHubPage(
                         subtitle = "${item.owner}/${item.repo}",
                         expanded = expanded,
                         onExpandedChange = { expanded = it },
+                        headerStartAction = {
+                            AppIcon(packageName = item.packageName, size = 24.dp)
+                        },
+                        onHeaderLongClick = { pendingDeleteItem = item },
                         headerActions = {
                             val state = checkStates[item.id] ?: VersionCheckUi()
                             val statusText = when {
@@ -443,10 +449,14 @@ fun GitHubPage(
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(item.appLabel, color = MiuixTheme.colorScheme.onBackground)
                                 Text(
-                                    item.packageName,
-                                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                    text = item.packageName,
+                                    color = MiuixTheme.colorScheme.primary,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.clickable {
+                                        refreshItem(item, showToastOnError = true)
+                                        Toast.makeText(context, "已刷新 ${item.appLabel}", Toast.LENGTH_SHORT).show()
+                                    }
                                 )
                             }
                         }
@@ -463,7 +473,6 @@ fun GitHubPage(
                                 }
                             }
                         )
-                        MiuixInfoItem("应用包名", item.packageName)
                         if (state.localVersion.isNotBlank()) {
                             Row {
                                 Text("本地 ", color = MiuixTheme.colorScheme.onBackgroundVariant)
@@ -481,24 +490,6 @@ fun GitHubPage(
                                 Text("预发 ", color = MiuixTheme.colorScheme.onBackgroundVariant)
                                 Text(state.preReleaseInfo, color = MiuixTheme.colorScheme.error)
                             }
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            GlassTextButton(
-                                backdrop = backdrop,
-                                text = "刷新检查",
-                                onClick = { refreshItem(item, showToastOnError = true) }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            GlassTextButton(
-                                backdrop = backdrop,
-                                text = "删除",
-                                onClick = {
-                                    trackedItems.remove(item)
-                                    checkStates.remove(item.id)
-                                    saveTracked()
-                                }
-                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -618,6 +609,38 @@ fun GitHubPage(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+
+    WindowDialog(
+        show = pendingDeleteItem != null,
+        title = "删除跟踪",
+        summary = pendingDeleteItem?.let { "确定删除 ${it.appLabel} (${it.owner}/${it.repo}) 吗？" },
+        onDismissRequest = { pendingDeleteItem = null }
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            GlassTextButton(
+                backdrop = null,
+                text = "取消",
+                onClick = { pendingDeleteItem = null }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            GlassTextButton(
+                backdrop = null,
+                text = "删除",
+                onClick = {
+                    pendingDeleteItem?.let { deleting ->
+                        trackedItems.remove(deleting)
+                        checkStates.remove(deleting.id)
+                        saveTracked()
+                        Toast.makeText(context, "已删除 ${deleting.appLabel}", Toast.LENGTH_SHORT).show()
+                    }
+                    pendingDeleteItem = null
+                }
+            )
         }
     }
 }
