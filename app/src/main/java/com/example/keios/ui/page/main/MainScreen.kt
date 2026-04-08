@@ -90,6 +90,7 @@ fun MainScreen(
                         appLabel = appLabel,
                         packageInfo = packageInfo,
                         shizukuStatus = shizukuStatus,
+                        shizukuApiUtils = shizukuApiUtils,
                         onCheckShizuku = onCheckOrRequestShizuku,
                         contentBottomPadding = bottomOverlayPadding,
                         scrollToTopSignal = aboutScrollToTopSignal

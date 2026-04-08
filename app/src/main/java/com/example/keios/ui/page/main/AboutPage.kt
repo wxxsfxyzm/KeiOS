@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
+import com.example.keios.ui.utils.ShizukuApiUtils
 import com.kyant.backdrop.Backdrop
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -47,6 +48,7 @@ fun AboutPage(
     appLabel: String,
     packageInfo: PackageInfo?,
     shizukuStatus: String,
+    shizukuApiUtils: ShizukuApiUtils,
     onCheckShizuku: () -> Unit,
     contentBottomPadding: Dp = 72.dp,
     scrollToTopSignal: Int = 0
@@ -124,10 +126,26 @@ fun AboutPage(
     }
 
     val permissionRows = remember(shizukuStatus) {
-        listOf(
+        mutableListOf(
             AboutRow("Shizuku Status", shizukuStatus),
             AboutRow("Shizuku Ready", shizukuStatus.contains("granted", ignoreCase = true).toString())
         )
+    }
+
+    val shizukuDetailRows = remember(shizukuStatus) {
+        shizukuApiUtils.detailedRows()
+            .map { AboutRow(it.first, it.second) }
+    }
+
+    val permissionSectionRows = remember(permissionRows, shizukuDetailRows) {
+        val activated = permissionRows.any {
+            it.key == "Shizuku Ready" && it.value.equals("true", ignoreCase = true)
+        }
+        if (activated) {
+            permissionRows + shizukuDetailRows
+        } else {
+            permissionRows + listOf(AboutRow("Shizuku Detail", "激活并授权后显示更多信息"))
+        }
     }
 
     Column(
@@ -200,11 +218,11 @@ fun AboutPage(
         MiuixExpandableSection(
             backdrop = backdrop,
             title = "权限与服务状态",
-            subtitle = "${permissionRows.size} 条",
+            subtitle = "${permissionSectionRows.size} 条",
             expanded = permissionExpanded,
             onExpandedChange = { permissionExpanded = it }
         ) {
-            permissionRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
+            permissionSectionRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
         }
     }
 }

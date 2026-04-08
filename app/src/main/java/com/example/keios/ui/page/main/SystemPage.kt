@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.FeatureInfo
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -170,7 +171,15 @@ private object TopInfoKeys {
 
     val android = linkedSetOf(
         "graphics.opengl.es",
+        "graphics.opengl.es.raw",
+        "graphics.opengl.es.decoded",
         "graphics.vulkan.version",
+        "graphics.vulkan.version.raw",
+        "graphics.vulkan.level",
+        "graphics.gpu.driver.package",
+        "graphics.gpu.driver.version",
+        "graphics.gpu.driver.ro.gfx.driver.0",
+        "graphics.gpu.driver.ro.gfx.driver.1",
         "prop.ro.hardware.egl",
         "prop.ro.hardware.vulkan",
         "feature.bluetooth_le",
@@ -689,6 +698,39 @@ private fun decodeVulkanApiVersion(version: Int): String {
     return "$major.$minor.$patch"
 }
 
+private fun decodeOpenGlEsVersion(raw: String): String {
+    val value = raw.toIntOrNull() ?: return ""
+    if (value <= 0) return ""
+    val major = (value shr 16) and 0xffff
+    val minor = value and 0xffff
+    return "$major.$minor"
+}
+
+private fun packageVersionName(context: Context, packageName: String): String {
+    return runCatching {
+        val info = if (Build.VERSION.SDK_INT >= 33) {
+            context.packageManager.getPackageInfo(
+                packageName,
+                PackageManager.PackageInfoFlags.of(0)
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            context.packageManager.getPackageInfo(packageName, 0)
+        }
+        val versionName = info.versionName ?: ""
+        val versionCode = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else {
+            @Suppress("DEPRECATION")
+            info.versionCode.toLong()
+        }
+        buildString {
+            append(versionName.ifBlank { "unknown" })
+            append(" (")
+            append(versionCode)
+            append(")")
+        }
+    }.getOrDefault("")
+}
+
 private fun featureVersion(features: Array<FeatureInfo>?, featureName: String): Int {
     return features?.firstOrNull { it.name == featureName }?.version ?: 0
 }
@@ -702,21 +744,36 @@ private fun graphicsRows(context: Context): List<InfoRow> {
     val features = pm.systemAvailableFeatures
     val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
     val glEsVersion = activityManager?.deviceConfigurationInfo?.glEsVersion.orEmpty()
+    val glEsRaw = execRuntimeCommand("getprop ro.opengles.version").orEmpty()
+    val glEsDecoded = decodeOpenGlEsVersion(glEsRaw)
 
     val vulkanVersionEncoded = featureVersion(features, "android.hardware.vulkan.version")
     val vulkanLevel = featureVersion(features, "android.hardware.vulkan.level")
     val vulkanVersionText = decodeVulkanApiVersion(vulkanVersionEncoded)
+    val vulkanHardware = execRuntimeCommand("getprop ro.hardware.vulkan").orEmpty()
+    val eglHardware = execRuntimeCommand("getprop ro.hardware.egl").orEmpty()
+    val gfxDriver0 = execRuntimeCommand("getprop ro.gfx.driver.0").orEmpty()
+    val gfxDriver1 = execRuntimeCommand("getprop ro.gfx.driver.1").orEmpty()
+    val gpuDriverPackage = listOf(gfxDriver1, gfxDriver0).firstOrNull { it.contains('.') }.orEmpty()
+    val gpuDriverVersion = if (gpuDriverPackage.isBlank()) "" else packageVersionName(context, gpuDriverPackage)
 
     return listOf(
         InfoRow("graphics.opengl.es", glEsVersion),
+        InfoRow("graphics.opengl.es.raw", glEsRaw),
+        InfoRow("graphics.opengl.es.decoded", glEsDecoded),
         InfoRow("graphics.vulkan.version", vulkanVersionText),
+        InfoRow("graphics.vulkan.version.raw", if (vulkanVersionEncoded > 0) vulkanVersionEncoded.toString() else ""),
         InfoRow("graphics.vulkan.level", if (vulkanLevel > 0) vulkanLevel.toString() else ""),
+        InfoRow("graphics.gpu.driver.package", gpuDriverPackage),
+        InfoRow("graphics.gpu.driver.version", gpuDriverVersion),
+        InfoRow("graphics.gpu.driver.ro.gfx.driver.0", gfxDriver0),
+        InfoRow("graphics.gpu.driver.ro.gfx.driver.1", gfxDriver1),
         boolFeatureRow(pm, "android.hardware.vulkan.version", "feature.vulkan.version"),
         boolFeatureRow(pm, "android.hardware.vulkan.level", "feature.vulkan.level"),
         boolFeatureRow(pm, "android.hardware.opengles.aep", "feature.opengl.aep"),
         boolFeatureRow(pm, PackageManager.FEATURE_OPENGLES_EXTENSION_PACK, "feature.opengles.extension_pack"),
-        InfoRow("prop.ro.hardware.egl", execRuntimeCommand("getprop ro.hardware.egl").orEmpty()),
-        InfoRow("prop.ro.hardware.vulkan", execRuntimeCommand("getprop ro.hardware.vulkan").orEmpty())
+        InfoRow("prop.ro.hardware.egl", eglHardware),
+        InfoRow("prop.ro.hardware.vulkan", vulkanHardware)
     )
 }
 

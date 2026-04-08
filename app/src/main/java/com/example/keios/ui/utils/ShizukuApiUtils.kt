@@ -109,6 +109,45 @@ class ShizukuApiUtils(
         }.getOrNull()
     }
 
+    fun detailedRows(): List<Pair<String, String>> {
+        val rows = mutableListOf<Pair<String, String>>()
+        val binderAlive = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+        val granted = runCatching { Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
+        val activated = binderAlive && granted
+
+        rows += "Shizuku Binder Alive" to binderAlive.toString()
+        rows += "Shizuku Permission Granted" to granted.toString()
+        rows += "Shizuku Activated" to activated.toString()
+        rows += "Shizuku Pre-v11" to runCatching { Shizuku.isPreV11().toString() }.getOrDefault("unknown")
+        rows += "Shizuku Permission Rationale" to runCatching { Shizuku.shouldShowRequestPermissionRationale().toString() }.getOrDefault("unknown")
+
+        reflectAny("getUid")?.let { rows += "Shizuku Service UID" to it.toString() }
+        reflectAny("getVersion")?.let { rows += "Shizuku Service Version" to it.toString() }
+        reflectAny("getServerPatchVersion")?.let { rows += "Shizuku Server Patch Version" to it.toString() }
+        reflectAny("getSELinuxContext")?.let { rows += "Shizuku SELinux Context" to it.toString() }
+        reflectAny("getLatestServiceVersion")?.let { rows += "Shizuku Latest Service Version" to it.toString() }
+
+        if (activated) {
+            execCommand("id")?.let { rows += "Shizuku id" to it.lineSequence().firstOrNull().orEmpty() }
+            execCommand("whoami")?.let { rows += "Shizuku whoami" to it.lineSequence().firstOrNull().orEmpty() }
+            execCommand("uname -a")?.let { rows += "Shizuku uname" to it.lineSequence().firstOrNull().orEmpty() }
+            execCommand("getenforce")?.let { rows += "Shizuku getenforce" to it.lineSequence().firstOrNull().orEmpty() }
+            execCommand("ps -A | wc -l")?.let { rows += "Shizuku process count" to it.lineSequence().firstOrNull().orEmpty() }
+        }
+
+        return rows.filter { it.first.isNotBlank() && it.second.isNotBlank() }
+    }
+
+    private fun reflectAny(methodName: String): Any? {
+        return runCatching {
+            val method = Shizuku::class.java.methods.firstOrNull {
+                it.name == methodName && it.parameterTypes.isEmpty()
+            } ?: return null
+            method.isAccessible = true
+            method.invoke(null)
+        }.getOrNull()
+    }
+
     private fun publishStatus(message: String) {
         statusCallback?.invoke(message)
     }
