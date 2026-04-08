@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.utils.InfoFactory
+import com.example.keios.ui.utils.ShizukuApiUtils
 import com.example.keios.ui.utils.findJavaPropString
 import com.example.keios.ui.utils.findPropString
 import com.example.keios.ui.utils.getAllJavaPropString
@@ -33,7 +34,9 @@ import top.yukonga.miuix.kmp.basic.TextField
 @Composable
 fun SystemPage(
     backdrop: Backdrop?,
-    scrollToTopSignal: Int
+    scrollToTopSignal: Int,
+    shizukuStatus: String,
+    shizukuApiUtils: ShizukuApiUtils
 ) {
     var query by remember { mutableStateOf("") }
     var systemPropsExpanded by remember { mutableStateOf(false) }
@@ -78,6 +81,44 @@ fun SystemPage(
             "fileSafStatus = ${InfoFactory.fileSafStatus}"
         )
     }
+    val lowLevelDetectorLines = remember(shizukuStatus) {
+        fun prop(key: String, fallback: String = ""): String = findPropString(key, fallback)
+        fun privileged(command: String, fallback: String = ""): String {
+            return shizukuApiUtils.execCommand(command)?.lineSequence()?.firstOrNull()?.ifBlank { null }
+                ?: fallback
+        }
+        listOf(
+            "Shizuku = $shizukuStatus",
+            "ro.build.ab_update = ${prop("ro.build.ab_update")}",
+            "ro.virtual_ab.enabled = ${prop("ro.virtual_ab.enabled")}",
+            "ro.virtual_ab.retrofit = ${prop("ro.virtual_ab.retrofit")}",
+            "ro.boot.slot_suffix = ${prop("ro.boot.slot_suffix")}",
+            "ro.boot.dynamic_partitions = ${prop("ro.boot.dynamic_partitions")}",
+            "ro.boot.dynamic_partitions_retrofit = ${prop("ro.boot.dynamic_partitions_retrofit")}",
+            "ro.treble.enabled = ${prop("ro.treble.enabled")}",
+            "ro.vndk.version = ${prop("ro.vndk.version")}",
+            "ro.vndk.lite = ${prop("ro.vndk.lite")}",
+            "ro.apex.updatable = ${prop("ro.apex.updatable")}",
+            "ro.adb.secure = ${prop("ro.adb.secure")}",
+            "ro.secure = ${prop("ro.secure")}",
+            "ro.debuggable = ${prop("ro.debuggable")}",
+            "ro.oem_unlock_supported = ${prop("ro.oem_unlock_supported")}",
+            "ro.boot.flash.locked = ${prop("ro.boot.flash.locked")}",
+            "ro.boot.verifiedbootstate = ${prop("ro.boot.verifiedbootstate")}",
+            "ro.boot.veritymode = ${prop("ro.boot.veritymode")}",
+            "ro.boot.vbmeta.device_state = ${prop("ro.boot.vbmeta.device_state")}",
+            "ro.boot.vbmeta.avb_version = ${prop("ro.boot.vbmeta.avb_version")}",
+            "ro.boot.avb_version = ${prop("ro.boot.avb_version")}",
+            "ro.boot.secureboot = ${prop("ro.boot.secureboot")}",
+            "ro.product.first_api_level = ${prop("ro.product.first_api_level")}",
+            "ro.board.first_api_level = ${prop("ro.board.first_api_level")}",
+            "getenforce (Shizuku) = ${privileged("getenforce", "N/A")}",
+            "toybox --version (Shizuku) = ${privileged("toybox --version", "N/A")}",
+            "uname -a (Shizuku) = ${privileged("uname -a", "N/A")}",
+            "cat /sys/fs/selinux/policyvers (Shizuku) = ${privileged("cat /sys/fs/selinux/policyvers", "N/A")}",
+            "ls -l /dev/block/by-name/super (Shizuku) = ${privileged("ls -l /dev/block/by-name/super", "N/A")}"
+        )
+    }
     val systemProps = remember { getAllSystemProperties.toSortedMap() }
     val javaProps = remember { getAllJavaPropString.toSortedMap() }
     val q = query.trim()
@@ -86,6 +127,9 @@ fun SystemPage(
     }
     val infoFactoryText = remember(q, infoFactoryLines) {
         infoFactoryLines.filter { q.isEmpty() || it.contains(q, true) }.joinToString("\n")
+    }
+    val lowLevelDetectorText = remember(q, lowLevelDetectorLines) {
+        lowLevelDetectorLines.filter { q.isEmpty() || it.contains(q, true) }.joinToString("\n")
     }
     val filteredSystemProps = remember(q, systemProps) {
         systemProps.entries
@@ -134,6 +178,14 @@ fun SystemPage(
                 subtitle = "Migrated utils snapshot",
                 body = infoFactoryText.ifBlank { "No matched results." },
                 accent = Color(0xFF7E8CFF)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            FrostedBlock(
+                backdrop = backdrop,
+                title = "AndroidLowLevelDetector",
+                subtitle = "Merged property set + Shizuku privileged probes",
+                body = lowLevelDetectorText.ifBlank { "No matched results." },
+                accent = Color(0xFF6D7B8A)
             )
             Spacer(modifier = Modifier.height(12.dp))
             FrostedBlock(

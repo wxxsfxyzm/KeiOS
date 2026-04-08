@@ -37,7 +37,8 @@ class MainActivity : ComponentActivity() {
                     appLabel = appLabel,
                     packageInfo = packageInfo,
                     shizukuStatus = shizukuStatus.value,
-                    onCheckOrRequestShizuku = { shizukuApiUtils.requestPermissionIfNeeded() }
+                    onCheckOrRequestShizuku = { shizukuApiUtils.requestPermissionIfNeeded() },
+                    shizukuApiUtils = shizukuApiUtils
                 )
             }
         }

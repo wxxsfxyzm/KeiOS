@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
+import com.example.keios.ui.utils.ShizukuApiUtils
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
@@ -35,6 +36,7 @@ fun MainScreen(
     packageInfo: PackageInfo?,
     shizukuStatus: String,
     onCheckOrRequestShizuku: () -> Unit,
+    shizukuApiUtils: ShizukuApiUtils,
 ) {
     var currentPage by remember { mutableStateOf(BottomPage.Home) }
     var clickCount by remember { mutableIntStateOf(0) }
@@ -68,7 +70,9 @@ fun MainScreen(
                 BottomPage.System -> {
                     SystemPage(
                         backdrop = backdrop,
-                        scrollToTopSignal = systemScrollToTopSignal
+                        scrollToTopSignal = systemScrollToTopSignal,
+                        shizukuStatus = shizukuStatus,
+                        shizukuApiUtils = shizukuApiUtils
                     )
                 }
 
