@@ -4,6 +4,7 @@ import android.content.pm.PackageInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -69,6 +70,12 @@ fun MainScreen(
         WindowInsets.navigationBars.getBottom(this).toDp()
     }
     val bottomOverlayPadding = 112.dp + navigationBarBottom
+    val systemInsets = WindowInsets.safeDrawing.union(WindowInsets.navigationBars).asPaddingValues()
+    val isImmersiveHome = currentPage == BottomPage.Home && !settingsVisible
+    val contentInsets = if (isImmersiveHome) PaddingValues(0.dp) else systemInsets
+    val homeTopInset = systemInsets.calculateTopPadding()
+    val homeBottomInset = systemInsets.calculateBottomPadding()
+    val pageHorizontalPadding = if (currentPage == BottomPage.Home && !settingsVisible) 0.dp else 18.dp
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -88,10 +95,12 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(nestedScrollConnection)
-                .padding(horizontal = 18.dp)
-                .padding(WindowInsets.safeDrawing.union(WindowInsets.navigationBars).asPaddingValues())
+                .padding(horizontal = pageHorizontalPadding)
+                .padding(contentInsets)
         ) {
-            Spacer(modifier = Modifier.height(14.dp))
+            if (!isImmersiveHome) {
+                Spacer(modifier = Modifier.height(14.dp))
+            }
             when (currentPage) {
                 BottomPage.Home -> {
                     if (settingsVisible) {
@@ -105,15 +114,22 @@ fun MainScreen(
                             onBack = { settingsVisible = false }
                         )
                     } else {
-                        HomePage(
-                            backdrop = backdrop,
-                            shizukuStatus = shizukuStatus,
-                            mcpRunning = mcpUiState.running,
-                            mcpPort = mcpUiState.port,
-                            shizukuApiVersion = ShizukuApiUtils.API_VERSION,
-                            mcpConnectedClients = mcpUiState.connectedClients,
-                            onOpenSettings = { settingsVisible = true }
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                        ) {
+                            HomePage(
+                                backdrop = backdrop,
+                                shizukuStatus = shizukuStatus,
+                                mcpRunning = mcpUiState.running,
+                                mcpPort = mcpUiState.port,
+                                shizukuApiVersion = ShizukuApiUtils.API_VERSION,
+                                mcpConnectedClients = mcpUiState.connectedClients,
+                                onOpenSettings = { settingsVisible = true },
+                                contentTopPadding = homeTopInset,
+                                contentBottomPadding = homeBottomInset
+                            )
+                        }
                     }
                 }
 
@@ -159,7 +175,9 @@ fun MainScreen(
                 }
 
             }
-            Spacer(modifier = Modifier.height(bottomOverlayPadding))
+            if (currentPage != BottomPage.Home || settingsVisible) {
+                Spacer(modifier = Modifier.height(bottomOverlayPadding))
+            }
         }
 
         AnimatedVisibility(
