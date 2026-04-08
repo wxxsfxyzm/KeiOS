@@ -7,7 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,7 +35,7 @@ fun MiuixExpandableSection(
                 if (backdrop != null) {
                     Modifier.drawBackdrop(
                         backdrop = backdrop,
-                        shape = { RoundedRectangle(22.dp) },
+                        shape = { RoundedRectangle(16.dp) },
                         effects = {},
                         highlight = { Highlight.Default.copy(alpha = 0.75f) },
                         shadow = { Shadow.Default.copy(color = Color.Black.copy(alpha = 0.08f)) },
@@ -48,7 +47,7 @@ fun MiuixExpandableSection(
                     Modifier.background(Color.White.copy(alpha = 0.62f))
                 }
             )
-            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
+            .background(Color.White.copy(alpha = 0.08f), shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
     ) {
         BasicComponent(
             title = title,

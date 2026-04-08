@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.model.BottomPage
@@ -45,6 +46,11 @@ fun MainScreen(
     val brand = Build.BRAND.lowercase()
     val isBackdropSafe = !(manufacturer.contains("xiaomi") || brand.contains("xiaomi") || brand.contains("redmi") || brand.contains("poco"))
     val backdrop: Backdrop? = if (isBackdropSafe) rememberLayerBackdrop() else null
+    val density = LocalDensity.current
+    val navigationBarBottom = with(density) {
+        WindowInsets.navigationBars.getBottom(this).toDp()
+    }
+    val bottomOverlayPadding = 112.dp + navigationBarBottom
 
     Box(
         modifier = Modifier
@@ -72,7 +78,8 @@ fun MainScreen(
                         backdrop = backdrop,
                         scrollToTopSignal = systemScrollToTopSignal,
                         shizukuStatus = shizukuStatus,
-                        shizukuApiUtils = shizukuApiUtils
+                        shizukuApiUtils = shizukuApiUtils,
+                        contentBottomPadding = bottomOverlayPadding
                     )
                 }
 
@@ -82,11 +89,12 @@ fun MainScreen(
                         appLabel = appLabel,
                         packageInfo = packageInfo,
                         shizukuStatus = shizukuStatus,
-                        onCheckShizuku = onCheckOrRequestShizuku
+                        onCheckShizuku = onCheckOrRequestShizuku,
+                        contentBottomPadding = bottomOverlayPadding
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(110.dp))
+            Spacer(modifier = Modifier.height(bottomOverlayPadding))
         }
 
         FloatingBottomBar(
@@ -103,7 +111,7 @@ fun MainScreen(
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 22.dp, vertical = 18.dp)
+                .padding(horizontal = 22.dp, vertical = 12.dp + navigationBarBottom)
         )
     }
 }

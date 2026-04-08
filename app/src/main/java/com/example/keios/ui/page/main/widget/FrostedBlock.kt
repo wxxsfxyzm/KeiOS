@@ -29,12 +29,12 @@ fun FrostedBlock(
     androidx.compose.foundation.layout.Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(16.dp))
             .then(
                 if (backdrop != null) {
                     Modifier.drawBackdrop(
                         backdrop = backdrop,
-                        shape = { RoundedRectangle(22.dp) },
+                        shape = { RoundedRectangle(16.dp) },
                         effects = {},
                         highlight = { Highlight.Default.copy(alpha = 0.75f) },
                         shadow = { Shadow.Default.copy(color = Color.Black.copy(alpha = 0.08f)) },

@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
@@ -45,7 +46,8 @@ fun SystemPage(
     backdrop: Backdrop?,
     scrollToTopSignal: Int,
     shizukuStatus: String,
-    shizukuApiUtils: ShizukuApiUtils
+    shizukuApiUtils: ShizukuApiUtils,
+    contentBottomPadding: Dp = 72.dp
 ) {
     var query by remember { mutableStateOf("") }
     var keyInfoExpanded by remember { mutableStateOf(true) }
@@ -158,7 +160,7 @@ fun SystemPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(scrollState)
-                .padding(bottom = 72.dp)
+                .padding(bottom = contentBottomPadding)
         ) {
             Text(text = "System", modifier = Modifier.padding(top = 6.dp))
             Text(text = "系统参数与属性", modifier = Modifier.padding(top = 4.dp))
