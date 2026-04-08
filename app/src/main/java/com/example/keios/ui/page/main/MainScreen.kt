@@ -145,8 +145,6 @@ fun MainScreen(
                     McpPage(
                         backdrop = backdrop,
                         mcpServerManager = mcpServerManager,
-                        notificationPermissionGranted = notificationPermissionGranted,
-                        onRequestNotificationPermission = onRequestNotificationPermission,
                         contentBottomPadding = bottomOverlayPadding,
                         scrollToTopSignal = mcpScrollToTopSignal
                     )

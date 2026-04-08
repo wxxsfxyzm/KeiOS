@@ -43,6 +43,8 @@ import com.tencent.mmkv.MMKV
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -984,7 +986,6 @@ fun SystemPage(
     val shizukuReady = shizukuStatus.contains("granted", ignoreCase = true)
     val cached = remember { SystemInfoCache.read() }
     var query by remember { mutableStateOf("") }
-    var overviewExpanded by remember { mutableStateOf(SystemUiStateStore.overviewExpanded(defaultValue = true)) }
     var topInfoExpanded by remember { mutableStateOf(SystemUiStateStore.topInfoExpanded(defaultValue = true)) }
     var systemTableExpanded by remember { mutableStateOf(SystemUiStateStore.systemTableExpanded(defaultValue = false)) }
     var secureTableExpanded by remember { mutableStateOf(SystemUiStateStore.secureTableExpanded(defaultValue = false)) }
@@ -1058,9 +1059,6 @@ fun SystemPage(
 
     LaunchedEffect(topInfoExpanded) {
         withContext(Dispatchers.IO) { SystemUiStateStore.setTopInfoExpanded(topInfoExpanded) }
-    }
-    LaunchedEffect(overviewExpanded) {
-        withContext(Dispatchers.IO) { SystemUiStateStore.setOverviewExpanded(overviewExpanded) }
     }
     LaunchedEffect(systemTableExpanded) {
         withContext(Dispatchers.IO) { SystemUiStateStore.setSystemTableExpanded(systemTableExpanded) }
@@ -1185,30 +1183,40 @@ fun SystemPage(
                 .padding(bottom = contentBottomPadding)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-            MiuixExpandableSection(
-                backdrop = backdrop,
-                title = "Overview",
-                subtitle = "系统信息加载状态",
-                expanded = overviewExpanded,
-                onExpandedChange = { overviewExpanded = it }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.defaultColors(
+                    color = if (shizukuReady) primary.copy(alpha = 0.18f) else MiuixTheme.colorScheme.error.copy(alpha = 0.16f),
+                    contentColor = titleColor
+                ),
+                showIndication = true,
+                onClick = { }
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    StatusPill(
-                        label = if (shizukuReady) "Shizuku Ready" else "Shizuku Limited",
-                        color = if (shizukuReady) success else inactive
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Overview", color = titleColor)
+                        StatusPill(
+                            label = if (shizukuReady) "Shizuku Ready" else "Shizuku Limited",
+                            color = if (shizukuReady) success else inactive
+                        )
+                    }
+                    Text(
+                        text = "TopInfo ${topInfoRows.size} 条 · Fresh $loadedFreshCount / 6",
+                        color = subtitleColor
                     )
-                    StatusPill(
-                        label = "TopInfo ${topInfoRows.size}",
-                        color = primary
+                    Text(
+                        text = "缓存分区 $cachedSectionCount · 查询 ${if (query.isBlank()) "（空）" else query}",
+                        color = subtitleColor
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                MiuixInfoItem("Fresh Sections", "$loadedFreshCount / 6")
-                MiuixInfoItem("Cached Sections", cachedSectionCount.toString())
-                MiuixInfoItem("Search Query", if (query.isBlank()) "（空）" else query)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
