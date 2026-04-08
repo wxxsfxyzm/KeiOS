@@ -62,16 +62,6 @@ class McpKeepAliveService : Service() {
                 } else {
                     startForeground(McpNotificationHelper.KEEPALIVE_NOTIFICATION_ID, notification)
                 }
-                serviceScope.launch {
-                    delay(180)
-                    McpNotificationHelper.refreshForegroundAsIsland(
-                        context = this@McpKeepAliveService,
-                        running = running,
-                        port = port,
-                        path = path,
-                        clients = clients
-                    )
-                }
                 startHeartbeat()
                 return START_STICKY
             }

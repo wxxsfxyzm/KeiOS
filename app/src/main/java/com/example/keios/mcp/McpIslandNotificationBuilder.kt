@@ -27,8 +27,9 @@ object McpIslandNotificationBuilder {
             val lightIconKey = createPicture("mcp_logo_light", lightIcon)
             val darkIconKey = createPicture("mcp_logo_dark", darkIcon)
 
-            islandFirstFloat = true
-            enableFloat = true
+            // Keep Focus style in notification center only; do not request status-bar island float.
+            islandFirstFloat = false
+            enableFloat = false
             updatable = true
             ticker = shortText
             tickerPic = lightIconKey

@@ -186,10 +186,7 @@ object McpNotificationHelper {
         notificationId: Int,
         notification: android.app.Notification
     ) {
-        XiaomiIslandMagic.notify(
-            context = context,
-            notificationId = notificationId,
-            notification = notification
-        )
+        // Stable path: keep Focus-style notification payload in notification center only.
+        NotificationManagerCompat.from(context).notify(notificationId, notification)
     }
 }
