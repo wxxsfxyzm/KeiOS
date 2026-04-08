@@ -1,7 +1,6 @@
 package com.example.keios.ui.page.main
 
 import android.content.pm.PackageInfo
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,7 +39,8 @@ import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.utils.ShizukuApiUtils
 import com.example.keios.ui.utils.UiPrefs
-import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -61,10 +61,11 @@ fun MainScreen(
     var mcpScrollToTopSignal by remember { mutableIntStateOf(0) }
     var showBottomBar by remember { mutableStateOf(true) }
     var liquidBottomBarEnabled by remember { mutableStateOf(UiPrefs.isLiquidBottomBarEnabled()) }
-    val manufacturer = Build.MANUFACTURER.lowercase()
-    val brand = Build.BRAND.lowercase()
-    val isBackdropSafe = !(manufacturer.contains("xiaomi") || brand.contains("xiaomi") || brand.contains("redmi") || brand.contains("poco"))
-    val backdrop: Backdrop? = if (isBackdropSafe) rememberLayerBackdrop() else null
+    val backdropSurfaceColor = MiuixTheme.colorScheme.background
+    val backdrop: LayerBackdrop = rememberLayerBackdrop {
+        drawRect(backdropSurfaceColor)
+        drawContent()
+    }
     val mcpUiState by mcpServerManager.uiState.collectAsState()
     val density = LocalDensity.current
     val navigationBarBottom = with(density) {
@@ -90,6 +91,7 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(nestedScrollConnection)
+                .then(if (liquidBottomBarEnabled) Modifier.layerBackdrop(backdrop) else Modifier)
                 .padding(horizontal = 18.dp)
                 .padding(WindowInsets.safeDrawing.union(WindowInsets.navigationBars).asPaddingValues())
         ) {

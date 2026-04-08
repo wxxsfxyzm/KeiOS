@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -125,13 +126,19 @@ fun FloatingBottomBar(
             modifier = modifier
                 .height(76.dp)
                 .clip(ContinuousCapsule)
-                .drawBackdrop(
-                    backdrop = backdrop ?: rememberLayerBackdrop(),
-                    shape = { ContinuousCapsule },
-                    effects = {},
-                    highlight = { Highlight.Default.copy(alpha = 0.2f) },
-                    shadow = { Shadow.Default.copy(color = Color.Black.copy(alpha = 0.12f)) },
-                    onDrawSurface = { drawRect(normalSurface.copy(alpha = 0.92f)) }
+                .then(
+                    if (backdrop != null) {
+                        Modifier.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { ContinuousCapsule },
+                            effects = {},
+                            highlight = { Highlight.Default.copy(alpha = 0.2f) },
+                            shadow = { Shadow.Default.copy(color = Color.Black.copy(alpha = 0.12f)) },
+                            onDrawSurface = { drawRect(normalSurface.copy(alpha = 0.92f)) }
+                        )
+                    } else {
+                        Modifier.background(normalSurface.copy(alpha = 0.92f))
+                    }
                 )
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -163,7 +170,10 @@ fun FloatingBottomBar(
         return
     }
 
-    val usedBackdrop = backdrop ?: rememberLayerBackdrop()
+    if (backdrop == null) {
+        return
+    }
+    val usedBackdrop = backdrop
     val tabsBackdrop = rememberLayerBackdrop()
     val density = LocalDensity.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
