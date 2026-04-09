@@ -13,12 +13,17 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -33,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -42,7 +48,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.AppTopBar
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -62,6 +67,7 @@ import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -69,9 +75,12 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Close
@@ -145,7 +154,8 @@ fun GitHubPage(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val scrollState = rememberScrollState()
+    val listState = rememberLazyListState()
+    val scrollBehavior = MiuixScrollBehavior()
     val isDark = isSystemInDarkTheme()
     val surfaceColor = MiuixTheme.colorScheme.surface
     val backdrop: LayerBackdrop = rememberLayerBackdrop {
@@ -405,7 +415,7 @@ fun GitHubPage(
     }
 
     LaunchedEffect(scrollToTopSignal) {
-        if (scrollToTopSignal > 0) scrollState.animateScrollTo(0)
+        if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
     }
 
     LaunchedEffect(appListLoaded, appList) {
@@ -448,13 +458,83 @@ fun GitHubPage(
         s?.hasUpdate == false && s.isPreRelease.not()
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        AppTopBar(
-            title = "GitHub",
-            subtitle = "项目版本跟踪",
-            showSubtitle = true,
-            actions = {
-                Row {
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = "GitHub",
+                scrollBehavior = scrollBehavior,
+                color = MiuixTheme.colorScheme.surface,
+                actions = {
+                    Box {
+                        IconButton(onClick = { showSortPopup = !showSortPopup }) {
+                            Icon(
+                                imageVector = MiuixIcons.Regular.Sort,
+                                contentDescription = "排序",
+                                tint = MiuixTheme.colorScheme.onSurface
+                            )
+                        }
+                        if (showSortPopup) {
+                            WindowListPopup(
+                                show = showSortPopup,
+                                alignment = PopupPositionProvider.Align.BottomEnd,
+                                onDismissRequest = { showSortPopup = false },
+                                enableWindowDim = false
+                            ) {
+                                ListPopupColumn {
+                                    val modes = GitHubSortMode.entries
+                                    modes.forEachIndexed { index, mode ->
+                                        DropdownImpl(
+                                            text = mode.label,
+                                            optionSize = modes.size,
+                                            isSelected = sortMode == mode,
+                                            index = index,
+                                            onSelectedIndexChange = { selectedIndex ->
+                                                sortMode = modes[selectedIndex]
+                                                showSortPopup = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Box {
+                        IconButton(onClick = { showIntervalPopup = !showIntervalPopup }) {
+                            Icon(
+                                imageVector = MiuixIcons.Regular.Timer,
+                                contentDescription = "刷新间隔",
+                                tint = MiuixTheme.colorScheme.onSurface
+                            )
+                        }
+                        if (showIntervalPopup) {
+                            WindowListPopup(
+                                show = showIntervalPopup,
+                                alignment = PopupPositionProvider.Align.BottomEnd,
+                                onDismissRequest = { showIntervalPopup = false },
+                                enableWindowDim = false
+                            ) {
+                                ListPopupColumn {
+                                    val options = RefreshIntervalOption.entries
+                                    val selected = RefreshIntervalOption.fromHours(refreshIntervalHours)
+                                    options.forEachIndexed { index, option ->
+                                        DropdownImpl(
+                                            text = option.label,
+                                            optionSize = options.size,
+                                            isSelected = selected == option,
+                                            index = index,
+                                            onSelectedIndexChange = { selectedIndex ->
+                                                val picked = options[selectedIndex]
+                                                refreshIntervalHours = picked.hours
+                                                GitHubTrackStore.saveRefreshIntervalHours(picked.hours)
+                                                showIntervalPopup = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     IconButton(onClick = { refreshAllTracked(showToast = true) }) {
                         Icon(
                             imageVector = MiuixIcons.Regular.Refresh,
@@ -462,7 +542,6 @@ fun GitHubPage(
                             tint = MiuixTheme.colorScheme.onSurface
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
                     IconButton(onClick = { showAddSheet = true }) {
                         Icon(
                             imageVector = MiuixIcons.Regular.AddCircle,
@@ -471,103 +550,35 @@ fun GitHubPage(
                         )
                     }
                 }
-            }
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            Box(modifier = Modifier.padding(top = 2.dp)) {
-                IconButton(onClick = { showSortPopup = !showSortPopup }) {
-                    Icon(
-                        imageVector = MiuixIcons.Regular.Sort,
-                        contentDescription = "排序",
-                        tint = MiuixTheme.colorScheme.onSurface
-                    )
-                }
-                if (showSortPopup) {
-                    WindowListPopup(
-                        show = showSortPopup,
-                        alignment = PopupPositionProvider.Align.BottomEnd,
-                        onDismissRequest = { showSortPopup = false },
-                        enableWindowDim = false
-                    ) {
-                        ListPopupColumn {
-                            val modes = GitHubSortMode.entries
-                            modes.forEachIndexed { index, mode ->
-                                DropdownImpl(
-                                    text = mode.label,
-                                    optionSize = modes.size,
-                                    isSelected = sortMode == mode,
-                                    index = index,
-                                    onSelectedIndexChange = { selectedIndex ->
-                                        sortMode = modes[selectedIndex]
-                                        showSortPopup = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(modifier = Modifier.padding(top = 2.dp)) {
-                IconButton(onClick = { showIntervalPopup = !showIntervalPopup }) {
-                    Icon(
-                        imageVector = MiuixIcons.Regular.Timer,
-                        contentDescription = "刷新间隔",
-                        tint = MiuixTheme.colorScheme.onSurface
-                    )
-                }
-                if (showIntervalPopup) {
-                    WindowListPopup(
-                        show = showIntervalPopup,
-                        alignment = PopupPositionProvider.Align.BottomEnd,
-                        onDismissRequest = { showIntervalPopup = false },
-                        enableWindowDim = false
-                    ) {
-                        ListPopupColumn {
-                            val options = RefreshIntervalOption.entries
-                            val selected = RefreshIntervalOption.fromHours(refreshIntervalHours)
-                            options.forEachIndexed { index, option ->
-                                DropdownImpl(
-                                    text = option.label,
-                                    optionSize = options.size,
-                                    isSelected = selected == option,
-                                    index = index,
-                                    onSelectedIndexChange = { selectedIndex ->
-                                        val picked = options[selectedIndex]
-                                        refreshIntervalHours = picked.hours
-                                        GitHubTrackStore.saveRefreshIntervalHours(picked.hours)
-                                        showIntervalPopup = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextField(
-            value = trackedSearch,
-            onValueChange = { trackedSearch = it },
-            label = "搜索已跟踪项目（仓库/应用/包名）",
-            useLabelAsPlaceholder = true,
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Column(
+    ) { innerPadding ->
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(scrollState)
-                .padding(bottom = contentBottomPadding)
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            state = listState,
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                bottom = innerPadding.calculateBottomPadding() + 16.dp,
+                start = 12.dp,
+                end = 12.dp
+            )
         ) {
-            Card(
+            item { SmallTitle("项目版本跟踪") }
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+            item {
+                TextField(
+                    value = trackedSearch,
+                    onValueChange = { trackedSearch = it },
+                    label = "搜索已跟踪项目（仓库/应用/包名）",
+                    useLabelAsPlaceholder = true,
+                    singleLine = true
+                )
+            }
+            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item {
+                Card(
                 modifier = Modifier
                     .fillMaxWidth(),
                 colors = CardDefaults.defaultColors(
@@ -675,15 +686,16 @@ fun GitHubPage(
                     }
                 }
             }
+            }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            item { Spacer(modifier = Modifier.height(10.dp)) }
 
             if (trackedItems.isEmpty()) {
-                MiuixInfoItem("跟踪列表", "暂无条目，请先新增")
+                item { MiuixInfoItem("跟踪列表", "暂无条目，请先新增") }
             } else if (filteredTracked.isEmpty()) {
-                MiuixInfoItem("搜索结果", "没有匹配的跟踪项目")
+                item { MiuixInfoItem("搜索结果", "没有匹配的跟踪项目") }
             } else {
-                sortedTracked.forEach { item ->
+                items(sortedTracked, key = { it.id }) { item ->
                     var expanded by remember(item.id) { mutableStateOf(false) }
                     MiuixAccordionCard(
                         backdrop = backdrop,

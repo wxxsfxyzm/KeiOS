@@ -6,12 +6,16 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -22,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -29,19 +34,21 @@ import androidx.compose.ui.unit.dp
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.AppTopBar
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
-import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Copy
@@ -75,7 +82,8 @@ fun McpPage(
     var controlExpanded by remember { mutableStateOf(true) }
     var configExpanded by remember { mutableStateOf(false) }
     var logsExpanded by remember { mutableStateOf(false) }
-    val scrollState = rememberScrollState()
+    val listState = rememberLazyListState()
+    val scrollBehavior = MiuixScrollBehavior()
     val toggleServer: () -> Unit = {
         if (uiState.running) {
             mcpServerManager.stop()
@@ -103,16 +111,17 @@ fun McpPage(
         drawContent()
     }
     LaunchedEffect(scrollToTopSignal) {
-        if (scrollToTopSignal > 0) scrollState.animateScrollTo(0)
+        if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        AppTopBar(
-            title = "MCP",
-            subtitle = "本地 MCP 服务",
-            showSubtitle = true,
-            actions = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = "MCP",
+                scrollBehavior = scrollBehavior,
+                color = MiuixTheme.colorScheme.surface,
+                actions = {
                     IconButton(onClick = toggleServer) {
                         Icon(
                             imageVector = if (uiState.running) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
@@ -158,17 +167,26 @@ fun McpPage(
                         )
                     }
                 }
-            }
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Column(
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(scrollState)
-                .padding(bottom = contentBottomPadding)
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            state = listState,
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                bottom = innerPadding.calculateBottomPadding() + 16.dp,
+                start = 12.dp,
+                end = 12.dp
+            )
         ) {
-            Card(
+            item { SmallTitle("本地 MCP 服务") }
+            item { Spacer(modifier = Modifier.height(10.dp)) }
+
+            item {
+                Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.defaultColors(
                     color = if (uiState.running) overviewGreen else overviewRed,
@@ -208,10 +226,12 @@ fun McpPage(
                     )
                 }
             }
+            }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            item { Spacer(modifier = Modifier.height(10.dp)) }
 
-            MiuixExpandableSection(
+            item {
+                MiuixExpandableSection(
                 backdrop = backdrop,
                 title = "服务控制",
                 subtitle = "通知与连接调试",
@@ -228,10 +248,12 @@ fun McpPage(
                     }
                 )
             }
+            }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            item { Spacer(modifier = Modifier.height(10.dp)) }
 
-            MiuixExpandableSection(
+            item {
+                MiuixExpandableSection(
                 backdrop = backdrop,
                 title = "工具",
                 subtitle = "${uiState.tools.size} 个工具",
@@ -242,10 +264,12 @@ fun McpPage(
                     MiuixInfoItem(tool.name, tool.description)
                 }
             }
+            }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            item { Spacer(modifier = Modifier.height(10.dp)) }
 
-            MiuixExpandableSection(
+            item {
+                MiuixExpandableSection(
                 backdrop = backdrop,
                 title = "MCP Logs",
                 subtitle = "${uiState.logs.size} 条",
@@ -265,6 +289,7 @@ fun McpPage(
                     text = "清空日志",
                     onClick = { mcpServerManager.clearLogs() }
                 )
+            }
             }
         }
     }
