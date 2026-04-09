@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.widget.AppTopBar
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.Backdrop
@@ -30,28 +31,21 @@ fun SettingsPage(
     onBack: () -> Unit
 ) {
     val accent = MiuixTheme.colorScheme.primary
-    val titleColor = MiuixTheme.colorScheme.onBackground
-    val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text(text = "Settings", color = titleColor)
-                Text(text = "界面与样式", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
+        AppTopBar(
+            title = "Settings",
+            subtitle = "界面与样式",
+            navigationIcon = {
+                Icon(
+                    imageVector = MiuixIcons.Regular.Back,
+                    contentDescription = "返回",
+                    tint = MiuixTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable { onBack() }
+                        .padding(top = 4.dp)
+                )
             }
-            Icon(
-                imageVector = MiuixIcons.Regular.Back,
-                contentDescription = "返回",
-                tint = MiuixTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clickable { onBack() }
-                    .padding(top = 4.dp)
-            )
-        }
+        )
 
         Spacer(modifier = Modifier.height(14.dp))
         FrostedBlock(

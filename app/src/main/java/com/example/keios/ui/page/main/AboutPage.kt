@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
+import com.example.keios.ui.page.main.widget.AppTopBar
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.utils.ShizukuApiUtils
 import com.kyant.backdrop.Backdrop
@@ -77,9 +78,11 @@ fun AboutPage(
             .padding(bottom = contentBottomPadding)
     ) {
         val shizukuReady = shizukuStatus.contains("granted", ignoreCase = true)
-        Text(text = "About", color = titleColor, modifier = Modifier.padding(top = 6.dp))
-        Text(text = "权限检查与应用详情", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
-        Spacer(modifier = Modifier.height(14.dp))
+        AppTopBar(
+            title = "About",
+            subtitle = "权限检查与应用详情"
+        )
+        Spacer(modifier = Modifier.height(4.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),

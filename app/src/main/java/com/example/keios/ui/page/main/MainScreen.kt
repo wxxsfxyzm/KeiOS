@@ -66,7 +66,6 @@ fun MainScreen(
     shizukuApiUtils: ShizukuApiUtils,
     mcpServerManager: McpServerManager,
 ) {
-    var currentPage by remember { mutableStateOf(BottomPage.Home) }
     var settingsVisible by remember { mutableStateOf(false) }
     var systemScrollToTopSignal by remember { mutableIntStateOf(0) }
     var aboutScrollToTopSignal by remember { mutableIntStateOf(0) }
@@ -78,9 +77,10 @@ fun MainScreen(
     val tabs = BottomPage.entries
     val coroutineScope = rememberCoroutineScope()
     val pagerState = rememberPagerState(
-        initialPage = tabs.indexOf(currentPage).coerceAtLeast(0),
+        initialPage = tabs.indexOf(BottomPage.Home).coerceAtLeast(0),
         pageCount = { tabs.size }
     )
+    val currentPage = tabs[pagerState.currentPage.coerceIn(0, tabs.lastIndex)]
     val mcpUiState by mcpServerManager.uiState.collectAsState()
     val density = LocalDensity.current
     val navigationBarBottom = with(density) {
@@ -91,7 +91,7 @@ fun MainScreen(
     val isImmersiveHome = currentPage == BottomPage.Home && !settingsVisible
     val contentInsets = if (isImmersiveHome) PaddingValues(0.dp) else PaddingValues(
         start = systemInsets.calculateStartPadding(LayoutDirection.Ltr),
-        top = systemInsets.calculateTopPadding(),
+        top = 0.dp,
         end = systemInsets.calculateEndPadding(LayoutDirection.Ltr),
         bottom = 0.dp
     )
@@ -106,20 +106,8 @@ fun MainScreen(
             }
         }
     }
-    LaunchedEffect(currentPage, settingsVisible) {
-        if (!settingsVisible) {
-            val targetIndex = tabs.indexOf(currentPage).coerceAtLeast(0)
-            if (pagerState.currentPage != targetIndex) {
-                pagerState.animateScrollToPage(targetIndex)
-            }
-        }
-    }
     LaunchedEffect(pagerState.currentPage) {
-        val page = tabs[pagerState.currentPage]
-        if (currentPage != page) {
-            currentPage = page
-            settingsVisible = false
-        }
+        if (settingsVisible) settingsVisible = false
     }
 
     Scaffold(
@@ -148,7 +136,8 @@ fun MainScreen(
                         liquidGlassEnabled = liquidBottomBarEnabled,
                         onPageSelected = { selected ->
                             showBottomBar = true
-                            if (selected == currentPage) {
+                            val current = tabs[pagerState.currentPage.coerceIn(0, tabs.lastIndex)]
+                            if (selected == current) {
                                 if (selected == BottomPage.System) {
                                     systemScrollToTopSignal++
                                 }
@@ -163,7 +152,6 @@ fun MainScreen(
                                 }
                             } else {
                                 settingsVisible = false
-                                currentPage = selected
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(tabs.indexOf(selected).coerceAtLeast(0))
                                 }
@@ -190,7 +178,6 @@ fun MainScreen(
                         .padding(systemInsets),
                     verticalArrangement = Arrangement.Top
                 ) {
-                    Spacer(modifier = Modifier.height(14.dp))
                     SettingsPage(
                         backdrop = backdrop,
                         liquidBottomBarEnabled = liquidBottomBarEnabled,
@@ -235,7 +222,6 @@ fun MainScreen(
                                     .padding(horizontal = 18.dp)
                                     .padding(contentInsets)
                             ) {
-                                Spacer(modifier = Modifier.height(14.dp))
                                 SystemPage(
                                     backdrop = backdrop,
                                     scrollToTopSignal = systemScrollToTopSignal,
@@ -253,7 +239,6 @@ fun MainScreen(
                                     .padding(horizontal = 18.dp)
                                     .padding(contentInsets)
                             ) {
-                                Spacer(modifier = Modifier.height(14.dp))
                                 AboutPage(
                                     backdrop = backdrop,
                                     appLabel = appLabel,
@@ -275,7 +260,6 @@ fun MainScreen(
                                     .padding(horizontal = 18.dp)
                                     .padding(contentInsets)
                             ) {
-                                Spacer(modifier = Modifier.height(14.dp))
                                 McpPage(
                                     backdrop = backdrop,
                                     mcpServerManager = mcpServerManager,
@@ -292,7 +276,6 @@ fun MainScreen(
                                     .padding(horizontal = 18.dp)
                                     .padding(contentInsets)
                             ) {
-                                Spacer(modifier = Modifier.height(14.dp))
                                 GitHubPage(
                                     backdrop = backdrop,
                                     contentBottomPadding = bottomOverlayPadding,

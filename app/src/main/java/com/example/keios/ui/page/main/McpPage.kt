@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
+import com.example.keios.ui.page.main.widget.AppTopBar
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -99,54 +100,54 @@ fun McpPage(
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = "MCP", color = titleColor, modifier = Modifier.padding(top = 6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                GlassIconButton(
-                    backdrop = backdrop,
-                    icon = if (uiState.running) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
-                    contentDescription = if (uiState.running) "停止服务" else "启动服务",
-                    modifier = Modifier.padding(top = 2.dp),
-                    onClick = toggleServer
-                )
-                GlassIconButton(
-                    backdrop = backdrop,
-                    icon = MiuixIcons.Regular.Edit,
-                    contentDescription = "编辑服务参数",
-                    modifier = Modifier.padding(top = 2.dp),
-                    onClick = { showEditSheet = true }
-                )
-                GlassIconButton(
-                    backdrop = backdrop,
-                    icon = MiuixIcons.Regular.Copy,
-                    contentDescription = "复制当前配置",
-                    modifier = Modifier.padding(top = 2.dp),
-                    onClick = {
-                        val endpoint = if (allowExternal && uiState.addresses.isNotEmpty()) {
-                            "http://${uiState.addresses.first()}:${portText.toIntOrNull() ?: uiState.port}${uiState.endpointPath}"
-                        } else {
-                            "http://127.0.0.1:${portText.toIntOrNull() ?: uiState.port}${uiState.endpointPath}"
+        AppTopBar(
+            title = "MCP",
+            subtitle = "本地 MCP 服务",
+            actions = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassIconButton(
+                        backdrop = backdrop,
+                        icon = if (uiState.running) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
+                        contentDescription = if (uiState.running) "停止服务" else "启动服务",
+                        modifier = Modifier.padding(top = 2.dp),
+                        onClick = toggleServer
+                    )
+                    GlassIconButton(
+                        backdrop = backdrop,
+                        icon = MiuixIcons.Regular.Edit,
+                        contentDescription = "编辑服务参数",
+                        modifier = Modifier.padding(top = 2.dp),
+                        onClick = { showEditSheet = true }
+                    )
+                    GlassIconButton(
+                        backdrop = backdrop,
+                        icon = MiuixIcons.Regular.Copy,
+                        contentDescription = "复制当前配置",
+                        modifier = Modifier.padding(top = 2.dp),
+                        onClick = {
+                            val endpoint = if (allowExternal && uiState.addresses.isNotEmpty()) {
+                                "http://${uiState.addresses.first()}:${portText.toIntOrNull() ?: uiState.port}${uiState.endpointPath}"
+                            } else {
+                                "http://127.0.0.1:${portText.toIntOrNull() ?: uiState.port}${uiState.endpointPath}"
+                            }
+                            val json = mcpServerManager.buildConfigJson(endpoint)
+                            copyToClipboard(context, "mcp-config", json)
+                            Toast.makeText(context, "MCP 配置已复制", Toast.LENGTH_SHORT).show()
                         }
-                        val json = mcpServerManager.buildConfigJson(endpoint)
-                        copyToClipboard(context, "mcp-config", json)
-                        Toast.makeText(context, "MCP 配置已复制", Toast.LENGTH_SHORT).show()
-                    }
-                )
-                GlassIconButton(
-                    backdrop = backdrop,
-                    icon = MiuixIcons.Regular.Refresh,
-                    contentDescription = "刷新",
-                    modifier = Modifier.padding(top = 2.dp),
-                    onClick = {
-                        mcpServerManager.refreshNow()
-                        Toast.makeText(context, "已刷新", Toast.LENGTH_SHORT).show()
-                    }
-                )
+                    )
+                    GlassIconButton(
+                        backdrop = backdrop,
+                        icon = MiuixIcons.Regular.Refresh,
+                        contentDescription = "刷新",
+                        modifier = Modifier.padding(top = 2.dp),
+                        onClick = {
+                            mcpServerManager.refreshNow()
+                            Toast.makeText(context, "已刷新", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
             }
-        }
+        )
         Spacer(modifier = Modifier.height(10.dp))
 
         Column(

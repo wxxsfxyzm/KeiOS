@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.AppTopBar
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -1195,47 +1196,45 @@ fun SystemPage(
     val cachedSectionCount = sectionStates.values.count { !it.loadedFresh && it.rows.isNotEmpty() }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = "System", color = titleColor, modifier = Modifier.padding(top = 6.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = "系统参数与属性", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                GlassIconButton(
-                    backdrop = backdrop,
-                    icon = MiuixIcons.Regular.Refresh,
-                    contentDescription = "刷新系统参数",
-                    onClick = {
-                        if (refreshing) return@GlassIconButton
-                        scope.launch {
-                            refreshAllSections()
-                        }
-                    }
-                )
-                GlassIconButton(
-                    backdrop = backdrop,
-                    icon = MiuixIcons.Regular.Download,
-                    contentDescription = if (exportPreparing) "准备导出中" else "导出",
-                    onClick = {
-                        if (exportPreparing) return@GlassIconButton
-                        exportPreparing = true
-                        scope.launch {
-                            val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-                            val markdown = withContext(Dispatchers.IO) {
-                                val exportSections = buildExportSections(context, shizukuStatus, shizukuApiUtils)
-                                buildSystemMarkdown(generatedAt, shizukuStatus, exportSections)
+        AppTopBar(
+            title = "System",
+            subtitle = "系统参数与属性",
+            actions = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassIconButton(
+                        backdrop = backdrop,
+                        icon = MiuixIcons.Regular.Refresh,
+                        contentDescription = "刷新系统参数",
+                        onClick = {
+                            if (refreshing) return@GlassIconButton
+                            scope.launch {
+                                refreshAllSections()
                             }
-                            val fileName = "keios-system-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())}.md"
-                            pendingExportContent = markdown
-                            exportPreparing = false
-                            exportLauncher.launch(fileName)
                         }
-                    }
-                )
+                    )
+                    GlassIconButton(
+                        backdrop = backdrop,
+                        icon = MiuixIcons.Regular.Download,
+                        contentDescription = if (exportPreparing) "准备导出中" else "导出",
+                        onClick = {
+                            if (exportPreparing) return@GlassIconButton
+                            exportPreparing = true
+                            scope.launch {
+                                val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                                val markdown = withContext(Dispatchers.IO) {
+                                    val exportSections = buildExportSections(context, shizukuStatus, shizukuApiUtils)
+                                    buildSystemMarkdown(generatedAt, shizukuStatus, exportSections)
+                                }
+                                val fileName = "keios-system-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())}.md"
+                                pendingExportContent = markdown
+                                exportPreparing = false
+                                exportLauncher.launch(fileName)
+                            }
+                        }
+                    )
+                }
             }
-        }
+        )
         Spacer(modifier = Modifier.height(10.dp))
         TextField(
             value = queryInput,

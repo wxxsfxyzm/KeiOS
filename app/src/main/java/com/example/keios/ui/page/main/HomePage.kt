@@ -4,9 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.CircleShape
+import com.example.keios.ui.page.main.widget.AppTopBar
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -125,24 +125,18 @@ fun HomePage(
                         bottom = contentBottomPadding + 6.dp
                     )
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(text = "KeiOS", color = titleColor)
-                        Text(text = "Dashboard", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
+                AppTopBar(
+                    title = "KeiOS",
+                    actions = {
+                        GlassIconButton(
+                            backdrop = backdrop,
+                            icon = MiuixIcons.Regular.Settings,
+                            contentDescription = "设置",
+                            onClick = onOpenSettings
+                        )
                     }
-                    GlassIconButton(
-                        backdrop = backdrop,
-                        icon = MiuixIcons.Regular.Settings,
-                        contentDescription = "设置",
-                        onClick = onOpenSettings
-                    )
-                }
-                Spacer(modifier = Modifier.height(30.dp))
+                )
+                Spacer(modifier = Modifier.height(14.dp))
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
