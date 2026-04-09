@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.widget.LiquidActionBar
+import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -49,8 +52,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -985,7 +986,8 @@ fun SystemPage(
     scrollToTopSignal: Int,
     shizukuStatus: String,
     shizukuApiUtils: ShizukuApiUtils,
-    contentBottomPadding: Dp = 72.dp
+    contentBottomPadding: Dp = 72.dp,
+    onActionBarInteractingChanged: (Boolean) -> Unit = {}
 ) {
     val primary = MiuixTheme.colorScheme.primary
     val success = MiuixTheme.colorScheme.secondary
@@ -1015,6 +1017,9 @@ fun SystemPage(
     val backdrop: LayerBackdrop = rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
+    }
+    DisposableEffect(Unit) {
+        onDispose { onActionBarInteractingChanged(false) }
     }
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/markdown")
@@ -1215,41 +1220,39 @@ fun SystemPage(
                 scrollBehavior = scrollBehavior,
                 color = MiuixTheme.colorScheme.surface,
                 actions = {
-                    IconButton(
-                        onClick = {
-                            if (refreshing) return@IconButton
-                            scope.launch { refreshAllSections() }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Regular.Refresh,
-                            contentDescription = "刷新系统参数",
-                            tint = MiuixTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            if (exportPreparing) return@IconButton
-                            exportPreparing = true
-                            scope.launch {
-                                val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-                                val markdown = withContext(Dispatchers.IO) {
-                                    val exportSections = buildExportSections(context, shizukuStatus, shizukuApiUtils)
-                                    buildSystemMarkdown(generatedAt, shizukuStatus, exportSections)
+                    LiquidActionBar(
+                        backdrop = backdrop,
+                        items = listOf(
+                            LiquidActionItem(
+                                icon = MiuixIcons.Regular.Refresh,
+                                contentDescription = "刷新系统参数",
+                                onClick = {
+                                    if (refreshing) return@LiquidActionItem
+                                    scope.launch { refreshAllSections() }
                                 }
-                                val fileName = "keios-system-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())}.md"
-                                pendingExportContent = markdown
-                                exportPreparing = false
-                                exportLauncher.launch(fileName)
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Regular.Download,
-                            contentDescription = if (exportPreparing) "准备导出中" else "导出",
-                            tint = MiuixTheme.colorScheme.onSurface
-                        )
-                    }
+                            ),
+                            LiquidActionItem(
+                                icon = MiuixIcons.Regular.Download,
+                                contentDescription = if (exportPreparing) "准备导出中" else "导出",
+                                onClick = {
+                                    if (exportPreparing) return@LiquidActionItem
+                                    exportPreparing = true
+                                    scope.launch {
+                                        val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                                        val markdown = withContext(Dispatchers.IO) {
+                                            val exportSections = buildExportSections(context, shizukuStatus, shizukuApiUtils)
+                                            buildSystemMarkdown(generatedAt, shizukuStatus, exportSections)
+                                        }
+                                        val fileName = "keios-system-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())}.md"
+                                        pendingExportContent = markdown
+                                        exportPreparing = false
+                                        exportLauncher.launch(fileName)
+                                    }
+                                }
+                            )
+                        ),
+                        onInteractionChanged = onActionBarInteractingChanged
+                    )
                 }
             )
         }

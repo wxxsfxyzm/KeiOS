@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
+import com.example.keios.ui.page.main.widget.LiquidActionBar
+import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -41,8 +44,6 @@ import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -64,7 +65,8 @@ import top.yukonga.miuix.kmp.window.WindowBottomSheet
 fun McpPage(
     mcpServerManager: McpServerManager,
     contentBottomPadding: Dp = 72.dp,
-    scrollToTopSignal: Int = 0
+    scrollToTopSignal: Int = 0,
+    onActionBarInteractingChanged: (Boolean) -> Unit = {}
 ) {
     val titleColor = MiuixTheme.colorScheme.onBackground
     val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
@@ -110,6 +112,9 @@ fun McpPage(
         drawRect(surfaceColor)
         drawContent()
     }
+    DisposableEffect(Unit) {
+        onDispose { onActionBarInteractingChanged(false) }
+    }
     LaunchedEffect(scrollToTopSignal) {
         if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
     }
@@ -122,50 +127,44 @@ fun McpPage(
                 scrollBehavior = scrollBehavior,
                 color = MiuixTheme.colorScheme.surface,
                 actions = {
-                    IconButton(onClick = toggleServer) {
-                        Icon(
-                            imageVector = if (uiState.running) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
-                            contentDescription = if (uiState.running) "停止服务" else "启动服务",
-                            tint = MiuixTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(onClick = { showEditSheet = true }) {
-                        Icon(
-                            imageVector = MiuixIcons.Regular.Edit,
-                            contentDescription = "编辑服务参数",
-                            tint = MiuixTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            val endpoint = if (allowExternal && uiState.addresses.isNotEmpty()) {
-                                "http://${uiState.addresses.first()}:${portText.toIntOrNull() ?: uiState.port}${uiState.endpointPath}"
-                            } else {
-                                "http://127.0.0.1:${portText.toIntOrNull() ?: uiState.port}${uiState.endpointPath}"
-                            }
-                            val json = mcpServerManager.buildConfigJson(endpoint)
-                            copyToClipboard(context, "mcp-config", json)
-                            Toast.makeText(context, "MCP 配置已复制", Toast.LENGTH_SHORT).show()
-                        }
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Regular.Copy,
-                            contentDescription = "复制当前配置",
-                            tint = MiuixTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            mcpServerManager.refreshNow()
-                            Toast.makeText(context, "已刷新", Toast.LENGTH_SHORT).show()
-                        }
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Regular.Refresh,
-                            contentDescription = "刷新",
-                            tint = MiuixTheme.colorScheme.onSurface
-                        )
-                    }
+                    LiquidActionBar(
+                        backdrop = backdrop,
+                        items = listOf(
+                            LiquidActionItem(
+                                icon = if (uiState.running) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
+                                contentDescription = if (uiState.running) "停止服务" else "启动服务",
+                                onClick = toggleServer
+                            ),
+                            LiquidActionItem(
+                                icon = MiuixIcons.Regular.Edit,
+                                contentDescription = "编辑服务参数",
+                                onClick = { showEditSheet = true }
+                            ),
+                            LiquidActionItem(
+                                icon = MiuixIcons.Regular.Copy,
+                                contentDescription = "复制当前配置",
+                                onClick = {
+                                    val endpoint = if (allowExternal && uiState.addresses.isNotEmpty()) {
+                                        "http://${uiState.addresses.first()}:${portText.toIntOrNull() ?: uiState.port}${uiState.endpointPath}"
+                                    } else {
+                                        "http://127.0.0.1:${portText.toIntOrNull() ?: uiState.port}${uiState.endpointPath}"
+                                    }
+                                    val json = mcpServerManager.buildConfigJson(endpoint)
+                                    copyToClipboard(context, "mcp-config", json)
+                                    Toast.makeText(context, "MCP 配置已复制", Toast.LENGTH_SHORT).show()
+                                }
+                            ),
+                            LiquidActionItem(
+                                icon = MiuixIcons.Regular.Refresh,
+                                contentDescription = "刷新",
+                                onClick = {
+                                    mcpServerManager.refreshNow()
+                                    Toast.makeText(context, "已刷新", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        ),
+                        onInteractionChanged = onActionBarInteractingChanged
+                    )
                 }
             )
         }

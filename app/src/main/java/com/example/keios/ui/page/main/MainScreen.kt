@@ -323,7 +323,10 @@ private fun MainPagerLayout(
                             scrollToTopSignal = systemScrollToTopSignal,
                             shizukuStatus = shizukuStatus,
                             shizukuApiUtils = shizukuApiUtils,
-                            contentBottomPadding = bottomOverlayPadding
+                            contentBottomPadding = bottomOverlayPadding,
+                            onActionBarInteractingChanged = { interacting ->
+                                pagerScrollEnabled = !interacting
+                            }
                         )
                     }
                     BottomPage.About -> {
@@ -342,7 +345,10 @@ private fun MainPagerLayout(
                         McpPage(
                             mcpServerManager = mcpServerManager,
                             contentBottomPadding = bottomOverlayPadding,
-                            scrollToTopSignal = mcpScrollToTopSignal
+                            scrollToTopSignal = mcpScrollToTopSignal,
+                            onActionBarInteractingChanged = { interacting ->
+                                pagerScrollEnabled = !interacting
+                            }
                         )
                     }
                     BottomPage.GitHub -> {
