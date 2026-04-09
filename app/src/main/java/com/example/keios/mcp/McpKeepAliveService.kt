@@ -22,6 +22,7 @@ class McpKeepAliveService : Service() {
     private var currentRunning: Boolean = false
     private var currentPort: Int = 38888
     private var currentPath: String = "/mcp"
+    private var currentServerName: String = "KeiOS MCP"
     private var currentClients: Int = 0
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -31,6 +32,7 @@ class McpKeepAliveService : Service() {
         when (intent?.action) {
             ACTION_STOP -> {
                 stopHeartbeat()
+                McpNotificationHelper.restoreXiaomiNetworkIfNeeded(this)
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return START_NOT_STICKY
@@ -42,12 +44,15 @@ class McpKeepAliveService : Service() {
                 val running = intent?.getBooleanExtra(EXTRA_RUNNING, false) == true
                 val port = intent?.getIntExtra(EXTRA_PORT, 38888) ?: 38888
                 val path = intent?.getStringExtra(EXTRA_PATH).orEmpty().ifBlank { "/mcp" }
+                val serverName = intent?.getStringExtra(EXTRA_SERVER_NAME).orEmpty().ifBlank { "KeiOS MCP" }
                 val clients = intent?.getIntExtra(EXTRA_CLIENTS, 0) ?: 0
                 currentRunning = running
                 currentPort = port
                 currentPath = path
+                currentServerName = serverName
                 currentClients = clients
                 val notification = buildNotification(
+                    serverName = serverName,
                     running = running,
                     port = port,
                     path = path,
@@ -62,6 +67,14 @@ class McpKeepAliveService : Service() {
                 } else {
                     startForeground(McpNotificationHelper.KEEPALIVE_NOTIFICATION_ID, notification)
                 }
+                McpNotificationHelper.refreshForegroundAsIsland(
+                    context = this,
+                    serverName = serverName,
+                    running = running,
+                    port = port,
+                    path = path,
+                    clients = clients
+                )
                 startHeartbeat()
                 return START_STICKY
             }
@@ -71,11 +84,13 @@ class McpKeepAliveService : Service() {
 
     override fun onDestroy() {
         stopHeartbeat()
+        McpNotificationHelper.restoreXiaomiNetworkIfNeeded(this)
         serviceScope.cancel()
         super.onDestroy()
     }
 
     private fun buildNotification(
+        serverName: String,
         running: Boolean,
         port: Int,
         path: String,
@@ -83,6 +98,7 @@ class McpKeepAliveService : Service() {
     ): Notification {
         return McpNotificationHelper.buildForegroundNotification(
             context = this,
+            serverName = serverName,
             running = running,
             port = port,
             path = path,
@@ -93,14 +109,15 @@ class McpKeepAliveService : Service() {
     }
 
     private fun startHeartbeat() {
-        if (!currentRunning) return
         heartbeatJob?.cancel()
+        if (!currentRunning) return
         heartbeatJob = serviceScope.launch {
             while (true) {
                 delay(18_000)
                 if (!currentRunning) continue
                 McpNotificationHelper.refreshForegroundPulse(
                     context = this@McpKeepAliveService,
+                    serverName = currentServerName,
                     running = currentRunning,
                     port = currentPort,
                     path = currentPath,
@@ -122,10 +139,12 @@ class McpKeepAliveService : Service() {
         private const val EXTRA_RUNNING = "running"
         private const val EXTRA_PORT = "port"
         private const val EXTRA_PATH = "path"
+        private const val EXTRA_SERVER_NAME = "server_name"
         private const val EXTRA_CLIENTS = "clients"
 
         fun startOrUpdate(
             context: Context,
+            serverName: String,
             running: Boolean,
             port: Int,
             path: String,
@@ -137,6 +156,7 @@ class McpKeepAliveService : Service() {
                 putExtra(EXTRA_RUNNING, running)
                 putExtra(EXTRA_PORT, port)
                 putExtra(EXTRA_PATH, path)
+                putExtra(EXTRA_SERVER_NAME, serverName)
                 putExtra(EXTRA_CLIENTS, clients)
             }
             ContextCompat.startForegroundService(context, intent)

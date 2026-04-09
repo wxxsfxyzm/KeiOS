@@ -1,6 +1,7 @@
 package com.example.keios.mcp
 
 import android.content.Context
+import android.util.Log
 import com.tencent.mmkv.MMKV
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCallPipeline
@@ -59,6 +60,10 @@ class McpServerManager(
     private val appContext: Context,
     private val localMcpService: LocalMcpService
 ) {
+    companion object {
+        private const val TAG = "McpServerManager"
+    }
+
     private object Prefs {
         private const val KV_ID = "mcp_server_prefs"
         private const val KEY_AUTH_TOKEN = "auth_token"
@@ -137,7 +142,6 @@ class McpServerManager(
             ensurePortAvailable(host, port)
 
             val server = localMcpService.getOrCreateServer()
-            val token = current.authToken
             val newEngine = embeddedServer(
                 factory = CIO,
                 host = host,
@@ -145,12 +149,20 @@ class McpServerManager(
             ) {
                 intercept(ApplicationCallPipeline.Plugins) {
                     val appCall = context
-                    if (!appCall.request.path().startsWith("/mcp")) return@intercept
-                    val authHeader = appCall.request.headers["Authorization"] ?: ""
-                    if (authHeader != "Bearer $token") {
-                        appendLog("WARN", "Rejected unauthorized request to /mcp")
+                    val requestPath = appCall.request.path()
+                    if (!requestPath.startsWith("/mcp")) return@intercept
+
+                    val authHeaderRaw = appCall.request.headers["Authorization"].orEmpty()
+                    val providedToken = extractBearerToken(authHeaderRaw)
+                    val expectedToken = _uiState.value.authToken
+                    if (providedToken != expectedToken) {
+                        val mode = describeAuthHeader(authHeaderRaw)
+                        val message = "Rejected unauthorized request: path=$requestPath auth=$mode"
+                        appendLog("WARN", message)
+                        Log.w(TAG, message)
                         appCall.respond(HttpStatusCode.Unauthorized, "Unauthorized")
                         finish()
+                        return@intercept
                     }
                 }
                 mcpStreamableHttp(path = "/mcp") { server }
@@ -257,6 +269,7 @@ class McpServerManager(
         return runCatching {
             McpNotificationHelper.notifyTest(
                 context = appContext,
+                serverName = state.serverName,
                 running = state.running,
                 port = state.port,
                 path = state.endpointPath,
@@ -336,12 +349,27 @@ class McpServerManager(
         }
     }
 
+    private fun extractBearerToken(rawHeader: String): String {
+        if (rawHeader.isBlank()) return ""
+        val parts = rawHeader.trim().split(Regex("\\s+"), limit = 2)
+        if (parts.size < 2 || !parts[0].equals("Bearer", ignoreCase = true)) return ""
+        return parts[1].trim().trim('"')
+    }
+
+    private fun describeAuthHeader(rawHeader: String): String {
+        if (rawHeader.isBlank()) return "missing"
+        val token = extractBearerToken(rawHeader)
+        if (token.isBlank()) return "invalid-format"
+        return "bearer(len=${token.length})"
+    }
+
     private fun syncKeepAliveNotification(forceStart: Boolean) {
         val state = _uiState.value
         if (!state.running) return
         runCatching {
             McpKeepAliveService.startOrUpdate(
                 context = appContext,
+                serverName = state.serverName,
                 running = state.running,
                 port = state.port,
                 path = state.endpointPath,
