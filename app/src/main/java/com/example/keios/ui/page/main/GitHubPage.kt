@@ -7,7 +7,9 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,6 +58,8 @@ import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -88,6 +92,12 @@ private enum class GitHubSortMode(val label: String) {
     PreReleaseFirst("预发行优先")
 }
 
+private enum class OverviewRefreshState {
+    Idle,
+    Refreshing,
+    Completed
+}
+
 @Composable
 fun GitHubPage(
     backdrop: Backdrop?,
@@ -97,6 +107,7 @@ fun GitHubPage(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    val isDark = isSystemInDarkTheme()
 
     var trackedSearch by remember { mutableStateOf("") }
     var repoUrlInput by remember { mutableStateOf("") }
@@ -110,6 +121,7 @@ fun GitHubPage(
     var showSortPopup by remember { mutableStateOf(false) }
     var sortMode by remember { mutableStateOf(GitHubSortMode.UpdateFirst) }
     var pendingDeleteItem by remember { mutableStateOf<GitHubTrackedApp?>(null) }
+    var overviewRefreshState by remember { mutableStateOf(OverviewRefreshState.Idle) }
 
     val trackedItems = remember { mutableStateListOf<GitHubTrackedApp>() }
     val checkStates = remember { mutableStateMapOf<String, VersionCheckUi>() }
@@ -245,9 +257,11 @@ fun GitHubPage(
     fun refreshAllTracked(showToast: Boolean = true) {
         if (trackedItems.isEmpty()) {
             if (showToast) Toast.makeText(context, "暂无可检查条目", Toast.LENGTH_SHORT).show()
+            overviewRefreshState = OverviewRefreshState.Idle
             return
         }
         scope.launch {
+            overviewRefreshState = OverviewRefreshState.Refreshing
             trackedItems.forEachIndexed { index, item ->
                 checkStates[item.id] = VersionCheckUi(loading = true)
                 val state = resolveItemState(item)
@@ -257,6 +271,7 @@ fun GitHubPage(
                 }
                 if (index < trackedItems.lastIndex) delay(120)
             }
+            overviewRefreshState = OverviewRefreshState.Completed
             if (showToast) Toast.makeText(context, "检查完成", Toast.LENGTH_SHORT).show()
         }
     }
@@ -312,6 +327,13 @@ fun GitHubPage(
                 .thenByDescending { checkStates[it.id]?.hasUpdate == true }
                 .thenBy { it.appLabel.lowercase() }
         )
+    }
+    val trackedCount = trackedItems.size
+    val updatableCount = trackedItems.count { checkStates[it.id]?.hasUpdate == true }
+    val preReleaseCount = trackedItems.count { checkStates[it.id]?.isPreRelease == true }
+    val stableLatestCount = trackedItems.count {
+        val s = checkStates[it.id]
+        s?.hasUpdate == false && s.isPreRelease.not()
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -394,6 +416,69 @@ fun GitHubPage(
                 .verticalScroll(scrollState)
                 .padding(bottom = contentBottomPadding)
         ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                colors = CardDefaults.defaultColors(
+                    color = when (overviewRefreshState) {
+                        OverviewRefreshState.Refreshing -> if (isDark) {
+                            androidx.compose.ui.graphics.Color(0x553B82F6)
+                        } else {
+                            androidx.compose.ui.graphics.Color(0x333B82F6)
+                        }
+                        OverviewRefreshState.Completed -> if (isDark) {
+                            androidx.compose.ui.graphics.Color(0x5522C55E)
+                        } else {
+                            androidx.compose.ui.graphics.Color(0x3322C55E)
+                        }
+                        OverviewRefreshState.Idle -> MiuixTheme.colorScheme.surface.copy(alpha = 0.66f)
+                    },
+                    contentColor = MiuixTheme.colorScheme.onBackground
+                ),
+                showIndication = true,
+                onClick = { refreshAllTracked(showToast = true) }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .combinedClickable(
+                            onClick = { refreshAllTracked(showToast = true) },
+                            onLongClick = { showAddSheet = true }
+                        )
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Overview", color = MiuixTheme.colorScheme.onBackground)
+                        StatusPill(
+                            label = when (overviewRefreshState) {
+                                OverviewRefreshState.Refreshing -> "Refreshing"
+                                OverviewRefreshState.Completed -> "Synced"
+                                OverviewRefreshState.Idle -> "Idle"
+                            },
+                            color = when (overviewRefreshState) {
+                                OverviewRefreshState.Refreshing -> androidx.compose.ui.graphics.Color(0xFF3B82F6)
+                                OverviewRefreshState.Completed -> androidx.compose.ui.graphics.Color(0xFF22C55E)
+                                OverviewRefreshState.Idle -> MiuixTheme.colorScheme.onBackgroundVariant
+                            }
+                        )
+                    }
+                    Text(
+                        "追踪 $trackedCount 项 · 可更新 $updatableCount 项",
+                        color = MiuixTheme.colorScheme.onBackgroundVariant
+                    )
+                    Text(
+                        "最新稳定版 $stableLatestCount 项 · 预发行 $preReleaseCount 项",
+                        color = MiuixTheme.colorScheme.onBackgroundVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             if (trackedItems.isEmpty()) {
                 MiuixInfoItem("跟踪列表", "暂无条目，请先新增")
             } else if (filteredTracked.isEmpty()) {
