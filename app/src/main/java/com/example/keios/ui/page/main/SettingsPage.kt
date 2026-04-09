@@ -1,8 +1,5 @@
 package com.example.keios.ui.page.main
 
-import android.R.attr.contentDescription
-import android.R.attr.iconTint
-import android.R.attr.onClick
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,18 +15,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -112,9 +108,9 @@ fun SettingsPage(
                                     modifier = Modifier.padding(top = 4.dp)
                                 )
                             }
-                            Checkbox(
-                                state = if (liquidBottomBarEnabled) ToggleableState.On else ToggleableState.Off,
-                                onClick = { onLiquidBottomBarChanged(!liquidBottomBarEnabled) }
+                            Switch(
+                                checked = liquidBottomBarEnabled,
+                                onCheckedChange = { checked -> onLiquidBottomBarChanged(checked) }
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
