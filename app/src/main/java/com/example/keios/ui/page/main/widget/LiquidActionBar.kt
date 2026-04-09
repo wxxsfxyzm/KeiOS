@@ -90,7 +90,8 @@ fun LiquidActionBar(
     modifier: Modifier = Modifier,
     backdrop: Backdrop,
     items: List<LiquidActionItem>,
-    isBlurEnabled: Boolean = true
+    isBlurEnabled: Boolean = true,
+    onInteractionChanged: (Boolean) -> Unit = {}
 ) {
     if (items.isEmpty()) return
 
@@ -125,11 +126,7 @@ fun LiquidActionBar(
 
     var currentIndex by remember { mutableIntStateOf(0) }
     var gestureActive by remember { mutableStateOf(false) }
-
-    class DampedDragAnimationHolder {
-        var instance: DampedDragAnimation? = null
-    }
-    val holder = remember { DampedDragAnimationHolder() }
+    var gestureIndex by remember { mutableIntStateOf(0) }
 
     val dampedDragAnimation = remember(animationScope, items.size, density, isLtr) {
         DampedDragAnimation(
@@ -140,32 +137,24 @@ fun LiquidActionBar(
             initialScale = 1f,
             pressedScale = 74f / 42f,
             canDrag = { offset ->
-                val anim = holder.instance ?: return@DampedDragAnimation true
-                if (tabWidthPx == 0f) return@DampedDragAnimation false
-                val currentValue = anim.value
-                val indicatorX = currentValue * tabWidthPx
-                val padding = with(density) { 4.dp.toPx() }
-                val globalTouchX = if (isLtr) {
-                    val touchX = indicatorX + offset.x
-                    padding + touchX
-                } else {
-                    val touchX = totalWidthPx - padding - tabWidthPx - indicatorX + offset.x
-                    touchX
-                }
-                globalTouchX in 0f..totalWidthPx
+                if (totalWidthPx <= 0f) return@DampedDragAnimation false
+                offset.x in 0f..totalWidthPx
             },
             onDragStarted = { position ->
                 gestureActive = true
+                onInteractionChanged(true)
                 if (tabWidthPx > 0f) {
                     val padding = with(density) { 4.dp.toPx() }
                     val raw = ((position.x - padding) / tabWidthPx).fastCoerceIn(0f, items.lastIndex.toFloat())
+                    gestureIndex = raw.fastRoundToInt().fastCoerceIn(0, items.lastIndex)
                     updateValue(raw)
                 }
             },
             onDragStopped = {
                 if (!gestureActive) return@DampedDragAnimation
                 gestureActive = false
-                val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, items.lastIndex)
+                onInteractionChanged(false)
+                val targetIndex = gestureIndex.fastCoerceIn(0, items.lastIndex)
                 currentIndex = targetIndex
                 animateToValue(targetIndex.toFloat())
                 items.getOrNull(targetIndex)?.onClick?.invoke()
@@ -175,16 +164,16 @@ fun LiquidActionBar(
             },
             onDrag = { _, dragAmount ->
                 if (tabWidthPx > 0) {
-                    updateValue(
-                        (targetValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)
-                            .fastCoerceIn(0f, items.lastIndex.toFloat())
-                    )
+                    val raw = (targetValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)
+                        .fastCoerceIn(0f, items.lastIndex.toFloat())
+                    gestureIndex = raw.fastRoundToInt().fastCoerceIn(0, items.lastIndex)
+                    updateValue(raw)
                     animationScope.launch {
                         offsetAnimation.snapTo(offsetAnimation.value + dragAmount.x)
                     }
                 }
             }
-        ).also { holder.instance = it }
+        )
     }
 
     val interactiveHighlight = if (isBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

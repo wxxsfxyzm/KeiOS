@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -151,7 +152,8 @@ private fun formatRefreshAgo(lastRefreshMs: Long, nowMs: Long = System.currentTi
 @Composable
 fun GitHubPage(
     contentBottomPadding: Dp = 72.dp,
-    scrollToTopSignal: Int = 0
+    scrollToTopSignal: Int = 0,
+    onActionBarInteractingChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -184,6 +186,10 @@ fun GitHubPage(
 
     val trackedItems = remember { mutableStateListOf<GitHubTrackedApp>() }
     val checkStates = remember { mutableStateMapOf<String, VersionCheckUi>() }
+
+    DisposableEffect(Unit) {
+        onDispose { onActionBarInteractingChanged(false) }
+    }
 
     fun VersionCheckUi.toCacheEntry(): GitHubCheckCacheEntry = GitHubCheckCacheEntry(
         loading = false,
@@ -492,59 +498,83 @@ fun GitHubPage(
                                         contentDescription = "新增跟踪",
                                         onClick = { showAddSheet = true }
                                     )
-                                )
+                                ),
+                                onInteractionChanged = onActionBarInteractingChanged
                             )
 
-                            if (showSortPopup) {
-                                WindowListPopup(
-                                    show = showSortPopup,
-                                    alignment = PopupPositionProvider.Align.BottomEnd,
-                                    onDismissRequest = { showSortPopup = false },
-                                    enableWindowDim = false
+                            Row(
+                                modifier = Modifier
+                                    .width(156.dp)
+                                    .height(50.dp)
+                                    .padding(horizontal = 4.dp),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(37.dp)
+                                        .height(42.dp)
                                 ) {
-                                    ListPopupColumn {
-                                        val modes = GitHubSortMode.entries
-                                        modes.forEachIndexed { index, mode ->
-                                            DropdownImpl(
-                                                text = mode.label,
-                                                optionSize = modes.size,
-                                                isSelected = sortMode == mode,
-                                                index = index,
-                                                onSelectedIndexChange = { selectedIndex ->
-                                                    sortMode = modes[selectedIndex]
-                                                    showSortPopup = false
+                                    if (showSortPopup) {
+                                        WindowListPopup(
+                                            show = showSortPopup,
+                                            alignment = PopupPositionProvider.Align.BottomStart,
+                                            onDismissRequest = { showSortPopup = false },
+                                            enableWindowDim = false
+                                        ) {
+                                            ListPopupColumn {
+                                                val modes = GitHubSortMode.entries
+                                                modes.forEachIndexed { index, mode ->
+                                                    DropdownImpl(
+                                                        text = mode.label,
+                                                        optionSize = modes.size,
+                                                        isSelected = sortMode == mode,
+                                                        index = index,
+                                                        onSelectedIndexChange = { selectedIndex ->
+                                                            sortMode = modes[selectedIndex]
+                                                            showSortPopup = false
+                                                        }
+                                                    )
                                                 }
-                                            )
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            if (showIntervalPopup) {
-                                WindowListPopup(
-                                    show = showIntervalPopup,
-                                    alignment = PopupPositionProvider.Align.BottomEnd,
-                                    onDismissRequest = { showIntervalPopup = false },
-                                    enableWindowDim = false
+
+                                Box(
+                                    modifier = Modifier
+                                        .width(37.dp)
+                                        .height(42.dp)
                                 ) {
-                                    ListPopupColumn {
-                                        val options = RefreshIntervalOption.entries
-                                        val selected = RefreshIntervalOption.fromHours(refreshIntervalHours)
-                                        options.forEachIndexed { index, option ->
-                                            DropdownImpl(
-                                                text = option.label,
-                                                optionSize = options.size,
-                                                isSelected = selected == option,
-                                                index = index,
-                                                onSelectedIndexChange = { selectedIndex ->
-                                                    val picked = options[selectedIndex]
-                                                    refreshIntervalHours = picked.hours
-                                                    GitHubTrackStore.saveRefreshIntervalHours(picked.hours)
-                                                    showIntervalPopup = false
+                                    if (showIntervalPopup) {
+                                        WindowListPopup(
+                                            show = showIntervalPopup,
+                                            alignment = PopupPositionProvider.Align.BottomStart,
+                                            onDismissRequest = { showIntervalPopup = false },
+                                            enableWindowDim = false
+                                        ) {
+                                            ListPopupColumn {
+                                                val options = RefreshIntervalOption.entries
+                                                val selected = RefreshIntervalOption.fromHours(refreshIntervalHours)
+                                                options.forEachIndexed { index, option ->
+                                                    DropdownImpl(
+                                                        text = option.label,
+                                                        optionSize = options.size,
+                                                        isSelected = selected == option,
+                                                        index = index,
+                                                        onSelectedIndexChange = { selectedIndex ->
+                                                            val picked = options[selectedIndex]
+                                                            refreshIntervalHours = picked.hours
+                                                            GitHubTrackStore.saveRefreshIntervalHours(picked.hours)
+                                                            showIntervalPopup = false
+                                                        }
+                                                    )
                                                 }
-                                            )
+                                            }
                                         }
                                     }
                                 }
+                                Spacer(modifier = Modifier.width(37.dp))
+                                Spacer(modifier = Modifier.width(37.dp))
                             }
                         }
                     }

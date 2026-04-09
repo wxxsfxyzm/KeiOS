@@ -146,6 +146,7 @@ private fun MainPagerLayout(
     var aboutScrollToTopSignal by remember { mutableIntStateOf(0) }
     var mcpScrollToTopSignal by remember { mutableIntStateOf(0) }
     var githubScrollToTopSignal by remember { mutableIntStateOf(0) }
+    var pagerScrollEnabled by remember { mutableStateOf(true) }
 
     var showBottomBar by remember { mutableStateOf(true) }
     val nestedScrollConnection = remember {
@@ -263,7 +264,7 @@ private fun MainPagerLayout(
     ) { _ ->
         HorizontalPager(
             state = pagerState,
-            userScrollEnabled = true,
+            userScrollEnabled = pagerScrollEnabled,
             overscrollEffect = null,
             beyondViewportPageCount = 1,
             // CRITICAL FIX: NEVER conditionally unmount layerBackdrop.
@@ -347,7 +348,10 @@ private fun MainPagerLayout(
                     BottomPage.GitHub -> {
                         GitHubPage(
                             contentBottomPadding = bottomOverlayPadding,
-                            scrollToTopSignal = githubScrollToTopSignal
+                            scrollToTopSignal = githubScrollToTopSignal,
+                            onActionBarInteractingChanged = { interacting ->
+                                pagerScrollEnabled = !interacting
+                            }
                         )
                     }
                 }
