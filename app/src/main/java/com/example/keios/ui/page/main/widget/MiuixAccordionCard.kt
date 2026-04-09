@@ -3,9 +3,9 @@ package com.example.keios.ui.page.main.widget
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,7 +32,7 @@ import top.yukonga.miuix.kmp.icon.extended.ExpandMore
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-fun MiuixExpandableSection(
+fun MiuixAccordionCard(
     backdrop: Backdrop?,
     title: String,
     subtitle: String,
@@ -44,21 +44,13 @@ fun MiuixExpandableSection(
     content: @Composable () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
-    val sectionSurface = if (isDark) {
-        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.84f)
+    val surface = if (isDark) {
+        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.86f)
     } else {
-        Color.White.copy(alpha = 0.62f)
+        Color.White.copy(alpha = 0.70f)
     }
-    val overlayColor = if (isDark) {
-        Color.White.copy(alpha = 0.03f)
-    } else {
-        Color.White.copy(alpha = 0.08f)
-    }
-    val shadowColor = if (isDark) {
-        Color.Black.copy(alpha = 0.24f)
-    } else {
-        Color.Black.copy(alpha = 0.08f)
-    }
+    val borderColor = if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.14f)
+    val shadowColor = if (isDark) Color.Black.copy(alpha = 0.24f) else Color.Black.copy(alpha = 0.08f)
 
     Column(
         modifier = Modifier
@@ -70,41 +62,25 @@ fun MiuixExpandableSection(
                         backdrop = backdrop,
                         shape = { RoundedRectangle(16.dp) },
                         effects = {},
-                        highlight = { Highlight.Default.copy(alpha = if (isDark) 0.32f else 0.75f) },
+                        highlight = { Highlight.Default.copy(alpha = if (isDark) 0.30f else 0.72f) },
                         shadow = { Shadow.Default.copy(color = shadowColor) },
-                        onDrawSurface = {
-                            drawRect(sectionSurface)
-                        }
+                        onDrawSurface = { drawRect(surface) }
                     )
                 } else {
-                    Modifier.background(sectionSurface)
+                    Modifier.background(surface)
                 }
             )
-            .background(overlayColor, shape = RoundedCornerShape(16.dp))
-            .border(
-                width = 1.dp,
-                color = if (isDark) Color.White.copy(alpha = 0.14f) else Color.Black.copy(alpha = 0.14f),
-                shape = RoundedCornerShape(16.dp)
-            )
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
     ) {
-        val headerModifier = if (onHeaderLongClick != null) {
-            Modifier.combinedClickable(
-                onClick = { onExpandedChange(!expanded) },
-                onLongClick = onHeaderLongClick
-            )
-        } else {
-            Modifier
-        }
+        val headerModifier = Modifier.combinedClickable(
+            onClick = { onExpandedChange(!expanded) },
+            onLongClick = { onHeaderLongClick?.invoke() }
+        )
         BasicComponent(
             title = title,
             summary = subtitle,
             modifier = headerModifier,
             startAction = headerStartAction,
-            onClick = if (onHeaderLongClick == null) {
-                { onExpandedChange(!expanded) }
-            } else {
-                null
-            },
             endActions = {
                 Row {
                     headerActions?.invoke()
@@ -125,10 +101,11 @@ fun MiuixExpandableSection(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
             ) {
                 content()
             }
         }
     }
 }
+
