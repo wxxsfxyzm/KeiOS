@@ -8,10 +8,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
@@ -39,7 +42,9 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
@@ -50,14 +55,16 @@ import com.example.keios.ui.navigation.KeiosRoute
 import com.example.keios.ui.navigation.Navigator
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
+import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.utils.ShizukuApiUtils
 import com.example.keios.ui.utils.UiPrefs
-import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -130,8 +137,8 @@ private fun MainPagerLayout(
     shizukuApiUtils: ShizukuApiUtils,
     mcpServerManager: McpServerManager
 ) {
-    val pages = remember { BottomPage.entries.toTypedArray() }
-    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val tabs = remember { BottomPage.entries.toTypedArray() }
+    val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
     val mcpUiState by mcpServerManager.uiState.collectAsState()
 
@@ -174,6 +181,24 @@ private fun MainPagerLayout(
     val homeTopInset = systemInsets.calculateTopPadding()
     val homeBottomInset = systemInsets.calculateBottomPadding()
 
+    val handlePageSelected: (Int) -> Unit = { index ->
+        val selected = tabs[index]
+        showBottomBar = true
+        if (index == pagerState.currentPage) {
+            when (selected) {
+                BottomPage.System -> systemScrollToTopSignal++
+                BottomPage.About -> aboutScrollToTopSignal++
+                BottomPage.Mcp -> mcpScrollToTopSignal++
+                BottomPage.GitHub -> githubScrollToTopSignal++
+                else -> {}
+            }
+        } else {
+            coroutineScope.launch {
+                pagerState.animateScrollToPage(index)
+            }
+        }
+    }
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -194,32 +219,44 @@ private fun MainPagerLayout(
                     modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
                     FloatingBottomBar(
+                        modifier = Modifier
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {},
+                            )
+                            .padding(
+                                horizontal = 12.dp,
+                                vertical = 12.dp + navigationBarBottom
+                            ),
+                        selectedIndex = { pagerState.currentPage },
+                        onSelected = handlePageSelected,
                         backdrop = backdrop,
-                        currentPage = pages[pagerState.currentPage],
-                        // Rely completely on user preference. Do not force disable during transitions!
-                        liquidGlassEnabled = liquidBottomBarEnabled,
-                        onPageSelected = { selected ->
-                            showBottomBar = true
-                            val targetIndex = pages.indexOf(selected)
-                            if (targetIndex == pagerState.currentPage) {
-                                when (selected) {
-                                    BottomPage.System -> systemScrollToTopSignal++
-                                    BottomPage.About -> aboutScrollToTopSignal++
-                                    BottomPage.Mcp -> mcpScrollToTopSignal++
-                                    BottomPage.GitHub -> githubScrollToTopSignal++
-                                    else -> {}
-                                }
-                            } else {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(targetIndex)
-                                }
+                        tabsCount = tabs.size,
+                        isBlurEnabled = liquidBottomBarEnabled
+                    ) {
+                        tabs.forEachIndexed { index, page ->
+                            FloatingBottomBarItem(
+                                onClick = { handlePageSelected(index) },
+                                modifier = Modifier.defaultMinSize(minWidth = 76.dp)
+                            ) {
+                                Icon(
+                                    imageVector = page.icon,
+                                    contentDescription = page.label,
+                                    tint = MiuixTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = page.label,
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp,
+                                    color = MiuixTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Visible
+                                )
                             }
-                        },
-                        modifier = Modifier.padding(
-                            horizontal = 12.dp,
-                            vertical = 12.dp + navigationBarBottom
-                        )
-                    )
+                        }
+                    }
                 }
             }
         }
@@ -237,7 +274,9 @@ private fun MainPagerLayout(
                 .layerBackdrop(backdrop)
         ) { pageIndex ->
 
-            val isHome = pages[pageIndex] == BottomPage.Home
+            val currentPageType = tabs[pageIndex]
+            val isHome = currentPageType == BottomPage.Home
+
             val pageHorizontalPadding = if (isHome) 0.dp else 18.dp
             val contentInsets = if (isHome) PaddingValues(0.dp) else systemInsets
             val topSpacerPadding = if (!isHome) 14.dp else 0.dp
@@ -249,7 +288,7 @@ private fun MainPagerLayout(
                     .padding(contentInsets)
                     .padding(top = topSpacerPadding)
             ) {
-                when (pages[pageIndex]) {
+                when (currentPageType) {
                     BottomPage.Home -> {
                         HomePage(
                             shizukuStatus = shizukuStatus,
