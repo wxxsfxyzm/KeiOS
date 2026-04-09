@@ -1253,7 +1253,6 @@ fun SystemPage(
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = contentBottomPadding)
             ,
             state = listState
         ) {
