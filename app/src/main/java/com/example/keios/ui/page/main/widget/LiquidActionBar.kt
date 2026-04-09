@@ -4,8 +4,6 @@ import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -143,12 +141,15 @@ fun LiquidActionBar(
             onDragStarted = { position ->
                 gestureActive = true
                 onInteractionChanged(true)
-                if (tabWidthPx > 0f) {
-                    val padding = with(density) { 4.dp.toPx() }
-                    val raw = ((position.x - padding) / tabWidthPx).fastCoerceIn(0f, items.lastIndex.toFloat())
-                    gestureIndex = raw.fastRoundToInt().fastCoerceIn(0, items.lastIndex)
-                    updateValue(raw)
+                if (tabWidthPx <= 0f) {
+                    gestureActive = false
+                    onInteractionChanged(false)
+                    return@DampedDragAnimation
                 }
+                val padding = with(density) { 4.dp.toPx() }
+                val raw = ((position.x - padding) / tabWidthPx).fastCoerceIn(0f, items.lastIndex.toFloat())
+                gestureIndex = raw.fastRoundToInt().fastCoerceIn(0, items.lastIndex)
+                updateValue(raw)
             },
             onDragStopped = {
                 if (!gestureActive) return@DampedDragAnimation
@@ -207,11 +208,6 @@ fun LiquidActionBar(
                     tabWidthPx = contentWidthPx / items.size
                 }
                 .graphicsLayer { translationX = panelOffset }
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {}
-                )
                 .drawBackdrop(
                     backdrop = backdrop,
                     shape = { ContinuousCapsule },
