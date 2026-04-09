@@ -6,6 +6,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,22 +15,27 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.CircleShape
-import com.example.keios.ui.page.main.widget.AppTopBar
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.utils.rememberCardBlurColors
 import com.kyant.shapes.RoundedRectangle
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.blur.BlurDefaults
 import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -59,6 +65,8 @@ fun HomePage(
     val isDark = isSystemInDarkTheme()
     val foregroundBackdrop = rememberLayerBackdrop()
     val blurEnabled = isRenderEffectSupported()
+    val listState = rememberLazyListState()
+    val scrollBehavior = MiuixScrollBehavior()
     val cardBlurColors = rememberCardBlurColors()
     val shizukuState = when {
         shizukuGranted -> "已授权"
@@ -68,63 +76,55 @@ fun HomePage(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .layerBackdrop(foregroundBackdrop)
-                    .background(
-                        brush = if (isDark) {
-                            Brush.radialGradient(
-                                listOf(
-                                    Color(0xFF5C1D5E),
-                                    Color(0xFF2A2A7A),
-                                    Color(0xFF191C24)
-                                )
+                .layerBackdrop(foregroundBackdrop)
+                .background(
+                    brush = if (isDark) {
+                        Brush.radialGradient(
+                            listOf(
+                                Color(0xFF5C1D5E),
+                                Color(0xFF2A2A7A),
+                                Color(0xFF191C24)
                             )
-                        } else {
-                            Brush.radialGradient(
-                                listOf(
-                                    Color(0xFFFFE3F1),
-                                    Color(0xFFE6E8FF),
-                                    Color(0xFFF4F7FF)
-                                )
+                        )
+                    } else {
+                        Brush.radialGradient(
+                            listOf(
+                                Color(0xFFFFE3F1),
+                                Color(0xFFE6E8FF),
+                                Color(0xFFF4F7FF)
                             )
-                        }
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = 20.dp, top = 44.dp)
-                    .size(140.dp)
-                    .background(
-                        if (isDark) Color(0x55D748A3) else Color(0x66FF8CC7),
-                        shape = CircleShape
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 52.dp)
-                    .size(160.dp)
-                    .background(
-                        if (isDark) Color(0x44FF8C3A) else Color(0x66FFC18B),
-                        shape = CircleShape
-                    )
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = 2.dp,
-                        end = 2.dp,
-                        top = contentTopPadding + 6.dp,
-                        bottom = contentBottomPadding + 6.dp
-                    )
-            ) {
-                AppTopBar(
+                        )
+                    }
+                )
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 20.dp, top = 44.dp)
+                .size(140.dp)
+                .background(
+                    if (isDark) Color(0x55D748A3) else Color(0x66FF8CC7),
+                    shape = CircleShape
+                )
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 52.dp)
+                .size(160.dp)
+                .background(
+                    if (isDark) Color(0x44FF8C3A) else Color(0x66FFC18B),
+                    shape = CircleShape
+                )
+        )
+
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                TopAppBar(
                     title = "KeiOS",
+                    scrollBehavior = scrollBehavior,
+                    color = Color.Transparent,
                     actions = {
                         IconButton(onClick = onOpenSettings) {
                             Icon(
@@ -135,8 +135,22 @@ fun HomePage(
                         }
                     }
                 )
-                Spacer(modifier = Modifier.height(14.dp))
-                Column(
+            }
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                state = listState,
+                contentPadding = PaddingValues(
+                    top = innerPadding.calculateTopPadding() + 8.dp,
+                    bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 8.dp,
+                    start = 12.dp,
+                    end = 12.dp
+                )
+            ) {
+                item {
+                    Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -162,11 +176,12 @@ fun HomePage(
                         modifier = Modifier.padding(top = 6.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(18.dp))
-                Column(
+                }
+                item { Spacer(modifier = Modifier.height(18.dp)) }
+                item {
+                    Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 6.dp)
                         .textureBlur(
                             backdrop = foregroundBackdrop,
                             shape = RoundedRectangle(18.dp),
@@ -220,7 +235,8 @@ fun HomePage(
                     )
                     MiuixInfoItem("Shizuku 授权", "$shizukuState · API $shizukuApiVersion")
                 }
-                Spacer(modifier = Modifier.weight(1f))
+                }
+                item { Spacer(modifier = Modifier.height(24.dp)) }
             }
         }
     }
