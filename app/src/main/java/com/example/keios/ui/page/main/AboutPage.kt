@@ -117,6 +117,10 @@ fun AboutPage(
                     }
                 )
                 MiuixInfoItem(
+                    "Version",
+                    "${packageInfo?.versionName ?: "unknown"} (${packageInfo?.longVersionCode ?: -1})"
+                )
+                MiuixInfoItem(
                     "Runtime",
                     buildString {
                         append("API ")
