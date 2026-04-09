@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
+import com.example.keios.ui.page.main.widget.LiquidActionBar
+import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -74,7 +76,6 @@ import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
@@ -468,13 +469,32 @@ fun GitHubPage(
                     color = MiuixTheme.colorScheme.surface,
                     actions = {
                         Box {
-                            IconButton(onClick = { showSortPopup = !showSortPopup }) {
-                                Icon(
-                                    imageVector = MiuixIcons.Regular.Sort,
-                                    contentDescription = "排序",
-                                    tint = MiuixTheme.colorScheme.onSurface
+                            LiquidActionBar(
+                                backdrop = backdrop,
+                                items = listOf(
+                                    LiquidActionItem(
+                                        icon = MiuixIcons.Regular.Sort,
+                                        contentDescription = "排序",
+                                        onClick = { showSortPopup = !showSortPopup }
+                                    ),
+                                    LiquidActionItem(
+                                        icon = MiuixIcons.Regular.Timer,
+                                        contentDescription = "刷新间隔",
+                                        onClick = { showIntervalPopup = !showIntervalPopup }
+                                    ),
+                                    LiquidActionItem(
+                                        icon = MiuixIcons.Regular.Refresh,
+                                        contentDescription = "检查",
+                                        onClick = { refreshAllTracked(showToast = true) }
+                                    ),
+                                    LiquidActionItem(
+                                        icon = MiuixIcons.Regular.AddCircle,
+                                        contentDescription = "新增跟踪",
+                                        onClick = { showAddSheet = true }
+                                    )
                                 )
-                            }
+                            )
+
                             if (showSortPopup) {
                                 WindowListPopup(
                                     show = showSortPopup,
@@ -498,15 +518,6 @@ fun GitHubPage(
                                         }
                                     }
                                 }
-                            }
-                        }
-                        Box {
-                            IconButton(onClick = { showIntervalPopup = !showIntervalPopup }) {
-                                Icon(
-                                    imageVector = MiuixIcons.Regular.Timer,
-                                    contentDescription = "刷新间隔",
-                                    tint = MiuixTheme.colorScheme.onSurface
-                                )
                             }
                             if (showIntervalPopup) {
                                 WindowListPopup(
@@ -535,20 +546,6 @@ fun GitHubPage(
                                     }
                                 }
                             }
-                        }
-                        IconButton(onClick = { refreshAllTracked(showToast = true) }) {
-                            Icon(
-                                imageVector = MiuixIcons.Regular.Refresh,
-                                contentDescription = "检查",
-                                tint = MiuixTheme.colorScheme.onSurface
-                            )
-                        }
-                        IconButton(onClick = { showAddSheet = true }) {
-                            Icon(
-                                imageVector = MiuixIcons.Regular.AddCircle,
-                                contentDescription = "新增跟踪",
-                                tint = MiuixTheme.colorScheme.onSurface
-                            )
                         }
                     }
                 )
