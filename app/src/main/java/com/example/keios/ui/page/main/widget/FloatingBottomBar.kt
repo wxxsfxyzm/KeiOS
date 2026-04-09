@@ -1,23 +1,23 @@
+// SPDX-License-Identifier: GPL-3.0-only
 package com.example.keios.ui.page.main.widget
 
 import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -46,13 +46,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import com.example.keios.ui.animation.DampedDragAnimation
 import com.example.keios.ui.animation.InteractiveHighlight
-import com.example.keios.ui.page.main.model.BottomPage
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
@@ -68,16 +66,14 @@ import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.abs
 import kotlin.math.sign
 
-private val LocalFloatingBottomBarTabScale = staticCompositionLocalOf { { 1f } }
+val LocalFloatingBottomBarTabScale = staticCompositionLocalOf { { 1f } }
 
 @Composable
-private fun RowScope.FloatingBottomBarItem(
+fun RowScope.FloatingBottomBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
@@ -95,11 +91,10 @@ private fun RowScope.FloatingBottomBarItem(
             .fillMaxHeight()
             .weight(1f)
             .graphicsLayer {
-                val value = scale()
-                scaleX = value
-                scaleY = value
-            }
-            .padding(vertical = 4.dp),
+                val scaleValue = scale()
+                scaleX = scaleValue
+                scaleY = scaleValue
+            },
         verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
         content = content
@@ -108,79 +103,26 @@ private fun RowScope.FloatingBottomBarItem(
 
 @Composable
 fun FloatingBottomBar(
-    backdrop: Backdrop?,
-    currentPage: BottomPage,
-    liquidGlassEnabled: Boolean,
-    onPageSelected: (BottomPage) -> Unit,
     modifier: Modifier = Modifier,
+    selectedIndex: () -> Int,
+    onSelected: (index: Int) -> Unit,
+    backdrop: Backdrop,
+    tabsCount: Int,
+    isBlurEnabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit
 ) {
-    val tabs = BottomPage.entries
-    val selectedIndex = tabs.indexOf(currentPage).coerceAtLeast(0)
-
-    // Normal Style Fallback
-    if (!liquidGlassEnabled) {
-        val normalSelectedTint = MiuixTheme.colorScheme.primary
-        val normalUnselectedTint = MiuixTheme.colorScheme.onBackgroundVariant
-        val normalSurface = MiuixTheme.colorScheme.surfaceContainer
-        Row(
-            modifier = modifier
-                .height(76.dp)
-                .clip(ContinuousCapsule)
-                .then(
-                    if (backdrop != null) {
-                        Modifier.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { ContinuousCapsule },
-                            effects = {},
-                            highlight = { Highlight.Default.copy(alpha = 0.2f) },
-                            shadow = { Shadow.Default.copy(color = Color.Black.copy(alpha = 0.12f)) },
-                            onDrawSurface = { drawRect(normalSurface.copy(alpha = 0.92f)) }
-                        )
-                    } else {
-                        Modifier.background(normalSurface.copy(alpha = 0.92f))
-                    }
-                )
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            tabs.forEach { page ->
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(ContinuousCapsule)
-                        .clickable { onPageSelected(page) }
-                        .padding(vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = page.icon,
-                        contentDescription = page.label,
-                        modifier = Modifier.size(20.dp),
-                        tint = if (currentPage == page) normalSelectedTint else normalUnselectedTint
-                    )
-                    Text(
-                        text = page.label,
-                        color = if (currentPage == page) normalSelectedTint else normalUnselectedTint,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-            }
-        }
-        return
+    val isInLightTheme = !isSystemInDarkTheme()
+    val accentColor = MiuixTheme.colorScheme.primary
+    val containerColor = if (isBlurEnabled) {
+        MiuixTheme.colorScheme.surfaceContainer.copy(0.4f)
+    } else {
+        MiuixTheme.colorScheme.surfaceContainer
     }
 
-    if (backdrop == null) return
-
-    // Liquid Glass Style
-    val usedBackdrop = backdrop
     val tabsBackdrop = rememberLayerBackdrop()
     val density = LocalDensity.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
     val animationScope = rememberCoroutineScope()
-    val isInLightTheme = !androidx.compose.foundation.isSystemInDarkTheme()
-    val accentColor = MiuixTheme.colorScheme.primary
-    val unselectedTint = MiuixTheme.colorScheme.onBackgroundVariant
 
     var tabWidthPx by remember { mutableFloatStateOf(0f) }
     var totalWidthPx by remember { mutableFloatStateOf(0f) }
@@ -196,16 +138,20 @@ fun FloatingBottomBar(
             }
         }
     }
+
+    var currentIndex by remember(selectedIndex) { mutableIntStateOf(selectedIndex()) }
+
     class DampedDragAnimationHolder {
         var instance: DampedDragAnimation? = null
     }
+
     val holder = remember { DampedDragAnimationHolder() }
-    var currentIndex by remember { mutableIntStateOf(selectedIndex) }
-    val dampedDragAnimation = remember(animationScope, tabs.size, density, isLtr) {
+
+    val dampedDragAnimation = remember(animationScope, tabsCount, density, isLtr) {
         DampedDragAnimation(
             animationScope = animationScope,
-            initialValue = selectedIndex.toFloat(),
-            valueRange = 0f..(tabs.size - 1).toFloat(),
+            initialValue = selectedIndex().toFloat(),
+            valueRange = 0f..(tabsCount - 1).toFloat(),
             visibilityThreshold = 0.001f,
             initialScale = 1f,
             pressedScale = 78f / 56f,
@@ -213,44 +159,53 @@ fun FloatingBottomBar(
                 val anim = holder.instance ?: return@DampedDragAnimation true
                 if (tabWidthPx == 0f) return@DampedDragAnimation false
 
-                // 【修正点】使用 anim.value 而不是 value
                 val currentValue = anim.value
                 val indicatorX = currentValue * tabWidthPx
-
                 val padding = with(density) { 4.dp.toPx() }
                 val globalTouchX = if (isLtr) {
-                    padding + indicatorX + offset.x
+                    val touchX = indicatorX + offset.x
+                    padding + touchX
                 } else {
-                    totalWidthPx - padding - tabWidthPx - indicatorX + offset.x
+                    val touchX = totalWidthPx - padding - tabWidthPx - indicatorX + offset.x
+                    touchX
                 }
                 globalTouchX in 0f..totalWidthPx
             },
             onDragStarted = {},
             onDragStopped = {
-                val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabs.size - 1)
+                val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
                 currentIndex = targetIndex
                 animateToValue(targetIndex.toFloat())
-                animationScope.launch { offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f)) }
+                animationScope.launch {
+                    offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
+                }
             },
             onDrag = { _, dragAmount ->
                 if (tabWidthPx > 0) {
-                    updateValue((targetValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f).fastCoerceIn(0f, (tabs.size - 1).toFloat()))
-                    animationScope.launch { offsetAnimation.snapTo(offsetAnimation.value + dragAmount.x) }
+                    updateValue(
+                        (targetValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)
+                            .fastCoerceIn(0f, (tabsCount - 1).toFloat())
+                    )
+                    animationScope.launch {
+                        offsetAnimation.snapTo(offsetAnimation.value + dragAmount.x)
+                    }
                 }
             }
-        )
+        ).also { holder.instance = it }
     }
 
-    LaunchedEffect(selectedIndex) { currentIndex = selectedIndex }
+    LaunchedEffect(selectedIndex) {
+        snapshotFlow { selectedIndex() }.collectLatest { currentIndex = it }
+    }
     LaunchedEffect(dampedDragAnimation) {
         snapshotFlow { currentIndex }.drop(1).collectLatest { index ->
             dampedDragAnimation.animateToValue(index.toFloat())
-            onPageSelected(tabs[index])
+            onSelected(index)
         }
     }
 
-    val interactiveHighlight = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        remember(animationScope, tabWidthPx, tabs.size, isLtr) {
+    val interactiveHighlight = if (isBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        remember(animationScope, tabWidthPx) {
             InteractiveHighlight(
                 animationScope = animationScope,
                 position = { size, _ ->
@@ -262,106 +217,162 @@ fun FloatingBottomBar(
                 }
             )
         }
-    } else null
+    } else {
+        null
+    }
 
-    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
-        // 1. Bottom Row: Static Background and Unselected Icons
+    Box(
+        modifier = modifier.width(IntrinsicSize.Min),
+        contentAlignment = Alignment.CenterStart
+    ) {
         Row(
             Modifier
                 .onGloballyPositioned { coords ->
                     totalWidthPx = coords.size.width.toFloat()
                     val contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
-                    tabWidthPx = contentWidthPx / tabs.size
+                    tabWidthPx = contentWidthPx / tabsCount
                 }
                 .graphicsLayer { translationX = panelOffset }
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {})
-                .drawBackdrop(
-                    backdrop = usedBackdrop,
-                    shape = { ContinuousCapsule },
-                    effects = { vibrancy(); blur(8f.dp.toPx()); lens(24f.dp.toPx(), 24f.dp.toPx()) },
-                    highlight = { Highlight.Default.copy(alpha = 1f) },
-                    shadow = { Shadow.Default.copy(color = Color.Black.copy(if (isInLightTheme) 0.1f else 0.2f)) },
-                    onDrawSurface = { drawRect(Color.White.copy(alpha = if (isInLightTheme) 0.34f else 0.18f)) }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
                 )
-                .then(interactiveHighlight?.modifier ?: Modifier)
-                .height(76.dp)
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { ContinuousCapsule },
+                    effects = {
+                        if (isBlurEnabled) {
+                            vibrancy()
+                            blur(8f.dp.toPx())
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        }
+                    },
+                    highlight = {
+                        Highlight.Default.copy(alpha = if (isBlurEnabled) 1f else 0f)
+                    },
+                    shadow = {
+                        Shadow.Default.copy(
+                            color = Color.Black.copy(if (isInLightTheme) 0.1f else 0.2f),
+                        )
+                    },
+                    layerBlock = {
+                        if (isBlurEnabled) {
+                            val progress = dampedDragAnimation.pressProgress
+                            val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                    },
+                    onDrawSurface = { drawRect(containerColor) }
+                )
+                .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
+                .height(64.dp)
                 .padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            tabs.forEachIndexed { index, page ->
-                FloatingBottomBarItem(onClick = { currentIndex = index }) {
-                    Icon(imageVector = page.icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = unselectedTint)
-                    Text(text = page.label, color = unselectedTint, fontSize = 11.sp)
-                }
-            }
-        }
+            verticalAlignment = Alignment.CenterVertically,
+            content = content
+        )
 
-        // 2. Middle Row: The "Source" for the colored highlight (Captured by tabsBackdrop)
-        CompositionLocalProvider(LocalFloatingBottomBarTabScale provides { lerp(1f, 1.2f, dampedDragAnimation.pressProgress) }) {
+        CompositionLocalProvider(
+            LocalFloatingBottomBarTabScale provides {
+                if (isBlurEnabled) lerp(1f, 1.2f, dampedDragAnimation.pressProgress)
+                else 1f
+            }
+        ) {
             Row(
                 Modifier
                     .clearAndSetSemantics {}
-                    .alpha(0f) // Keep it invisible but available for backdrop capture
+                    .alpha(0f)
                     .layerBackdrop(tabsBackdrop)
-                    .graphicsLayer {
-                        translationX = panelOffset
-                        // FIX: Tint the entire layer to the accent color.
-                        // When the indicator lens reads this, it sees colored icons.
-                        colorFilter = ColorFilter.tint(accentColor)
-                    }
-                    .height(68.dp) // Align height with the indicator Box
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                tabs.forEachIndexed { index, page ->
-                    FloatingBottomBarItem(onClick = { currentIndex = index }) {
-                        Icon(imageVector = page.icon, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Text(text = page.label, fontSize = 11.sp)
-                    }
-                }
-            }
+                    .graphicsLayer { translationX = panelOffset }
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { ContinuousCapsule },
+                        effects = {
+                            if (isBlurEnabled) {
+                                val progress = dampedDragAnimation.pressProgress
+                                vibrancy()
+                                blur(8f.dp.toPx())
+                                lens(24f.dp.toPx() * progress, 24f.dp.toPx() * progress)
+                            }
+                        },
+                        highlight = {
+                            Highlight.Default.copy(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f)
+                        },
+                        onDrawSurface = { drawRect(containerColor) }
+                    )
+                    .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
+                    .height(56.dp)
+                    .padding(horizontal = 4.dp)
+                    .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content
+            )
         }
 
-        // 3. Top Layer: The Moving Indicator (Lens)
         if (tabWidthPx > 0f) {
             Box(
                 Modifier
                     .padding(horizontal = 4.dp)
                     .graphicsLayer {
                         val contentWidth = totalWidthPx - with(density) { 8.dp.toPx() }
-                        val singleTabWidth = contentWidth / tabs.size
+                        val singleTabWidth = contentWidth / tabsCount
+
                         val progressOffset = dampedDragAnimation.value * singleTabWidth
-                        translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
+
+                        translationX = if (isLtr) {
+                            progressOffset + panelOffset
+                        } else {
+                            -progressOffset + panelOffset
+                        }
                     }
-                    .then(interactiveHighlight?.gestureModifier ?: Modifier)
+                    .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.gestureModifier else Modifier)
                     .then(dampedDragAnimation.modifier)
                     .drawBackdrop(
-                        // Combined backdrop allows reading both the wallpaper and the colored icons
-                        backdrop = rememberCombinedBackdrop(usedBackdrop, tabsBackdrop),
+                        backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
                         shape = { ContinuousCapsule },
                         effects = {
-                            val progress = dampedDragAnimation.pressProgress
-                            // isLens = true is critical for the "colored glass" effect
-                            lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, true)
+                            if (isBlurEnabled) {
+                                val progress = dampedDragAnimation.pressProgress
+                                lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, true)
+                            }
                         },
-                        highlight = { Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress) },
-                        shadow = { Shadow(alpha = dampedDragAnimation.pressProgress) },
-                        innerShadow = { InnerShadow(radius = 8f.dp * dampedDragAnimation.pressProgress, alpha = dampedDragAnimation.pressProgress) },
+                        highlight = {
+                            Highlight.Default.copy(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f)
+                        },
+                        shadow = { Shadow(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f) },
+                        innerShadow = {
+                            InnerShadow(
+                                radius = 8f.dp * dampedDragAnimation.pressProgress,
+                                alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f
+                            )
+                        },
                         layerBlock = {
-                            scaleX = dampedDragAnimation.scaleX
-                            scaleY = dampedDragAnimation.scaleY
+                            if (isBlurEnabled) {
+                                scaleX = dampedDragAnimation.scaleX
+                                scaleY = dampedDragAnimation.scaleY
+                                val velocity = dampedDragAnimation.velocity / 10f
+                                scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
+                                scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                            }
                         },
                         onDrawSurface = {
-                            val progress = dampedDragAnimation.pressProgress
-                            // Draw a subtle surface color for the indicator
+                            val progress = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f
                             drawRect(
-                                color = if (isInLightTheme) Color.Black.copy(0.12f) else Color.White.copy(0.12f),
+                                color = if (isInLightTheme) {
+                                    Color.Black.copy(0.1f)
+                                } else {
+                                    Color.White.copy(0.1f)
+                                },
                                 alpha = 1f - progress
+                            )
+                            drawRect(
+                                Color.Black.copy(alpha = 0.03f * progress)
                             )
                         }
                     )
-                    .height(68.dp)
-                    .width(with(density) { ((totalWidthPx - 8.dp.toPx()) / tabs.size).toDp() })
+                    .height(56.dp)
+                    .width(with(density) { ((totalWidthPx - 8.dp.toPx()) / tabsCount).toDp() })
             )
         }
     }
