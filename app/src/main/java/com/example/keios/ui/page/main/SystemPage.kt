@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,8 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.keios.ui.page.main.widget.GlassIconButton
-import com.example.keios.ui.page.main.widget.AppTopBar
+import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -40,14 +39,12 @@ import com.example.keios.ui.utils.ShizukuApiUtils
 import com.example.keios.ui.utils.getAllJavaPropString
 import com.example.keios.ui.utils.getAllSystemProperties
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.tencent.mmkv.MMKV
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -974,7 +971,6 @@ private fun buildSystemMarkdown(
 
 @Composable
 fun SystemPage(
-    backdrop: Backdrop?,
     scrollToTopSignal: Int,
     shizukuStatus: String,
     shizukuApiUtils: ShizukuApiUtils,
@@ -989,9 +985,8 @@ fun SystemPage(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val shizukuReady = shizukuStatus.contains("granted", ignoreCase = true)
-    var cacheLoaded by remember { mutableStateOf(false) }
-    var queryInput by remember { mutableStateOf("") }
-    var queryApplied by remember { mutableStateOf("") }
+    val cached = remember { SystemInfoCache.read() }
+    var query by remember { mutableStateOf("") }
     var topInfoExpanded by remember { mutableStateOf(SystemUiStateStore.topInfoExpanded(defaultValue = true)) }
     var systemTableExpanded by remember { mutableStateOf(SystemUiStateStore.systemTableExpanded(defaultValue = false)) }
     var secureTableExpanded by remember { mutableStateOf(SystemUiStateStore.secureTableExpanded(defaultValue = false)) }
@@ -999,11 +994,14 @@ fun SystemPage(
     var androidPropsExpanded by remember { mutableStateOf(SystemUiStateStore.androidPropsExpanded(defaultValue = false)) }
     var javaPropsExpanded by remember { mutableStateOf(SystemUiStateStore.javaPropsExpanded(defaultValue = false)) }
     var linuxEnvExpanded by remember { mutableStateOf(SystemUiStateStore.linuxEnvExpanded(defaultValue = false)) }
-    val listState = rememberLazyListState()
+    val scrollState = rememberScrollState()
     var pendingExportContent by remember { mutableStateOf<String?>(null) }
     var exportPreparing by remember { mutableStateOf(false) }
-    var refreshing by remember { mutableStateOf(false) }
-
+    val surfaceColor = MiuixTheme.colorScheme.surface
+    val backdrop: LayerBackdrop = rememberLayerBackdrop {
+        drawRect(surfaceColor)
+        drawContent()
+    }
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/markdown")
     ) { uri ->
@@ -1023,12 +1021,12 @@ fun SystemPage(
     var sectionStates by remember {
         mutableStateOf(
             mapOf(
-                SectionKind.SYSTEM to SectionState(),
-                SectionKind.SECURE to SectionState(),
-                SectionKind.GLOBAL to SectionState(),
-                SectionKind.ANDROID to SectionState(),
-                SectionKind.JAVA to SectionState(),
-                SectionKind.LINUX to SectionState()
+                SectionKind.SYSTEM to SectionState(rows = cached.system),
+                SectionKind.SECURE to SectionState(rows = cached.secure),
+                SectionKind.GLOBAL to SectionState(rows = cached.global),
+                SectionKind.ANDROID to SectionState(rows = cached.android),
+                SectionKind.JAVA to SectionState(rows = cached.java),
+                SectionKind.LINUX to SectionState(rows = cached.linux)
             )
         )
     }
@@ -1040,13 +1038,9 @@ fun SystemPage(
         }
     }
 
-    suspend fun ensureLoad(section: SectionKind, forceRefresh: Boolean = false) {
+    suspend fun ensureLoad(section: SectionKind) {
         val current = sectionStates[section] ?: SectionState()
-        if (current.loading) return
-        if (!forceRefresh) {
-            if (current.loadedFresh) return
-            if (current.rows.isNotEmpty()) return
-        }
+        if (current.loading || current.loadedFresh) return
         updateSection(section) { it.copy(loading = true) }
         val fresh = withContext(Dispatchers.IO) {
             buildSectionRows(section, context, shizukuStatus, shizukuApiUtils)
@@ -1057,38 +1051,8 @@ fun SystemPage(
         }
     }
 
-    suspend fun refreshAllSections() {
-        refreshing = true
-        try {
-            SectionKind.entries.forEach { section ->
-                ensureLoad(section, forceRefresh = true)
-            }
-            Toast.makeText(context, "系统参数已刷新并缓存", Toast.LENGTH_SHORT).show()
-        } finally {
-            refreshing = false
-        }
-    }
-
     LaunchedEffect(scrollToTopSignal) {
-        if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
-    }
-
-    LaunchedEffect(queryInput) {
-        delay(180)
-        queryApplied = queryInput
-    }
-
-    LaunchedEffect(Unit) {
-        val cached = withContext(Dispatchers.IO) { SystemInfoCache.read() }
-        sectionStates = mapOf(
-            SectionKind.SYSTEM to SectionState(rows = cached.system),
-            SectionKind.SECURE to SectionState(rows = cached.secure),
-            SectionKind.GLOBAL to SectionState(rows = cached.global),
-            SectionKind.ANDROID to SectionState(rows = cached.android),
-            SectionKind.JAVA to SectionState(rows = cached.java),
-            SectionKind.LINUX to SectionState(rows = cached.linux)
-        )
-        cacheLoaded = true
+        if (scrollToTopSignal > 0) scrollState.animateScrollTo(0)
     }
 
     LaunchedEffect(shizukuReady) {
@@ -1157,31 +1121,15 @@ fun SystemPage(
     val prunedJavaRows = remember(javaRows) { removeTopInfoRows(SectionKind.JAVA, javaRows) }
     val prunedLinuxRows = remember(linuxRows) { removeTopInfoRows(SectionKind.LINUX, linuxRows) }
 
-    val q = queryApplied.trim()
-    val displayedTopInfoRows = remember(q, topInfoRows, topInfoExpanded) {
-        if (q.isBlank() && !topInfoExpanded) topInfoRows else sortRowsByType(filterRows(topInfoRows, q))
-    }
-    val displayedSystemRows = remember(q, prunedSystemRows, systemTableExpanded) {
-        if (q.isBlank() && !systemTableExpanded) prunedSystemRows else sortRowsByType(filterRows(prunedSystemRows, q))
-    }
-    val displayedSecureRows = remember(q, prunedSecureRows, secureTableExpanded) {
-        if (q.isBlank() && !secureTableExpanded) prunedSecureRows else sortRowsByType(filterRows(prunedSecureRows, q))
-    }
-    val displayedGlobalRows = remember(q, prunedGlobalRows, globalTableExpanded) {
-        if (q.isBlank() && !globalTableExpanded) prunedGlobalRows else sortRowsByType(filterRows(prunedGlobalRows, q))
-    }
-    val displayedAndroidRows = remember(q, prunedAndroidRows, androidPropsExpanded) {
-        if (q.isBlank() && !androidPropsExpanded) prunedAndroidRows else sortRowsByType(filterRows(prunedAndroidRows, q))
-    }
-    val displayedJavaRows = remember(q, prunedJavaRows, javaPropsExpanded) {
-        if (q.isBlank() && !javaPropsExpanded) prunedJavaRows else sortRowsByType(filterRows(prunedJavaRows, q))
-    }
-    val displayedLinuxRows = remember(q, prunedLinuxRows, linuxEnvExpanded) {
-        if (q.isBlank() && !linuxEnvExpanded) prunedLinuxRows else sortRowsByType(filterRows(prunedLinuxRows, q))
-    }
-    val groupedTopInfoRows = remember(displayedTopInfoRows, topInfoExpanded, q) {
-        if (q.isBlank() && !topInfoExpanded) emptyList() else groupTopInfoRows(displayedTopInfoRows)
-    }
+    val q = query.trim()
+    val filteredTopInfoRows = remember(q, topInfoRows) { sortRowsByType(filterRows(topInfoRows, q)) }
+    val filteredSystemRows = remember(q, prunedSystemRows) { sortRowsByType(filterRows(prunedSystemRows, q)) }
+    val filteredSecureRows = remember(q, prunedSecureRows) { sortRowsByType(filterRows(prunedSecureRows, q)) }
+    val filteredGlobalRows = remember(q, prunedGlobalRows) { sortRowsByType(filterRows(prunedGlobalRows, q)) }
+    val filteredAndroidRows = remember(q, prunedAndroidRows) { sortRowsByType(filterRows(prunedAndroidRows, q)) }
+    val filteredJavaRows = remember(q, prunedJavaRows) { sortRowsByType(filterRows(prunedJavaRows, q)) }
+    val filteredLinuxRows = remember(q, prunedLinuxRows) { sortRowsByType(filterRows(prunedLinuxRows, q)) }
+    val groupedTopInfoRows = remember(filteredTopInfoRows) { groupTopInfoRows(filteredTopInfoRows) }
 
     fun sectionSubtitle(section: SectionKind, size: Int): String {
         val state = sectionStates[section] ?: SectionState()
@@ -1196,62 +1144,50 @@ fun SystemPage(
     val cachedSectionCount = sectionStates.values.count { !it.loadedFresh && it.rows.isNotEmpty() }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        AppTopBar(
-            title = "System",
-            subtitle = "系统参数与属性",
-            actions = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GlassIconButton(
-                        backdrop = backdrop,
-                        icon = MiuixIcons.Regular.Refresh,
-                        contentDescription = "刷新系统参数",
-                        onClick = {
-                            if (refreshing) return@GlassIconButton
-                            scope.launch {
-                                refreshAllSections()
-                            }
+        Text(text = "System", color = titleColor, modifier = Modifier.padding(top = 6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "系统参数与属性", color = subtitleColor, modifier = Modifier.padding(top = 4.dp))
+            GlassTextButton(
+                backdrop = backdrop,
+                text = if (exportPreparing) "准备导出..." else "导出",
+                onClick = {
+                    if (exportPreparing) return@GlassTextButton
+                    exportPreparing = true
+                    scope.launch {
+                        val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                        val markdown = withContext(Dispatchers.IO) {
+                            val exportSections = buildExportSections(context, shizukuStatus, shizukuApiUtils)
+                            buildSystemMarkdown(generatedAt, shizukuStatus, exportSections)
                         }
-                    )
-                    GlassIconButton(
-                        backdrop = backdrop,
-                        icon = MiuixIcons.Regular.Download,
-                        contentDescription = if (exportPreparing) "准备导出中" else "导出",
-                        onClick = {
-                            if (exportPreparing) return@GlassIconButton
-                            exportPreparing = true
-                            scope.launch {
-                                val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-                                val markdown = withContext(Dispatchers.IO) {
-                                    val exportSections = buildExportSections(context, shizukuStatus, shizukuApiUtils)
-                                    buildSystemMarkdown(generatedAt, shizukuStatus, exportSections)
-                                }
-                                val fileName = "keios-system-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())}.md"
-                                pendingExportContent = markdown
-                                exportPreparing = false
-                                exportLauncher.launch(fileName)
-                            }
-                        }
-                    )
+                        val fileName = "keios-system-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())}.md"
+                        pendingExportContent = markdown
+                        exportPreparing = false
+                        exportLauncher.launch(fileName)
+                    }
                 }
-            }
-        )
+            )
+        }
         Spacer(modifier = Modifier.height(10.dp))
         TextField(
-            value = queryInput,
-            onValueChange = { queryInput = it },
+            value = query,
+            onValueChange = { query = it },
             label = "搜索系统参数",
             useLabelAsPlaceholder = true,
             singleLine = true
         )
         Spacer(modifier = Modifier.height(14.dp))
 
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = contentBottomPadding),
-            state = listState
+                .verticalScroll(scrollState)
+                .padding(bottom = contentBottomPadding)
         ) {
-            item {
+            Column(modifier = Modifier.fillMaxWidth()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.defaultColors(
@@ -1282,140 +1218,115 @@ fun SystemPage(
                         color = subtitleColor
                     )
                     Text(
-                        text = if (!cacheLoaded) {
-                            "读取缓存中... · 查询 ${if (q.isBlank()) "（空）" else q}"
-                        } else {
-                            "缓存分区 $cachedSectionCount · 查询 ${if (q.isBlank()) "（空）" else q}"
-                        },
+                        text = "缓存分区 $cachedSectionCount · 查询 ${if (query.isBlank()) "（空）" else query}",
                         color = subtitleColor
                     )
                 }
             }
-            }
 
-            item { Spacer(modifier = Modifier.height(12.dp)) }
+            Spacer(modifier = Modifier.height(12.dp))
 
-            item {
             MiuixExpandableSection(
                 backdrop = backdrop,
                 title = "TopInfo",
-                subtitle = "${displayedTopInfoRows.size} 条",
+                subtitle = "${filteredTopInfoRows.size} 条",
                 expanded = topInfoExpanded,
                 onExpandedChange = { topInfoExpanded = it }
             ) {
-                if (displayedTopInfoRows.isEmpty()) {
+                if (filteredTopInfoRows.isEmpty()) {
                     Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
                 } else {
-                    if (q.isBlank() && !topInfoExpanded) {
-                        displayedTopInfoRows.forEach { row ->
+                    groupedTopInfoRows.forEachIndexed { index, (type, rows) ->
+                        Text(
+                            text = type,
+                            color = MiuixTheme.colorScheme.onBackground,
+                            modifier = Modifier.padding(top = if (index == 0) 0.dp else 8.dp, bottom = 2.dp)
+                        )
+                        rows.forEach { row ->
                             MiuixInfoItem(row.key, row.value)
-                        }
-                    } else {
-                        groupedTopInfoRows.forEachIndexed { index, (type, rows) ->
-                            Text(
-                                text = type,
-                                color = MiuixTheme.colorScheme.onBackground,
-                                modifier = Modifier.padding(top = if (index == 0) 0.dp else 8.dp, bottom = 2.dp)
-                            )
-                            rows.forEach { row ->
-                                MiuixInfoItem(row.key, row.value)
-                            }
                         }
                     }
                 }
             }
-            }
 
-            item { Spacer(modifier = Modifier.height(12.dp)) }
+            Spacer(modifier = Modifier.height(12.dp))
 
-            item {
             MiuixExpandableSection(
                 backdrop = backdrop,
                 title = "System Table",
-                subtitle = sectionSubtitle(SectionKind.SYSTEM, if (q.isBlank()) prunedSystemRows.size else displayedSystemRows.size),
+                subtitle = sectionSubtitle(SectionKind.SYSTEM, filteredSystemRows.size),
                 expanded = systemTableExpanded,
                 onExpandedChange = { systemTableExpanded = it }
             ) {
-                if (displayedSystemRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
-                else displayedSystemRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
-            }
+                if (filteredSystemRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                else filteredSystemRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
             }
 
-            item { Spacer(modifier = Modifier.height(12.dp)) }
+            Spacer(modifier = Modifier.height(12.dp))
 
-            item {
             MiuixExpandableSection(
                 backdrop = backdrop,
                 title = "Secure Table",
-                subtitle = sectionSubtitle(SectionKind.SECURE, if (q.isBlank()) prunedSecureRows.size else displayedSecureRows.size),
+                subtitle = sectionSubtitle(SectionKind.SECURE, filteredSecureRows.size),
                 expanded = secureTableExpanded,
                 onExpandedChange = { secureTableExpanded = it }
             ) {
-                if (displayedSecureRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
-                else displayedSecureRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
-            }
+                if (filteredSecureRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                else filteredSecureRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
             }
 
-            item { Spacer(modifier = Modifier.height(12.dp)) }
+            Spacer(modifier = Modifier.height(12.dp))
 
-            item {
             MiuixExpandableSection(
                 backdrop = backdrop,
                 title = "Global Table",
-                subtitle = sectionSubtitle(SectionKind.GLOBAL, if (q.isBlank()) prunedGlobalRows.size else displayedGlobalRows.size),
+                subtitle = sectionSubtitle(SectionKind.GLOBAL, filteredGlobalRows.size),
                 expanded = globalTableExpanded,
                 onExpandedChange = { globalTableExpanded = it }
             ) {
-                if (displayedGlobalRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
-                else displayedGlobalRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
-            }
+                if (filteredGlobalRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                else filteredGlobalRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
             }
 
-            item { Spacer(modifier = Modifier.height(12.dp)) }
+            Spacer(modifier = Modifier.height(12.dp))
 
-            item {
             MiuixExpandableSection(
                 backdrop = backdrop,
                 title = "Android Properties",
-                subtitle = sectionSubtitle(SectionKind.ANDROID, if (q.isBlank()) prunedAndroidRows.size else displayedAndroidRows.size),
+                subtitle = sectionSubtitle(SectionKind.ANDROID, filteredAndroidRows.size),
                 expanded = androidPropsExpanded,
                 onExpandedChange = { androidPropsExpanded = it }
             ) {
-                if (displayedAndroidRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
-                else displayedAndroidRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
-            }
+                if (filteredAndroidRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                else filteredAndroidRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
             }
 
-            item { Spacer(modifier = Modifier.height(12.dp)) }
+            Spacer(modifier = Modifier.height(12.dp))
 
-            item {
             MiuixExpandableSection(
                 backdrop = backdrop,
                 title = "Java Properties",
-                subtitle = sectionSubtitle(SectionKind.JAVA, if (q.isBlank()) prunedJavaRows.size else displayedJavaRows.size),
+                subtitle = sectionSubtitle(SectionKind.JAVA, filteredJavaRows.size),
                 expanded = javaPropsExpanded,
                 onExpandedChange = { javaPropsExpanded = it }
             ) {
-                if (displayedJavaRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
-                else displayedJavaRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
-            }
+                if (filteredJavaRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                else filteredJavaRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
             }
 
-            item { Spacer(modifier = Modifier.height(12.dp)) }
+            Spacer(modifier = Modifier.height(12.dp))
 
-            item {
             MiuixExpandableSection(
                 backdrop = backdrop,
                 title = "Linux environment",
-                subtitle = sectionSubtitle(SectionKind.LINUX, if (q.isBlank()) prunedLinuxRows.size else displayedLinuxRows.size),
+                subtitle = sectionSubtitle(SectionKind.LINUX, filteredLinuxRows.size),
                 expanded = linuxEnvExpanded,
                 onExpandedChange = { linuxEnvExpanded = it }
             ) {
-                if (displayedLinuxRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
-                else displayedLinuxRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
+                if (filteredLinuxRows.isEmpty()) Text(text = "No matched results.", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                else filteredLinuxRows.forEach { row -> MiuixInfoItem(row.key, row.value) }
             }
             }
-            item { Spacer(modifier = Modifier.height(8.dp)) }
         }
     }
 }

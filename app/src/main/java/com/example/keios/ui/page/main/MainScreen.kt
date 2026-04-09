@@ -1,55 +1,60 @@
 package com.example.keios.ui.page.main
 
 import android.content.pm.PackageInfo
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberDecoratedNavEntries
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
 import com.example.keios.mcp.McpServerManager
+import com.example.keios.ui.navigation.KeiosRoute
+import com.example.keios.ui.navigation.Navigator
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.utils.ShizukuApiUtils
 import com.example.keios.ui.utils.UiPrefs
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -66,37 +71,76 @@ fun MainScreen(
     shizukuApiUtils: ShizukuApiUtils,
     mcpServerManager: McpServerManager,
 ) {
-    var settingsVisible by remember { mutableStateOf(false) }
+    val backStack = remember { mutableStateListOf<NavKey>().apply { add(KeiosRoute.Main) } }
+    val navigator = remember { Navigator(backStack) }
+
+    var liquidBottomBarEnabled by remember { mutableStateOf(UiPrefs.isLiquidBottomBarEnabled()) }
+
+    val entryProvider = remember(backStack) {
+        entryProvider<NavKey> {
+            entry<KeiosRoute.Main> {
+                // Removed the dangerous isTopRoute check. The route should manage its own state naturally.
+                MainPagerLayout(
+                    navigator = navigator,
+                    liquidBottomBarEnabled = liquidBottomBarEnabled,
+                    appLabel = appLabel,
+                    packageInfo = packageInfo,
+                    shizukuStatus = shizukuStatus,
+                    onCheckOrRequestShizuku = onCheckOrRequestShizuku,
+                    notificationPermissionGranted = notificationPermissionGranted,
+                    shizukuApiUtils = shizukuApiUtils,
+                    mcpServerManager = mcpServerManager
+                )
+            }
+            entry<KeiosRoute.Settings> {
+                SettingsPage(
+                    liquidBottomBarEnabled = liquidBottomBarEnabled,
+                    onLiquidBottomBarChanged = {
+                        liquidBottomBarEnabled = it
+                        UiPrefs.setLiquidBottomBarEnabled(it)
+                    },
+                    onBack = { navigator.pop() }
+                )
+            }
+        }
+    }
+
+    val entries = rememberDecoratedNavEntries(
+        backStack = backStack,
+        entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
+        entryProvider = entryProvider,
+    )
+
+    NavDisplay(
+        entries = entries,
+        onBack = { navigator.pop() },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Composable
+private fun MainPagerLayout(
+    navigator: Navigator,
+    liquidBottomBarEnabled: Boolean,
+    appLabel: String,
+    packageInfo: PackageInfo?,
+    shizukuStatus: String,
+    onCheckOrRequestShizuku: () -> Unit,
+    notificationPermissionGranted: Boolean,
+    shizukuApiUtils: ShizukuApiUtils,
+    mcpServerManager: McpServerManager
+) {
+    val pages = remember { BottomPage.entries.toTypedArray() }
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val coroutineScope = rememberCoroutineScope()
+    val mcpUiState by mcpServerManager.uiState.collectAsState()
+
     var systemScrollToTopSignal by remember { mutableIntStateOf(0) }
     var aboutScrollToTopSignal by remember { mutableIntStateOf(0) }
     var mcpScrollToTopSignal by remember { mutableIntStateOf(0) }
     var githubScrollToTopSignal by remember { mutableIntStateOf(0) }
+
     var showBottomBar by remember { mutableStateOf(true) }
-    var liquidBottomBarEnabled by remember { mutableStateOf(UiPrefs.isLiquidBottomBarEnabled()) }
-    val backdrop = rememberLayerBackdrop()
-    val tabs = BottomPage.entries
-    val coroutineScope = rememberCoroutineScope()
-    val pagerState = rememberPagerState(
-        initialPage = tabs.indexOf(BottomPage.Home).coerceAtLeast(0),
-        pageCount = { tabs.size }
-    )
-    val currentPage = tabs[pagerState.currentPage.coerceIn(0, tabs.lastIndex)]
-    val mcpUiState by mcpServerManager.uiState.collectAsState()
-    val density = LocalDensity.current
-    val navigationBarBottom = with(density) {
-        WindowInsets.navigationBars.getBottom(this).toDp()
-    }
-    val bottomOverlayPadding = 0.dp
-    val systemInsets = WindowInsets.safeDrawing.union(WindowInsets.navigationBars).asPaddingValues()
-    val isImmersiveHome = currentPage == BottomPage.Home && !settingsVisible
-    val contentInsets = if (isImmersiveHome) PaddingValues(0.dp) else PaddingValues(
-        start = systemInsets.calculateStartPadding(LayoutDirection.Ltr),
-        top = 0.dp,
-        end = systemInsets.calculateEndPadding(LayoutDirection.Ltr),
-        bottom = 0.dp
-    )
-    val homeTopInset = systemInsets.calculateTopPadding()
-    val homeBottomInset = systemInsets.calculateBottomPadding()
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -106,19 +150,37 @@ fun MainScreen(
             }
         }
     }
-    LaunchedEffect(pagerState.currentPage) {
-        if (settingsVisible) settingsVisible = false
+
+    // This is the ONLY hack needed: track ReusableContentHost lifecycle to prevent memory leaks or stale nodes.
+    // It forces a fresh GraphicsLayer allocation when returning from the background.
+    var activationCount by rememberSaveable { mutableIntStateOf(0) }
+    DisposableEffect(Unit) {
+        activationCount++
+        onDispose { }
     }
 
+    val surfaceColor = MiuixTheme.colorScheme.surface
+    val backdrop: LayerBackdrop = key(activationCount) {
+        rememberLayerBackdrop {
+            drawRect(surfaceColor)
+            drawContent()
+        }
+    }
+
+    val density = LocalDensity.current
+    val navigationBarBottom = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
+    val bottomOverlayPadding = 112.dp + navigationBarBottom
+    val systemInsets = WindowInsets.safeDrawing.union(WindowInsets.navigationBars).asPaddingValues()
+    val homeTopInset = systemInsets.calculateTopPadding()
+    val homeBottomInset = systemInsets.calculateBottomPadding()
+
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MiuixTheme.colorScheme.background)
+            .nestedScroll(nestedScrollConnection),
         bottomBar = {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.BottomCenter
-            ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
                 AnimatedVisibility(
                     visible = showBottomBar,
                     enter = fadeIn(animationSpec = tween(180)) + slideInVertically(
@@ -128,161 +190,110 @@ fun MainScreen(
                     exit = fadeOut(animationSpec = tween(120)) + slideOutVertically(
                         animationSpec = tween(180),
                         targetOffsetY = { it / 2 }
-                    )
+                    ),
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
                     FloatingBottomBar(
                         backdrop = backdrop,
-                        currentPage = currentPage,
+                        currentPage = pages[pagerState.currentPage],
+                        // Rely completely on user preference. Do not force disable during transitions!
                         liquidGlassEnabled = liquidBottomBarEnabled,
                         onPageSelected = { selected ->
                             showBottomBar = true
-                            val current = tabs[pagerState.currentPage.coerceIn(0, tabs.lastIndex)]
-                            if (selected == current) {
-                                if (selected == BottomPage.System) {
-                                    systemScrollToTopSignal++
-                                }
-                                if (selected == BottomPage.About) {
-                                    aboutScrollToTopSignal++
-                                }
-                                if (selected == BottomPage.Mcp) {
-                                    mcpScrollToTopSignal++
-                                }
-                                if (selected == BottomPage.GitHub) {
-                                    githubScrollToTopSignal++
+                            val targetIndex = pages.indexOf(selected)
+                            if (targetIndex == pagerState.currentPage) {
+                                when (selected) {
+                                    BottomPage.System -> systemScrollToTopSignal++
+                                    BottomPage.About -> aboutScrollToTopSignal++
+                                    BottomPage.Mcp -> mcpScrollToTopSignal++
+                                    BottomPage.GitHub -> githubScrollToTopSignal++
+                                    else -> {}
                                 }
                             } else {
-                                settingsVisible = false
                                 coroutineScope.launch {
-                                    pagerState.animateScrollToPage(tabs.indexOf(selected).coerceAtLeast(0))
+                                    pagerState.animateScrollToPage(targetIndex)
                                 }
                             }
                         },
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp, vertical = 12.dp + navigationBarBottom)
+                        modifier = Modifier.padding(
+                            horizontal = 12.dp,
+                            vertical = 12.dp + navigationBarBottom
+                        )
                     )
                 }
             }
         }
     ) { _ ->
-        Box(
+        HorizontalPager(
+            state = pagerState,
+            userScrollEnabled = true,
+            overscrollEffect = null,
+            beyondViewportPageCount = 1,
+            // CRITICAL FIX: NEVER conditionally unmount layerBackdrop.
+            // If the node is visible (even during an exit animation), it MUST have the backdrop attached,
+            // otherwise consumer composables will attempt to draw a detached Native pointer causing SIGSEGV.
             modifier = Modifier
                 .fillMaxSize()
-                .background(MiuixTheme.colorScheme.background)
-                .nestedScroll(nestedScrollConnection)
-        ) {
-            if (settingsVisible) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 18.dp)
-                        .padding(systemInsets),
-                    verticalArrangement = Arrangement.Top
-                ) {
-                    SettingsPage(
-                        backdrop = backdrop,
-                        liquidBottomBarEnabled = liquidBottomBarEnabled,
-                        onLiquidBottomBarChanged = {
-                            liquidBottomBarEnabled = it
-                            UiPrefs.setLiquidBottomBarEnabled(it)
-                        },
-                        onBack = { settingsVisible = false }
-                    )
-                }
-            } else {
-                HorizontalPager(
-                    state = pagerState,
-                    beyondViewportPageCount = 0,
-                    modifier = Modifier.fillMaxSize()
-                ) { pageIndex ->
-                    val shouldComposeHeavyPage =
-                        pageIndex == pagerState.currentPage || pageIndex == pagerState.targetPage
-                    if (!shouldComposeHeavyPage) {
-                        Box(modifier = Modifier.fillMaxSize())
-                        return@HorizontalPager
+                .layerBackdrop(backdrop)
+        ) { pageIndex ->
+
+            val isHome = pages[pageIndex] == BottomPage.Home
+            val pageHorizontalPadding = if (isHome) 0.dp else 18.dp
+            val contentInsets = if (isHome) PaddingValues(0.dp) else systemInsets
+            val topSpacerPadding = if (!isHome) 14.dp else 0.dp
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = pageHorizontalPadding)
+                    .padding(contentInsets)
+                    .padding(top = topSpacerPadding)
+            ) {
+                when (pages[pageIndex]) {
+                    BottomPage.Home -> {
+                        HomePage(
+                            shizukuStatus = shizukuStatus,
+                            mcpRunning = mcpUiState.running,
+                            mcpPort = mcpUiState.port,
+                            shizukuApiVersion = ShizukuApiUtils.API_VERSION,
+                            mcpConnectedClients = mcpUiState.connectedClients,
+                            onOpenSettings = { navigator.push(KeiosRoute.Settings) },
+                            contentTopPadding = homeTopInset,
+                            contentBottomPadding = homeBottomInset
+                        )
                     }
-                    when (tabs[pageIndex]) {
-                        BottomPage.Home -> {
-                            HomePage(
-                                backdrop = backdrop,
-                                shizukuStatus = shizukuStatus,
-                                mcpRunning = mcpUiState.running,
-                                mcpPort = mcpUiState.port,
-                                shizukuApiVersion = ShizukuApiUtils.API_VERSION,
-                                mcpConnectedClients = mcpUiState.connectedClients,
-                                onOpenSettings = { settingsVisible = true },
-                                contentTopPadding = homeTopInset,
-                                contentBottomPadding = homeBottomInset
-                            )
-                        }
-
-                        BottomPage.System -> {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 18.dp)
-                                    .padding(contentInsets)
-                            ) {
-                                SystemPage(
-                                    backdrop = backdrop,
-                                    scrollToTopSignal = systemScrollToTopSignal,
-                                    shizukuStatus = shizukuStatus,
-                                    shizukuApiUtils = shizukuApiUtils,
-                                    contentBottomPadding = bottomOverlayPadding
-                                )
-                            }
-                        }
-
-                        BottomPage.About -> {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 18.dp)
-                                    .padding(contentInsets)
-                            ) {
-                                AboutPage(
-                                    backdrop = backdrop,
-                                    appLabel = appLabel,
-                                    packageInfo = packageInfo,
-                                    notificationPermissionGranted = notificationPermissionGranted,
-                                    shizukuStatus = shizukuStatus,
-                                    shizukuApiUtils = shizukuApiUtils,
-                                    onCheckShizuku = onCheckOrRequestShizuku,
-                                    contentBottomPadding = bottomOverlayPadding,
-                                    scrollToTopSignal = aboutScrollToTopSignal
-                                )
-                            }
-                        }
-
-                        BottomPage.Mcp -> {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 18.dp)
-                                    .padding(contentInsets)
-                            ) {
-                                McpPage(
-                                    backdrop = backdrop,
-                                    mcpServerManager = mcpServerManager,
-                                    contentBottomPadding = bottomOverlayPadding,
-                                    scrollToTopSignal = mcpScrollToTopSignal
-                                )
-                            }
-                        }
-
-                        BottomPage.GitHub -> {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 18.dp)
-                                    .padding(contentInsets)
-                            ) {
-                                GitHubPage(
-                                    backdrop = backdrop,
-                                    contentBottomPadding = bottomOverlayPadding,
-                                    scrollToTopSignal = githubScrollToTopSignal
-                                )
-                            }
-                        }
+                    BottomPage.System -> {
+                        SystemPage(
+                            scrollToTopSignal = systemScrollToTopSignal,
+                            shizukuStatus = shizukuStatus,
+                            shizukuApiUtils = shizukuApiUtils,
+                            contentBottomPadding = bottomOverlayPadding
+                        )
+                    }
+                    BottomPage.About -> {
+                        AboutPage(
+                            appLabel = appLabel,
+                            packageInfo = packageInfo,
+                            notificationPermissionGranted = notificationPermissionGranted,
+                            shizukuStatus = shizukuStatus,
+                            shizukuApiUtils = shizukuApiUtils,
+                            onCheckShizuku = onCheckOrRequestShizuku,
+                            contentBottomPadding = bottomOverlayPadding,
+                            scrollToTopSignal = aboutScrollToTopSignal
+                        )
+                    }
+                    BottomPage.Mcp -> {
+                        McpPage(
+                            mcpServerManager = mcpServerManager,
+                            contentBottomPadding = bottomOverlayPadding,
+                            scrollToTopSignal = mcpScrollToTopSignal
+                        )
+                    }
+                    BottomPage.GitHub -> {
+                        GitHubPage(
+                            contentBottomPadding = bottomOverlayPadding,
+                            scrollToTopSignal = githubScrollToTopSignal
+                        )
                     }
                 }
             }
