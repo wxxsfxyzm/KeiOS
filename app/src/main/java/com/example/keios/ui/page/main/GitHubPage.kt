@@ -456,7 +456,7 @@ fun GitHubPage(
                     if (showSortPopup) {
                         WindowListPopup(
                             show = showSortPopup,
-                            alignment = PopupPositionProvider.Align.End,
+                            alignment = PopupPositionProvider.Align.BottomEnd,
                             onDismissRequest = { showSortPopup = false },
                             enableWindowDim = false
                         ) {
@@ -489,7 +489,7 @@ fun GitHubPage(
                     if (showIntervalPopup) {
                         WindowListPopup(
                             show = showIntervalPopup,
-                            alignment = PopupPositionProvider.Align.End,
+                            alignment = PopupPositionProvider.Align.BottomEnd,
                             onDismissRequest = { showIntervalPopup = false },
                             enableWindowDim = false
                         ) {
@@ -621,22 +621,41 @@ fun GitHubPage(
                         "追踪 $trackedCount 项 · 可更新 $updatableCount 项",
                         color = MiuixTheme.colorScheme.onBackgroundVariant
                     )
-                    Text(
-                        "最新稳定版 $stableLatestCount 项 · 预发行 $preReleaseCount 项",
-                        color = MiuixTheme.colorScheme.onBackgroundVariant
-                    )
-                    if (overviewRefreshState == OverviewRefreshState.Refreshing) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "最新稳定版 $stableLatestCount 项 · 预发行 $preReleaseCount 项",
+                            color = MiuixTheme.colorScheme.onBackgroundVariant
+                        )
+                        if (overviewRefreshState != OverviewRefreshState.Idle) {
+                            val indicatorColor = when (overviewRefreshState) {
+                                OverviewRefreshState.Refreshing -> androidx.compose.ui.graphics.Color(0xFF3B82F6)
+                                OverviewRefreshState.Completed -> androidx.compose.ui.graphics.Color(0xFF22C55E)
+                                OverviewRefreshState.Cached -> androidx.compose.ui.graphics.Color(0xFFF59E0B)
+                                OverviewRefreshState.Idle -> MiuixTheme.colorScheme.onBackgroundVariant
+                            }
+                            val indicatorBg = when (overviewRefreshState) {
+                                OverviewRefreshState.Refreshing -> androidx.compose.ui.graphics.Color(0x553B82F6)
+                                OverviewRefreshState.Completed -> androidx.compose.ui.graphics.Color(0x5522C55E)
+                                OverviewRefreshState.Cached -> androidx.compose.ui.graphics.Color(0x55F59E0B)
+                                OverviewRefreshState.Idle -> MiuixTheme.colorScheme.surface
+                            }
+                            val progressValue = when (overviewRefreshState) {
+                                OverviewRefreshState.Refreshing -> refreshProgress.coerceIn(0f, 1f)
+                                OverviewRefreshState.Completed,
+                                OverviewRefreshState.Cached -> 1f
+                                OverviewRefreshState.Idle -> 0f
+                            }
                             CircularProgressIndicator(
-                                progress = refreshProgress.coerceIn(0f, 1f),
+                                progress = progressValue,
                                 size = 18.dp,
                                 strokeWidth = 2.dp,
                                 colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                    foregroundColor = androidx.compose.ui.graphics.Color(0xFF3B82F6),
-                                    backgroundColor = androidx.compose.ui.graphics.Color(0x553B82F6)
+                                    foregroundColor = indicatorColor,
+                                    backgroundColor = indicatorBg
                                 )
                             )
                         }
