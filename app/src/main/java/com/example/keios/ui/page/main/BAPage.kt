@@ -634,6 +634,7 @@ fun BAPage(
     }
     val baGlassBlur = 4.dp
     val baLightGlass = true
+    val baBottomBarGlass = true
     val baSmallTitleMargin = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
     val serverOptions = remember { listOf("国服", "国际服", "日服") }
     val cafeLevelOptions = remember { (1..10).toList() }
@@ -1321,6 +1322,7 @@ fun BAPage(
                                     text = serverOptions[serverIndex],
                                     blurRadius = baGlassBlur,
                                     lightMaterial = baLightGlass,
+                                    bottomBarStyle = baBottomBarGlass,
                                     onClick = { showOverviewServerPopup = !showOverviewServerPopup }
                                 )
                                 if (showOverviewServerPopup) {
@@ -1383,6 +1385,7 @@ fun BAPage(
                                     backdrop = backdrop,
                                     blurRadius = baGlassBlur,
                                     lightMaterial = baLightGlass,
+                                    bottomBarStyle = baBottomBarGlass,
                                     singleLine = true,
                                     textAlign = TextAlign.Center,
                                     fontSize = 18.sp,
@@ -1413,6 +1416,7 @@ fun BAPage(
                                     backdrop = backdrop,
                                     blurRadius = baGlassBlur,
                                     lightMaterial = baLightGlass,
+                                    bottomBarStyle = baBottomBarGlass,
                                     singleLine = true,
                                     textAlign = TextAlign.Center,
                                     fontSize = 18.sp,
@@ -1444,6 +1448,7 @@ fun BAPage(
                                     textColor = Color(0xFF22C55E),
                                     blurRadius = baGlassBlur,
                                     lightMaterial = baLightGlass,
+                                    bottomBarStyle = baBottomBarGlass,
                                     onClick = { claimCafeStoredAp() }
                                 )
                                 GlassTextButton(
@@ -1452,6 +1457,7 @@ fun BAPage(
                                     textColor = accentGreen,
                                     blurRadius = baGlassBlur,
                                     lightMaterial = baLightGlass,
+                                    bottomBarStyle = baBottomBarGlass,
                                     onClick = {}
                                 )
                             }
@@ -1606,6 +1612,7 @@ fun BAPage(
                                 enabled = coffeeHeadpatMs <= 0L || nextHeadpatAt <= nowMs,
                                 blurRadius = baGlassBlur,
                                 lightMaterial = baLightGlass,
+                                bottomBarStyle = baBottomBarGlass,
                                 onClick = { touchHead() },
                                 onLongClick = { forceResetHeadpatCooldown() },
                                 onPressedChange = onGlassButtonPressedChange
@@ -1635,6 +1642,7 @@ fun BAPage(
                                 enabled = invite1Ready,
                                 blurRadius = baGlassBlur,
                                 lightMaterial = baLightGlass,
+                                bottomBarStyle = baBottomBarGlass,
                                 onClick = { useInviteTicket1() },
                                 onLongClick = { forceResetInviteTicket1Cooldown() },
                                 onPressedChange = onGlassButtonPressedChange
@@ -1664,6 +1672,7 @@ fun BAPage(
                                 enabled = invite2Ready,
                                 blurRadius = baGlassBlur,
                                 lightMaterial = baLightGlass,
+                                bottomBarStyle = baBottomBarGlass,
                                 onClick = { useInviteTicket2() },
                                 onLongClick = { forceResetInviteTicket2Cooldown() },
                                 onPressedChange = onGlassButtonPressedChange
@@ -1735,6 +1744,7 @@ fun BAPage(
                                     contentDescription = "刷新活动日历",
                                     blurRadius = baGlassBlur,
                                     lightMaterial = baLightGlass,
+                                    bottomBarStyle = baBottomBarGlass,
                                     onClick = { refreshCalendar(force = true) }
                                 )
                             }
@@ -1869,6 +1879,7 @@ fun BAPage(
                                     backdrop = backdrop,
                                     blurRadius = baGlassBlur,
                                     lightMaterial = baLightGlass,
+                                    bottomBarStyle = baBottomBarGlass,
                                     singleLine = true,
                                     textAlign = TextAlign.Center
                                 )
@@ -1900,6 +1911,7 @@ fun BAPage(
                                 backdrop = backdrop,
                                 blurRadius = baGlassBlur,
                                 lightMaterial = baLightGlass,
+                                bottomBarStyle = baBottomBarGlass,
                                 singleLine = true,
                                 textAlign = TextAlign.Center
                             )
@@ -1938,6 +1950,7 @@ fun BAPage(
                                 text = "AP通知",
                                 blurRadius = baGlassBlur,
                                 lightMaterial = baLightGlass,
+                                bottomBarStyle = baBottomBarGlass,
                                 onClick = { sendApTestNotification(showToast = true) },
                                 onPressedChange = onGlassButtonPressedChange
                             )
@@ -1946,6 +1959,7 @@ fun BAPage(
                                 text = "咖啡厅3h AP",
                                 blurRadius = baGlassBlur,
                                 lightMaterial = baLightGlass,
+                                bottomBarStyle = baBottomBarGlass,
                                 onClick = { testCafePlus3Hours() },
                                 onPressedChange = onGlassButtonPressedChange
                             )
@@ -1967,6 +1981,7 @@ fun BAPage(
                 contentDescription = "关闭",
                 blurRadius = baGlassBlur,
                 lightMaterial = baLightGlass,
+                bottomBarStyle = baBottomBarGlass,
                 onClick = { closeSettingsSheet() }
             )
         },
@@ -1977,6 +1992,7 @@ fun BAPage(
                 contentDescription = "保存",
                 blurRadius = baGlassBlur,
                 lightMaterial = baLightGlass,
+                bottomBarStyle = baBottomBarGlass,
                 onClick = { saveSettings() }
             )
         }
@@ -2005,6 +2021,7 @@ fun BAPage(
                         text = "${sheetCafeLevel}级",
                         blurRadius = baGlassBlur,
                         lightMaterial = baLightGlass,
+                        bottomBarStyle = baBottomBarGlass,
                         onClick = { showCafeLevelPopup = !showCafeLevelPopup }
                     )
                     if (showCafeLevelPopup) {
@@ -2082,6 +2099,7 @@ fun BAPage(
                         backdrop = backdrop,
                         blurRadius = baGlassBlur,
                         lightMaterial = baLightGlass,
+                        bottomBarStyle = baBottomBarGlass,
                         singleLine = true,
                         textAlign = TextAlign.Center,
                         fontSize = 18.sp,

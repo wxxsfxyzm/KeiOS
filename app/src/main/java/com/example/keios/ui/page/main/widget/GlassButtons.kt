@@ -45,33 +45,38 @@ fun GlassIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     blurRadius: Dp? = null,
-    lightMaterial: Boolean = false
+    lightMaterial: Boolean = false,
+    bottomBarStyle: Boolean = false
 ) {
     val isDark = isSystemInDarkTheme()
     val iconTint = MiuixTheme.colorScheme.primary
     val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
-    val blurDp = blurRadius ?: if (isDark) 7.dp else 11.dp
-    val surfaceAlpha = if (lightMaterial) {
+    val blurDp = if (bottomBarStyle) 8.dp else (blurRadius ?: if (isDark) 7.dp else 11.dp)
+    val surfaceAlpha = if (bottomBarStyle) 0f else if (lightMaterial) {
         if (isDark) 0.12f else 0.28f
     } else {
         if (isDark) 0.20f else 0.46f
     }
-    val overlayAlpha = if (lightMaterial) {
+    val overlayAlpha = if (bottomBarStyle) 0f else if (lightMaterial) {
         if (isDark) 0.03f else 0.03f
     } else {
         if (isDark) 0.0f else 0.06f
     }
-    val highlightAlpha = if (lightMaterial) {
+    val highlightAlpha = if (bottomBarStyle) 1f else if (lightMaterial) {
         if (isDark) 0.52f else 0.58f
     } else {
         if (isDark) 0.9f else 1.0f
     }
-    val shadowAlpha = if (lightMaterial) {
+    val shadowAlpha = if (bottomBarStyle) {
+        if (isDark) 0.2f else 0.1f
+    } else if (lightMaterial) {
         if (isDark) 0.08f else 0.10f
     } else {
         if (isDark) 0.12f else 0.20f
     }
-    val borderAlpha = if (lightMaterial) 0.10f else 0.16f
+    val borderAlpha = if (bottomBarStyle) 0f else if (lightMaterial) 0.10f else 0.16f
+    val bottomBarSurface = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+    val showBorder = !bottomBarStyle
     Box(
         modifier = modifier
             .width(40.dp)
@@ -97,9 +102,13 @@ fun GlassIconButton(
                             )
                         },
                         onDrawSurface = {
-                            drawRect(Color.White.copy(alpha = surfaceAlpha))
-                            if (overlayAlpha > 0f) {
-                                drawRect(Color.Black.copy(alpha = overlayAlpha))
+                            if (bottomBarStyle) {
+                                drawRect(bottomBarSurface)
+                            } else {
+                                drawRect(Color.White.copy(alpha = surfaceAlpha))
+                                if (overlayAlpha > 0f) {
+                                    drawRect(Color.Black.copy(alpha = overlayAlpha))
+                                }
                             }
                         }
                     )
@@ -109,16 +118,18 @@ fun GlassIconButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(ContinuousCapsule)
-                .border(
-                    width = 1.dp,
-                    color = if (isDark) Color.White.copy(alpha = borderAlpha) else Color.Black.copy(alpha = borderAlpha),
-                    shape = ContinuousCapsule
-                )
-        )
+        if (showBorder) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(ContinuousCapsule)
+                    .border(
+                        width = 1.dp,
+                        color = if (isDark) Color.White.copy(alpha = borderAlpha) else Color.Black.copy(alpha = borderAlpha),
+                        shape = ContinuousCapsule
+                    )
+            )
+        }
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
@@ -138,33 +149,46 @@ fun GlassTextButton(
     onLongClick: (() -> Unit)? = null,
     onPressedChange: ((Boolean) -> Unit)? = null,
     blurRadius: Dp? = null,
-    lightMaterial: Boolean = false
+    lightMaterial: Boolean = false,
+    bottomBarStyle: Boolean = false
 ) {
     val isDark = isSystemInDarkTheme()
     val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
     val longClick = onLongClick
-    val blurDp = blurRadius ?: if (isDark) 7.dp else 11.dp
-    val surfaceAlpha = if (lightMaterial) {
+    val blurDp = if (bottomBarStyle) 8.dp else (blurRadius ?: if (isDark) 7.dp else 11.dp)
+    val surfaceAlpha = if (bottomBarStyle) 0f else if (lightMaterial) {
         if (isDark) 0.12f else 0.28f
     } else {
         if (isDark) 0.20f else 0.46f
     }
-    val overlayAlpha = if (lightMaterial) {
+    val overlayAlpha = if (bottomBarStyle) 0f else if (lightMaterial) {
         if (isDark) 0.03f else 0.03f
     } else {
         if (isDark) 0.0f else 0.06f
     }
-    val highlightAlpha = if (lightMaterial) {
+    val highlightAlpha = if (bottomBarStyle) 1f else if (lightMaterial) {
         if (isDark) 0.52f else 0.58f
     } else {
         if (isDark) 0.9f else 1.0f
     }
-    val shadowAlpha = if (lightMaterial) {
+    val shadowAlpha = if (bottomBarStyle) {
+        if (isDark) 0.2f else 0.1f
+    } else if (lightMaterial) {
         if (isDark) 0.08f else 0.10f
     } else {
         if (isDark) 0.12f else 0.20f
     }
-    val borderAlpha = if (lightMaterial) 0.10f else 0.16f
+    val borderAlpha = if (bottomBarStyle) 0f else if (lightMaterial) 0.10f else 0.16f
+    val bottomBarSurface = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+    val borderModifier = if (!bottomBarStyle) {
+        Modifier.border(
+            width = 1.dp,
+            color = if (isDark) Color.White.copy(alpha = borderAlpha) else Color.Black.copy(alpha = borderAlpha),
+            shape = ContinuousCapsule
+        )
+    } else {
+        Modifier
+    }
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
@@ -216,9 +240,13 @@ fun GlassTextButton(
                             )
                         },
                         onDrawSurface = {
-                            drawRect(Color.White.copy(alpha = surfaceAlpha))
-                            if (overlayAlpha > 0f) {
-                                drawRect(Color.Black.copy(alpha = overlayAlpha))
+                            if (bottomBarStyle) {
+                                drawRect(bottomBarSurface)
+                            } else {
+                                drawRect(Color.White.copy(alpha = surfaceAlpha))
+                                if (overlayAlpha > 0f) {
+                                    drawRect(Color.Black.copy(alpha = overlayAlpha))
+                                }
                             }
                         }
                     )
@@ -226,11 +254,7 @@ fun GlassTextButton(
                     Modifier.background(fallbackSurface.copy(alpha = if (lightMaterial) 0.68f else 0.9f))
                 }
             )
-            .border(
-                width = 1.dp,
-                color = if (isDark) Color.White.copy(alpha = borderAlpha) else Color.Black.copy(alpha = borderAlpha),
-                shape = ContinuousCapsule
-            )
+            .then(borderModifier)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {

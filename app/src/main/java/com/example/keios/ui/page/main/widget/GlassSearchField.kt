@@ -49,23 +49,41 @@ fun GlassSearchField(
     textColor: Color = MiuixTheme.colorScheme.onBackground,
     onImeActionDone: (() -> Unit)? = null,
     blurRadius: Dp? = null,
-    lightMaterial: Boolean = false
+    lightMaterial: Boolean = false,
+    bottomBarStyle: Boolean = false
 ) {
     val focusManager = LocalFocusManager.current
     val isDark = isSystemInDarkTheme()
     val placeholderColor = MiuixTheme.colorScheme.onBackgroundVariant
-    val blurDp = blurRadius ?: 12.dp
-    val glassBaseColor = if (isDark) {
+    val blurDp = if (bottomBarStyle) 8.dp else (blurRadius ?: 12.dp)
+    val glassBaseColor = if (bottomBarStyle) {
+        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+    } else if (isDark) {
         Color(0xFF111111).copy(alpha = if (lightMaterial) 0.12f else 0.60f)
     } else {
         Color.White.copy(alpha = if (lightMaterial) 0.28f else 0.58f)
     }
-    val glassOverlayColor = if (isDark) {
+    val glassOverlayColor = if (bottomBarStyle) {
+        Color.Transparent
+    } else if (isDark) {
         Color.White.copy(alpha = if (lightMaterial) 0.03f else 0.08f)
     } else {
         Color.Black.copy(alpha = if (lightMaterial) 0.03f else 0.06f)
     }
     val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
+    val borderModifier = if (bottomBarStyle) {
+        Modifier
+    } else {
+        Modifier.border(
+            width = 1.dp,
+            color = if (isDark) {
+                Color.White.copy(alpha = if (lightMaterial) 0.10f else 0.28f)
+            } else {
+                Color.Black.copy(alpha = if (lightMaterial) 0.10f else 0.20f)
+            },
+            shape = ContinuousCapsule
+        )
+    }
 
     val contentAlignment = when (textAlign) {
         TextAlign.Center -> Alignment.Center
@@ -86,13 +104,15 @@ fun GlassSearchField(
                             vibrancy()
                             blur(blurDp.toPx())
                             lens(
-                                if (lightMaterial) 24.dp.toPx() else 26.dp.toPx(),
-                                if (lightMaterial) 24.dp.toPx() else 28.dp.toPx()
+                                if (bottomBarStyle || lightMaterial) 24.dp.toPx() else 26.dp.toPx(),
+                                if (bottomBarStyle || lightMaterial) 24.dp.toPx() else 28.dp.toPx()
                             )
                         },
                         highlight = {
                             Highlight.Default.copy(
-                                alpha = if (lightMaterial) {
+                                alpha = if (bottomBarStyle) {
+                                    1f
+                                } else if (lightMaterial) {
                                     if (isDark) 0.52f else 0.58f
                                 } else {
                                     if (isDark) 0.98f else 1f
@@ -102,7 +122,9 @@ fun GlassSearchField(
                         shadow = {
                             Shadow.Default.copy(
                                 color = Color.Black.copy(
-                                    alpha = if (lightMaterial) {
+                                    alpha = if (bottomBarStyle) {
+                                        if (isDark) 0.2f else 0.1f
+                                    } else if (lightMaterial) {
                                         if (isDark) 0.08f else 0.10f
                                     } else {
                                         if (isDark) 0.24f else 0.14f
@@ -112,7 +134,7 @@ fun GlassSearchField(
                         },
                         onDrawSurface = {
                             drawRect(glassBaseColor)
-                            drawRect(glassOverlayColor)
+                            if (glassOverlayColor != Color.Transparent) drawRect(glassOverlayColor)
                         }
                     )
                 } else {
@@ -122,15 +144,7 @@ fun GlassSearchField(
                     )
                 }
             )
-            .border(
-                width = 1.dp,
-                color = if (isDark) {
-                    Color.White.copy(alpha = if (lightMaterial) 0.10f else 0.28f)
-                } else {
-                    Color.Black.copy(alpha = if (lightMaterial) 0.10f else 0.20f)
-                },
-                shape = ContinuousCapsule
-            )
+            .then(borderModifier)
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         BasicTextField(
