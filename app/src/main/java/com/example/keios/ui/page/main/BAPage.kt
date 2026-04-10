@@ -154,6 +154,27 @@ private fun nextCafeStudentRefreshMs(fromMs: Long, serverIndex: Int): Long {
     }
 }
 
+private fun nextArenaRefreshMs(fromMs: Long, serverIndex: Int): Long {
+    val timeZone = serverRefreshTimeZone(serverIndex)
+    val nowCal = Calendar.getInstance(timeZone).apply { timeInMillis = fromMs }
+    val refreshCal = Calendar.getInstance(timeZone).apply {
+        timeInMillis = fromMs
+        set(Calendar.HOUR_OF_DAY, 14)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    if (fromMs >= refreshCal.timeInMillis) {
+        nowCal.add(Calendar.DAY_OF_YEAR, 1)
+        nowCal.set(Calendar.HOUR_OF_DAY, 14)
+        nowCal.set(Calendar.MINUTE, 0)
+        nowCal.set(Calendar.SECOND, 0)
+        nowCal.set(Calendar.MILLISECOND, 0)
+        return nowCal.timeInMillis
+    }
+    return refreshCal.timeInMillis
+}
+
 private fun calculateNextHeadpatAvailableMs(lastHeadpatMs: Long, serverIndex: Int): Long {
     if (lastHeadpatMs <= 0L) return 0L
     val cooldownReadyAt = lastHeadpatMs + BA_HEADPAT_COOLDOWN_MS
@@ -1104,12 +1125,14 @@ fun BAPage(
                 val nowMs = uiNowMs
                 val nextHeadpatAt = calculateNextHeadpatAvailableMs(coffeeHeadpatMs, serverIndex)
                 val nextStudentRefreshAt = nextCafeStudentRefreshMs(nowMs, serverIndex)
+                val nextArenaRefreshAt = nextArenaRefreshMs(nowMs, serverIndex)
                 val nextHeadpatText = if (coffeeHeadpatMs <= 0L || nextHeadpatAt <= nowMs) {
                     "0s"
                 } else {
                     formatBaRemainingTime(nextHeadpatAt, nowMs)
                 }
                 val nextStudentRefreshText = formatBaRemainingTime(nextStudentRefreshAt, nowMs)
+                val nextArenaRefreshText = formatBaRemainingTime(nextArenaRefreshAt, nowMs)
                 val invite1AvailableAt = calculateInviteTicketAvailableMs(coffeeInvite1UsedMs)
                 val invite2AvailableAt = calculateInviteTicketAvailableMs(coffeeInvite2UsedMs)
                 val invite1Ready = coffeeInvite1UsedMs <= 0L || invite1AvailableAt <= nowMs
@@ -1136,6 +1159,19 @@ fun BAPage(
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("竞技场", color = accentPink)
+                            Text(
+                                text = nextArenaRefreshText,
+                                color = countdownBlue,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,

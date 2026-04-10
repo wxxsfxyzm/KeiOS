@@ -67,7 +67,9 @@ import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.utils.GitHubTrackStore
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberActionBarBackdrop
 import com.kyant.shapes.RoundedRectangle
+import com.tencent.mmkv.MMKV
 import java.util.concurrent.TimeUnit
+import java.util.Locale
 import kotlinx.coroutines.flow.onEach
 import com.rosan.installer.ui.library.blend.BlendTokenConfig
 import com.rosan.installer.ui.library.blend.ColorBlendToken
@@ -99,6 +101,53 @@ private fun formatGitHubCacheAgo(lastRefreshMs: Long, nowMs: Long = System.curre
     val hours = minutes / 60L
     val remainMinutes = minutes % 60L
     return if (remainMinutes == 0L) "${hours}h ago" else "${hours}h ${remainMinutes}min ago"
+}
+
+private const val HOME_BA_KV_ID = "ba_page_settings"
+private const val HOME_BA_DEFAULT_FRIEND_CODE = "ARISUKEI"
+private const val HOME_BA_AP_LIMIT_MAX = 240
+private const val HOME_BA_AP_MAX = 999
+private val HOME_BA_CAFE_DAILY_AP_BY_LEVEL = intArrayOf(92, 152, 222, 302, 390, 460, 530, 600, 570, 740)
+
+private data class HomeBaOverview(
+    val activated: Boolean,
+    val apCurrent: Int,
+    val apLimit: Int,
+    val cafeStored: Int,
+    val cafeCap: Int
+)
+
+private fun loadHomeBaOverview(): HomeBaOverview {
+    val kv = MMKV.mmkvWithID(HOME_BA_KV_ID)
+
+    val friendCode = kv.decodeString("id_friend_code", HOME_BA_DEFAULT_FRIEND_CODE)
+        .orEmpty()
+        .uppercase(Locale.ROOT)
+        .filter { it in 'A'..'Z' }
+        .take(8)
+        .let { if (it.length == 8) it else HOME_BA_DEFAULT_FRIEND_CODE }
+    val activated = friendCode != HOME_BA_DEFAULT_FRIEND_CODE
+
+    val apLimit = kv.decodeInt("ap_limit", HOME_BA_AP_LIMIT_MAX).coerceIn(0, HOME_BA_AP_LIMIT_MAX)
+    val apCurrentExact = if (kv.containsKey("ap_current_exact")) {
+        kv.decodeString("ap_current_exact", "0")?.toDoubleOrNull() ?: 0.0
+    } else {
+        kv.decodeInt("ap_current", 0).toDouble()
+    }
+    val apCurrent = apCurrentExact.coerceIn(0.0, HOME_BA_AP_MAX.toDouble()).toInt()
+
+    val cafeLevel = kv.decodeInt("cafe_level", 1).coerceIn(1, 10)
+    val cafeCap = HOME_BA_CAFE_DAILY_AP_BY_LEVEL[cafeLevel - 1]
+    val cafeStoredRaw = kv.decodeString("cafe_stored_ap", "0")?.toDoubleOrNull() ?: 0.0
+    val cafeStored = cafeStoredRaw.coerceAtLeast(0.0).toInt().coerceAtMost(cafeCap)
+
+    return HomeBaOverview(
+        activated = activated,
+        apCurrent = apCurrent,
+        apLimit = apLimit,
+        cafeStored = cafeStored,
+        cafeCap = cafeCap
+    )
 }
 
 @Composable
@@ -188,7 +237,7 @@ private fun HomeInfoCard(
 private fun HomeInlineInfoItem(
     title: String,
     headline: String,
-    detail: String
+    detail: String = ""
 ) {
     val summaryColor = if (isSystemInDarkTheme()) {
         Color(0xFF8AB8FF)
@@ -219,12 +268,14 @@ private fun HomeInlineInfoItem(
                 modifier = Modifier.weight(1f)
             )
         }
-        Text(
-            text = detail.ifBlank { "N/A" },
-            color = summaryColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        if (detail.isNotBlank()) {
+            Text(
+                text = detail,
+                color = summaryColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -290,6 +341,7 @@ fun HomePage(
         cacheHitCount == 0 -> "待刷新"
         else -> "$updatableCount 项"
     }
+    val baOverview = loadHomeBaOverview()
 
     var logoHeightPx by remember { mutableIntStateOf(0) }
     val scrollProgress by remember {
@@ -552,6 +604,11 @@ fun HomePage(
                             label = "Shizuku",
                             color = if (shizukuGranted) runningColor else stoppedColor
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        StatusPill(
+                            label = "BA",
+                            color = if (baOverview.activated) runningColor else stoppedColor
+                        )
                     }
                 }
             }
@@ -610,6 +667,18 @@ fun HomePage(
                                 "GitHub Cache",
                                 "上次更新：$githubLastUpdateLine",
                                 "追踪：$trackedCount 项   可更新：$githubUpdatableLine"
+                            )
+                        }
+
+                        HomeInfoCard(
+                            backdrop = backdrop,
+                            blurEnabled = blurEnabled,
+                            blurRadius = cardBlurRadius,
+                            blendColors = cardBlendColors
+                        ) {
+                            HomeInlineInfoItem(
+                                "BA",
+                                "AP：${baOverview.apCurrent}/${baOverview.apLimit}   咖啡厅AP：${baOverview.cafeStored}/${baOverview.cafeCap}"
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
