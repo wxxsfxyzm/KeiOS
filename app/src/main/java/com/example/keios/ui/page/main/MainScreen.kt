@@ -42,6 +42,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -258,11 +259,21 @@ private fun MainPagerLayout(
                                 onClick = { handlePageSelected(index) },
                                 modifier = Modifier.defaultMinSize(minWidth = 76.dp)
                             ) {
-                                Icon(
-                                    imageVector = page.icon,
-                                    contentDescription = page.label,
-                                    tint = MiuixTheme.colorScheme.onSurface
-                                )
+                                if (page.iconRes != null) {
+                                    Icon(
+                                        painter = painterResource(id = page.iconRes),
+                                        contentDescription = page.label,
+                                        tint = MiuixTheme.colorScheme.onSurface
+                                    )
+                                } else {
+                                    page.icon?.let { icon ->
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = page.label,
+                                            tint = MiuixTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
                                 Text(
                                     text = page.label,
                                     fontSize = 11.sp,
