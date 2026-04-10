@@ -4,6 +4,8 @@ import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -34,6 +37,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
@@ -102,9 +107,11 @@ fun LiquidActionBar(
     items: List<LiquidActionItem>,
     isBlurEnabled: Boolean = true,
     compactSingleItem: Boolean = false,
+    selectedIndex: Int = 0,
     onInteractionChanged: (Boolean) -> Unit = {}
 ) {
     if (items.isEmpty()) return
+    val clampedSelectedIndex = selectedIndex.coerceIn(0, items.lastIndex)
 
     val isInLightTheme = !isSystemInDarkTheme()
     val accentColor = MiuixTheme.colorScheme.primary
@@ -140,7 +147,7 @@ fun LiquidActionBar(
     val dampedDragAnimation = remember(animationScope, items.size, density, isLtr) {
         DampedDragAnimation(
             animationScope = animationScope,
-            initialValue = 0f,
+            initialValue = clampedSelectedIndex.toFloat(),
             valueRange = 0f..(items.lastIndex).toFloat(),
             visibilityThreshold = 0.001f,
             initialScale = 1f,
@@ -173,6 +180,12 @@ fun LiquidActionBar(
             }
         )
     }
+    LaunchedEffect(clampedSelectedIndex, items.size) {
+        val target = clampedSelectedIndex.toFloat()
+        if (abs(dampedDragAnimation.targetValue - target) > 0.001f) {
+            dampedDragAnimation.updateValue(target)
+        }
+    }
 
     val interactiveHighlight = if (isBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         remember(animationScope, tabWidthPx) {
@@ -193,9 +206,24 @@ fun LiquidActionBar(
 
     val minimumWidth = if (compactSingleItem && items.size == 1) 50.dp else 156.dp
     val barWidth = remember(items.size, compactSingleItem) { maxOf(minimumWidth, (items.size * 38).dp) }
+    val interactionLockModifier = Modifier.pointerInput(onInteractionChanged) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            onInteractionChanged(true)
+            try {
+                do {
+                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                } while (event.changes.any { it.pressed })
+            } finally {
+                onInteractionChanged(false)
+            }
+        }
+    }
 
     Box(
-        modifier = modifier.width(barWidth),
+        modifier = modifier
+            .width(barWidth)
+            .then(interactionLockModifier),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(

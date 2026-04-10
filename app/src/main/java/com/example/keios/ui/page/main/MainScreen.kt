@@ -115,6 +115,17 @@ fun MainScreen(
                     onBack = { navigator.pop() }
                 )
             }
+            entry<KeiosRoute.About> {
+                AboutPage(
+                    appLabel = appLabel,
+                    packageInfo = packageInfo,
+                    notificationPermissionGranted = notificationPermissionGranted,
+                    shizukuStatus = shizukuStatus,
+                    shizukuApiUtils = shizukuApiUtils,
+                    onCheckShizuku = onCheckOrRequestShizuku,
+                    onBack = { navigator.pop() }
+                )
+            }
         }
     }
 
@@ -149,7 +160,7 @@ private fun MainPagerLayout(
     val mcpUiState by mcpServerManager.uiState.collectAsState()
 
     var systemScrollToTopSignal by remember { mutableIntStateOf(0) }
-    var aboutScrollToTopSignal by remember { mutableIntStateOf(0) }
+    var baScrollToTopSignal by remember { mutableIntStateOf(0) }
     var mcpScrollToTopSignal by remember { mutableIntStateOf(0) }
     var githubScrollToTopSignal by remember { mutableIntStateOf(0) }
     var pagerScrollEnabled by remember { mutableStateOf(true) }
@@ -194,7 +205,7 @@ private fun MainPagerLayout(
         if (index == pagerState.currentPage) {
             when (selected) {
                 BottomPage.System -> systemScrollToTopSignal++
-                BottomPage.About -> aboutScrollToTopSignal++
+                BottomPage.Ba -> baScrollToTopSignal++
                 BottomPage.Mcp -> mcpScrollToTopSignal++
                 BottomPage.GitHub -> githubScrollToTopSignal++
                 else -> {}
@@ -284,7 +295,7 @@ private fun MainPagerLayout(
             val currentPageType = tabs[pageIndex]
             val isHome = currentPageType == BottomPage.Home
             val isTopBarManagedPage = currentPageType == BottomPage.System ||
-                currentPageType == BottomPage.About ||
+                currentPageType == BottomPage.Ba ||
                 currentPageType == BottomPage.Mcp ||
                 currentPageType == BottomPage.GitHub
 
@@ -320,6 +331,10 @@ private fun MainPagerLayout(
                             mcpConnectedClients = mcpUiState.connectedClients,
                             mcpAllowExternal = mcpUiState.allowExternal,
                             onOpenSettings = { navigator.push(KeiosRoute.Settings) },
+                            onOpenAbout = { navigator.push(KeiosRoute.About) },
+                            onActionBarInteractingChanged = { interacting ->
+                                pagerScrollEnabled = !interacting
+                            },
                             contentTopPadding = homeTopInset,
                             contentBottomPadding = homeBottomInset
                         )
@@ -335,16 +350,13 @@ private fun MainPagerLayout(
                             }
                         )
                     }
-                    BottomPage.About -> {
-                        AboutPage(
-                            appLabel = appLabel,
-                            packageInfo = packageInfo,
-                            notificationPermissionGranted = notificationPermissionGranted,
-                            shizukuStatus = shizukuStatus,
-                            shizukuApiUtils = shizukuApiUtils,
-                            onCheckShizuku = onCheckOrRequestShizuku,
+                    BottomPage.Ba -> {
+                        BAPage(
                             contentBottomPadding = bottomOverlayPadding,
-                            scrollToTopSignal = aboutScrollToTopSignal
+                            scrollToTopSignal = baScrollToTopSignal,
+                            onActionBarInteractingChanged = { interacting ->
+                                pagerScrollEnabled = !interacting
+                            }
                         )
                     }
                     BottomPage.Mcp -> {

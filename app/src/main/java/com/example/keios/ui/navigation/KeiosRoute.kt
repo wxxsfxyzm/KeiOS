@@ -15,4 +15,7 @@ sealed interface KeiosRoute : NavKey {
 
     @Serializable
     data object McpSkill : KeiosRoute
+
+    @Serializable
+    data object About : KeiosRoute
 }

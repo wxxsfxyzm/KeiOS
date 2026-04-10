@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -35,6 +36,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -84,6 +86,7 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -233,6 +236,8 @@ fun HomePage(
     mcpConnectedClients: Int,
     mcpAllowExternal: Boolean,
     onOpenSettings: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onActionBarInteractingChanged: (Boolean) -> Unit = {},
     contentTopPadding: Dp = 0.dp,
     contentBottomPadding: Dp = 0.dp
 ) {
@@ -321,6 +326,7 @@ fun HomePage(
     var iconProgress by remember { mutableFloatStateOf(0f) }
     var titleProgress by remember { mutableFloatStateOf(0f) }
     var summaryProgress by remember { mutableFloatStateOf(0f) }
+    var actionBarSelectedIndex by rememberSaveable { mutableIntStateOf(0) }
 
     LaunchedEffect(lazyListState) {
         snapshotFlow { lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset }
@@ -356,6 +362,10 @@ fun HomePage(
         if (isDark) ColorBlendToken.Colored_Thick_Dark else ColorBlendToken.Colored_Thick_Light
     }
 
+    DisposableEffect(Unit) {
+        onDispose { onActionBarInteractingChanged(false) }
+    }
+
     Scaffold(
         topBar = {
             SmallTopAppBar(
@@ -368,12 +378,24 @@ fun HomePage(
                         backdrop = actionBarBackdrop,
                         items = listOf(
                             LiquidActionItem(
+                                icon = MiuixIcons.Regular.Info,
+                                contentDescription = "关于",
+                                onClick = {
+                                    actionBarSelectedIndex = 0
+                                    onOpenAbout()
+                                }
+                            ),
+                            LiquidActionItem(
                                 icon = MiuixIcons.Regular.Settings,
                                 contentDescription = "设置",
-                                onClick = onOpenSettings
+                                onClick = {
+                                    actionBarSelectedIndex = 1
+                                    onOpenSettings()
+                                }
                             )
                         ),
-                        compactSingleItem = true
+                        selectedIndex = actionBarSelectedIndex,
+                        onInteractionChanged = onActionBarInteractingChanged
                     )
                 }
             )
