@@ -2,8 +2,11 @@ package com.example.keios.ui.page.main
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.combinedClickable
@@ -75,6 +78,7 @@ import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Timer
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
@@ -92,6 +96,20 @@ import kotlin.math.roundToInt
 private enum class BAInitState {
     Empty,
     Draft
+}
+
+private enum class BaCalendarRefreshIntervalOption(val hours: Int, val label: String) {
+    Hour1(1, "1 小时"),
+    Hour3(3, "3 小时"),
+    Hour6(6, "6 小时"),
+    Hour12(12, "12 小时"),
+    Hour24(24, "24 小时");
+
+    companion object {
+        fun fromHours(hours: Int): BaCalendarRefreshIntervalOption {
+            return entries.firstOrNull { it.hours == hours } ?: Hour12
+        }
+    }
 }
 
 private const val BA_AP_MAX = 999
@@ -404,6 +422,17 @@ private fun activityProgress(entry: BaCalendarEntry, nowMs: Long): Float {
     val elapsed = (nowMs - entry.beginAtMs).coerceIn(0L, total)
     return (elapsed.toDouble() / total.toDouble()).toFloat().coerceIn(0f, 1f)
 }
+
+private fun isNetworkAvailable(context: Context): Boolean {
+    return runCatching {
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }.getOrDefault(false)
+}
+
 private object BASettingsStore {
     private const val KV_ID = "ba_page_settings"
     private const val KEY_SERVER_INDEX = "server_index"
@@ -433,6 +462,8 @@ private object BASettingsStore {
     private const val DEFAULT_AP_CURRENT = 0.0
     private const val KEY_CALENDAR_CACHE_PREFIX = "calendar_cache_"
     private const val KEY_CALENDAR_SYNC_PREFIX = "calendar_sync_"
+    private const val KEY_CALENDAR_REFRESH_INTERVAL_HOURS = "calendar_refresh_interval_hours"
+    private const val DEFAULT_CALENDAR_REFRESH_INTERVAL_HOURS = 12
 
     private fun calendarCacheKey(serverIndex: Int): String = "$KEY_CALENDAR_CACHE_PREFIX${serverIndex.coerceIn(0, 2)}"
 
@@ -448,6 +479,21 @@ private object BASettingsStore {
         val store = kv()
         store.encode(calendarCacheKey(serverIndex), encodedEntries)
         store.encode(calendarSyncKey(serverIndex), syncMs.coerceAtLeast(0L))
+    }
+
+    fun loadCalendarRefreshIntervalHours(): Int {
+        val raw = kv().decodeInt(
+            KEY_CALENDAR_REFRESH_INTERVAL_HOURS,
+            DEFAULT_CALENDAR_REFRESH_INTERVAL_HOURS
+        )
+        return BaCalendarRefreshIntervalOption.fromHours(raw).hours
+    }
+
+    fun saveCalendarRefreshIntervalHours(hours: Int) {
+        kv().encode(
+            KEY_CALENDAR_REFRESH_INTERVAL_HOURS,
+            BaCalendarRefreshIntervalOption.fromHours(hours).hours
+        )
     }
 
     private fun kv(): MMKV = MMKV.mmkvWithID(KV_ID)
@@ -596,6 +642,7 @@ fun BAPage(
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showOverviewServerPopup by remember { mutableStateOf(false) }
     var showCafeLevelPopup by remember { mutableStateOf(false) }
+    var showCalendarIntervalPopup by remember { mutableStateOf(false) }
 
     var serverIndex by remember { mutableIntStateOf(BASettingsStore.loadServerIndex()) }
     var cafeLevel by remember { mutableIntStateOf(BASettingsStore.loadCafeLevel()) }
@@ -620,6 +667,9 @@ fun BAPage(
     var baCalendarError by remember { mutableStateOf<String?>(null) }
     var baCalendarLastSyncMs by remember { mutableLongStateOf(0L) }
     var baCalendarReloadSignal by remember { mutableIntStateOf(0) }
+    var calendarRefreshIntervalHours by remember {
+        mutableIntStateOf(BASettingsStore.loadCalendarRefreshIntervalHours())
+    }
 
     var sheetCafeLevel by remember { mutableIntStateOf(cafeLevel) }
     var sheetApNotifyEnabled by remember { mutableStateOf(apNotifyEnabled) }
@@ -631,6 +681,11 @@ fun BAPage(
     var idFriendCodeInput by remember { mutableStateOf(idFriendCode) }
     var apLastNotifiedLevel by remember { mutableIntStateOf(-1) }
     var glassButtonPressCount by remember { mutableIntStateOf(0) }
+    val officeSmallTitle = when (serverIndex) {
+        0 -> "沙勒办公室"
+        1 -> "夏萊行政室"
+        else -> "夏莱办公室"
+    }
     val suspendCardFeedback = glassButtonPressCount > 0
     val onGlassButtonPressedChange: (Boolean) -> Unit = { pressed ->
         glassButtonPressCount = if (pressed) {
@@ -1025,23 +1080,42 @@ fun BAPage(
         tryApThresholdNotification()
     }
 
-    LaunchedEffect(serverIndex, baCalendarReloadSignal) {
+    LaunchedEffect(serverIndex, baCalendarReloadSignal, calendarRefreshIntervalHours) {
         val now = System.currentTimeMillis()
         val (cachedRaw, cachedSyncMs) = BASettingsStore.loadCalendarCache(serverIndex)
         val hasCache = cachedRaw.isNotBlank()
+        val cachedEntries = if (hasCache) {
+            runCatching { decodeBaCalendarEntries(cachedRaw, now) }.getOrElse { emptyList() }
+        } else {
+            emptyList()
+        }
+        val networkAvailable = isNetworkAvailable(context)
+        val intervalMs = calendarRefreshIntervalHours.coerceAtLeast(1) * 60L * 60L * 1000L
+        val cacheExpired = !hasCache || cachedSyncMs <= 0L || (now - cachedSyncMs).coerceAtLeast(0L) >= intervalMs
+        val forceRefresh = baCalendarReloadSignal > 0
+        val shouldRequestNetwork = forceRefresh || cacheExpired
 
-        if (hasCache && baCalendarReloadSignal == 0) {
-            runCatching { decodeBaCalendarEntries(cachedRaw, now) }
-                .onSuccess { cachedEntries ->
-                    baCalendarEntries = cachedEntries
-                    baCalendarLastSyncMs = cachedSyncMs
-                    baCalendarError = null
-                }
-                .onFailure {
-                    baCalendarEntries = emptyList()
-                    baCalendarLastSyncMs = 0L
-                }
+        if (hasCache) {
+            baCalendarEntries = cachedEntries
+            baCalendarLastSyncMs = cachedSyncMs
+        } else {
+            baCalendarEntries = emptyList()
+            baCalendarLastSyncMs = 0L
+        }
+
+        if (!shouldRequestNetwork) {
             baCalendarLoading = false
+            baCalendarError = null
+            return@LaunchedEffect
+        }
+
+        if (!networkAvailable) {
+            baCalendarLoading = false
+            baCalendarError = if (hasCache) {
+                "当前离线，已显示本地缓存"
+            } else {
+                "当前离线且无缓存，请联网后刷新"
+            }
             return@LaunchedEffect
         }
 
@@ -1059,14 +1133,9 @@ fun BAPage(
             }
             .onFailure {
                 if (hasCache) {
-                    runCatching { decodeBaCalendarEntries(cachedRaw, now) }
-                        .onSuccess { cachedEntries ->
-                            baCalendarEntries = cachedEntries
-                            baCalendarLastSyncMs = cachedSyncMs
-                        }
-                        .onFailure {
-                            baCalendarError = "活动日历同步失败"
-                        }
+                    baCalendarEntries = cachedEntries
+                    baCalendarLastSyncMs = cachedSyncMs
+                    baCalendarError = "网络请求失败，已显示本地缓存"
                 } else {
                     baCalendarError = "活动日历同步失败"
                 }
@@ -1097,6 +1166,11 @@ fun BAPage(
                                         }
                                     ),
                                     LiquidActionItem(
+                                        icon = MiuixIcons.Regular.Timer,
+                                        contentDescription = "刷新间隔",
+                                        onClick = { showCalendarIntervalPopup = !showCalendarIntervalPopup }
+                                    ),
+                                    LiquidActionItem(
                                         icon = MiuixIcons.Regular.Edit,
                                         contentDescription = "编辑",
                                         onClick = { openSettingsSheet() }
@@ -1109,6 +1183,65 @@ fun BAPage(
                                 ),
                                 onInteractionChanged = onActionBarInteractingChanged
                             )
+
+                            Row(
+                                modifier = Modifier
+                                    .width(156.dp)
+                                    .height(50.dp)
+                                    .padding(horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(37.dp)
+                                        .height(42.dp)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .width(37.dp)
+                                        .height(42.dp)
+                                ) {
+                                    if (showCalendarIntervalPopup) {
+                                        WindowListPopup(
+                                            show = showCalendarIntervalPopup,
+                                            alignment = PopupPositionProvider.Align.BottomStart,
+                                            onDismissRequest = { showCalendarIntervalPopup = false },
+                                            enableWindowDim = false
+                                        ) {
+                                            ListPopupColumn {
+                                                val options = BaCalendarRefreshIntervalOption.entries
+                                                val selected = BaCalendarRefreshIntervalOption.fromHours(
+                                                    calendarRefreshIntervalHours
+                                                )
+                                                options.forEachIndexed { index, option ->
+                                                    DropdownImpl(
+                                                        text = option.label,
+                                                        optionSize = options.size,
+                                                        isSelected = selected == option,
+                                                        index = index,
+                                                        onSelectedIndexChange = { selectedIndex ->
+                                                            val picked = options[selectedIndex]
+                                                            calendarRefreshIntervalHours = picked.hours
+                                                            BASettingsStore.saveCalendarRefreshIntervalHours(
+                                                                picked.hours
+                                                            )
+                                                            showCalendarIntervalPopup = false
+                                                            val elapsed = (
+                                                                System.currentTimeMillis() - baCalendarLastSyncMs
+                                                            ).coerceAtLeast(0L)
+                                                            if (baCalendarLastSyncMs <= 0L ||
+                                                                elapsed >= picked.hours * 60L * 60L * 1000L
+                                                            ) {
+                                                                refreshCalendar(force = true)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 )
@@ -1127,7 +1260,7 @@ fun BAPage(
                 end = 12.dp
             )
         ) {
-            item { SmallTitle("夏莱办公室", insideMargin = baSmallTitleMargin) }
+            item { SmallTitle(officeSmallTitle, insideMargin = baSmallTitleMargin) }
             item { Spacer(modifier = Modifier.height(8.dp)) }
 
             item {
@@ -1425,7 +1558,7 @@ fun BAPage(
                         color = Color(0x223B82F6),
                         contentColor = MiuixTheme.colorScheme.onBackground
                     ),
-                    pressFeedbackType = if (suspendCardFeedback) PressFeedbackType.None else PressFeedbackType.Tilt,
+                    pressFeedbackType = if (suspendCardFeedback) PressFeedbackType.None else PressFeedbackType.Sink,
                     showIndication = !suspendCardFeedback,
                     onClick = {}
                 ) {
@@ -1567,7 +1700,7 @@ fun BAPage(
                         color = Color(0x223B82F6),
                         contentColor = MiuixTheme.colorScheme.onBackground
                     ),
-                    pressFeedbackType = if (suspendCardFeedback) PressFeedbackType.None else PressFeedbackType.Tilt,
+                    pressFeedbackType = if (suspendCardFeedback) PressFeedbackType.None else PressFeedbackType.Sink,
                     showIndication = !suspendCardFeedback,
                     onClick = {}
                 ) {
@@ -1699,7 +1832,7 @@ fun BAPage(
                         color = Color(0x223B82F6),
                         contentColor = MiuixTheme.colorScheme.onBackground
                     ),
-                    pressFeedbackType = if (suspendCardFeedback) PressFeedbackType.None else PressFeedbackType.Tilt,
+                    pressFeedbackType = if (suspendCardFeedback) PressFeedbackType.None else PressFeedbackType.Sink,
                     showIndication = !suspendCardFeedback,
                     onClick = {}
                 ) {
@@ -1786,7 +1919,7 @@ fun BAPage(
                         color = Color(0x223B82F6),
                         contentColor = MiuixTheme.colorScheme.onBackground
                     ),
-                    pressFeedbackType = if (suspendCardFeedback) PressFeedbackType.None else PressFeedbackType.Tilt,
+                    pressFeedbackType = if (suspendCardFeedback) PressFeedbackType.None else PressFeedbackType.Sink,
                     showIndication = !suspendCardFeedback,
                     onClick = {}
                 ) {
