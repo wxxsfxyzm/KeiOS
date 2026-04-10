@@ -2,7 +2,9 @@ package com.example.keios.ui.page.main
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,9 +51,15 @@ import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.tencent.mmkv.MMKV
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -72,6 +80,8 @@ import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowListPopup
 import java.text.SimpleDateFormat
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -219,6 +229,181 @@ private fun formatBaRemainingTime(targetMs: Long, nowMs: Long = System.currentTi
     return parts.joinToString(" ")
 }
 
+private const val BA_CALENDAR_ENDPOINT = "https://www.gamekee.com/v1/activity/page-list"
+private const val BA_CALENDAR_CONNECT_TIMEOUT_MS = 10_000
+private const val BA_CALENDAR_READ_TIMEOUT_MS = 10_000
+private const val BA_CALENDAR_MAX_ITEMS = 6
+
+private data class BaCalendarEntry(
+    val id: Int,
+    val title: String,
+    val kindId: Int,
+    val kindName: String,
+    val beginAtMs: Long,
+    val endAtMs: Long,
+    val linkUrl: String,
+    val isRunning: Boolean
+)
+
+private fun gameKeeServerId(serverIndex: Int): Int {
+    return when (serverIndex) {
+        0 -> 16 // 国服
+        1 -> 17 // 国际服
+        else -> 15 // 日服
+    }
+}
+
+private fun normalizeGameKeeLink(url: String): String {
+    val raw = url.trim()
+    if (raw.isBlank()) return "https://www.gamekee.com/ba/huodong"
+    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw
+    return if (raw.startsWith("/")) "https://www.gamekee.com$raw" else "https://www.gamekee.com/$raw"
+}
+
+private fun formatBaDateTimeNoYearInTimeZone(epochMillis: Long, timeZone: TimeZone): String {
+    if (epochMillis <= 0L) return "-"
+    return runCatching {
+        SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).apply {
+            this.timeZone = timeZone
+        }.format(Date(epochMillis))
+    }.getOrDefault("-")
+}
+
+private fun fetchBaCalendarEntries(serverIndex: Int, nowMs: Long = System.currentTimeMillis()): List<BaCalendarEntry> {
+    val serverId = gameKeeServerId(serverIndex)
+    val endpoint = "$BA_CALENDAR_ENDPOINT?importance=0&sort=-1&keyword=&limit=999&page_no=1&serverId=$serverId&status=0"
+    val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        connectTimeout = BA_CALENDAR_CONNECT_TIMEOUT_MS
+        readTimeout = BA_CALENDAR_READ_TIMEOUT_MS
+        setRequestProperty("Accept", "application/json, text/plain, */*")
+        setRequestProperty("Accept-Language", "zh-CN")
+        setRequestProperty("Referer", "https://www.gamekee.com/ba/huodong/$serverId")
+        setRequestProperty("User-Agent", "Mozilla/5.0 (Android) KeiOS/1.0")
+        setRequestProperty("device-num", "1")
+        setRequestProperty("game-alias", "ba")
+    }
+    try {
+        val code = conn.responseCode
+        val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
+            ?.bufferedReader()
+            ?.use { it.readText() }
+            .orEmpty()
+        if (code !in 200..299) {
+            error("HTTP $code")
+        }
+        val root = JSONObject(body)
+        if (root.optInt("code", -1) != 0) {
+            error("API ${root.optInt("code", -1)}")
+        }
+        val data = root.optJSONArray("data") ?: return emptyList()
+        val entries = mutableListOf<BaCalendarEntry>()
+        for (index in 0 until data.length()) {
+            val item = data.optJSONObject(index) ?: continue
+            val title = item.optString("title").trim()
+            if (title.isBlank()) continue
+
+            val beginSec = item.optLong("begin_at", 0L)
+            val endSec = item.optLong("end_at", 0L)
+            if (beginSec <= 0L || endSec <= 0L) continue
+            val beginAtMs = beginSec * 1000L
+            val endAtMs = endSec * 1000L
+
+            val kindId = item.optInt("activity_kind_id", 31)
+            val kindName = item.optString("activity_kind_name").ifBlank { "其他" }
+            entries += BaCalendarEntry(
+                id = item.optInt("id", 0),
+                title = title,
+                kindId = kindId,
+                kindName = kindName,
+                beginAtMs = beginAtMs,
+                endAtMs = endAtMs,
+                linkUrl = normalizeGameKeeLink(item.optString("link_url")),
+                isRunning = nowMs in beginAtMs until endAtMs
+            )
+        }
+
+        return normalizeBaCalendarEntries(entries, nowMs)
+    } finally {
+        conn.disconnect()
+    }
+}
+
+
+private fun normalizeBaCalendarEntries(entries: List<BaCalendarEntry>, nowMs: Long = System.currentTimeMillis()): List<BaCalendarEntry> {
+    return entries
+        .asSequence()
+        .filter { it.title.isNotBlank() }
+        .map { entry ->
+            val beginAtMs = entry.beginAtMs.coerceAtLeast(0L)
+            val endAtMs = entry.endAtMs.coerceAtLeast(beginAtMs)
+            entry.copy(
+                beginAtMs = beginAtMs,
+                endAtMs = endAtMs,
+                isRunning = nowMs in beginAtMs until endAtMs,
+                linkUrl = normalizeGameKeeLink(entry.linkUrl)
+            )
+        }
+        .filter { it.endAtMs > nowMs }
+        .sortedWith(
+            compareBy<BaCalendarEntry>(
+                { if (it.isRunning) 0 else 1 },
+                { if (it.isRunning) it.endAtMs else it.beginAtMs },
+                { it.kindId }
+            )
+        )
+        .take(BA_CALENDAR_MAX_ITEMS)
+        .toList()
+}
+
+private fun encodeBaCalendarEntries(entries: List<BaCalendarEntry>): String {
+    val arr = JSONArray()
+    entries.forEach { item ->
+        arr.put(
+            JSONObject().apply {
+                put("id", item.id)
+                put("title", item.title)
+                put("kindId", item.kindId)
+                put("kindName", item.kindName)
+                put("beginAtMs", item.beginAtMs)
+                put("endAtMs", item.endAtMs)
+                put("linkUrl", item.linkUrl)
+            }
+        )
+    }
+    return arr.toString()
+}
+
+private fun decodeBaCalendarEntries(raw: String, nowMs: Long = System.currentTimeMillis()): List<BaCalendarEntry> {
+    if (raw.isBlank()) return emptyList()
+    val arr = JSONArray(raw)
+    val parsed = mutableListOf<BaCalendarEntry>()
+    for (i in 0 until arr.length()) {
+        val obj = arr.optJSONObject(i) ?: continue
+        val title = obj.optString("title").trim()
+        if (title.isBlank()) continue
+        val beginAtMs = obj.optLong("beginAtMs", 0L)
+        val endAtMs = obj.optLong("endAtMs", 0L)
+        if (beginAtMs <= 0L || endAtMs <= 0L) continue
+        parsed += BaCalendarEntry(
+            id = obj.optInt("id", 0),
+            title = title,
+            kindId = obj.optInt("kindId", 31),
+            kindName = obj.optString("kindName").ifBlank { "其他" },
+            beginAtMs = beginAtMs,
+            endAtMs = endAtMs,
+            linkUrl = normalizeGameKeeLink(obj.optString("linkUrl")),
+            isRunning = nowMs in beginAtMs until endAtMs
+        )
+    }
+    return normalizeBaCalendarEntries(parsed, nowMs)
+}
+
+private fun activityProgress(entry: BaCalendarEntry, nowMs: Long): Float {
+    val total = (entry.endAtMs - entry.beginAtMs).coerceAtLeast(1L)
+    val elapsed = (nowMs - entry.beginAtMs).coerceIn(0L, total)
+    return (elapsed.toDouble() / total.toDouble()).toFloat().coerceIn(0f, 1f)
+}
 private object BASettingsStore {
     private const val KV_ID = "ba_page_settings"
     private const val KEY_SERVER_INDEX = "server_index"
@@ -246,6 +431,24 @@ private object BASettingsStore {
     private const val DEFAULT_AP_LIMIT = BA_AP_LIMIT_MAX
     private const val DEFAULT_AP_NOTIFY_THRESHOLD = 120
     private const val DEFAULT_AP_CURRENT = 0.0
+    private const val KEY_CALENDAR_CACHE_PREFIX = "calendar_cache_"
+    private const val KEY_CALENDAR_SYNC_PREFIX = "calendar_sync_"
+
+    private fun calendarCacheKey(serverIndex: Int): String = "$KEY_CALENDAR_CACHE_PREFIX${serverIndex.coerceIn(0, 2)}"
+
+    private fun calendarSyncKey(serverIndex: Int): String = "$KEY_CALENDAR_SYNC_PREFIX${serverIndex.coerceIn(0, 2)}"
+
+    fun loadCalendarCache(serverIndex: Int): Pair<String, Long> {
+        val store = kv()
+        return store.decodeString(calendarCacheKey(serverIndex), "").orEmpty() to
+            store.decodeLong(calendarSyncKey(serverIndex), 0L)
+    }
+
+    fun saveCalendarCache(serverIndex: Int, encodedEntries: String, syncMs: Long) {
+        val store = kv()
+        store.encode(calendarCacheKey(serverIndex), encodedEntries)
+        store.encode(calendarSyncKey(serverIndex), syncMs.coerceAtLeast(0L))
+    }
 
     private fun kv(): MMKV = MMKV.mmkvWithID(KV_ID)
 
@@ -412,6 +615,11 @@ fun BAPage(
     var coffeeInvite1UsedMs by remember { mutableLongStateOf(BASettingsStore.loadCoffeeInvite1UsedMs()) }
     var coffeeInvite2UsedMs by remember { mutableLongStateOf(BASettingsStore.loadCoffeeInvite2UsedMs()) }
     var uiNowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var baCalendarEntries by remember { mutableStateOf<List<BaCalendarEntry>>(emptyList()) }
+    var baCalendarLoading by remember { mutableStateOf(false) }
+    var baCalendarError by remember { mutableStateOf<String?>(null) }
+    var baCalendarLastSyncMs by remember { mutableLongStateOf(0L) }
+    var baCalendarReloadSignal by remember { mutableIntStateOf(0) }
 
     var sheetCafeLevel by remember { mutableIntStateOf(cafeLevel) }
     var sheetApNotifyEnabled by remember { mutableStateOf(apNotifyEnabled) }
@@ -665,6 +873,23 @@ fun BAPage(
         BASettingsStore.saveCoffeeInvite2UsedMs(0L)
     }
 
+    fun openCalendarLink(url: String) {
+        runCatching {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }.onFailure {
+            Toast.makeText(context, "无法打开活动链接", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun refreshCalendar(force: Boolean = false) {
+        if (force) {
+            baCalendarReloadSignal += 1
+        }
+    }
+
     fun sendApTestNotification(
         showToast: Boolean = true,
         thresholdTriggered: Boolean = false
@@ -800,6 +1025,55 @@ fun BAPage(
         tryApThresholdNotification()
     }
 
+    LaunchedEffect(serverIndex, baCalendarReloadSignal) {
+        val now = System.currentTimeMillis()
+        val (cachedRaw, cachedSyncMs) = BASettingsStore.loadCalendarCache(serverIndex)
+        val hasCache = cachedRaw.isNotBlank()
+
+        if (hasCache && baCalendarReloadSignal == 0) {
+            runCatching { decodeBaCalendarEntries(cachedRaw, now) }
+                .onSuccess { cachedEntries ->
+                    baCalendarEntries = cachedEntries
+                    baCalendarLastSyncMs = cachedSyncMs
+                    baCalendarError = null
+                }
+                .onFailure {
+                    baCalendarEntries = emptyList()
+                    baCalendarLastSyncMs = 0L
+                }
+            baCalendarLoading = false
+            return@LaunchedEffect
+        }
+
+        baCalendarLoading = true
+        baCalendarError = null
+        val result = withContext(Dispatchers.IO) {
+            runCatching { fetchBaCalendarEntries(serverIndex, now) }
+        }
+        result
+            .onSuccess { entries ->
+                baCalendarEntries = entries
+                baCalendarLastSyncMs = now
+                baCalendarError = null
+                BASettingsStore.saveCalendarCache(serverIndex, encodeBaCalendarEntries(entries), now)
+            }
+            .onFailure {
+                if (hasCache) {
+                    runCatching { decodeBaCalendarEntries(cachedRaw, now) }
+                        .onSuccess { cachedEntries ->
+                            baCalendarEntries = cachedEntries
+                            baCalendarLastSyncMs = cachedSyncMs
+                        }
+                        .onFailure {
+                            baCalendarError = "活动日历同步失败"
+                        }
+                } else {
+                    baCalendarError = "活动日历同步失败"
+                }
+            }
+        baCalendarLoading = false
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -819,6 +1093,7 @@ fun BAPage(
                                         onClick = {
                                             applyCafeStorage()
                                             applyApRegen()
+                                            refreshCalendar(force = true)
                                         }
                                     ),
                                     LiquidActionItem(
@@ -932,6 +1207,7 @@ fun BAPage(
                                                     onSelectedIndexChange = { selected ->
                                                         serverIndex = selected
                                                         BASettingsStore.saveServerIndex(selected)
+                                                        refreshCalendar(force = true)
                                                         showOverviewServerPopup = false
                                                     }
                                                 )
@@ -1271,6 +1547,144 @@ fun BAPage(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(6.dp)) }
+            item { SmallTitle("活动日历", insideMargin = baSmallTitleMargin) }
+            item { Spacer(modifier = Modifier.height(6.dp)) }
+
+            item {
+                val accentBlue = Color(0xFF3B82F6)
+                val accentGreen = Color(0xFF22C55E)
+                val countdownBlue = Color(0xFF60A5FA)
+                val serverTimeZone = serverRefreshTimeZone(serverIndex)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
+                        color = Color(0x223B82F6),
+                        contentColor = MiuixTheme.colorScheme.onBackground
+                    ),
+                    pressFeedbackType = if (suspendCardFeedback) PressFeedbackType.None else PressFeedbackType.Tilt,
+                    showIndication = !suspendCardFeedback,
+                    onClick = {}
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("GameKee · ${serverOptions[serverIndex]}", color = MiuixTheme.colorScheme.onBackground)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (baCalendarLoading) "同步中..." else formatBaDateTimeNoYearInTimeZone(
+                                        baCalendarLastSyncMs,
+                                        serverTimeZone
+                                    ),
+                                    color = countdownBlue,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = MiuixIcons.Regular.Refresh,
+                                    contentDescription = "刷新活动日历",
+                                    blurRadius = baGlassBlur,
+                                    lightMaterial = baLightGlass,
+                                    onClick = { refreshCalendar(force = true) }
+                                )
+                            }
+                        }
+
+                        if (!baCalendarError.isNullOrBlank()) {
+                            Text(
+                                text = baCalendarError.orEmpty(),
+                                color = Color(0xFFF59E0B),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        } else if (!baCalendarLoading && baCalendarEntries.isEmpty()) {
+                            Text(
+                                text = "暂无进行中或即将开始的活动",
+                                color = MiuixTheme.colorScheme.onBackgroundVariant
+                            )
+                        } else {
+                            baCalendarEntries.forEachIndexed { index, activity ->
+                                val remainTarget = if (activity.isRunning) activity.endAtMs else activity.beginAtMs
+                                val remainText = formatBaRemainingTime(remainTarget, uiNowMs)
+                                val statusText = if (activity.isRunning) "进行中" else "即将开始"
+                                val statusColor = if (activity.isRunning) accentGreen else accentBlue
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = { openCalendarLink(activity.linkUrl) },
+                                            onLongClick = { openCalendarLink(activity.linkUrl) }
+                                        ),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(
+                                            text = "${activity.kindName} · ${activity.title}",
+                                            maxLines = 3,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "${formatBaDateTimeNoYearInTimeZone(activity.beginAtMs, serverTimeZone)} - ${
+                                                formatBaDateTimeNoYearInTimeZone(
+                                                    activity.endAtMs,
+                                                    serverTimeZone
+                                                )
+                                            }",
+                                            color = countdownBlue,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        LinearProgressIndicator(
+                                            progress = activityProgress(activity, uiNowMs),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 2.dp),
+                                            height = 5.dp,
+                                            colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                                foregroundColor = if (activity.isRunning) accentGreen else accentBlue,
+                                                backgroundColor = MiuixTheme.colorScheme.secondaryContainer
+                                            )
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column(
+                                        horizontalAlignment = Alignment.End,
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(statusText, color = statusColor)
+                                        Text(
+                                            text = remainText,
+                                            color = countdownBlue,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                if (index < baCalendarEntries.lastIndex) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+                            }
                         }
                     }
                 }
