@@ -2,15 +2,6 @@ package com.example.keios.ui.page.main
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import com.kyant.shapes.RoundedRectangle
-import top.yukonga.miuix.kmp.blur.BlurColors
-import top.yukonga.miuix.kmp.blur.BlurDefaults
-import top.yukonga.miuix.kmp.blur.textureBlur
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,19 +60,24 @@ import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.utils.GitHubTrackStore
+import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberActionBarBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.Shadow
+import com.kyant.shapes.RoundedRectangle
 import com.tencent.mmkv.MMKV
 import java.util.concurrent.TimeUnit
 import java.util.Locale
 import kotlinx.coroutines.flow.onEach
-import com.rosan.installer.ui.library.blend.BlendTokenConfig
-import com.rosan.installer.ui.library.blend.ColorBlendToken
 import com.rosan.installer.ui.library.effect.BgEffectBackground
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
@@ -152,83 +148,49 @@ private fun loadHomeBaOverview(): HomeBaOverview {
 
 @Composable
 private fun HomeInfoCard(
-    backdrop: LayerBackdrop,
+    backdrop: Backdrop,
     blurEnabled: Boolean,
-    blurRadius: Float,
-    blendColors: List<BlendColorEntry>,
     content: @Composable () -> Unit,
 ) {
-    val isDark = isSystemInDarkTheme()
-    val shape = RoundedCornerShape(20.dp)
-    val glassSurface = if (isDark) {
-        Color.White.copy(alpha = 0.16f)
+    val isInLightTheme = !isSystemInDarkTheme()
+    val containerColor = if (blurEnabled) {
+        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
     } else {
-        Color.White.copy(alpha = 0.28f)
+        MiuixTheme.colorScheme.surfaceContainer
     }
-    val borderBrush = Brush.linearGradient(
-        listOf(
-            Color.White.copy(alpha = if (isDark) 0.52f else 0.68f),
-            Color.White.copy(alpha = if (isDark) 0.22f else 0.34f),
-            Color.White.copy(alpha = if (isDark) 0.46f else 0.62f),
-        )
-    )
 
     Box(
         modifier = Modifier
             .padding(horizontal = 12.dp)
             .padding(bottom = 12.dp)
-            .textureBlur(
+            .drawBackdrop(
                 backdrop = backdrop,
-                shape = RoundedRectangle(20.dp),
-                blurRadius = blurRadius,
-                noiseCoefficient = BlurDefaults.NoiseCoefficient,
-                colors = BlurColors(blendColors = blendColors),
-                enabled = blurEnabled,
+                shape = { RoundedRectangle(20.dp) },
+                effects = {
+                    if (blurEnabled) {
+                        vibrancy()
+                        blur(8.dp.toPx())
+                        lens(24.dp.toPx(), 24.dp.toPx())
+                    }
+                },
+                highlight = {
+                    Highlight.Default.copy(alpha = if (blurEnabled) 1f else 0f)
+                },
+                shadow = {
+                    Shadow.Default.copy(
+                        color = Color.Black.copy(if (isInLightTheme) 0.1f else 0.2f)
+                    )
+                },
+                onDrawSurface = { drawRect(containerColor) }
             )
-            .background(
-                color = if (blurEnabled) glassSurface else MiuixTheme.colorScheme.surfaceContainer,
-                shape = shape
-            )
-            .border(width = 1.dp, brush = borderBrush, shape = shape)
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = if (isDark) 0.22f else 0.30f),
-                                Color.White.copy(alpha = if (isDark) 0.16f else 0.20f),
-                                Color.White.copy(alpha = if (isDark) 0.12f else 0.15f),
-                                Color.Transparent
-                            )
-                        ),
-                        shape = shape
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        brush = Brush.linearGradient(
-                            listOf(
-                                Color.White.copy(alpha = if (isDark) 0.18f else 0.24f),
-                                Color.Transparent,
-                                Color.White.copy(alpha = if (isDark) 0.16f else 0.22f),
-                            )
-                        ),
-                        shape = shape
-                    )
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                content()
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            content()
         }
     }
 }
@@ -308,6 +270,9 @@ fun HomePage(
         drawRect(surfaceColor)
         drawContent()
     }
+    val homeCardBackdrop = rememberActionBarBackdrop {
+        drawContent()
+    }
 
     val shizukuGranted = shizukuStatus.contains("granted", ignoreCase = true)
     val runningColor = Color(0xFF2E7D32)
@@ -360,10 +325,6 @@ fun HomePage(
         targetValue = scrollProgress,
         label = "home_top_bar_progress"
     )
-    val cardBlurRadius by animateFloatAsState(
-        targetValue = if (blurEnabled) BlendTokenConfig.Effects.DEFAULT + 10f - (6f * scrollProgress) else 0f,
-        label = "home_card_blur_radius"
-    )
     val bgAlpha by animateFloatAsState(
         targetValue = 1f - scrollProgress,
         label = "home_bg_alpha"
@@ -408,10 +369,6 @@ fun HomePage(
                     .coerceIn(0f, 1f)
             }
             .collect { }
-    }
-
-    val cardBlendColors = remember(isDark) {
-        if (isDark) ColorBlendToken.Colored_Thick_Dark else ColorBlendToken.Colored_Thick_Light
     }
 
     DisposableEffect(Unit) {
@@ -612,10 +569,8 @@ fun HomePage(
                             .padding(bottom = listContentPadding.calculateBottomPadding())
                     ) {
                         HomeInfoCard(
-                            backdrop = backdrop,
-                            blurEnabled = blurEnabled,
-                            blurRadius = cardBlurRadius,
-                            blendColors = cardBlendColors
+                            backdrop = homeCardBackdrop,
+                            blurEnabled = blurEnabled
                         ) {
                             HomeInlineInfoItem(
                                 "MCP",
@@ -625,10 +580,8 @@ fun HomePage(
                         }
 
                         HomeInfoCard(
-                            backdrop = backdrop,
-                            blurEnabled = blurEnabled,
-                            blurRadius = cardBlurRadius,
-                            blendColors = cardBlendColors
+                            backdrop = homeCardBackdrop,
+                            blurEnabled = blurEnabled
                         ) {
                             HomeInlineInfoItem(
                                 "GitHub Cache",
@@ -638,10 +591,8 @@ fun HomePage(
                         }
 
                         HomeInfoCard(
-                            backdrop = backdrop,
-                            blurEnabled = blurEnabled,
-                            blurRadius = cardBlurRadius,
-                            blendColors = cardBlendColors
+                            backdrop = homeCardBackdrop,
+                            blurEnabled = blurEnabled
                         ) {
                             HomeInlineInfoItem(
                                 "BA",
