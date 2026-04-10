@@ -80,8 +80,8 @@ import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -105,6 +105,8 @@ private data class VersionCheckUi(
     val localVersion: String = "",
     val localVersionCode: Long = -1L,
     val latestTag: String = "",
+    val latestStableRawTag: String = "",
+    val latestPreRawTag: String = "",
     val hasUpdate: Boolean? = null,
     val message: String = "",
     val isPreRelease: Boolean = false,
@@ -166,12 +168,13 @@ fun GitHubPage(
         drawRect(surfaceColor)
         drawContent()
     }
-
     var trackedSearch by remember { mutableStateOf("") }
     var repoUrlInput by remember { mutableStateOf("") }
     var appSearch by remember { mutableStateOf("") }
     var pickerExpanded by remember { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
+    var editingTrackedItem by remember { mutableStateOf<GitHubTrackedApp?>(null) }
+    var checkPreReleaseInput by remember { mutableStateOf(false) }
     var selectedApp by remember { mutableStateOf<InstalledAppItem?>(null) }
     var appList by remember { mutableStateOf<List<InstalledAppItem>>(emptyList()) }
     var appListLoaded by remember { mutableStateOf(false) }
@@ -197,6 +200,8 @@ fun GitHubPage(
         localVersion = localVersion,
         localVersionCode = localVersionCode,
         latestTag = latestTag,
+        latestStableRawTag = latestStableRawTag,
+        latestPreRawTag = latestPreRawTag,
         hasUpdate = hasUpdate,
         message = message,
         isPreRelease = isPreRelease,
@@ -210,6 +215,8 @@ fun GitHubPage(
         localVersion = localVersion,
         localVersionCode = localVersionCode,
         latestTag = latestTag,
+        latestStableRawTag = latestStableRawTag,
+        latestPreRawTag = latestPreRawTag,
         hasUpdate = hasUpdate,
         message = message,
         isPreRelease = isPreRelease,
@@ -238,6 +245,7 @@ fun GitHubPage(
 
     suspend fun resolveItemState(item: GitHubTrackedApp): VersionCheckUi {
         return withContext(Dispatchers.IO) {
+                val preReleaseCheckEnabled = item.checkPreRelease
                 val local = runCatching { GitHubVersionUtils.localVersionName(context, item.packageName) }
                     .getOrDefault("unknown")
                 val localVersionCode = runCatching { GitHubVersionUtils.localVersionCode(context, item.packageName) }
@@ -270,19 +278,24 @@ fun GitHubPage(
                         } else {
                             null
                         }
-                        val hasPreReleaseUpdate = localIsPreReleaseInstalled && preRelevant && (preCmp?.let { it < 0 } == true)
+                        val hasPreReleaseUpdate = preReleaseCheckEnabled &&
+                            localIsPreReleaseInstalled &&
+                            preRelevant &&
+                            (preCmp?.let { it < 0 } == true)
                         val stableHasUpdate = cmp?.let { it < 0 } == true
-                        val hasUpdate = hasPreReleaseUpdate || stableHasUpdate
+                        val hasUpdate = stableHasUpdate || hasPreReleaseUpdate
                         val message = when {
                             hasPreReleaseUpdate -> "预发有更新"
                             stableHasUpdate -> "发现更新"
-                            localIsPreReleaseInstalled && preRelevant -> "预发行"
+                            preReleaseCheckEnabled && localIsPreReleaseInstalled && preRelevant -> "预发行"
                             hasUpdate == false -> "已是最新"
                             else -> "版本格式无法精确比较"
                         }
                         val preInfo = when {
-                            localIsPreReleaseInstalled && preRelevant -> matchedEntry.let { entry -> entry.title.ifBlank { entry.tag } }
-                            preRelevant -> latestPreEntry.title.ifBlank { latestPreEntry.tag }
+                            preReleaseCheckEnabled && localIsPreReleaseInstalled && preRelevant ->
+                                matchedEntry.let { entry -> entry.title.ifBlank { entry.tag } }
+                            preReleaseCheckEnabled && preRelevant ->
+                                latestPreEntry.title.ifBlank { latestPreEntry.tag }
                             else -> ""
                         }
                         VersionCheckUi(
@@ -290,11 +303,13 @@ fun GitHubPage(
                             localVersion = local,
                             localVersionCode = localVersionCode,
                             latestTag = signals.displayVersion,
+                            latestStableRawTag = signals.rawTag,
+                            latestPreRawTag = latestPreEntry?.tag.orEmpty(),
                             hasUpdate = hasUpdate,
                             message = message,
-                            isPreRelease = localIsPreReleaseInstalled && preRelevant,
+                            isPreRelease = preReleaseCheckEnabled && localIsPreReleaseInstalled && preRelevant,
                             preReleaseInfo = preInfo,
-                            showPreReleaseInfo = preInfo.isNotBlank(),
+                            showPreReleaseInfo = preReleaseCheckEnabled && preInfo.isNotBlank(),
                             hasPreReleaseUpdate = hasPreReleaseUpdate
                         )
                     },
@@ -306,25 +321,27 @@ fun GitHubPage(
                                     entry.title.ifBlank { entry.tag },
                                     matchedEntry.candidates
                                 )?.let { it > 0 } == true
-                            }
+                            }?.takeIf { preReleaseCheckEnabled }
                             VersionCheckUi(
                                 loading = false,
                                 localVersion = local,
                                 localVersionCode = localVersionCode,
                                 latestTag = matchedEntry.title.ifBlank { matchedEntry.tag },
+                                latestStableRawTag = matchedEntry.tag,
+                                latestPreRawTag = latestPre?.tag.orEmpty(),
                                 hasUpdate = latestPre != null,
                                 message = when {
                                     latestPre != null -> "预发有更新"
-                                    localIsPreRelease -> "预发行"
+                                    preReleaseCheckEnabled && localIsPreRelease -> "预发行"
                                     else -> "已匹配发行"
                                 },
-                                isPreRelease = localIsPreRelease,
+                                isPreRelease = preReleaseCheckEnabled && localIsPreRelease,
                                 preReleaseInfo = when {
                                     latestPre != null -> latestPre.title.ifBlank { latestPre.tag }
-                                    localIsPreRelease -> matchedEntry.title.ifBlank { matchedEntry.tag }
+                                    preReleaseCheckEnabled && localIsPreRelease -> matchedEntry.title.ifBlank { matchedEntry.tag }
                                     else -> ""
                                 },
-                                showPreReleaseInfo = localIsPreRelease || latestPre != null,
+                                showPreReleaseInfo = preReleaseCheckEnabled && (localIsPreRelease || latestPre != null),
                                 hasPreReleaseUpdate = latestPre != null
                             )
                         } else {
@@ -389,6 +406,80 @@ fun GitHubPage(
 
     fun saveTracked() {
         GitHubTrackStore.save(trackedItems.toList())
+    }
+
+    fun openTrackSheetForAdd() {
+        editingTrackedItem = null
+        repoUrlInput = ""
+        selectedApp = null
+        appSearch = ""
+        pickerExpanded = false
+        checkPreReleaseInput = false
+        showAddSheet = true
+    }
+
+    fun openTrackSheetForEdit(item: GitHubTrackedApp) {
+        editingTrackedItem = item
+        repoUrlInput = item.repoUrl
+        selectedApp = appList.firstOrNull { it.packageName == item.packageName }
+            ?: InstalledAppItem(label = item.appLabel, packageName = item.packageName)
+        appSearch = ""
+        pickerExpanded = false
+        checkPreReleaseInput = item.checkPreRelease
+        showAddSheet = true
+    }
+
+    fun applyTrackSheet() {
+        val app = selectedApp
+        val parsed = GitHubVersionUtils.parseOwnerRepo(repoUrlInput)
+        if (app == null || parsed == null) {
+            Toast.makeText(context, "请填写正确仓库并选择 App", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val newItem = GitHubTrackedApp(
+            repoUrl = repoUrlInput.trim(),
+            owner = parsed.first,
+            repo = parsed.second,
+            packageName = app.packageName,
+            appLabel = app.label,
+            checkPreRelease = checkPreReleaseInput
+        )
+        val editing = editingTrackedItem
+        if (editing == null) {
+            if (trackedItems.any { it.id == newItem.id }) {
+                Toast.makeText(context, "该条目已存在", Toast.LENGTH_SHORT).show()
+                return
+            }
+            trackedItems.add(newItem)
+            saveTracked()
+            refreshItem(newItem, showToastOnError = true)
+            Toast.makeText(context, "已新增跟踪", Toast.LENGTH_SHORT).show()
+        } else {
+            val duplicate = trackedItems.any { it.id == newItem.id && it.id != editing.id }
+            if (duplicate) {
+                Toast.makeText(context, "该条目已存在", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val index = trackedItems.indexOfFirst { it.id == editing.id }
+            if (index >= 0) {
+                trackedItems[index] = newItem
+            } else {
+                trackedItems.add(newItem)
+            }
+            if (editing.id != newItem.id) {
+                checkStates.remove(editing.id)
+            }
+            saveTracked()
+            refreshItem(newItem, showToastOnError = true)
+            Toast.makeText(context, "已更新跟踪", Toast.LENGTH_SHORT).show()
+        }
+        editingTrackedItem = null
+        repoUrlInput = ""
+        selectedApp = null
+        appSearch = ""
+        pickerExpanded = false
+        checkPreReleaseInput = false
+        showAddSheet = false
     }
 
     val appListPermissionLauncher =
@@ -497,7 +588,7 @@ fun GitHubPage(
                                     LiquidActionItem(
                                         icon = MiuixIcons.Regular.AddCircle,
                                         contentDescription = "新增跟踪",
-                                        onClick = { showAddSheet = true }
+                                        onClick = { openTrackSheetForAdd() }
                                     )
                                 ),
                                 onInteractionChanged = onActionBarInteractingChanged
@@ -642,7 +733,7 @@ fun GitHubPage(
                         .fillMaxWidth()
                         .combinedClickable(
                             onClick = { refreshAllTracked(showToast = true) },
-                            onLongClick = { showAddSheet = true }
+                            onLongClick = { openTrackSheetForAdd() }
                         )
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -652,10 +743,16 @@ fun GitHubPage(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                     ) {
+                        val refreshColor = when (overviewRefreshState) {
+                            OverviewRefreshState.Refreshing -> Color(0xFF3B82F6)
+                            OverviewRefreshState.Completed -> Color(0xFF22C55E)
+                            OverviewRefreshState.Cached -> Color(0xFFF59E0B)
+                            OverviewRefreshState.Idle -> MiuixTheme.colorScheme.onBackgroundVariant
+                        }
                         Text("Overview", color = MiuixTheme.colorScheme.onBackground)
                         Text(
                             text = formatRefreshAgo(lastRefreshMs),
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
+                            color = refreshColor,
                             modifier = Modifier.weight(1f)
                         )
                         StatusPill(
@@ -673,19 +770,40 @@ fun GitHubPage(
                             }
                         )
                     }
-                    Text(
-                        "追踪 $trackedCount 项 · 可更新 $updatableCount 项",
-                        color = MiuixTheme.colorScheme.onBackgroundVariant
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "追踪 $trackedCount 项",
+                            color = if (trackedCount > 0) MiuixTheme.colorScheme.onBackground else MiuixTheme.colorScheme.onBackgroundVariant
+                        )
+                        Text("·", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                        Text(
+                            "可更新 $updatableCount 项",
+                            color = if (updatableCount > 0) Color(0xFF22C55E) else MiuixTheme.colorScheme.onBackgroundVariant
+                        )
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                     ) {
-                        Text(
-                            "最新稳定版 $stableLatestCount 项 · 预发行 $preReleaseCount 项",
-                            color = MiuixTheme.colorScheme.onBackgroundVariant
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "最新稳定版 $stableLatestCount 项",
+                                color = if (stableLatestCount > 0) Color(0xFF3B82F6) else MiuixTheme.colorScheme.onBackgroundVariant
+                            )
+                            Text("·", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                            Text(
+                                "预发行 $preReleaseCount 项",
+                                color = if (preReleaseCount > 0) Color(0xFFF59E0B) else MiuixTheme.colorScheme.onBackgroundVariant
+                            )
+                        }
                         if (overviewRefreshState != OverviewRefreshState.Idle) {
                             val indicatorColor = when (overviewRefreshState) {
                                 OverviewRefreshState.Refreshing -> androidx.compose.ui.graphics.Color(0xFF3B82F6)
@@ -738,7 +856,7 @@ fun GitHubPage(
                         headerStartAction = {
                             AppIcon(packageName = item.packageName, size = 24.dp)
                         },
-                        onHeaderLongClick = { pendingDeleteItem = item },
+                        onHeaderLongClick = { openTrackSheetForEdit(item) },
                         headerActions = {
                             val state = checkStates[item.id] ?: VersionCheckUi()
                             val statusIcon = when {
@@ -759,7 +877,15 @@ fun GitHubPage(
                             }
                             val clickableModifier = if (state.hasUpdate == true || state.isPreRelease) {
                                 Modifier.clickable {
-                                    val releaseUrl = GitHubVersionUtils.buildReleaseUrl(item.owner, item.repo)
+                                    val releaseUrl = when {
+                                        state.hasPreReleaseUpdate && state.latestPreRawTag.isNotBlank() ->
+                                            GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestPreRawTag)
+                                        state.hasUpdate == true && state.latestStableRawTag.isNotBlank() ->
+                                            GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestStableRawTag)
+                                        state.isPreRelease && state.latestPreRawTag.isNotBlank() ->
+                                            GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestPreRawTag)
+                                        else -> GitHubVersionUtils.buildReleaseUrl(item.owner, item.repo)
+                                    }
                                     runCatching {
                                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl)))
                                     }.onFailure {
@@ -850,46 +976,32 @@ fun GitHubPage(
 
     WindowBottomSheet(
         show = showAddSheet,
-        title = "新增跟踪",
-        onDismissRequest = { showAddSheet = false },
+        title = if (editingTrackedItem == null) "新增跟踪" else "编辑跟踪",
+        onDismissRequest = {
+            showAddSheet = false
+            pickerExpanded = false
+            appSearch = ""
+            editingTrackedItem = null
+        },
         startAction = {
             GlassIconButton(
                 backdrop = backdrop,
                 icon = MiuixIcons.Regular.Close,
                 contentDescription = "关闭",
-                onClick = { showAddSheet = false }
+                onClick = {
+                    showAddSheet = false
+                    pickerExpanded = false
+                    appSearch = ""
+                    editingTrackedItem = null
+                }
             )
         },
         endAction = {
             GlassIconButton(
                 backdrop = backdrop,
                 icon = MiuixIcons.Regular.Ok,
-                contentDescription = "确认新增",
-                onClick = {
-                    val app = selectedApp
-                    val parsed = GitHubVersionUtils.parseOwnerRepo(repoUrlInput)
-                    if (app == null || parsed == null) {
-                        Toast.makeText(context, "请填写正确仓库并选择 App", Toast.LENGTH_SHORT).show()
-                        return@GlassIconButton
-                    }
-                    val item = GitHubTrackedApp(
-                        repoUrl = repoUrlInput.trim(),
-                        owner = parsed.first,
-                        repo = parsed.second,
-                        packageName = app.packageName,
-                        appLabel = app.label
-                    )
-                    if (trackedItems.any { it.id == item.id }) {
-                        Toast.makeText(context, "该条目已存在", Toast.LENGTH_SHORT).show()
-                        return@GlassIconButton
-                    }
-                    trackedItems.add(item)
-                    saveTracked()
-                    refreshItem(item, showToastOnError = true)
-                    repoUrlInput = ""
-                    showAddSheet = false
-                    Toast.makeText(context, "已新增跟踪", Toast.LENGTH_SHORT).show()
-                }
+                contentDescription = if (editingTrackedItem == null) "确认新增" else "确认保存",
+                onClick = { applyTrackSheet() }
             )
         }
     ) {
@@ -897,12 +1009,13 @@ fun GitHubPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
+                .padding(bottom = 12.dp)
         ) {
-            TextField(
+            GlassSearchField(
                 value = repoUrlInput,
                 onValueChange = { repoUrlInput = it },
                 label = "GitHub 项目地址",
-                useLabelAsPlaceholder = true,
+                backdrop = backdrop,
                 singleLine = true
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -917,12 +1030,27 @@ fun GitHubPage(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     text = "已选应用: ${selectedApp?.label ?: "未选择"}",
-                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                    color = Color(0xFF3A8DFF)
                 )
                 GlassTextButton(
                     backdrop = backdrop,
                     text = if (pickerExpanded) "收起列表" else "选择应用",
                     onClick = { pickerExpanded = !pickerExpanded }
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "检查预发行版本",
+                    color = MiuixTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = checkPreReleaseInput,
+                    onCheckedChange = { checked -> checkPreReleaseInput = checked }
                 )
             }
             if (pickerExpanded) {
@@ -949,7 +1077,7 @@ fun GitHubPage(
                             AppIcon(packageName = app.packageName, size = 30.dp)
                             Text(
                                 text = "${app.label} · ${app.packageName}",
-                                color = MiuixTheme.colorScheme.onBackground,
+                                color = Color(0xFF3A8DFF),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.fillMaxWidth()
@@ -957,6 +1085,21 @@ fun GitHubPage(
                         }
                     }
                 }
+            }
+            if (editingTrackedItem != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                GlassTextButton(
+                    backdrop = backdrop,
+                    text = "删除跟踪",
+                    textColor = MiuixTheme.colorScheme.error,
+                    onClick = {
+                        pendingDeleteItem = editingTrackedItem
+                        showAddSheet = false
+                        pickerExpanded = false
+                        appSearch = ""
+                        editingTrackedItem = null
+                    }
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -982,7 +1125,10 @@ fun GitHubPage(
                 TextButton(
                     modifier = Modifier.weight(1f),
                     text = "删除",
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    colors = ButtonDefaults.textButtonColors(
+                        color = MiuixTheme.colorScheme.error,
+                        textColor = MiuixTheme.colorScheme.onError
+                    ),
                     onClick = {
                         pendingDeleteItem?.let { deleting ->
                             trackedItems.remove(deleting)
@@ -1013,7 +1159,7 @@ private fun VersionValueRow(
     ) {
         Text(
             text = label,
-            color = MiuixTheme.colorScheme.onBackgroundVariant,
+            color = MiuixTheme.colorScheme.primary,
             modifier = Modifier.width(34.dp)
         )
         Text(
@@ -1054,7 +1200,7 @@ private fun AppIcon(
                 .clip(ContinuousCapsule),
             contentAlignment = androidx.compose.ui.Alignment.Center
         ) {
-            Text("App", color = MiuixTheme.colorScheme.onBackgroundVariant)
+            Text("App", color = MiuixTheme.colorScheme.primary)
         }
     }
 }

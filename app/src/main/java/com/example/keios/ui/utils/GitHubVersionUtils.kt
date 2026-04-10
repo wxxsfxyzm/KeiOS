@@ -22,7 +22,8 @@ data class GitHubTrackedApp(
     val owner: String,
     val repo: String,
     val packageName: String,
-    val appLabel: String
+    val appLabel: String,
+    val checkPreRelease: Boolean = false
 ) {
     val id: String
         get() = "$owner/$repo|$packageName"
@@ -45,6 +46,8 @@ data class GitHubCheckCacheEntry(
     val localVersion: String = "",
     val localVersionCode: Long = -1L,
     val latestTag: String = "",
+    val latestStableRawTag: String = "",
+    val latestPreRawTag: String = "",
     val hasUpdate: Boolean? = null,
     val message: String = "",
     val isPreRelease: Boolean = false,
@@ -93,7 +96,12 @@ object GitHubTrackStore {
                                 owner = owner,
                                 repo = repo,
                                 packageName = packageName,
-                                appLabel = appLabel.ifBlank { packageName }
+                                appLabel = appLabel.ifBlank { packageName },
+                                checkPreRelease = if (obj.has("checkPreRelease")) {
+                                    obj.optBoolean("checkPreRelease", false)
+                                } else {
+                                    false
+                                }
                             )
                         )
                     }
@@ -111,6 +119,7 @@ object GitHubTrackStore {
                 .put("repo", item.repo)
                 .put("packageName", item.packageName)
                 .put("appLabel", item.appLabel)
+                .put("checkPreRelease", item.checkPreRelease)
             array.put(obj)
         }
         kv().encode(KEY_ITEMS, array.toString())
@@ -134,6 +143,8 @@ object GitHubTrackStore {
                             localVersion = item.optString("localVersion"),
                             localVersionCode = item.optLong("localVersionCode", -1L),
                             latestTag = item.optString("latestTag"),
+                            latestStableRawTag = item.optString("latestStableRawTag"),
+                            latestPreRawTag = item.optString("latestPreRawTag"),
                             hasUpdate = if (item.has("hasUpdate")) item.optBoolean("hasUpdate") else null,
                             message = item.optString("message"),
                             isPreRelease = item.optBoolean("isPreRelease", false),
@@ -153,15 +164,17 @@ object GitHubTrackStore {
         states.forEach { (id, state) ->
             obj.put(
                 id,
-                JSONObject()
-                    .put("localVersion", state.localVersion)
-                    .put("localVersionCode", state.localVersionCode)
-                    .put("latestTag", state.latestTag)
-                    .put("hasUpdate", state.hasUpdate)
-                    .put("message", state.message)
-                    .put("isPreRelease", state.isPreRelease)
-                    .put("preReleaseInfo", state.preReleaseInfo)
-                    .put("showPreReleaseInfo", state.showPreReleaseInfo)
+                    JSONObject()
+                        .put("localVersion", state.localVersion)
+                        .put("localVersionCode", state.localVersionCode)
+                        .put("latestTag", state.latestTag)
+                        .put("latestStableRawTag", state.latestStableRawTag)
+                        .put("latestPreRawTag", state.latestPreRawTag)
+                        .put("hasUpdate", state.hasUpdate)
+                        .put("message", state.message)
+                        .put("isPreRelease", state.isPreRelease)
+                        .put("preReleaseInfo", state.preReleaseInfo)
+                        .put("showPreReleaseInfo", state.showPreReleaseInfo)
                     .put("hasPreReleaseUpdate", state.hasPreReleaseUpdate)
             )
         }
@@ -204,6 +217,14 @@ object GitHubVersionUtils {
 
     fun buildReleaseUrl(owner: String, repo: String): String {
         return "https://github.com/$owner/$repo/releases"
+    }
+
+    fun buildReleaseTagUrl(owner: String, repo: String, tag: String): String {
+        val normalized = tag.trim()
+        if (normalized.isBlank()) return buildReleaseUrl(owner, repo)
+        val encodedTag = java.net.URLEncoder.encode(normalized, Charsets.UTF_8.name())
+            .replace("+", "%20")
+        return "https://github.com/$owner/$repo/releases/tag/$encodedTag"
     }
 
     fun buildAppListPermissionIntent(context: Context): Intent? {

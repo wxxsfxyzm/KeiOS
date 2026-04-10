@@ -101,10 +101,10 @@ fun GlassTextButton(
     backdrop: Backdrop?,
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textColor: Color = MiuixTheme.colorScheme.primary
 ) {
     val isDark = isSystemInDarkTheme()
-    val textColor = MiuixTheme.colorScheme.primary
     val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
     Box(
         modifier = modifier

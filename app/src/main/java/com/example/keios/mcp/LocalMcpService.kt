@@ -800,6 +800,7 @@ class LocalMcpService(
     }
 
     private fun evaluateTrackedApp(item: GitHubTrackedApp): GitHubCheckRow {
+        val preReleaseCheckEnabled = item.checkPreRelease
         val local = runCatching {
             GitHubVersionUtils.localVersionName(appContext, item.packageName)
         }.getOrDefault("unknown")
@@ -829,14 +830,17 @@ class LocalMcpService(
                 val preCmp = if (latestPreEntry != null) {
                     GitHubVersionUtils.compareVersionToCandidates(local, latestPreEntry.candidates)
                 } else null
-                val hasPreUpdate = localIsPre && preRelevant && (preCmp?.let { it < 0 } == true)
+                val hasPreUpdate = preReleaseCheckEnabled &&
+                    localIsPre &&
+                    preRelevant &&
+                    (preCmp?.let { it < 0 } == true)
                 val stableUpdate = cmp?.let { it < 0 } == true
                 val hasUpdate = hasPreUpdate || stableUpdate
                 val preReleaseDisplay = latestPreEntry?.title?.ifBlank { latestPreEntry.tag }.orEmpty()
                 val status = when {
                     hasPreUpdate -> "预发有更新"
                     stableUpdate -> "发现更新"
-                    localIsPre && preRelevant -> "预发行"
+                    preReleaseCheckEnabled && localIsPre && preRelevant -> "预发行"
                     hasUpdate.not() -> "已是最新"
                     else -> "版本格式无法精确比较"
                 }
@@ -845,8 +849,8 @@ class LocalMcpService(
                     localVersion = local,
                     stableVersion = stable.displayVersion,
                     preReleaseVersion = when {
-                        localIsPre && preRelevant -> matchedEntry.title.ifBlank { matchedEntry.tag }
-                        preRelevant -> preReleaseDisplay
+                        preReleaseCheckEnabled && localIsPre && preRelevant -> matchedEntry.title.ifBlank { matchedEntry.tag }
+                        preReleaseCheckEnabled && preRelevant -> preReleaseDisplay
                         else -> ""
                     },
                     status = status,
@@ -856,12 +860,17 @@ class LocalMcpService(
             onFailure = { err ->
                 if (matchedEntry != null) {
                     val localIsPre = matchedEntry.isLikelyPreRelease
+                    val preInfo = if (preReleaseCheckEnabled && localIsPre) {
+                        matchedEntry.title.ifBlank { matchedEntry.tag }
+                    } else {
+                        ""
+                    }
                     GitHubCheckRow(
                         item = item,
                         localVersion = local,
                         stableVersion = matchedEntry.title.ifBlank { matchedEntry.tag },
-                        preReleaseVersion = if (localIsPre) matchedEntry.title.ifBlank { matchedEntry.tag } else "",
-                        status = if (localIsPre) "预发行" else "已匹配发行",
+                        preReleaseVersion = preInfo,
+                        status = if (preReleaseCheckEnabled && localIsPre) "预发行" else "已匹配发行",
                         hasUpdate = false
                     )
                 } else {

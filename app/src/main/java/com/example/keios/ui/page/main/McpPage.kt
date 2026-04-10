@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
@@ -48,7 +49,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
@@ -352,20 +352,21 @@ fun McpPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
+                .padding(bottom = 12.dp)
         ) {
-            TextField(
+            GlassSearchField(
                 value = serverName,
                 onValueChange = { serverName = it },
                 label = "服务名称（配置展示名）",
-                useLabelAsPlaceholder = true,
+                backdrop = backdrop,
                 singleLine = true
             )
             Spacer(modifier = Modifier.height(8.dp))
-            TextField(
+            GlassSearchField(
                 value = portText,
                 onValueChange = { portText = it.filter(Char::isDigit).take(5) },
                 label = "服务端口",
-                useLabelAsPlaceholder = true,
+                backdrop = backdrop,
                 singleLine = true
             )
             Spacer(modifier = Modifier.height(8.dp))
