@@ -251,6 +251,16 @@ private const val BA_CALENDAR_ENDPOINT = "https://www.gamekee.com/v1/activity/pa
 private const val BA_CALENDAR_CONNECT_TIMEOUT_MS = 10_000
 private const val BA_CALENDAR_READ_TIMEOUT_MS = 10_000
 private const val BA_CALENDAR_MAX_ITEMS = 6
+private const val BA_POOL_ENDPOINT = "https://www.gamekee.com/v1/cardPool/query-list"
+private const val BA_POOL_MAX_ITEMS = 6
+
+private val BA_POOL_TAGS = listOf(
+    6 to "限定",
+    7 to "FES限定",
+    8 to "联动",
+    9 to "复刻",
+    92 to "回忆招募"
+)
 
 private data class BaCalendarEntry(
     val id: Int,
@@ -258,6 +268,17 @@ private data class BaCalendarEntry(
     val kindId: Int,
     val kindName: String,
     val beginAtMs: Long,
+    val endAtMs: Long,
+    val linkUrl: String,
+    val isRunning: Boolean
+)
+
+private data class BaPoolEntry(
+    val id: Int,
+    val name: String,
+    val tagId: Int,
+    val tagName: String,
+    val startAtMs: Long,
     val endAtMs: Long,
     val linkUrl: String,
     val isRunning: Boolean
@@ -423,6 +444,153 @@ private fun activityProgress(entry: BaCalendarEntry, nowMs: Long): Float {
     return (elapsed.toDouble() / total.toDouble()).toFloat().coerceIn(0f, 1f)
 }
 
+private fun normalizeBaPoolEntries(entries: List<BaPoolEntry>, nowMs: Long = System.currentTimeMillis()): List<BaPoolEntry> {
+    return entries
+        .asSequence()
+        .filter { it.name.isNotBlank() }
+        .map { entry ->
+            val startAtMs = entry.startAtMs.coerceAtLeast(0L)
+            val endAtMs = entry.endAtMs.coerceAtLeast(startAtMs)
+            entry.copy(
+                startAtMs = startAtMs,
+                endAtMs = endAtMs,
+                isRunning = nowMs in startAtMs until endAtMs,
+                linkUrl = normalizeGameKeeLink(entry.linkUrl)
+            )
+        }
+        .filter { it.endAtMs > nowMs }
+        .sortedWith(
+            compareBy<BaPoolEntry>(
+                { if (it.isRunning) 0 else 1 },
+                { if (it.isRunning) it.endAtMs else it.startAtMs },
+                { it.tagId },
+                { it.id }
+            )
+        )
+        .take(BA_POOL_MAX_ITEMS)
+        .toList()
+}
+
+private fun fetchBaPoolEntriesByTag(serverIndex: Int, tagId: Int, tagName: String, nowMs: Long): List<BaPoolEntry> {
+    val serverId = gameKeeServerId(serverIndex)
+    val endpoint = "$BA_POOL_ENDPOINT?order_by=-1&card_tag_id=$tagId&keyword=&kind_id=6&status=0&serverId=$serverId"
+    val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        connectTimeout = BA_CALENDAR_CONNECT_TIMEOUT_MS
+        readTimeout = BA_CALENDAR_READ_TIMEOUT_MS
+        setRequestProperty("Accept", "application/json, text/plain, */*")
+        setRequestProperty("Accept-Language", "zh-CN")
+        setRequestProperty("Referer", "https://www.gamekee.com/ba/kachi/$serverId")
+        setRequestProperty("User-Agent", "Mozilla/5.0 (Android) KeiOS/1.0")
+        setRequestProperty("device-num", "1")
+        setRequestProperty("game-alias", "ba")
+    }
+    try {
+        val code = conn.responseCode
+        val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
+            ?.bufferedReader()
+            ?.use { it.readText() }
+            .orEmpty()
+        if (code !in 200..299) {
+            error("HTTP $code")
+        }
+        val root = JSONObject(body)
+        if (root.optInt("code", -1) != 0) {
+            error("API ${root.optInt("code", -1)}")
+        }
+        val data = root.optJSONArray("data") ?: return emptyList()
+        val entries = mutableListOf<BaPoolEntry>()
+        for (index in 0 until data.length()) {
+            val item = data.optJSONObject(index) ?: continue
+            val name = item.optString("name").trim()
+            if (name.isBlank()) continue
+
+            val startSec = item.optLong("start_at", 0L)
+            val endSec = item.optLong("end_at", 0L)
+            if (startSec <= 0L || endSec <= 0L) continue
+            val startAtMs = startSec * 1000L
+            val endAtMs = endSec * 1000L
+
+            entries += BaPoolEntry(
+                id = item.optInt("id", 0),
+                name = name,
+                tagId = tagId,
+                tagName = tagName,
+                startAtMs = startAtMs,
+                endAtMs = endAtMs,
+                linkUrl = normalizeGameKeeLink(item.optString("link_url")),
+                isRunning = nowMs in startAtMs until endAtMs
+            )
+        }
+        return entries
+    } finally {
+        conn.disconnect()
+    }
+}
+
+private fun fetchBaPoolEntries(serverIndex: Int, nowMs: Long = System.currentTimeMillis()): List<BaPoolEntry> {
+    val merged = mutableMapOf<Int, BaPoolEntry>()
+    BA_POOL_TAGS.forEach { (tagId, tagName) ->
+        val entries = fetchBaPoolEntriesByTag(serverIndex, tagId, tagName, nowMs)
+        entries.forEach { entry ->
+            val existing = merged[entry.id]
+            if (existing == null || entry.startAtMs > existing.startAtMs) {
+                merged[entry.id] = entry
+            }
+        }
+    }
+    return normalizeBaPoolEntries(merged.values.toList(), nowMs)
+}
+
+private fun encodeBaPoolEntries(entries: List<BaPoolEntry>): String {
+    val arr = JSONArray()
+    entries.forEach { item ->
+        arr.put(
+            JSONObject().apply {
+                put("id", item.id)
+                put("name", item.name)
+                put("tagId", item.tagId)
+                put("tagName", item.tagName)
+                put("startAtMs", item.startAtMs)
+                put("endAtMs", item.endAtMs)
+                put("linkUrl", item.linkUrl)
+            }
+        )
+    }
+    return arr.toString()
+}
+
+private fun decodeBaPoolEntries(raw: String, nowMs: Long = System.currentTimeMillis()): List<BaPoolEntry> {
+    if (raw.isBlank()) return emptyList()
+    val arr = JSONArray(raw)
+    val parsed = mutableListOf<BaPoolEntry>()
+    for (i in 0 until arr.length()) {
+        val obj = arr.optJSONObject(i) ?: continue
+        val name = obj.optString("name").trim()
+        if (name.isBlank()) continue
+        val startAtMs = obj.optLong("startAtMs", 0L)
+        val endAtMs = obj.optLong("endAtMs", 0L)
+        if (startAtMs <= 0L || endAtMs <= 0L) continue
+        parsed += BaPoolEntry(
+            id = obj.optInt("id", 0),
+            name = name,
+            tagId = obj.optInt("tagId", 0),
+            tagName = obj.optString("tagName").ifBlank { "其他" },
+            startAtMs = startAtMs,
+            endAtMs = endAtMs,
+            linkUrl = normalizeGameKeeLink(obj.optString("linkUrl")),
+            isRunning = nowMs in startAtMs until endAtMs
+        )
+    }
+    return normalizeBaPoolEntries(parsed, nowMs)
+}
+
+private fun poolProgress(entry: BaPoolEntry, nowMs: Long): Float {
+    val total = (entry.endAtMs - entry.startAtMs).coerceAtLeast(1L)
+    val elapsed = (nowMs - entry.startAtMs).coerceIn(0L, total)
+    return (elapsed.toDouble() / total.toDouble()).toFloat().coerceIn(0f, 1f)
+}
+
 private fun isNetworkAvailable(context: Context): Boolean {
     return runCatching {
         val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
@@ -462,12 +630,18 @@ private object BASettingsStore {
     private const val DEFAULT_AP_CURRENT = 0.0
     private const val KEY_CALENDAR_CACHE_PREFIX = "calendar_cache_"
     private const val KEY_CALENDAR_SYNC_PREFIX = "calendar_sync_"
+    private const val KEY_POOL_CACHE_PREFIX = "pool_cache_"
+    private const val KEY_POOL_SYNC_PREFIX = "pool_sync_"
     private const val KEY_CALENDAR_REFRESH_INTERVAL_HOURS = "calendar_refresh_interval_hours"
     private const val DEFAULT_CALENDAR_REFRESH_INTERVAL_HOURS = 12
 
     private fun calendarCacheKey(serverIndex: Int): String = "$KEY_CALENDAR_CACHE_PREFIX${serverIndex.coerceIn(0, 2)}"
 
     private fun calendarSyncKey(serverIndex: Int): String = "$KEY_CALENDAR_SYNC_PREFIX${serverIndex.coerceIn(0, 2)}"
+
+    private fun poolCacheKey(serverIndex: Int): String = "$KEY_POOL_CACHE_PREFIX${serverIndex.coerceIn(0, 2)}"
+
+    private fun poolSyncKey(serverIndex: Int): String = "$KEY_POOL_SYNC_PREFIX${serverIndex.coerceIn(0, 2)}"
 
     fun loadCalendarCache(serverIndex: Int): Pair<String, Long> {
         val store = kv()
@@ -479,6 +653,18 @@ private object BASettingsStore {
         val store = kv()
         store.encode(calendarCacheKey(serverIndex), encodedEntries)
         store.encode(calendarSyncKey(serverIndex), syncMs.coerceAtLeast(0L))
+    }
+
+    fun loadPoolCache(serverIndex: Int): Pair<String, Long> {
+        val store = kv()
+        return store.decodeString(poolCacheKey(serverIndex), "").orEmpty() to
+            store.decodeLong(poolSyncKey(serverIndex), 0L)
+    }
+
+    fun savePoolCache(serverIndex: Int, encodedEntries: String, syncMs: Long) {
+        val store = kv()
+        store.encode(poolCacheKey(serverIndex), encodedEntries)
+        store.encode(poolSyncKey(serverIndex), syncMs.coerceAtLeast(0L))
     }
 
     fun loadCalendarRefreshIntervalHours(): Int {
@@ -668,6 +854,11 @@ fun BAPage(
     var baCalendarError by remember { mutableStateOf<String?>(null) }
     var baCalendarLastSyncMs by remember { mutableLongStateOf(0L) }
     var baCalendarReloadSignal by remember { mutableIntStateOf(0) }
+    var baPoolEntries by remember { mutableStateOf<List<BaPoolEntry>>(emptyList()) }
+    var baPoolLoading by remember { mutableStateOf(false) }
+    var baPoolError by remember { mutableStateOf<String?>(null) }
+    var baPoolLastSyncMs by remember { mutableLongStateOf(0L) }
+    var baPoolReloadSignal by remember { mutableIntStateOf(0) }
     var calendarRefreshIntervalHours by remember {
         mutableIntStateOf(BASettingsStore.loadCalendarRefreshIntervalHours())
     }
@@ -946,6 +1137,12 @@ fun BAPage(
         }
     }
 
+    fun refreshPool(force: Boolean = false) {
+        if (force) {
+            baPoolReloadSignal += 1
+        }
+    }
+
     fun sendApTestNotification(
         showToast: Boolean = true,
         thresholdTriggered: Boolean = false
@@ -1144,6 +1341,69 @@ fun BAPage(
         baCalendarLoading = false
     }
 
+    LaunchedEffect(serverIndex, baPoolReloadSignal, calendarRefreshIntervalHours) {
+        val now = System.currentTimeMillis()
+        val (cachedRaw, cachedSyncMs) = BASettingsStore.loadPoolCache(serverIndex)
+        val hasCache = cachedRaw.isNotBlank()
+        val cachedEntries = if (hasCache) {
+            runCatching { decodeBaPoolEntries(cachedRaw, now) }.getOrElse { emptyList() }
+        } else {
+            emptyList()
+        }
+        val networkAvailable = isNetworkAvailable(context)
+        val intervalMs = calendarRefreshIntervalHours.coerceAtLeast(1) * 60L * 60L * 1000L
+        val cacheExpired = !hasCache || cachedSyncMs <= 0L || (now - cachedSyncMs).coerceAtLeast(0L) >= intervalMs
+        val forceRefresh = baPoolReloadSignal > 0
+        val shouldRequestNetwork = forceRefresh || cacheExpired
+
+        if (hasCache) {
+            baPoolEntries = cachedEntries
+            baPoolLastSyncMs = cachedSyncMs
+        } else {
+            baPoolEntries = emptyList()
+            baPoolLastSyncMs = 0L
+        }
+
+        if (!shouldRequestNetwork) {
+            baPoolLoading = false
+            baPoolError = null
+            return@LaunchedEffect
+        }
+
+        if (!networkAvailable) {
+            baPoolLoading = false
+            baPoolError = if (hasCache) {
+                "当前离线，已显示本地缓存"
+            } else {
+                "当前离线且无缓存，请联网后刷新"
+            }
+            return@LaunchedEffect
+        }
+
+        baPoolLoading = true
+        baPoolError = null
+        val result = withContext(Dispatchers.IO) {
+            runCatching { fetchBaPoolEntries(serverIndex, now) }
+        }
+        result
+            .onSuccess { entries ->
+                baPoolEntries = entries
+                baPoolLastSyncMs = now
+                baPoolError = null
+                BASettingsStore.savePoolCache(serverIndex, encodeBaPoolEntries(entries), now)
+            }
+            .onFailure {
+                if (hasCache) {
+                    baPoolEntries = cachedEntries
+                    baPoolLastSyncMs = cachedSyncMs
+                    baPoolError = "网络请求失败，已显示本地缓存"
+                } else {
+                    baPoolError = "卡池同步失败"
+                }
+            }
+        baPoolLoading = false
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -1164,6 +1424,7 @@ fun BAPage(
                                             applyCafeStorage()
                                             applyApRegen()
                                             refreshCalendar(force = true)
+                                            refreshPool(force = true)
                                         }
                                     ),
                                     LiquidActionItem(
@@ -1234,6 +1495,7 @@ fun BAPage(
                                                                 elapsed >= picked.hours * 60L * 60L * 1000L
                                                             ) {
                                                                 refreshCalendar(force = true)
+                                                                refreshPool(force = true)
                                                             }
                                                         }
                                                     )
@@ -1343,6 +1605,7 @@ fun BAPage(
                                                         serverIndex = selected
                                                         BASettingsStore.saveServerIndex(selected)
                                                         refreshCalendar(force = true)
+                                                        refreshPool(force = true)
                                                         showOverviewServerPopup = false
                                                     }
                                                 )
@@ -1819,6 +2082,134 @@ fun BAPage(
                                     }
                                 }
                                 if (index < baCalendarEntries.lastIndex) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(6.dp)) }
+            item { SmallTitle("卡池信息", insideMargin = baSmallTitleMargin) }
+            item { Spacer(modifier = Modifier.height(6.dp)) }
+
+            item {
+                val accentBlue = Color(0xFF3B82F6)
+                val accentGreen = Color(0xFF22C55E)
+                val countdownBlue = Color(0xFF60A5FA)
+                val serverTimeZone = serverRefreshTimeZone(serverIndex)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
+                        color = Color(0x223B82F6),
+                        contentColor = MiuixTheme.colorScheme.onBackground
+                    ),
+                    pressFeedbackType = if (suspendCardFeedback) PressFeedbackType.None else PressFeedbackType.Sink,
+                    showIndication = !suspendCardFeedback,
+                    onClick = {}
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("GameKee · ${serverOptions[serverIndex]}", color = MiuixTheme.colorScheme.onBackground)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (baPoolLoading) "同步中..." else formatBaDateTimeNoYearInTimeZone(
+                                        baPoolLastSyncMs,
+                                        serverTimeZone
+                                    ),
+                                    color = countdownBlue,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                GlassIconButton(
+                                    backdrop = backdrop,
+                                    icon = MiuixIcons.Regular.Refresh,
+                                    contentDescription = "刷新卡池",
+                                    blurRadius = baGlassBlur,
+                                    lightMaterial = baLightGlass,
+                                    bottomBarStyle = baBottomBarGlass,
+                                    onClick = { refreshPool(force = true) }
+                                )
+                            }
+                        }
+
+                        if (!baPoolError.isNullOrBlank()) {
+                            Text(
+                                text = baPoolError.orEmpty(),
+                                color = Color(0xFFF59E0B),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        } else if (!baPoolLoading && baPoolEntries.isEmpty()) {
+                            Text(
+                                text = "暂无进行中或即将开始的卡池",
+                                color = MiuixTheme.colorScheme.onBackgroundVariant
+                            )
+                        } else {
+                            baPoolEntries.forEachIndexed { index, pool ->
+                                val remainTarget = if (pool.isRunning) pool.endAtMs else pool.startAtMs
+                                val remainText = formatBaRemainingTime(remainTarget, uiNowMs)
+                                val statusText = if (pool.isRunning) "进行中" else "即将开始"
+                                val statusColor = if (pool.isRunning) accentGreen else accentBlue
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = { openCalendarLink(pool.linkUrl) },
+                                            onLongClick = { openCalendarLink(pool.linkUrl) }
+                                        ),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "${pool.tagName} · ${pool.name}",
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${formatBaDateTimeNoYearInTimeZone(pool.startAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(pool.endAtMs, serverTimeZone)}",
+                                        color = countdownBlue,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    LinearProgressIndicator(
+                                        progress = poolProgress(pool, uiNowMs),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 2.dp),
+                                        height = 5.dp,
+                                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                            foregroundColor = if (pool.isRunning) accentGreen else accentBlue,
+                                            backgroundColor = MiuixTheme.colorScheme.secondaryContainer
+                                        )
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(statusText, color = statusColor)
+                                        Text(
+                                            text = remainText,
+                                            color = countdownBlue,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                if (index < baPoolEntries.lastIndex) {
                                     Spacer(modifier = Modifier.height(6.dp))
                                 }
                             }
