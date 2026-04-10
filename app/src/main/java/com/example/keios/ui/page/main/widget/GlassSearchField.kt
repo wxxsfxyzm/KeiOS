@@ -8,13 +8,20 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
@@ -35,8 +42,12 @@ fun GlassSearchField(
     label: String,
     backdrop: Backdrop?,
     modifier: Modifier = Modifier,
-    singleLine: Boolean = true
+    singleLine: Boolean = true,
+    textAlign: TextAlign = TextAlign.Start,
+    fontSize: TextUnit = 15.sp,
+    onImeActionDone: (() -> Unit)? = null
 ) {
+    val focusManager = LocalFocusManager.current
     val isDark = isSystemInDarkTheme()
     val textColor = MiuixTheme.colorScheme.onBackground
     val placeholderColor = MiuixTheme.colorScheme.onBackgroundVariant
@@ -51,6 +62,12 @@ fun GlassSearchField(
         Color.Black.copy(alpha = 0.06f)
     }
     val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
+
+    val contentAlignment = when (textAlign) {
+        TextAlign.Center -> Alignment.Center
+        TextAlign.End, TextAlign.Right -> Alignment.CenterEnd
+        else -> Alignment.CenterStart
+    }
 
     Box(
         modifier = modifier
@@ -94,19 +111,31 @@ fun GlassSearchField(
             value = value,
             onValueChange = onValueChange,
             singleLine = singleLine,
-            textStyle = TextStyle(color = textColor, fontSize = 15.sp),
+            textStyle = TextStyle(color = textColor, fontSize = fontSize, textAlign = textAlign),
             cursorBrush = SolidColor(MiuixTheme.colorScheme.primary),
+            keyboardOptions = if (singleLine) KeyboardOptions(imeAction = ImeAction.Done) else KeyboardOptions.Default,
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    onImeActionDone?.invoke()
+                    focusManager.clearFocus()
+                }
+            ),
             modifier = Modifier.fillMaxWidth(),
             decorationBox = { innerTextField ->
-                if (value.isBlank()) {
-                    Text(
-                        text = label,
-                        color = placeholderColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = contentAlignment
+                ) {
+                    if (value.isBlank()) {
+                        Text(
+                            text = label,
+                            color = placeholderColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    innerTextField()
                 }
-                innerTextField()
             }
         )
     }
