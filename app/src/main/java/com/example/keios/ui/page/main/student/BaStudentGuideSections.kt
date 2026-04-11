@@ -52,9 +52,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Pause
@@ -471,6 +473,7 @@ fun GuideVoiceEntryCard(
     languageHeaders: List<String>,
     backdrop: Backdrop?,
     isPlaying: Boolean,
+    playProgress: Float,
     onTogglePlay: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -518,14 +521,30 @@ fun GuideVoiceEntryCard(
                     modifier = Modifier.weight(1f)
                 )
                 if (entry.audioUrl.isNotBlank()) {
-                    GlassTextButton(
-                        backdrop = backdrop,
-                        text = "",
-                        leadingIcon = if (isPlaying) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
-                        textColor = Color(0xFF3B82F6),
-                        bottomBarStyle = true,
-                        onClick = { onTogglePlay(entry.audioUrl) }
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (isPlaying) {
+                            CircularProgressIndicator(
+                                progress = playProgress.coerceIn(0f, 1f),
+                                size = 18.dp,
+                                strokeWidth = 2.dp,
+                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                    foregroundColor = Color(0xFF3B82F6),
+                                    backgroundColor = Color(0x553B82F6)
+                                )
+                            )
+                        }
+                        GlassTextButton(
+                            backdrop = backdrop,
+                            text = "",
+                            leadingIcon = if (isPlaying) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
+                            textColor = Color(0xFF3B82F6),
+                            bottomBarStyle = true,
+                            onClick = { onTogglePlay(entry.audioUrl) }
+                        )
+                    }
                 }
             }
 

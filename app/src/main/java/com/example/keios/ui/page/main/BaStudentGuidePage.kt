@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,7 +60,6 @@ import com.example.keios.ui.page.main.student.GuideRemoteImage
 import com.example.keios.ui.page.main.student.GuideRowsSection
 import com.example.keios.ui.page.main.student.GuideSkillCardItem
 import com.example.keios.ui.page.main.student.GuideVoiceEntryCard
-import com.example.keios.ui.page.main.student.GuideVoiceLanguageCard
 import com.example.keios.ui.page.main.student.GuideWeaponCardItem
 import com.example.keios.ui.page.main.student.buildCombatMetaItems
 import com.example.keios.ui.page.main.student.buildProfileMetaItems
@@ -78,6 +78,7 @@ import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -113,6 +114,8 @@ fun BaStudentGuidePage(
     var refreshSignal by remember { mutableStateOf(0) }
     var selectedBottomTabIndex by rememberSaveable(sourceUrl) { mutableIntStateOf(0) }
     var playingVoiceUrl by rememberSaveable(sourceUrl) { mutableStateOf("") }
+    var isVoicePlaying by remember(sourceUrl) { mutableStateOf(false) }
+    var voicePlayProgress by remember(sourceUrl) { mutableFloatStateOf(0f) }
     val bottomTabs = GuideBottomTab.entries
     val activeBottomTab = bottomTabs.getOrElse(selectedBottomTabIndex) { GuideBottomTab.Archive }
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -153,16 +156,34 @@ fun BaStudentGuidePage(
 
     DisposableEffect(voicePlayer) {
         val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                isVoicePlaying = isPlaying && playingVoiceUrl.isNotBlank()
+                if (!isVoicePlaying) {
+                    voicePlayProgress = 0f
+                }
+            }
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                voicePlayProgress = 0f
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
-                    if (!voicePlayer.isPlaying) {
+                when (playbackState) {
+                    Player.STATE_ENDED, Player.STATE_IDLE -> {
                         playingVoiceUrl = ""
+                        isVoicePlaying = false
+                        voicePlayProgress = 0f
+                    }
+                    Player.STATE_READY -> {
+                        isVoicePlaying = voicePlayer.isPlaying && playingVoiceUrl.isNotBlank()
                     }
                 }
             }
 
             override fun onPlayerError(error: PlaybackException) {
                 playingVoiceUrl = ""
+                isVoicePlaying = false
+                voicePlayProgress = 0f
                 Toast.makeText(context, "语音播放失败：${error.errorCodeName}", Toast.LENGTH_SHORT).show()
             }
         }
@@ -193,19 +214,43 @@ fun BaStudentGuidePage(
                 if (voicePlayer.isPlaying) {
                     voicePlayer.pause()
                     playingVoiceUrl = ""
+                    isVoicePlaying = false
+                    voicePlayProgress = 0f
                 } else {
                     voicePlayer.play()
                     playingVoiceUrl = target
+                    isVoicePlaying = true
                 }
             } else {
                 voicePlayer.setMediaItem(MediaItem.fromUri(target))
                 voicePlayer.prepare()
                 voicePlayer.play()
                 playingVoiceUrl = target
+                isVoicePlaying = true
+                voicePlayProgress = 0f
             }
         }.onFailure {
             playingVoiceUrl = ""
+            isVoicePlaying = false
+            voicePlayProgress = 0f
             Toast.makeText(context, "语音播放失败", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(isVoicePlaying, playingVoiceUrl) {
+        if (!isVoicePlaying || playingVoiceUrl.isBlank()) {
+            voicePlayProgress = 0f
+            return@LaunchedEffect
+        }
+        while (isVoicePlaying && playingVoiceUrl.isNotBlank()) {
+            val duration = voicePlayer.duration
+            val position = voicePlayer.currentPosition
+            voicePlayProgress = if (duration > 0L && position >= 0L) {
+                (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+            delay(220)
         }
     }
 
@@ -626,16 +671,6 @@ fun BaStudentGuidePage(
                                 item { Spacer(modifier = Modifier.height(10.dp)) }
                             }
 
-                            if (guide.voiceLanguageHeaders.isNotEmpty()) {
-                                item {
-                                    GuideVoiceLanguageCard(
-                                        headers = guide.voiceLanguageHeaders,
-                                        backdrop = backdrop
-                                    )
-                                }
-                                item { Spacer(modifier = Modifier.height(10.dp)) }
-                            }
-
                             if (voiceEntries.isNotEmpty()) {
                                 voiceEntries.forEachIndexed { index, entry ->
                                     item {
@@ -643,7 +678,12 @@ fun BaStudentGuidePage(
                                             entry = entry,
                                             languageHeaders = guide.voiceLanguageHeaders,
                                             backdrop = backdrop,
-                                            isPlaying = normalizeGuideUrl(entry.audioUrl) == playingVoiceUrl && voicePlayer.isPlaying,
+                                            isPlaying = normalizeGuideUrl(entry.audioUrl) == playingVoiceUrl && isVoicePlaying,
+                                            playProgress = if (normalizeGuideUrl(entry.audioUrl) == playingVoiceUrl) {
+                                                voicePlayProgress
+                                            } else {
+                                                0f
+                                            },
                                             onTogglePlay = ::toggleVoicePlayback
                                         )
                                     }
