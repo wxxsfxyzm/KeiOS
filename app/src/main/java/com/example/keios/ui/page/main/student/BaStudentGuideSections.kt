@@ -849,12 +849,26 @@ private fun buildSkillDescriptionRichText(
 
     val inlineContent = linkedMapOf<String, InlineTextContent>()
     var inlineCounter = 0
+    val normalizedDescription = normalizeGlossaryToken(description)
+    val fuzzyLeadingIcons = glossary
+        .asSequence()
+        .filter { entry ->
+            val label = entry.key
+            if (description.contains(label)) return@filter false
+            val normalizedLabel = normalizeGlossaryToken(label)
+            normalizedLabel.isNotBlank() && normalizedDescription.contains(normalizedLabel)
+        }
+        .map { it.value }
+        .distinct()
+        .take(6)
+        .toList()
+    val prefixIcons = (leadingIcons + fuzzyLeadingIcons)
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .distinct()
+        .take(6)
     val text = buildAnnotatedString {
-        leadingIcons
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .take(6)
+        prefixIcons
             .forEach { iconUrl ->
                 val inlineId = "skill_icon_prefix_$inlineCounter"
                 inlineCounter += 1
@@ -931,6 +945,13 @@ private fun buildSkillDescriptionRichText(
         }
     }
     return SkillDescriptionRichText(text, inlineContent)
+}
+
+private fun normalizeGlossaryToken(raw: String): String {
+    return raw
+        .replace(Regex("""[\s\u3000]"""), "")
+        .replace(Regex("""[，。、“”‘’：:；;（）()【】\[\]《》<>·•\-—_+*/\\|!?！？]"""), "")
+        .lowercase()
 }
 
 @Composable

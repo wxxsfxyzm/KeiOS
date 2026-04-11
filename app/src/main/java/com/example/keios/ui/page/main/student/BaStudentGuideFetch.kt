@@ -367,6 +367,7 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
         val summaryCandidates = mutableListOf<String>()
 
         var inSkillBlock = false
+        var inSkillGlossaryBlock = false
         var inWeaponBlock = false
         baseRows.forEach { row ->
             val key = row.key
@@ -388,15 +389,23 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
                 normalizedKey.contains("专武考据") ||
                 normalizedKey == "初始数据"
             val isSkillBlockStart = normalizedKey == "技能类型"
+            val isSkillGlossaryStart = normalizedKey == "技能名词"
             val isSkillBlockEnd = isWeaponBlockStart ||
+                normalizedKey.contains("升级材料") ||
+                normalizedKey == "初始数据"
+            val isSkillGlossaryEnd = isWeaponBlockStart ||
                 normalizedKey.contains("升级材料") ||
                 normalizedKey == "初始数据"
             if (isWeaponBlockStart) {
                 inWeaponBlock = true
                 inSkillBlock = false
+                inSkillGlossaryBlock = false
             }
             if (isSkillBlockStart) {
                 inSkillBlock = true
+            }
+            if (isSkillGlossaryStart) {
+                inSkillGlossaryBlock = true
             }
 
             val isVoice = containsAny(normalizedKey, voiceKeywords)
@@ -404,6 +413,7 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
             val matchesGrowthKeywords = containsAny(normalizedKey, growthKeywords)
             val isLevelRow = key.trim().matches(Regex("""(?i)^LV\.?\d{1,2}$"""))
             val isSkill = (inSkillBlock && (isLevelRow || normalizedKey == "技能COST" || normalizedKey == "技能描述" || normalizedKey == "技能图标" || normalizedKey == "技能名称" || normalizedKey == "技能类型")) ||
+                (inSkillGlossaryBlock && normalizedKey.isNotBlank() && !inWeaponBlock) ||
                 (matchesSkillKeywords && !inWeaponBlock)
             val isGrowth = inWeaponBlock || (matchesGrowthKeywords && !isSkill)
             val isGallery = containsAny(normalizedKey, galleryKeywords)
@@ -451,6 +461,9 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
             if (isSkillBlockEnd) {
                 inSkillBlock = false
             }
+            if (isSkillGlossaryEnd) {
+                inSkillGlossaryBlock = false
+            }
         }
 
         val distinctGallery = galleryItems
@@ -461,8 +474,8 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
             imageUrl = firstImage,
             summary = summaryCandidates.joinToString(" · "),
             stats = stats.take(14),
-            // 技能名词图标通常位于后段，120条会截断导致描述内术语图标缺失。
-            skillRows = skillRows.take(260),
+            // 不截断技能行，避免长描述/术语图标在后段时被裁剪。
+            skillRows = skillRows,
             profileRows = profileRows.take(120),
             galleryItems = distinctGallery,
             growthRows = growthRows.take(160),

@@ -2,12 +2,13 @@ package com.example.keios.ui.page.main.student
 
 fun BaStudentGuideInfo.weaponCardForDisplay(): GuideWeaponCardModel? {
     val growthRows = growthRowsForDisplay()
+    val skillRows = skillRowsForDisplay()
     val rows = if (growthRows.any { it.key.trim() == "专武" }) {
         growthRows
     } else {
         buildList {
             addAll(growthRows)
-            addAll(skillRowsForDisplay())
+            addAll(skillRows)
         }
     }
     if (rows.isEmpty()) return null
@@ -15,7 +16,12 @@ fun BaStudentGuideInfo.weaponCardForDisplay(): GuideWeaponCardModel? {
     val weaponStart = rows.indexOfFirst { it.key.trim() == "专武" }
     if (weaponStart < 0) return null
 
-    val glossaryIcons = extractSkillGlossaryIcons(rows)
+    val glossaryIcons = extractSkillGlossaryIcons(
+        buildList {
+            addAll(skillRows)
+            addAll(growthRows)
+        }
+    )
     var weaponName = ""
     var weaponImage = ""
     var weaponDescription = ""

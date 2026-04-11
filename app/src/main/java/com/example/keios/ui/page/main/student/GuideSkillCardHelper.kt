@@ -6,7 +6,15 @@ fun BaStudentGuideInfo.skillCardsForDisplay(): List<GuideSkillCardModel> {
     val rows = skillRowsForDisplay()
     if (rows.isEmpty()) return emptyList()
 
-    val glossaryIcons = extractSkillGlossaryIcons(rows)
+    val glossaryIcons = extractSkillGlossaryIcons(rows).ifEmpty {
+        extractSkillGlossaryIcons(
+            buildList {
+                addAll(rows)
+                addAll(profileRowsForDisplay())
+                addAll(growthRowsForDisplay())
+            }
+        )
+    }
     val drafts = parseBaseSkillDrafts(rows)
     if (drafts.isEmpty()) return emptyList()
 
