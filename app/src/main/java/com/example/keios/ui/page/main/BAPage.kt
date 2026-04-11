@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -60,6 +59,7 @@ import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
+import com.example.keios.ba.helper.GameKeeFetchHelper
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.tencent.mmkv.MMKV
@@ -92,13 +92,15 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowListPopup
-import java.net.HttpURLConnection
-import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -256,12 +258,12 @@ private fun formatBaRemainingTime(targetMs: Long, nowMs: Long = System.currentTi
     return parts.joinToString(" ")
 }
 
-private const val BA_CALENDAR_ENDPOINT = "https://www.gamekee.com/v1/activity/page-list"
-private const val BA_CALENDAR_CONNECT_TIMEOUT_MS = 10_000
-private const val BA_CALENDAR_READ_TIMEOUT_MS = 10_000
+private const val BA_CALENDAR_ENDPOINT = "/v1/activity/page-list"
+private const val BA_NETWORK_RETRY_ATTEMPTS = 1
+private const val BA_SYNC_TIMEOUT_MS = 20_000L
 private const val BA_CALENDAR_MAX_ITEMS = 6
 private const val BA_CALENDAR_CACHE_SCHEMA_VERSION = 3
-private const val BA_POOL_ENDPOINT = "https://www.gamekee.com/v1/cardPool/query-list"
+private const val BA_POOL_ENDPOINT = "/v1/cardPool/query-list"
 private const val BA_POOL_MAX_ITEMS = 6
 private const val BA_POOL_CACHE_SCHEMA_VERSION = 5
 
@@ -275,6 +277,39 @@ private val BA_POOL_TAGS = listOf(
 )
 private val BA_POOL_TAG_NAME_MAP = BA_POOL_TAGS.toMap()
 private const val BA_POOL_FALLBACK_ACTIVE_TAG_ID = 6
+
+private fun <T> runWithRetry(attempts: Int = BA_NETWORK_RETRY_ATTEMPTS, block: () -> T): T {
+    var lastError: Throwable? = null
+    repeat(attempts.coerceAtLeast(1)) { index ->
+        try {
+            return block()
+        } catch (t: Throwable) {
+            lastError = t
+            if (index < attempts - 1) Thread.sleep(300L)
+        }
+    }
+    throw lastError ?: IllegalStateException("network retry failed")
+}
+
+private fun <T> runWithHardTimeout(timeoutMs: Long, block: () -> T): T {
+    val executor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "ba-sync-hard-timeout").apply { isDaemon = true }
+    }
+    val future = executor.submit<T> { block() }
+    return try {
+        future.get(timeoutMs, TimeUnit.MILLISECONDS)
+    } catch (timeout: TimeoutException) {
+        future.cancel(true)
+        throw IllegalStateException("hard timeout ${timeoutMs}ms", timeout)
+    } catch (interrupted: InterruptedException) {
+        Thread.currentThread().interrupt()
+        throw IllegalStateException("hard timeout interrupted", interrupted)
+    } catch (execution: ExecutionException) {
+        throw (execution.cause ?: execution)
+    } finally {
+        executor.shutdownNow()
+    }
+}
 
 private data class BaCalendarEntry(
     val id: Int,
@@ -405,23 +440,8 @@ private fun GameKeeCoverImage(
 
     val bitmap by produceState<Bitmap?>(initialValue = null, normalizedUrl) {
         value = withContext(Dispatchers.IO) {
-            runCatching {
-                val conn = (URL(normalizedUrl).openConnection() as HttpURLConnection).apply {
-                    requestMethod = "GET"
-                    connectTimeout = BA_CALENDAR_CONNECT_TIMEOUT_MS
-                    readTimeout = BA_CALENDAR_READ_TIMEOUT_MS
-                    setRequestProperty("Accept", "image/*,*/*")
-                    setRequestProperty("User-Agent", "Mozilla/5.0 (Android) KeiOS/1.0")
-                    setRequestProperty("Referer", "https://www.gamekee.com/")
-                }
-                try {
-                    val code = conn.responseCode
-                    if (code !in 200..299) return@runCatching null
-                    conn.inputStream.use { BitmapFactory.decodeStream(it) }
-                } finally {
-                    conn.disconnect()
-                }
-            }.getOrNull()
+            runCatching { GameKeeFetchHelper.fetchImage(normalizedUrl) }
+                .getOrNull()
         }
     }
 
@@ -458,65 +478,54 @@ private fun formatBaDateTimeNoYearInTimeZone(epochMillis: Long, timeZone: TimeZo
     }.getOrDefault("-")
 }
 
-private fun fetchBaCalendarEntries(serverIndex: Int, nowMs: Long = System.currentTimeMillis()): List<BaCalendarEntry> {
+private fun fetchBaCalendarEntries(
+    serverIndex: Int,
+    nowMs: Long = System.currentTimeMillis()
+): List<BaCalendarEntry> {
     val serverId = gameKeeServerId(serverIndex)
-    val endpoint = "$BA_CALENDAR_ENDPOINT?importance=0&sort=-1&keyword=&limit=999&page_no=1&serverId=$serverId&status=0"
-    val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
-        requestMethod = "GET"
-        connectTimeout = BA_CALENDAR_CONNECT_TIMEOUT_MS
-        readTimeout = BA_CALENDAR_READ_TIMEOUT_MS
-        setRequestProperty("Accept", "application/json, text/plain, */*")
-        setRequestProperty("Accept-Language", "zh-CN")
-        setRequestProperty("Referer", "https://www.gamekee.com/ba/huodong/$serverId")
-        setRequestProperty("User-Agent", "Mozilla/5.0 (Android) KeiOS/1.0")
-        setRequestProperty("device-num", "1")
-        setRequestProperty("game-alias", "ba")
-    }
-    try {
-        val code = conn.responseCode
-        val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
-            ?.bufferedReader()
-            ?.use { it.readText() }
-            .orEmpty()
-        if (code !in 200..299) {
-            error("HTTP $code")
-        }
-        val root = JSONObject(body)
-        if (root.optInt("code", -1) != 0) {
-            error("API ${root.optInt("code", -1)}")
-        }
-        val data = root.optJSONArray("data") ?: return emptyList()
-        val entries = mutableListOf<BaCalendarEntry>()
-        for (index in 0 until data.length()) {
-            val item = data.optJSONObject(index) ?: continue
-            val title = item.optString("title").trim()
-            if (title.isBlank()) continue
-
-            val beginSec = item.optLong("begin_at", 0L)
-            val endSec = item.optLong("end_at", 0L)
-            if (beginSec <= 0L || endSec <= 0L) continue
-            val beginAtMs = beginSec * 1000L
-            val endAtMs = endSec * 1000L
-
-            val kindId = item.optInt("activity_kind_id", 31)
-            val kindName = item.optString("activity_kind_name").ifBlank { "其他" }
-            entries += BaCalendarEntry(
-                id = item.optInt("id", 0),
-                title = title,
-                kindId = kindId,
-                kindName = kindName,
-                beginAtMs = beginAtMs,
-                endAtMs = endAtMs,
-                linkUrl = normalizeGameKeeLink(item.optString("link_url")),
-                imageUrl = extractGameKeeImageLink(item),
-                isRunning = nowMs in beginAtMs until endAtMs
+    val endpointPath = "$BA_CALENDAR_ENDPOINT?importance=0&sort=-1&keyword=&limit=999&page_no=1&serverId=$serverId&status=0"
+    val body = runWithRetry {
+        GameKeeFetchHelper.fetchJson(
+            pathOrUrl = endpointPath,
+            refererPath = "/ba/huodong/$serverId",
+            extraHeaders = mapOf(
+                "device-num" to "1",
+                "game-alias" to "ba"
             )
-        }
-
-        return normalizeBaCalendarEntries(entries, nowMs)
-    } finally {
-        conn.disconnect()
+        )
     }
+    val root = JSONObject(body)
+    if (root.optInt("code", -1) != 0) {
+        error("API ${root.optInt("code", -1)}")
+    }
+    val data = root.optJSONArray("data") ?: return emptyList()
+    val entries = mutableListOf<BaCalendarEntry>()
+    for (index in 0 until data.length()) {
+        val item = data.optJSONObject(index) ?: continue
+        val title = item.optString("title").trim()
+        if (title.isBlank()) continue
+
+        val beginSec = item.optLong("begin_at", 0L)
+        val endSec = item.optLong("end_at", 0L)
+        if (beginSec <= 0L || endSec <= 0L) continue
+        val beginAtMs = beginSec * 1000L
+        val endAtMs = endSec * 1000L
+
+        val kindId = item.optInt("activity_kind_id", 31)
+        val kindName = item.optString("activity_kind_name").ifBlank { "其他" }
+        entries += BaCalendarEntry(
+            id = item.optInt("id", 0),
+            title = title,
+            kindId = kindId,
+            kindName = kindName,
+            beginAtMs = beginAtMs,
+            endAtMs = endAtMs,
+            linkUrl = normalizeGameKeeLink(item.optString("link_url")),
+            imageUrl = extractGameKeeImageLink(item),
+            isRunning = nowMs in beginAtMs until endAtMs
+        )
+    }
+    return normalizeBaCalendarEntries(entries, nowMs)
 }
 
 
@@ -707,155 +716,96 @@ private fun normalizeBaPoolEntries(entries: List<BaPoolEntry>, nowMs: Long = Sys
     return sorted.take(maxItems)
 }
 
-private fun fetchBaPoolEntriesByTag(serverIndex: Int, tagId: Int, tagName: String, nowMs: Long): List<BaPoolEntry> {
+private fun fetchBaPoolEntriesFromAll(
+    serverIndex: Int,
+    nowMs: Long
+): List<BaPoolEntry> {
     val serverId = gameKeeServerId(serverIndex)
-    val endpoint = "$BA_POOL_ENDPOINT?order_by=-1&card_tag_id=$tagId&keyword=&kind_id=6&status=0&serverId=$serverId"
-    val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
-        requestMethod = "GET"
-        connectTimeout = BA_CALENDAR_CONNECT_TIMEOUT_MS
-        readTimeout = BA_CALENDAR_READ_TIMEOUT_MS
-        setRequestProperty("Accept", "application/json, text/plain, */*")
-        setRequestProperty("Accept-Language", "zh-CN")
-        setRequestProperty("Referer", "https://www.gamekee.com/ba/kachi/$serverId")
-        setRequestProperty("User-Agent", "Mozilla/5.0 (Android) KeiOS/1.0")
-        setRequestProperty("device-num", "1")
-        setRequestProperty("game-alias", "ba")
-    }
-    try {
-        val code = conn.responseCode
-        val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
-            ?.bufferedReader()
-            ?.use { it.readText() }
-            .orEmpty()
-        if (code !in 200..299) {
-            error("HTTP $code")
-        }
-        val root = JSONObject(body)
-        if (root.optInt("code", -1) != 0) {
-            error("API ${root.optInt("code", -1)}")
-        }
-        val data = root.optJSONArray("data") ?: return emptyList()
-        val entries = mutableListOf<BaPoolEntry>()
-        for (index in 0 until data.length()) {
-            val item = data.optJSONObject(index) ?: continue
-            val name = item.optString("name").trim()
-            if (name.isBlank()) continue
-
-            val startSec = item.optLong("start_at", 0L)
-            val endSec = item.optLong("end_at", 0L)
-            if (startSec <= 0L || endSec <= 0L) continue
-            val startAtMs = startSec * 1000L
-            val endAtMs = endSec * 1000L
-
-            entries += BaPoolEntry(
-                id = item.optInt("id", 0),
-                name = name,
-                tagId = tagId,
-                tagName = tagName,
-                startAtMs = startAtMs,
-                endAtMs = endAtMs,
-                linkUrl = normalizeGameKeeLink(item.optString("link_url")),
-                imageUrl = extractGameKeeImageLink(item),
-                isRunning = nowMs in startAtMs until endAtMs
+    val endpointPath = "$BA_POOL_ENDPOINT?order_by=-1&card_tag_id=&keyword=&kind_id=6&status=0&serverId=$serverId"
+    val body = runWithRetry {
+        GameKeeFetchHelper.fetchJson(
+            pathOrUrl = endpointPath,
+            refererPath = "/ba/kachi/$serverId",
+            extraHeaders = mapOf(
+                "device-num" to "1",
+                "game-alias" to "ba"
             )
-        }
-        return entries
-    } finally {
-        conn.disconnect()
+        )
     }
+    val root = JSONObject(body)
+    if (root.optInt("code", -1) != 0) {
+        error("API ${root.optInt("code", -1)}")
+    }
+    val data = root.optJSONArray("data") ?: return emptyList()
+    val entries = mutableListOf<BaPoolEntry>()
+    for (index in 0 until data.length()) {
+        val item = data.optJSONObject(index) ?: continue
+        val name = item.optString("name").trim()
+        if (name.isBlank()) continue
+
+        val startSec = item.optLong("start_at", 0L)
+        val endSec = item.optLong("end_at", 0L)
+        if (startSec <= 0L || endSec <= 0L) continue
+        val startAtMs = startSec * 1000L
+        val endAtMs = endSec * 1000L
+        val isRunning = nowMs in startAtMs until endAtMs
+        val isUpcoming = startAtMs > nowMs
+
+        val knownTagId = parsePoolTagIds(item.optString("tag_id"))
+            .firstOrNull { it in BA_POOL_TAG_NAME_MAP }
+        val normalizedTagId = when {
+            knownTagId != null -> knownTagId
+            isRunning || isUpcoming -> BA_POOL_FALLBACK_ACTIVE_TAG_ID
+            else -> null
+        } ?: continue
+        val normalizedTagName = BA_POOL_TAG_NAME_MAP[normalizedTagId] ?: "卡池"
+
+        entries += BaPoolEntry(
+            id = item.optInt("id", 0),
+            name = name,
+            tagId = normalizedTagId,
+            tagName = normalizedTagName,
+            startAtMs = startAtMs,
+            endAtMs = endAtMs,
+            linkUrl = normalizeGameKeeLink(item.optString("link_url")),
+            imageUrl = extractGameKeeImageLink(item),
+            isRunning = isRunning
+        )
+    }
+    return entries
 }
 
-private fun fetchBaPoolEntriesFromAll(serverIndex: Int, nowMs: Long): List<BaPoolEntry> {
-    val serverId = gameKeeServerId(serverIndex)
-    val endpoint = "$BA_POOL_ENDPOINT?order_by=-1&card_tag_id=&keyword=&kind_id=6&status=0&serverId=$serverId"
-    val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
-        requestMethod = "GET"
-        connectTimeout = BA_CALENDAR_CONNECT_TIMEOUT_MS
-        readTimeout = BA_CALENDAR_READ_TIMEOUT_MS
-        setRequestProperty("Accept", "application/json, text/plain, */*")
-        setRequestProperty("Accept-Language", "zh-CN")
-        setRequestProperty("Referer", "https://www.gamekee.com/ba/kachi/$serverId")
-        setRequestProperty("User-Agent", "Mozilla/5.0 (Android) KeiOS/1.0")
-        setRequestProperty("device-num", "1")
-        setRequestProperty("game-alias", "ba")
-    }
-    try {
-        val code = conn.responseCode
-        val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
-            ?.bufferedReader()
-            ?.use { it.readText() }
-            .orEmpty()
-        if (code !in 200..299) {
-            error("HTTP $code")
-        }
-        val root = JSONObject(body)
-        if (root.optInt("code", -1) != 0) {
-            error("API ${root.optInt("code", -1)}")
-        }
-        val data = root.optJSONArray("data") ?: return emptyList()
-        val entries = mutableListOf<BaPoolEntry>()
-        for (index in 0 until data.length()) {
-            val item = data.optJSONObject(index) ?: continue
-            val name = item.optString("name").trim()
-            if (name.isBlank()) continue
-
-            val startSec = item.optLong("start_at", 0L)
-            val endSec = item.optLong("end_at", 0L)
-            if (startSec <= 0L || endSec <= 0L) continue
-            val startAtMs = startSec * 1000L
-            val endAtMs = endSec * 1000L
-            val isRunning = nowMs in startAtMs until endAtMs
-            val isUpcoming = startAtMs > nowMs
-
-            val knownTagId = parsePoolTagIds(item.optString("tag_id"))
-                .firstOrNull { it in BA_POOL_TAG_NAME_MAP }
-            val normalizedTagId = when {
-                knownTagId != null -> knownTagId
-                isRunning || isUpcoming -> BA_POOL_FALLBACK_ACTIVE_TAG_ID
-                else -> null
-            } ?: continue
-            val normalizedTagName = BA_POOL_TAG_NAME_MAP[normalizedTagId] ?: "卡池"
-
-            entries += BaPoolEntry(
-                id = item.optInt("id", 0),
-                name = name,
-                tagId = normalizedTagId,
-                tagName = normalizedTagName,
-                startAtMs = startAtMs,
-                endAtMs = endAtMs,
-                linkUrl = normalizeGameKeeLink(item.optString("link_url")),
-                imageUrl = extractGameKeeImageLink(item),
-                isRunning = isRunning
-            )
-        }
-        return entries
-    } finally {
-        conn.disconnect()
-    }
-}
-
-private fun fetchBaPoolEntries(serverIndex: Int, nowMs: Long = System.currentTimeMillis()): List<BaPoolEntry> {
+private fun fetchBaPoolEntries(
+    serverIndex: Int,
+    nowMs: Long = System.currentTimeMillis()
+): List<BaPoolEntry> {
     val merged = mutableMapOf<Int, BaPoolEntry>()
-    BA_POOL_TAGS.forEach { (tagId, tagName) ->
-        val entries = fetchBaPoolEntriesByTag(serverIndex, tagId, tagName, nowMs)
-        entries.forEach { entry ->
-            val existing = merged[entry.id]
-            if (existing == null || entry.startAtMs > existing.startAtMs) {
-                merged[entry.id] = entry
+    val sourceErrors = mutableListOf<Throwable>()
+    runCatching { fetchBaPoolEntriesFromAll(serverIndex, nowMs) }
+        .onSuccess { entries ->
+            entries.forEach { entry ->
+                val existing = merged[entry.id]
+                if (
+                    existing == null ||
+                    (existing.endAtMs <= nowMs && entry.endAtMs > nowMs) ||
+                    (entry.endAtMs > existing.endAtMs) ||
+                    (entry.startAtMs > existing.startAtMs)
+                ) {
+                    merged[entry.id] = entry
+                }
             }
         }
+        .onFailure { sourceErrors += it }
+
+    // Keep pool sync responsive: "all source" already covers all tags.
+    // Tag-by-tag补抓在网络异常时会显著拉长同步时间，这里改为不阻塞主同步流程。
+
+    if (merged.isEmpty() && sourceErrors.isNotEmpty()) {
+        val aggregate = IllegalStateException("pool all sources failed")
+        sourceErrors.forEach { aggregate.addSuppressed(it) }
+        throw aggregate
     }
-    fetchBaPoolEntriesFromAll(serverIndex, nowMs).forEach { entry ->
-        val existing = merged[entry.id]
-        if (
-            existing == null ||
-            (existing.endAtMs <= nowMs && entry.endAtMs > nowMs) ||
-            (entry.endAtMs > existing.endAtMs) ||
-            (entry.startAtMs > existing.startAtMs)
-        ) {
-            merged[entry.id] = entry
-        }
-    }
+
     return normalizeBaPoolEntries(merged.values.toList(), nowMs)
 }
 
@@ -1741,26 +1691,36 @@ fun BAPage(
 
         baCalendarLoading = true
         baCalendarError = null
-        val result = withContext(Dispatchers.IO) {
-            runCatching { fetchBaCalendarEntries(serverIndex, now) }
-        }
-        result
-            .onSuccess { entries ->
-                baCalendarEntries = entries
-                baCalendarLastSyncMs = now
-                baCalendarError = null
-                BASettingsStore.saveCalendarCache(serverIndex, encodeBaCalendarEntries(entries), now)
-            }
-            .onFailure {
-                if (hasCache) {
-                    baCalendarEntries = cachedEntries
-                    baCalendarLastSyncMs = cachedSyncMs
-                    baCalendarError = "网络请求失败，已显示本地缓存"
-                } else {
-                    baCalendarError = "活动日历同步失败"
+        try {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    runWithHardTimeout(BA_SYNC_TIMEOUT_MS) {
+                        fetchBaCalendarEntries(serverIndex, now)
+                    }
                 }
             }
-        baCalendarLoading = false
+            result
+                .onSuccess { entries ->
+                    val effective = if (entries.isNotEmpty()) entries else cachedEntries
+                    baCalendarEntries = effective
+                    baCalendarLastSyncMs = if (entries.isNotEmpty()) now else cachedSyncMs
+                    baCalendarError = if (entries.isNotEmpty() || !hasCache) null else "本次返回空数据，已保留本地缓存"
+                    if (entries.isNotEmpty()) {
+                        BASettingsStore.saveCalendarCache(serverIndex, encodeBaCalendarEntries(entries), now)
+                    }
+                }
+                .onFailure {
+                    if (hasCache) {
+                        baCalendarEntries = cachedEntries
+                        baCalendarLastSyncMs = cachedSyncMs
+                        baCalendarError = "同步超时或网络失败，已显示本地缓存"
+                    } else {
+                        baCalendarError = "活动日历同步失败（超时或网络异常）"
+                    }
+                }
+        } finally {
+            baCalendarLoading = false
+        }
     }
 
     LaunchedEffect(serverIndex, baPoolReloadSignal, calendarRefreshIntervalHours) {
@@ -1806,26 +1766,36 @@ fun BAPage(
 
         baPoolLoading = true
         baPoolError = null
-        val result = withContext(Dispatchers.IO) {
-            runCatching { fetchBaPoolEntries(serverIndex, now) }
-        }
-        result
-            .onSuccess { entries ->
-                baPoolEntries = entries
-                baPoolLastSyncMs = now
-                baPoolError = null
-                BASettingsStore.savePoolCache(serverIndex, encodeBaPoolEntries(entries), now)
-            }
-            .onFailure {
-                if (hasCache) {
-                    baPoolEntries = cachedEntries
-                    baPoolLastSyncMs = cachedSyncMs
-                    baPoolError = "网络请求失败，已显示本地缓存"
-                } else {
-                    baPoolError = "卡池同步失败"
+        try {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    runWithHardTimeout(BA_SYNC_TIMEOUT_MS) {
+                        fetchBaPoolEntries(serverIndex, now)
+                    }
                 }
             }
-        baPoolLoading = false
+            result
+                .onSuccess { entries ->
+                    val effective = if (entries.isNotEmpty()) entries else cachedEntries
+                    baPoolEntries = effective
+                    baPoolLastSyncMs = if (entries.isNotEmpty()) now else cachedSyncMs
+                    baPoolError = if (entries.isNotEmpty() || !hasCache) null else "本次返回空数据，已保留本地缓存"
+                    if (entries.isNotEmpty()) {
+                        BASettingsStore.savePoolCache(serverIndex, encodeBaPoolEntries(entries), now)
+                    }
+                }
+                .onFailure {
+                    if (hasCache) {
+                        baPoolEntries = cachedEntries
+                        baPoolLastSyncMs = cachedSyncMs
+                        baPoolError = "同步超时或网络失败，已显示本地缓存"
+                    } else {
+                        baPoolError = "卡池同步失败（超时或网络异常）"
+                    }
+                }
+        } finally {
+            baPoolLoading = false
+        }
     }
 
     Scaffold(

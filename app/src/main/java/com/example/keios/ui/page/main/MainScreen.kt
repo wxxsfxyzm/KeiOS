@@ -60,7 +60,7 @@ import com.example.keios.ui.navigation.Navigator
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
-import com.example.keios.ui.utils.ShizukuApiUtils
+import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.ui.utils.UiPrefs
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop

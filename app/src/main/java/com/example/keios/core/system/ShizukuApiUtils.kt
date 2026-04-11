@@ -1,4 +1,4 @@
-package com.example.keios.ui.utils
+package com.example.keios.core.system
 
 import android.content.pm.PackageManager
 import rikka.shizuku.Shizuku

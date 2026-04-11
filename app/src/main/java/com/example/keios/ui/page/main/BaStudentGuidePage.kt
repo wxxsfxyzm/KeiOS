@@ -2,7 +2,6 @@ package com.example.keios.ui.page.main
 
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -28,6 +27,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.keios.ba.helper.GameKeeFetchHelper
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
@@ -48,15 +48,10 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.Locale
 
 private const val BA_GUIDE_KV_ID = "ba_student_guide"
 private const val BA_GUIDE_KEY_CURRENT_URL = "current_url"
 private const val BA_GUIDE_KEY_CACHE_PREFIX = "cache_"
-private const val BA_GUIDE_CONNECT_TIMEOUT_MS = 12_000
-private const val BA_GUIDE_READ_TIMEOUT_MS = 12_000
 
 data class BaStudentGuideInfo(
     val sourceUrl: String,
@@ -222,62 +217,48 @@ private fun extractStatsFromHtml(html: String): List<Pair<String, String>> {
 private fun fetchGuideInfo(sourceUrl: String): BaStudentGuideInfo {
     val target = normalizeGuideUrl(sourceUrl)
     require(target.isNotBlank()) { "empty url" }
-    val conn = (URL(target).openConnection() as HttpURLConnection).apply {
-        requestMethod = "GET"
-        connectTimeout = BA_GUIDE_CONNECT_TIMEOUT_MS
-        readTimeout = BA_GUIDE_READ_TIMEOUT_MS
-        setRequestProperty("Accept", "text/html,application/xhtml+xml")
-        setRequestProperty("Accept-Language", "zh-CN")
-        setRequestProperty("User-Agent", "Mozilla/5.0 (Android) KeiOS/1.0")
-        setRequestProperty("Referer", "https://www.gamekee.com/ba/")
-    }
-    try {
-        val code = conn.responseCode
-        val html = (if (code in 200..299) conn.inputStream else conn.errorStream)
-            ?.bufferedReader()
-            ?.use { it.readText() }
-            .orEmpty()
-        if (code !in 200..299 || html.isBlank()) error("HTTP $code")
+    val html = GameKeeFetchHelper.fetchHtml(
+        pathOrUrl = target,
+        refererPath = "/ba/"
+    )
+    if (html.isBlank()) error("empty html")
 
-        val ogTitle = extractMeta(html, "og:title")
-        val titleTag = Regex("<title[^>]*>(.*?)</title>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-            .find(html)
-            ?.groupValues
-            ?.getOrNull(1)
-            .orEmpty()
-        val rawTitle = if (ogTitle.isNotBlank()) ogTitle else stripHtml(titleTag)
-        val title = rawTitle.ifBlank { "图鉴信息" }
+    val ogTitle = extractMeta(html, "og:title")
+    val titleTag = Regex("<title[^>]*>(.*?)</title>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+        .find(html)
+        ?.groupValues
+        ?.getOrNull(1)
+        .orEmpty()
+    val rawTitle = if (ogTitle.isNotBlank()) ogTitle else stripHtml(titleTag)
+    val title = rawTitle.ifBlank { "图鉴信息" }
 
-        val siteName = extractMeta(html, "og:site_name").ifBlank { "GameKee" }
-        val description = extractMeta(html, "og:description")
-            .ifBlank { extractMeta(html, "description") }
-            .ifBlank { "未解析到详细描述，可点击下方来源查看完整图鉴。" }
-        val imageUrl = normalizeImageUrl(target, extractMeta(html, "og:image"))
+    val siteName = extractMeta(html, "og:site_name").ifBlank { "GameKee" }
+    val description = extractMeta(html, "og:description")
+        .ifBlank { extractMeta(html, "description") }
+        .ifBlank { "未解析到详细描述，可点击下方来源查看完整图鉴。" }
+    val imageUrl = normalizeImageUrl(target, extractMeta(html, "og:image"))
 
-        val paragraphRegex = Regex(
-            "<p[^>]*>(.*?)</p>",
-            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-        )
-        val summary = paragraphRegex.findAll(html)
-            .map { stripHtml(it.groupValues[1]) }
-            .firstOrNull { it.length >= 12 }
-            ?: description
+    val paragraphRegex = Regex(
+        "<p[^>]*>(.*?)</p>",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+    )
+    val summary = paragraphRegex.findAll(html)
+        .map { stripHtml(it.groupValues[1]) }
+        .firstOrNull { it.length >= 12 }
+        ?: description
 
-        val stats = extractStatsFromHtml(html)
+    val stats = extractStatsFromHtml(html)
 
-        return BaStudentGuideInfo(
-            sourceUrl = target,
-            title = title,
-            subtitle = siteName,
-            description = description,
-            imageUrl = imageUrl,
-            summary = summary,
-            stats = stats,
-            syncedAtMs = System.currentTimeMillis()
-        )
-    } finally {
-        conn.disconnect()
-    }
+    return BaStudentGuideInfo(
+        sourceUrl = target,
+        title = title,
+        subtitle = siteName,
+        description = description,
+        imageUrl = imageUrl,
+        summary = summary,
+        stats = stats,
+        syncedAtMs = System.currentTimeMillis()
+    )
 }
 
 @Composable
@@ -288,23 +269,7 @@ private fun GuideRemoteImage(
     if (target.isBlank()) return
     val bitmap by produceState<Bitmap?>(initialValue = null, target) {
         value = withContext(Dispatchers.IO) {
-            runCatching {
-                val conn = (URL(target).openConnection() as HttpURLConnection).apply {
-                    requestMethod = "GET"
-                    connectTimeout = BA_GUIDE_CONNECT_TIMEOUT_MS
-                    readTimeout = BA_GUIDE_READ_TIMEOUT_MS
-                    setRequestProperty("Accept", "image/*,*/*")
-                    setRequestProperty("User-Agent", "Mozilla/5.0 (Android) KeiOS/1.0")
-                    setRequestProperty("Referer", "https://www.gamekee.com/")
-                }
-                try {
-                    val code = conn.responseCode
-                    if (code !in 200..299) return@runCatching null
-                    conn.inputStream.use { BitmapFactory.decodeStream(it) }
-                } finally {
-                    conn.disconnect()
-                }
-            }.getOrNull()
+            runCatching { GameKeeFetchHelper.fetchImage(target) }.getOrNull()
         }
     }
     val rendered = bitmap ?: return
@@ -477,4 +442,3 @@ fun BaStudentGuidePage(
 private fun showLoadingText(loading: Boolean, hasInfo: Boolean): Boolean {
     return loading && hasInfo
 }
-

@@ -43,9 +43,9 @@ import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
-import com.example.keios.ui.utils.ShizukuApiUtils
-import com.example.keios.ui.utils.getAllJavaPropString
-import com.example.keios.ui.utils.getAllSystemProperties
+import com.example.keios.core.system.ShizukuApiUtils
+import com.example.keios.core.system.getAllJavaPropString
+import com.example.keios.core.system.getAllSystemProperties
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.tencent.mmkv.MMKV

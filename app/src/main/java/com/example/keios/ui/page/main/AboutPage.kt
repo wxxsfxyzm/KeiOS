@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
-import com.example.keios.ui.utils.ShizukuApiUtils
+import com.example.keios.core.system.ShizukuApiUtils
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import java.text.SimpleDateFormat

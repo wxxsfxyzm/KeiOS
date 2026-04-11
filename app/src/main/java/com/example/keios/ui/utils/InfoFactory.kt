@@ -1,6 +1,8 @@
 package com.example.keios.ui.utils
 
 import android.os.Build
+import com.example.keios.core.system.findJavaPropString
+import com.example.keios.core.system.findPropString
 
 private fun exec(command: String): String = runCatching {
     val process = Runtime.getRuntime().exec(command)

@@ -5,7 +5,7 @@ import android.net.Uri
 import com.example.keios.ui.utils.GitHubTrackStore
 import com.example.keios.ui.utils.GitHubTrackedApp
 import com.example.keios.ui.utils.GitHubVersionUtils
-import com.example.keios.ui.utils.ShizukuApiUtils
+import com.example.keios.core.system.ShizukuApiUtils
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult

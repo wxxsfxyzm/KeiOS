@@ -20,9 +20,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.compose.runtime.mutableStateOf
 import com.example.keios.mcp.LocalMcpService
+import com.example.keios.mcp.McpNotificationHelper
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.MainScreen
-import com.example.keios.ui.utils.ShizukuApiUtils
+import com.example.keios.core.system.ShizukuApiUtils
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
@@ -66,6 +67,9 @@ class MainActivity : ComponentActivity() {
             appContext = applicationContext,
             localMcpService = localMcpService
         )
+        // Heal potential stale connectivity deny rules left by Xiaomi magic path
+        // so regular in-app networking (e.g. BA data sync) is not impacted.
+        McpNotificationHelper.restoreXiaomiNetworkIfNeeded(this)
         val controller = ThemeController(ColorSchemeMode.System)
 
         shizukuApiUtils.attach { status ->
