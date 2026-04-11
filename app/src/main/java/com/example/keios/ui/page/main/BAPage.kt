@@ -521,7 +521,7 @@ private fun fetchBaCalendarEntries(serverIndex: Int, nowMs: Long = System.curren
 
 
 private fun normalizeBaCalendarEntries(entries: List<BaCalendarEntry>, nowMs: Long = System.currentTimeMillis()): List<BaCalendarEntry> {
-    return entries
+    val normalized = entries
         .asSequence()
         .filter { it.title.isNotBlank() }
         .map { entry ->
@@ -535,16 +535,58 @@ private fun normalizeBaCalendarEntries(entries: List<BaCalendarEntry>, nowMs: Lo
                 imageUrl = normalizeGameKeeImageLink(entry.imageUrl)
             )
         }
-        .filter { it.endAtMs > nowMs }
+        .toList()
+
+    if (normalized.isEmpty()) return emptyList()
+
+    val activeOrUpcoming = normalized.filter { it.endAtMs > nowMs }
+    val activeKindIds = activeOrUpcoming.map { it.kindId }.toSet()
+    val fallbackMissingKinds = normalized
+        .asSequence()
+        .map { it.kindId }
+        .distinct()
+        .filter { it !in activeKindIds }
+        .mapNotNull { missingKindId ->
+            normalized
+                .asSequence()
+                .filter { it.kindId == missingKindId }
+                .maxWithOrNull(
+                    compareBy<BaCalendarEntry> { it.endAtMs }
+                        .thenBy { it.beginAtMs }
+                )
+        }
+        .toList()
+
+    val merged = buildList {
+        addAll(activeOrUpcoming)
+        fallbackMissingKinds.forEach { candidate ->
+            if (none { it.id == candidate.id }) add(candidate)
+        }
+    }
+
+    val sorted = merged
         .sortedWith(
             compareBy<BaCalendarEntry>(
-                { if (it.isRunning) 0 else 1 },
-                { if (it.isRunning) it.endAtMs else it.beginAtMs },
+                {
+                    when {
+                        it.isRunning -> 0
+                        it.endAtMs > nowMs -> 1
+                        else -> 2
+                    }
+                },
+                {
+                    when {
+                        it.isRunning -> it.endAtMs
+                        it.endAtMs > nowMs -> it.beginAtMs
+                        else -> -it.endAtMs
+                    }
+                },
                 { it.kindId }
             )
         )
-        .take(BA_CALENDAR_MAX_ITEMS)
-        .toList()
+
+    val maxItems = BA_CALENDAR_MAX_ITEMS.coerceAtLeast(activeOrUpcoming.size + fallbackMissingKinds.size)
+    return sorted.take(maxItems)
 }
 
 private fun encodeBaCalendarEntries(entries: List<BaCalendarEntry>): String {
@@ -894,13 +936,14 @@ private object BASettingsStore {
     private const val KEY_AP_REGEN_BASE_MS = "ap_regen_base_ms"
     private const val KEY_AP_SYNC_MS = "ap_sync_ms"
     private const val KEY_POOL_SHOW_ENDED = "pool_show_ended"
+    private const val KEY_ACTIVITY_SHOW_ENDED = "activity_show_ended"
     private const val KEY_SHOW_CALENDAR_POOL_IMAGES = "show_calendar_pool_images"
     private const val KEY_COFFEE_HEADPAT_MS = "coffee_headpat_ms"
     private const val KEY_COFFEE_INVITE1_USED_MS = "coffee_invite1_used_ms"
     private const val KEY_COFFEE_INVITE2_USED_MS = "coffee_invite2_used_ms"
 
     private const val DEFAULT_SERVER_INDEX = 2
-    private const val DEFAULT_CAFE_LEVEL = 1
+    private const val DEFAULT_CAFE_LEVEL = 10
     private const val DEFAULT_CAFE_STORED_AP = 0.0
     private const val DEFAULT_ID_NICKNAME = BA_DEFAULT_NICKNAME
     private const val DEFAULT_ID_FRIEND_CODE = BA_DEFAULT_FRIEND_CODE
@@ -967,6 +1010,12 @@ private object BASettingsStore {
 
     fun savePoolShowEnded(enabled: Boolean) {
         kv().encode(KEY_POOL_SHOW_ENDED, enabled)
+    }
+
+    fun loadActivityShowEnded(): Boolean = kv().decodeBool(KEY_ACTIVITY_SHOW_ENDED, false)
+
+    fun saveActivityShowEnded(enabled: Boolean) {
+        kv().encode(KEY_ACTIVITY_SHOW_ENDED, enabled)
     }
 
     fun loadShowCalendarPoolImages(): Boolean = kv().decodeBool(KEY_SHOW_CALENDAR_POOL_IMAGES, true)
@@ -1168,6 +1217,7 @@ fun BAPage(
     var baPoolLastSyncMs by remember { mutableLongStateOf(0L) }
     var baPoolReloadSignal by remember { mutableIntStateOf(0) }
     var showEndedPools by remember { mutableStateOf(BASettingsStore.loadPoolShowEnded()) }
+    var showEndedActivities by remember { mutableStateOf(BASettingsStore.loadActivityShowEnded()) }
     var showCalendarPoolImages by remember { mutableStateOf(BASettingsStore.loadShowCalendarPoolImages()) }
     var calendarRefreshIntervalHours by remember {
         mutableIntStateOf(BASettingsStore.loadCalendarRefreshIntervalHours())
@@ -1177,6 +1227,7 @@ fun BAPage(
     var sheetApNotifyEnabled by remember { mutableStateOf(apNotifyEnabled) }
     var sheetApNotifyThresholdText by remember { mutableStateOf(apNotifyThreshold.toString()) }
     var sheetShowEndedPools by remember { mutableStateOf(showEndedPools) }
+    var sheetShowEndedActivities by remember { mutableStateOf(showEndedActivities) }
     var sheetShowCalendarPoolImages by remember { mutableStateOf(showCalendarPoolImages) }
 
     var apCurrentInput by remember { mutableStateOf(displayAp(apCurrent).toString()) }
@@ -1510,6 +1561,7 @@ fun BAPage(
         sheetApNotifyEnabled = apNotifyEnabled
         sheetApNotifyThresholdText = apNotifyThreshold.toString()
         sheetShowEndedPools = showEndedPools
+        sheetShowEndedActivities = showEndedActivities
         sheetShowCalendarPoolImages = showCalendarPoolImages
         showSettingsSheet = true
     }
@@ -1521,6 +1573,7 @@ fun BAPage(
         sheetApNotifyEnabled = apNotifyEnabled
         sheetApNotifyThresholdText = apNotifyThreshold.toString()
         sheetShowEndedPools = showEndedPools
+        sheetShowEndedActivities = showEndedActivities
         sheetShowCalendarPoolImages = showCalendarPoolImages
     }
 
@@ -1567,10 +1620,20 @@ fun BAPage(
         BASettingsStore.savePoolShowEnded(sheetShowEndedPools)
         showEndedPools = sheetShowEndedPools
 
+        val wasShowingEndedActivities = showEndedActivities
+        BASettingsStore.saveActivityShowEnded(sheetShowEndedActivities)
+        showEndedActivities = sheetShowEndedActivities
+        val turningEndedActivitiesOn = !wasShowingEndedActivities && sheetShowEndedActivities
+
         val wasShowingImages = showCalendarPoolImages
         val turningImagesOn = !wasShowingImages && sheetShowCalendarPoolImages
         BASettingsStore.saveShowCalendarPoolImages(sheetShowCalendarPoolImages)
         showCalendarPoolImages = sheetShowCalendarPoolImages
+
+        if (turningEndedActivitiesOn) {
+            val (calendarCacheRaw, _) = BASettingsStore.loadCalendarCache(serverIndex)
+            if (calendarCacheRaw.isBlank()) refreshCalendar(force = true)
+        }
 
         if (turningImagesOn) {
             val calendarHasImage = hasAnyImageInCalendarCache(serverIndex)
@@ -2326,6 +2389,11 @@ fun BAPage(
                 val accentGreen = Color(0xFF22C55E)
                 val countdownBlue = Color(0xFF60A5FA)
                 val serverTimeZone = serverRefreshTimeZone(serverIndex)
+                val visibleCalendarEntries = if (showEndedActivities) {
+                    baCalendarEntries
+                } else {
+                    baCalendarEntries.filter { it.endAtMs > uiNowMs }
+                }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.defaultColors(
@@ -2380,17 +2448,26 @@ fun BAPage(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                        } else if (!baCalendarLoading && baCalendarEntries.isEmpty()) {
+                        } else if (!baCalendarLoading && visibleCalendarEntries.isEmpty()) {
                             Text(
-                                text = "暂无进行中或即将开始的活动",
+                                text = if (showEndedActivities) "暂无活动" else "暂无进行中或即将开始的活动",
                                 color = MiuixTheme.colorScheme.onBackgroundVariant
                             )
                         } else {
-                            baCalendarEntries.forEachIndexed { index, activity ->
-                                val remainTarget = if (activity.isRunning) activity.endAtMs else activity.beginAtMs
-                                val remainText = formatBaRemainingTime(remainTarget, uiNowMs)
-                                val statusText = if (activity.isRunning) "进行中" else "即将开始"
-                                val statusColor = if (activity.isRunning) accentGreen else accentBlue
+                            visibleCalendarEntries.forEachIndexed { index, activity ->
+                                val isEnded = activity.endAtMs <= uiNowMs
+                                val remainTarget = if (activity.isRunning || isEnded) activity.endAtMs else activity.beginAtMs
+                                val remainText = if (isEnded) "已结束" else formatBaRemainingTime(remainTarget, uiNowMs)
+                                val statusText = when {
+                                    activity.isRunning -> "进行中"
+                                    isEnded -> "已结束"
+                                    else -> "即将开始"
+                                }
+                                val statusColor = when {
+                                    activity.isRunning -> accentGreen
+                                    isEnded -> MiuixTheme.colorScheme.onBackgroundVariant
+                                    else -> accentBlue
+                                }
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -2449,7 +2526,7 @@ fun BAPage(
                                         )
                                     }
                                 }
-                                if (index < baCalendarEntries.lastIndex) {
+                                if (index < visibleCalendarEntries.lastIndex) {
                                     Spacer(modifier = Modifier.height(6.dp))
                                 }
                             }
@@ -2855,6 +2932,28 @@ fun BAPage(
                 Switch(
                     checked = sheetApNotifyEnabled,
                     onCheckedChange = { checked -> sheetApNotifyEnabled = checked }
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.heightIn(min = 40.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        text = "显示已结束活动",
+                        color = MiuixTheme.colorScheme.onBackground
+                    )
+                }
+                Switch(
+                    checked = sheetShowEndedActivities,
+                    onCheckedChange = { checked -> sheetShowEndedActivities = checked }
                 )
             }
 
