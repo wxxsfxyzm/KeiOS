@@ -5,15 +5,21 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,6 +31,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
@@ -44,6 +52,8 @@ import org.json.JSONObject
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.TabRow
@@ -82,6 +92,12 @@ data class BaGuideRow(
 
 data class BaGuideGalleryItem(
     val title: String,
+    val imageUrl: String
+)
+
+private data class BaGuideMetaItem(
+    val title: String,
+    val value: String,
     val imageUrl: String
 )
 
@@ -677,6 +693,28 @@ private fun GuideRemoteImage(
 }
 
 @Composable
+private fun GuideRemoteIcon(
+    imageUrl: String,
+    modifier: Modifier = Modifier,
+    iconSize: androidx.compose.ui.unit.Dp = 20.dp
+) {
+    val target = remember(imageUrl) { normalizeGuideUrl(imageUrl) }
+    if (target.isBlank()) return
+    val bitmap by produceState<Bitmap?>(initialValue = null, target) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { GameKeeFetchHelper.fetchImage(target) }.getOrNull()
+        }
+    }
+    val rendered = bitmap ?: return
+    Image(
+        bitmap = rendered.asImageBitmap(),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = modifier.size(iconSize)
+    )
+}
+
+@Composable
 private fun GuideRowsSection(
     rows: List<BaGuideRow>,
     emptyText: String,
@@ -733,6 +771,100 @@ private fun GuideGallerySection(
 }
 
 @Composable
+private fun GuideProfileMetaLine(item: BaGuideMetaItem) {
+    val rawValue = item.value.ifBlank { "-" }
+    val hideText = item.title == "位置" && rawValue == "-"
+    if (hideText) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (item.imageUrl.isNotBlank()) {
+                Box(modifier = Modifier.size(20.dp)) {
+                    GuideRemoteIcon(
+                        imageUrl = item.imageUrl,
+                        iconSize = 20.dp
+                    )
+                }
+            }
+        }
+        return
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (item.imageUrl.isNotBlank()) {
+            Box(modifier = Modifier.size(20.dp)) {
+                GuideRemoteIcon(
+                    imageUrl = item.imageUrl,
+                    iconSize = 20.dp
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.width(20.dp))
+        }
+        Text(
+            text = item.title,
+            color = MiuixTheme.colorScheme.onBackgroundVariant,
+            modifier = Modifier.width(58.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = rawValue,
+            color = MiuixTheme.colorScheme.onBackground,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun GuideCombatMetaTile(
+    item: BaGuideMetaItem,
+    modifier: Modifier = Modifier
+) {
+    val value = item.value.ifBlank { "-" }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.36f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (item.imageUrl.isNotBlank()) {
+            Box(modifier = Modifier.size(20.dp)) {
+                GuideRemoteIcon(
+                    imageUrl = item.imageUrl,
+                    iconSize = 20.dp
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.width(20.dp))
+        }
+        Text(
+            text = item.title,
+            color = MiuixTheme.colorScheme.onBackgroundVariant,
+            modifier = Modifier.width(74.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = value,
+            color = MiuixTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
 fun BaStudentGuidePage(
     onBack: () -> Unit
 ) {
@@ -751,6 +883,7 @@ fun BaStudentGuidePage(
     var error by remember { mutableStateOf<String?>(null) }
     var refreshSignal by remember { mutableStateOf(0) }
     var selectedTabIndex by rememberSaveable(sourceUrl) { mutableIntStateOf(0) }
+    val pageTitle = info?.title?.ifBlank { "学生图鉴" } ?: "学生图鉴"
 
     fun openExternal(url: String) {
         val target = normalizeGuideUrl(url)
@@ -787,7 +920,7 @@ fun BaStudentGuidePage(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "BA 图鉴",
+                title = pageTitle,
                 scrollBehavior = scrollBehavior,
                 color = MiuixTheme.colorScheme.surface,
                 navigationIcon = {
@@ -826,7 +959,7 @@ fun BaStudentGuidePage(
                 end = 16.dp
             )
         ) {
-            item { SmallTitle("学生图鉴") }
+            item { SmallTitle("档案") }
             item { Spacer(modifier = Modifier.height(14.dp)) }
 
             if (sourceUrl.isBlank()) {
@@ -840,9 +973,107 @@ fun BaStudentGuidePage(
                 }
             } else {
                 item {
+                    val guide = info
+                    val profileItems = guide?.buildProfileMetaItems().orEmpty()
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.defaultColors(
+                            color = Color(0x223B82F6),
+                            contentColor = MiuixTheme.colorScheme.onBackground
+                        ),
+                        onClick = {}
+                    ) {
+                        if (showLoadingText(loading = loading, hasInfo = guide != null)) {
+                            Text(
+                                text = "同步中...",
+                                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                            )
+                        }
+                        if (guide != null) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Box(modifier = Modifier.width(122.dp)) {
+                                        if (guide.imageUrl.isNotBlank()) {
+                                            GuideRemoteImage(
+                                                imageUrl = guide.imageUrl,
+                                                imageHeight = 156.dp
+                                            )
+                                        } else {
+                                            Text(
+                                                text = "暂无图片",
+                                                color = MiuixTheme.colorScheme.onBackgroundVariant
+                                            )
+                                        }
+                                    }
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(156.dp),
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        profileItems.forEach { item ->
+                                            GuideProfileMetaLine(item)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(10.dp)) }
+                item {
+                    val guide = info
+                    val combatItems = guide?.buildCombatMetaItems().orEmpty()
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.defaultColors(
+                            color = Color(0x223B82F6),
+                            contentColor = MiuixTheme.colorScheme.onBackground
+                        ),
+                        onClick = {}
+                    ) {
+                        if (showLoadingText(loading = loading, hasInfo = guide != null)) {
+                            Text(
+                                text = "同步中...",
+                                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                            )
+                        }
+                        if (guide != null) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                combatItems.forEachIndexed { index, item ->
+                                    GuideCombatMetaTile(
+                                        item = item,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    if (index < combatItems.lastIndex) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(10.dp)) }
+                item {
                     FrostedBlock(
                         backdrop = backdrop,
-                        title = info?.title?.ifBlank { "图鉴信息" } ?: "图鉴信息",
+                        title = "图鉴详情",
                         subtitle = info?.subtitle?.ifBlank { "GameKee" } ?: "GameKee",
                         accent = accent,
                         content = {
@@ -861,10 +1092,12 @@ fun BaStudentGuidePage(
                             }
                             val guide = info
                             if (guide != null) {
-                                if (guide.imageUrl.isNotBlank()) {
-                                    GuideRemoteImage(guide.imageUrl)
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                }
+                                val skillRows = guide.skillRowsForDisplay()
+                                val profileRows = guide.profileRowsForDisplay()
+                                val visibleSkillRows = skillRows.filterNot { shouldHideMovedHeaderRow(it) }
+                                val visibleProfileRows = profileRows.filterNot { shouldHideMovedHeaderRow(it) }
+                                val growthRows = guide.growthRowsForDisplay()
+
                                 Text(
                                     text = guide.summary.ifBlank { guide.description },
                                     color = MiuixTheme.colorScheme.onBackground
@@ -873,33 +1106,6 @@ fun BaStudentGuidePage(
 
                                 val tabs = GuideTab.entries
                                 val activeTab = tabs.getOrElse(selectedTabIndex) { GuideTab.Profile }
-                                val skillRows = if (guide.skillRows.isNotEmpty()) {
-                                    guide.skillRows
-                                } else {
-                                    guide.stats
-                                        .filter { (k, v) ->
-                                            k.contains("技能") ||
-                                                k.contains("EX", ignoreCase = true) ||
-                                                v.contains("技能")
-                                        }
-                                        .map { (k, v) -> BaGuideRow(k, v) }
-                                }
-                                val profileRows = if (guide.profileRows.isNotEmpty()) {
-                                    guide.profileRows
-                                } else {
-                                    guide.stats.map { (k, v) -> BaGuideRow(k, v) }
-                                }
-                                val growthRows = if (guide.growthRows.isNotEmpty()) {
-                                    guide.growthRows
-                                } else {
-                                    guide.stats
-                                        .filter { (k, v) ->
-                                            listOf("装备", "专武", "羁绊", "等级", "升级", "材料", "LV").any {
-                                                k.contains(it, ignoreCase = true) || v.contains(it, ignoreCase = true)
-                                            }
-                                        }
-                                        .map { (k, v) -> BaGuideRow(k, v) }
-                                }
                                 val galleryItems = if (guide.galleryItems.isNotEmpty()) {
                                     guide.galleryItems
                                 } else {
@@ -922,14 +1128,14 @@ fun BaStudentGuidePage(
                                 when (activeTab) {
                                     GuideTab.Skills -> {
                                         GuideRowsSection(
-                                            rows = skillRows,
+                                            rows = visibleSkillRows,
                                             emptyText = "暂未解析到角色技能数据。"
                                         )
                                     }
 
                                     GuideTab.Profile -> {
                                         GuideRowsSection(
-                                            rows = profileRows,
+                                            rows = visibleProfileRows,
                                             emptyText = "暂未解析到学生档案数据。"
                                         )
                                     }
@@ -973,4 +1179,114 @@ fun BaStudentGuidePage(
 
 private fun showLoadingText(loading: Boolean, hasInfo: Boolean): Boolean {
     return loading && hasInfo
+}
+
+private fun BaStudentGuideInfo.skillRowsForDisplay(): List<BaGuideRow> {
+    if (skillRows.isNotEmpty()) return skillRows
+    return stats
+        .filter { (k, v) ->
+            k.contains("技能") ||
+                k.contains("EX", ignoreCase = true) ||
+                v.contains("技能")
+        }
+        .map { (k, v) -> BaGuideRow(k, v) }
+}
+
+private fun BaStudentGuideInfo.profileRowsForDisplay(): List<BaGuideRow> {
+    if (profileRows.isNotEmpty()) return profileRows
+    return stats.map { (k, v) -> BaGuideRow(k, v) }
+}
+
+private fun BaStudentGuideInfo.growthRowsForDisplay(): List<BaGuideRow> {
+    if (growthRows.isNotEmpty()) return growthRows
+    return stats
+        .filter { (k, v) ->
+            listOf("装备", "专武", "羁绊", "等级", "升级", "材料", "LV").any {
+                k.contains(it, ignoreCase = true) || v.contains(it, ignoreCase = true)
+            }
+        }
+        .map { (k, v) -> BaGuideRow(k, v) }
+}
+
+private fun BaStudentGuideInfo.findFirstRowByKeywords(
+    rows: List<BaGuideRow>,
+    keywords: List<String>,
+    requireImage: Boolean = false
+): BaGuideRow? {
+    return rows.firstOrNull { row ->
+        val key = row.key
+        val value = row.value
+        val hasKeyword = keywords.any {
+            key.contains(it, ignoreCase = true) || value.contains(it, ignoreCase = true)
+        }
+        hasKeyword && (!requireImage || row.imageUrl.isNotBlank())
+    }
+}
+
+private fun BaStudentGuideInfo.buildMetaItem(
+    title: String,
+    valueKeywords: List<String>,
+    imageKeywords: List<String> = valueKeywords
+): BaGuideMetaItem {
+    val rows = profileRowsForDisplay() + skillRowsForDisplay()
+    val iconRow = findFirstRowByKeywords(rows, imageKeywords, requireImage = true)
+    val value = findGuideFieldValue(*valueKeywords.toTypedArray()).ifBlank { "-" }
+    return BaGuideMetaItem(
+        title = title,
+        value = value,
+        imageUrl = iconRow?.imageUrl.orEmpty()
+    )
+}
+
+private fun BaStudentGuideInfo.buildProfileMetaItems(): List<BaGuideMetaItem> {
+    return listOf(
+        buildMetaItem("稀有度", listOf("稀有度", "星级")),
+        buildMetaItem("学院", listOf("所属学园", "所属学院", "学园")),
+        buildMetaItem("所属社团", listOf("所属社团", "社团")),
+        buildMetaItem("位置", listOf("位置"))
+    )
+}
+
+private fun BaStudentGuideInfo.buildCombatMetaItems(): List<BaGuideMetaItem> {
+    return listOf(
+        buildMetaItem("战术作用", listOf("战术作用", "作用")),
+        buildMetaItem("攻击类型", listOf("攻击类型")),
+        buildMetaItem("防御类型", listOf("防御类型")),
+        buildMetaItem("武器类型", listOf("武器类型")),
+        buildMetaItem("市街", listOf("市街")),
+        buildMetaItem("屋外", listOf("屋外")),
+        buildMetaItem("室内", listOf("屋内", "室内"))
+    )
+}
+
+private fun shouldHideMovedHeaderRow(row: BaGuideRow): Boolean {
+    val key = row.key
+    val movedKeywords = listOf(
+        "头像", "角色头像",
+        "稀有度", "星级", "所属学园", "所属学院", "所属社团",
+        "战术作用", "攻击类型", "防御类型", "位置", "武器类型",
+        "市街", "屋外", "屋内", "室内"
+    )
+    if (movedKeywords.any { key.contains(it, ignoreCase = true) }) return true
+    if (key.trim().equals("作用", ignoreCase = true)) return true
+    return false
+}
+
+private fun BaStudentGuideInfo.findGuideFieldValue(vararg keywords: String): String {
+    val normalizedKeywords = keywords.map { it.trim() }.filter { it.isNotBlank() }
+    if (normalizedKeywords.isEmpty()) return "-"
+
+    fun keyMatched(key: String): Boolean {
+        return normalizedKeywords.any { key.contains(it, ignoreCase = true) }
+    }
+
+    profileRows.firstOrNull { row ->
+        keyMatched(row.key) && row.value.isNotBlank()
+    }?.let { return it.value }
+
+    stats.firstOrNull { (key, value) ->
+        keyMatched(key) && value.isNotBlank()
+    }?.let { return it.second }
+
+    return "-"
 }
