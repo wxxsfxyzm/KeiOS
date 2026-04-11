@@ -8,6 +8,7 @@ import org.json.JSONObject
 fun normalizeGuideUrl(raw: String): String {
     val value = raw.trim()
     if (value.isBlank()) return ""
+    if (value.startsWith("data:image", ignoreCase = true)) return value
     return when {
         value.startsWith("http://") || value.startsWith("https://") -> value
         value.startsWith("//") -> "https:$value"
@@ -55,6 +56,7 @@ private fun normalizeImageUrl(sourceUrl: String, imageRaw: String): String {
     val img = imageRaw.trim()
     if (img.isBlank()) return ""
     if (img.startsWith("http://") || img.startsWith("https://")) return img
+    if (img.startsWith("data:image", ignoreCase = true)) return img
     if (img.startsWith("//")) return "https:$img"
     return if (img.startsWith("/")) {
         val source = runCatching { Uri.parse(sourceUrl) }.getOrNull()
@@ -115,6 +117,7 @@ private data class GuideBaseRow(
 private fun looksLikeImageUrl(raw: String): Boolean {
     val value = raw.lowercase()
     if (value.isBlank()) return false
+    if (value.startsWith("data:image")) return true
     return value.startsWith("http://") ||
         value.startsWith("https://") ||
         value.startsWith("//") ||
@@ -123,6 +126,20 @@ private fun looksLikeImageUrl(raw: String): Boolean {
         value.endsWith(".jpeg") ||
         value.endsWith(".webp") ||
         value.contains("cdnimg")
+}
+
+private fun extractImageUrlsFromHtml(sourceUrl: String, raw: String): List<String> {
+    if (raw.isBlank()) return emptyList()
+    val regex = Regex(
+        """(?i)<img[^>]+src\s*=\s*["']([^"']+)["'][^>]*>"""
+    )
+    return regex.findAll(raw)
+        .mapNotNull { match ->
+            normalizeImageUrl(sourceUrl, match.groupValues.getOrNull(1).orEmpty())
+        }
+        .filter { it.isNotBlank() }
+        .distinct()
+        .toList()
 }
 
 private fun firstImageFromAny(any: Any?, sourceUrl: String, depth: Int = 0): String {
@@ -300,6 +317,8 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
                     val normalized = normalizeImageUrl(sourceUrl, rawValue)
                     if (normalized.isNotBlank()) imageValues += normalized
                 } else {
+                    val inlineImages = extractImageUrlsFromHtml(sourceUrl, rawValue)
+                    if (inlineImages.isNotEmpty()) imageValues += inlineImages
                     val normalized = stripHtml(rawValue)
                     if (normalized.isNotBlank()) textValues += normalized
                 }
@@ -320,7 +339,7 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
 
         val skillKeywords = listOf(
             "技能", "EX", "普通技能", "被动技能", "辅助技能", "固有", "技能COST", "技能图标", "技能描述", "技能名称",
-            "技能类型", "技能名词"
+            "技能类型", "技能名词", "LV"
         )
         val profileKeywords = listOf(
             "学生信息", "角色名称", "全名", "假名注音", "简中译名", "繁中译名", "稀有度", "战术作用", "所属学园",
@@ -333,7 +352,9 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
         )
         val growthKeywords = listOf(
             "装备", "专武", "能力解放", "礼物偏好", "羁绊", "升级材料", "所需", "LV", "T1", "T2", "爱用品", "初始数据",
-            "攻击力增加", "生命值增加", "暴击值增加", "暴击伤害增加", "装弹数", "命中值", "治愈力", "稳定值"
+            "攻击力增加", "生命值增加", "暴击值增加", "暴击伤害增加", "装弹数", "命中值", "治愈力", "稳定值",
+            // 兼容专武面板使用“攻击力/生命值/治愈力”等简写字段
+            "攻击力", "生命值", "防御力", "暴击", "爆伤", "命中", "闪避"
         )
         val voiceKeywords = listOf("战斗", "活动", "大厅及咖啡馆", "事件", "好感度")
 
@@ -345,6 +366,8 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
         val stats = mutableListOf<Pair<String, String>>()
         val summaryCandidates = mutableListOf<String>()
 
+        var inSkillBlock = false
+        var inWeaponBlock = false
         baseRows.forEach { row ->
             val key = row.key
             val value = row.textValues.joinToString(" / ")
@@ -354,19 +377,42 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
             val guideRow = BaGuideRow(
                 key = key.ifBlank { "信息" },
                 value = value,
-                imageUrl = imageUrl
+                imageUrl = imageUrl,
+                imageUrls = row.imageValues.distinct()
             )
             val normalizedKey = key.ifBlank { value }
+                .replace("\n", " ")
+                .trim()
+            val isWeaponBlockStart = normalizedKey == "专武"
+            val isWeaponBlockEnd = normalizedKey.contains("爱用品") ||
+                normalizedKey.contains("专武考据") ||
+                normalizedKey == "初始数据"
+            val isSkillBlockStart = normalizedKey == "技能类型"
+            val isSkillBlockEnd = isWeaponBlockStart ||
+                normalizedKey.contains("升级材料") ||
+                normalizedKey == "初始数据"
+            if (isWeaponBlockStart) {
+                inWeaponBlock = true
+                inSkillBlock = false
+            }
+            if (isSkillBlockStart) {
+                inSkillBlock = true
+            }
+
             val isVoice = containsAny(normalizedKey, voiceKeywords)
-            val isSkill = containsAny(normalizedKey, skillKeywords)
-            val isGrowth = containsAny(normalizedKey, growthKeywords)
+            val matchesSkillKeywords = containsAny(normalizedKey, skillKeywords)
+            val matchesGrowthKeywords = containsAny(normalizedKey, growthKeywords)
+            val isLevelRow = key.trim().matches(Regex("""(?i)^LV\.?\d{1,2}$"""))
+            val isSkill = (inSkillBlock && (isLevelRow || normalizedKey == "技能COST" || normalizedKey == "技能描述" || normalizedKey == "技能图标" || normalizedKey == "技能名称" || normalizedKey == "技能类型")) ||
+                (matchesSkillKeywords && !inWeaponBlock)
+            val isGrowth = inWeaponBlock || (matchesGrowthKeywords && !isSkill)
             val isGallery = containsAny(normalizedKey, galleryKeywords)
             val isProfile = containsAny(normalizedKey, profileKeywords)
 
             when {
-                isVoice -> voiceRows += guideRow
-                isSkill -> skillRows += guideRow
+                isVoice && !inWeaponBlock -> voiceRows += guideRow
                 isGrowth -> growthRows += guideRow
+                isSkill -> skillRows += guideRow
                 isGallery -> {
                     if (imageUrl.isNotBlank()) {
                         galleryItems += BaGuideGalleryItem(
@@ -398,6 +444,13 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
                     summaryCandidates += "${guideRow.key}：${guideRow.value}"
                 }
             }
+
+            if (isWeaponBlockEnd) {
+                inWeaponBlock = false
+            }
+            if (isSkillBlockEnd) {
+                inSkillBlock = false
+            }
         }
 
         val distinctGallery = galleryItems
@@ -408,7 +461,8 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
             imageUrl = firstImage,
             summary = summaryCandidates.joinToString(" · "),
             stats = stats.take(14),
-            skillRows = skillRows.take(120),
+            // 技能名词图标通常位于后段，120条会截断导致描述内术语图标缺失。
+            skillRows = skillRows.take(260),
             profileRows = profileRows.take(120),
             galleryItems = distinctGallery,
             growthRows = growthRows.take(160),
@@ -571,4 +625,3 @@ fun fetchGuideInfo(sourceUrl: String): BaStudentGuideInfo {
         .recoverCatching { fetchGuideInfoFromHtml(sourceUrl) }
         .getOrThrow()
 }
-

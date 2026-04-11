@@ -33,7 +33,8 @@ data class BaStudentGuideInfo(
 data class BaGuideRow(
     val key: String,
     val value: String,
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    val imageUrls: List<String> = emptyList()
 )
 
 data class BaGuideGalleryItem(

@@ -47,10 +47,10 @@ import com.example.keios.ui.page.main.student.GuideTab
 import com.example.keios.ui.page.main.student.GuideCombatMetaTile
 import com.example.keios.ui.page.main.student.GuideGallerySection
 import com.example.keios.ui.page.main.student.GuideProfileMetaLine
-import com.example.keios.ui.page.main.student.GuideRemoteIcon
 import com.example.keios.ui.page.main.student.GuideRemoteImage
 import com.example.keios.ui.page.main.student.GuideRowsSection
-import com.example.keios.ui.page.main.student.bottomTabIconUrl
+import com.example.keios.ui.page.main.student.GuideSkillCardItem
+import com.example.keios.ui.page.main.student.GuideWeaponCardItem
 import com.example.keios.ui.page.main.student.buildCombatMetaItems
 import com.example.keios.ui.page.main.student.buildProfileMetaItems
 import com.example.keios.ui.page.main.student.fetchGuideInfo
@@ -59,7 +59,8 @@ import com.example.keios.ui.page.main.student.normalizeGuideUrl
 import com.example.keios.ui.page.main.student.profileRowsForDisplay
 import com.example.keios.ui.page.main.student.shouldHideMovedHeaderRow
 import com.example.keios.ui.page.main.student.showLoadingText
-import com.example.keios.ui.page.main.student.skillRowsForDisplay
+import com.example.keios.ui.page.main.student.skillCardsForDisplay
+import com.example.keios.ui.page.main.student.weaponCardForDisplay
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.FrostedBlock
@@ -188,8 +189,6 @@ fun BaStudentGuidePage(
                     isBlurEnabled = true
                 ) {
                     bottomTabs.forEachIndexed { index, tab ->
-                        val useDynamicIcon = tab != GuideBottomTab.Archive && tab.localLogoRes == null
-                        val dynamicIconUrl = if (useDynamicIcon) info?.bottomTabIconUrl(tab).orEmpty() else ""
                         FloatingBottomBarItem(
                             onClick = { selectedBottomTabIndex = index },
                             modifier = Modifier.defaultMinSize(minWidth = 76.dp)
@@ -206,12 +205,6 @@ fun BaStudentGuidePage(
                                     contentDescription = tab.label,
                                     tint = Color.Unspecified,
                                     modifier = tabIconModifier
-                                )
-                            } else if (dynamicIconUrl.isNotBlank()) {
-                                GuideRemoteIcon(
-                                    imageUrl = dynamicIconUrl,
-                                    iconWidth = 20.dp,
-                                    iconHeight = 20.dp
                                 )
                             } else {
                                 Icon(
@@ -358,6 +351,141 @@ fun BaStudentGuidePage(
                         }
                     }
 
+                    GuideBottomTab.Skills -> {
+                        val guide = info
+                        if (guide == null) {
+                            item {
+                                FrostedBlock(
+                                    backdrop = backdrop,
+                                    title = activeBottomTab.label,
+                                    subtitle = info?.subtitle?.ifBlank { "GameKee" } ?: "GameKee",
+                                    accent = accent,
+                                    content = {
+                                        if (loading) {
+                                            Text("同步中...", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                                        }
+                                        error?.takeIf { it.isNotBlank() }?.let {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = it,
+                                                color = MiuixTheme.colorScheme.error,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        } else {
+                            val skillCards = guide.skillCardsForDisplay()
+                            val weaponCard = guide.weaponCardForDisplay()
+
+                            if (showLoadingText(loading = loading, hasInfo = true) || !error.isNullOrBlank()) {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.defaultColors(
+                                            color = Color(0x223B82F6),
+                                            contentColor = MiuixTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {}
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            if (showLoadingText(loading = loading, hasInfo = true)) {
+                                                Text("同步中...", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                                            }
+                                            error?.takeIf { it.isNotBlank() }?.let {
+                                                Text(
+                                                    text = it,
+                                                    color = MiuixTheme.colorScheme.error,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                item { Spacer(modifier = Modifier.height(10.dp)) }
+                            }
+
+                            if (skillCards.isNotEmpty()) {
+                                skillCards.forEachIndexed { index, card ->
+                                    item {
+                                        GuideSkillCardItem(
+                                            card = card,
+                                            backdrop = backdrop
+                                        )
+                                    }
+                                    if (index < skillCards.lastIndex) {
+                                        item { Spacer(modifier = Modifier.height(10.dp)) }
+                                    }
+                                }
+                            } else {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.defaultColors(
+                                            color = Color(0x223B82F6),
+                                            contentColor = MiuixTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {}
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "暂未解析到结构化技能卡数据。",
+                                                color = MiuixTheme.colorScheme.onBackgroundVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            weaponCard?.let { weapon ->
+                                item { Spacer(modifier = Modifier.height(10.dp)) }
+                                item {
+                                    GuideWeaponCardItem(
+                                        card = weapon,
+                                        backdrop = backdrop
+                                    )
+                                }
+                            }
+
+                            item { Spacer(modifier = Modifier.height(10.dp)) }
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.defaultColors(
+                                        color = Color(0x223B82F6),
+                                        contentColor = MiuixTheme.colorScheme.onBackground
+                                    ),
+                                    onClick = {}
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                                    ) {
+                                        MiuixInfoItem(
+                                            key = "来源",
+                                            value = guide.sourceUrl,
+                                            onClick = { openExternal(guide.sourceUrl) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     else -> {
                         item {
                             FrostedBlock(
@@ -381,9 +509,7 @@ fun BaStudentGuidePage(
                                     }
                                     val guide = info
                                     if (guide != null) {
-                                        val skillRows = guide.skillRowsForDisplay()
                                         val profileRows = guide.profileRowsForDisplay()
-                                        val visibleSkillRows = skillRows.filterNot { shouldHideMovedHeaderRow(it) }
                                         val visibleProfileRows = profileRows.filterNot { shouldHideMovedHeaderRow(it) }
                                         val growthRows = guide.growthRowsForDisplay()
                                         val galleryItems = if (guide.galleryItems.isNotEmpty()) {
@@ -404,13 +530,6 @@ fun BaStudentGuidePage(
                                         Spacer(modifier = Modifier.height(10.dp))
 
                                         when (activeGuideTab) {
-                                            GuideTab.Skills -> {
-                                                GuideRowsSection(
-                                                    rows = visibleSkillRows,
-                                                    emptyText = "暂未解析到角色技能数据。"
-                                                )
-                                            }
-
                                             GuideTab.Profile -> {
                                                 GuideRowsSection(
                                                     rows = visibleProfileRows,

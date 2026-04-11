@@ -19,6 +19,14 @@ object BaStudentGuideStore {
                         put("k", row.key)
                         put("v", row.value)
                         put("img", row.imageUrl)
+                        put(
+                            "imgs",
+                            JSONArray().apply {
+                                row.imageUrls.forEach { item ->
+                                    if (item.isNotBlank()) put(item)
+                                }
+                            }
+                        )
                     }
                 )
             }
@@ -33,8 +41,18 @@ object BaStudentGuideStore {
                 val k = row.optString("k").trim()
                 val v = row.optString("v").trim()
                 val img = row.optString("img").trim()
-                if (k.isBlank() && v.isBlank() && img.isBlank()) continue
-                add(BaGuideRow(key = k, value = v, imageUrl = img))
+                val imgs = buildList {
+                    val arr = row.optJSONArray("imgs")
+                    if (arr != null) {
+                        for (j in 0 until arr.length()) {
+                            val value = arr.optString(j).trim()
+                            if (value.isNotBlank()) add(value)
+                        }
+                    }
+                }
+                val normalizedImgs = if (imgs.isNotEmpty()) imgs else listOf(img).filter { it.isNotBlank() }
+                if (k.isBlank() && v.isBlank() && img.isBlank() && normalizedImgs.isEmpty()) continue
+                add(BaGuideRow(key = k, value = v, imageUrl = img, imageUrls = normalizedImgs))
             }
         }
     }
@@ -148,4 +166,3 @@ object BaStudentGuideStore {
         }.getOrNull()
     }
 }
-
