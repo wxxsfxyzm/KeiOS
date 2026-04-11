@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -187,35 +188,43 @@ fun BaStudentGuidePage(
                     isBlurEnabled = true
                 ) {
                     bottomTabs.forEachIndexed { index, tab ->
-                        val useDynamicIcon = tab != GuideBottomTab.Archive
+                        val useDynamicIcon = tab != GuideBottomTab.Archive && tab.localLogoRes == null
                         val dynamicIconUrl = if (useDynamicIcon) info?.bottomTabIconUrl(tab).orEmpty() else ""
                         FloatingBottomBarItem(
                             onClick = { selectedBottomTabIndex = index },
-                            modifier = Modifier.defaultMinSize(minWidth = 72.dp)
+                            modifier = Modifier.defaultMinSize(minWidth = 76.dp)
                         ) {
-                            if (dynamicIconUrl.isNotBlank()) {
+                            val tabIconModifier = Modifier
+                                .size(20.dp)
+                                .graphicsLayer {
+                                    scaleX = 1f
+                                    scaleY = 1f
+                                }
+                            if (tab.localLogoRes != null) {
+                                Icon(
+                                    painter = painterResource(id = tab.localLogoRes),
+                                    contentDescription = tab.label,
+                                    tint = Color.Unspecified,
+                                    modifier = tabIconModifier
+                                )
+                            } else if (dynamicIconUrl.isNotBlank()) {
                                 GuideRemoteIcon(
                                     imageUrl = dynamicIconUrl,
-                                    iconWidth = 18.dp,
-                                    iconHeight = 18.dp
+                                    iconWidth = 20.dp,
+                                    iconHeight = 20.dp
                                 )
                             } else {
                                 Icon(
                                     imageVector = tab.icon,
                                     contentDescription = tab.label,
                                     tint = MiuixTheme.colorScheme.onSurface,
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .graphicsLayer {
-                                            scaleX = 1f
-                                            scaleY = 1f
-                                        }
+                                    modifier = tabIconModifier
                                 )
                             }
                             Text(
                                 text = tab.label,
-                                fontSize = 10.sp,
-                                lineHeight = 12.sp,
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp,
                                 color = MiuixTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 softWrap = false,
@@ -449,4 +458,3 @@ fun BaStudentGuidePage(
         }
     }
 }
-

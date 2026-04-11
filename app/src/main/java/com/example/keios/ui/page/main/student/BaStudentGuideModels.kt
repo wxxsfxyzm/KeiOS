@@ -1,6 +1,7 @@
 package com.example.keios.ui.page.main.student
 
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.keios.R
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Album
 import top.yukonga.miuix.kmp.icon.extended.ContactsBook
@@ -58,12 +59,28 @@ enum class GuideTab(val label: String) {
 enum class GuideBottomTab(
     val label: String,
     val icon: ImageVector,
+    val localLogoRes: Int? = null,
     val guideTab: GuideTab? = null
 ) {
     Archive("档案", MiuixIcons.Regular.ContactsBook),
-    Skills(GuideTab.Skills.label, MiuixIcons.Regular.Tasks, GuideTab.Skills),
-    Profile(GuideTab.Profile.label, MiuixIcons.Regular.ContactsBook, GuideTab.Profile),
-    Voice(GuideTab.Voice.label, MiuixIcons.Regular.Mic, GuideTab.Voice),
-    Gallery(GuideTab.Gallery.label, MiuixIcons.Regular.Album, GuideTab.Gallery),
-    Simulate(GuideTab.Simulate.label, MiuixIcons.Regular.Stopwatch, GuideTab.Simulate)
+    Skills(
+        GuideTab.Skills.label,
+        MiuixIcons.Regular.Tasks,
+        localLogoRes = R.drawable.ba_tab_skill,
+        guideTab = GuideTab.Skills
+    ),
+    Profile(
+        GuideTab.Profile.label,
+        MiuixIcons.Regular.ContactsBook,
+        localLogoRes = R.drawable.ba_tab_profile,
+        guideTab = GuideTab.Profile
+    ),
+    Voice(GuideTab.Voice.label, MiuixIcons.Regular.Mic, guideTab = GuideTab.Voice),
+    Gallery(GuideTab.Gallery.label, MiuixIcons.Regular.Album, guideTab = GuideTab.Gallery),
+    Simulate(
+        GuideTab.Simulate.label,
+        MiuixIcons.Regular.Stopwatch,
+        localLogoRes = R.drawable.ba_tab_simulate,
+        guideTab = GuideTab.Simulate
+    )
 }

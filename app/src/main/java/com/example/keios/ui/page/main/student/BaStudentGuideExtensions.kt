@@ -91,7 +91,7 @@ fun BaStudentGuideInfo.buildCombatMetaItems(): List<BaGuideMetaItem> {
             requireImage = true
         )?.imageUrl.orEmpty()
         BaGuideMetaItem(
-            title = "战术位置作用",
+            title = "作用战术位置",
             value = findGuideFieldValue("战术作用", "作用").ifBlank { "-" },
             imageUrl = tacticalIcon,
             extraImageUrl = positionIcon
