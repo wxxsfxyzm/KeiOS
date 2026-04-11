@@ -1,0 +1,574 @@
+package com.example.keios.ui.page.main.student
+
+import android.net.Uri
+import com.example.keios.ba.helper.GameKeeFetchHelper
+import org.json.JSONArray
+import org.json.JSONObject
+
+fun normalizeGuideUrl(raw: String): String {
+    val value = raw.trim()
+    if (value.isBlank()) return ""
+    return when {
+        value.startsWith("http://") || value.startsWith("https://") -> value
+        value.startsWith("//") -> "https:$value"
+        value.startsWith("/") -> "https://www.gamekee.com$value"
+        else -> "https://www.gamekee.com/$value"
+    }
+}
+
+private fun decodeBasicHtmlEntity(raw: String): String {
+    return raw
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+}
+
+private fun stripHtml(raw: String): String {
+    return decodeBasicHtmlEntity(raw.replace(Regex("<[^>]+>"), " "))
+        .replace(Regex("\\s+"), " ")
+        .trim()
+}
+
+private fun extractMeta(html: String, key: String): String {
+    val escaped = Regex.escape(key)
+    val regexes = listOf(
+        Regex(
+            """<meta[^>]+(?:property|name)\s*=\s*["']$escaped["'][^>]*content\s*=\s*["']([^"']+)["'][^>]*>""",
+            setOf(RegexOption.IGNORE_CASE)
+        ),
+        Regex(
+            """<meta[^>]*content\s*=\s*["']([^"']+)["'][^>]+(?:property|name)\s*=\s*["']$escaped["'][^>]*>""",
+            setOf(RegexOption.IGNORE_CASE)
+        )
+    )
+    regexes.forEach { regex ->
+        val value = regex.find(html)?.groupValues?.getOrNull(1).orEmpty().trim()
+        if (value.isNotBlank()) return decodeBasicHtmlEntity(value)
+    }
+    return ""
+}
+
+private fun normalizeImageUrl(sourceUrl: String, imageRaw: String): String {
+    val img = imageRaw.trim()
+    if (img.isBlank()) return ""
+    if (img.startsWith("http://") || img.startsWith("https://")) return img
+    if (img.startsWith("//")) return "https:$img"
+    return if (img.startsWith("/")) {
+        val source = runCatching { Uri.parse(sourceUrl) }.getOrNull()
+        val host = source?.scheme?.plus("://")?.plus(source.host.orEmpty()).orEmpty()
+        (host.ifBlank { "https://www.gamekee.com" }) + img
+    } else {
+        "https://www.gamekee.com/$img"
+    }
+}
+
+private fun extractStatsFromHtml(html: String): List<Pair<String, String>> {
+    val rows = mutableListOf<Pair<String, String>>()
+    val trRegex = Regex(
+        """<tr[^>]*>\s*<th[^>]*>(.*?)</th>\s*<td[^>]*>(.*?)</td>\s*</tr>""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+    )
+    trRegex.findAll(html).forEach { m ->
+        val key = stripHtml(m.groupValues[1])
+        val value = stripHtml(m.groupValues[2])
+        if (key.isNotBlank() && value.isNotBlank()) rows += key to value
+    }
+    if (rows.isNotEmpty()) return rows.take(8)
+
+    val dlRegex = Regex(
+        """<dt[^>]*>(.*?)</dt>\s*<dd[^>]*>(.*?)</dd>""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+    )
+    dlRegex.findAll(html).forEach { m ->
+        val key = stripHtml(m.groupValues[1])
+        val value = stripHtml(m.groupValues[2])
+        if (key.isNotBlank() && value.isNotBlank()) rows += key to value
+    }
+    return rows.take(8)
+}
+
+private data class GuideDetailExtract(
+    val imageUrl: String = "",
+    val summary: String = "",
+    val stats: List<Pair<String, String>> = emptyList(),
+    val skillRows: List<BaGuideRow> = emptyList(),
+    val profileRows: List<BaGuideRow> = emptyList(),
+    val galleryItems: List<BaGuideGalleryItem> = emptyList(),
+    val growthRows: List<BaGuideRow> = emptyList(),
+    val voiceRows: List<BaGuideRow> = emptyList(),
+    val tabSkillIconUrl: String = "",
+    val tabProfileIconUrl: String = "",
+    val tabVoiceIconUrl: String = "",
+    val tabGalleryIconUrl: String = "",
+    val tabSimulateIconUrl: String = ""
+)
+
+private data class GuideBaseRow(
+    val key: String,
+    val textValues: List<String>,
+    val imageValues: List<String>
+)
+
+private fun looksLikeImageUrl(raw: String): Boolean {
+    val value = raw.lowercase()
+    if (value.isBlank()) return false
+    return value.startsWith("http://") ||
+        value.startsWith("https://") ||
+        value.startsWith("//") ||
+        value.endsWith(".png") ||
+        value.endsWith(".jpg") ||
+        value.endsWith(".jpeg") ||
+        value.endsWith(".webp") ||
+        value.contains("cdnimg")
+}
+
+private fun firstImageFromAny(any: Any?, sourceUrl: String, depth: Int = 0): String {
+    if (any == null || depth > 4) return ""
+    return when (any) {
+        is String -> {
+            val normalized = normalizeImageUrl(sourceUrl, any)
+            if (looksLikeImageUrl(normalized)) normalized else ""
+        }
+
+        is JSONObject -> {
+            val keys = any.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val found = firstImageFromAny(any.opt(key), sourceUrl, depth + 1)
+                if (found.isNotBlank()) return found
+            }
+            ""
+        }
+
+        is JSONArray -> {
+            for (i in 0 until any.length()) {
+                val found = firstImageFromAny(any.opt(i), sourceUrl, depth + 1)
+                if (found.isNotBlank()) return found
+            }
+            ""
+        }
+
+        else -> ""
+    }
+}
+
+private fun normalizeGuideTabLabel(raw: String): String {
+    return stripHtml(raw)
+        .replace(Regex("\\s+"), "")
+        .replace("（", "(")
+        .replace("）", ")")
+        .trim()
+}
+
+private fun mapGuideTabByLabel(rawLabel: String, strict: Boolean): GuideTab? {
+    val label = normalizeGuideTabLabel(rawLabel)
+    if (label.isBlank()) return null
+    if (strict) {
+        return when (label) {
+            GuideTab.Skills.label -> GuideTab.Skills
+            GuideTab.Profile.label -> GuideTab.Profile
+            GuideTab.Voice.label -> GuideTab.Voice
+            GuideTab.Gallery.label -> GuideTab.Gallery
+            GuideTab.Simulate.label -> GuideTab.Simulate
+            else -> null
+        }
+    }
+    return when {
+        label.contains("语音") || label.contains("台词") -> GuideTab.Voice
+        label.contains("影画") || label.contains("鉴赏") -> GuideTab.Gallery
+        label.contains("养成") || label.contains("模拟") -> GuideTab.Simulate
+        label.contains("档案") -> GuideTab.Profile
+        label.contains("技能") -> GuideTab.Skills
+        else -> null
+    }
+}
+
+private fun findImageByKnownKeys(obj: JSONObject, sourceUrl: String): String {
+    val keys = listOf(
+        "icon", "iconUrl", "icon_url", "tabIcon", "tab_icon",
+        "img", "image", "imageUrl", "image_url",
+        "thumb", "cover", "src", "url"
+    )
+    keys.forEach { key ->
+        val any = obj.opt(key) ?: return@forEach
+        val fromAny = when (any) {
+            is String -> normalizeImageUrl(sourceUrl, any)
+            is JSONObject, is JSONArray -> firstImageFromAny(any, sourceUrl)
+            else -> ""
+        }
+        if (looksLikeImageUrl(fromAny)) return fromAny
+    }
+    return ""
+}
+
+private fun extractGuideTabIcons(root: JSONObject, sourceUrl: String): Map<GuideTab, String> {
+    val strict = mutableMapOf<GuideTab, String>()
+    val fuzzy = mutableMapOf<GuideTab, String>()
+    val labelKeys = listOf("name", "title", "label", "tabName", "tab_name", "text", "key")
+
+    fun tryPut(tab: GuideTab?, icon: String, strictMode: Boolean) {
+        if (tab == null || icon.isBlank()) return
+        if (strictMode) {
+            strict.putIfAbsent(tab, icon)
+        } else {
+            fuzzy.putIfAbsent(tab, icon)
+        }
+    }
+
+    fun walk(any: Any?) {
+        when (any) {
+            is JSONObject -> {
+                val label = labelKeys
+                    .asSequence()
+                    .map { key -> any.optString(key).trim() }
+                    .firstOrNull { it.isNotBlank() }
+                    .orEmpty()
+                val icon = findImageByKnownKeys(any, sourceUrl)
+                if (label.isNotBlank() && icon.isNotBlank()) {
+                    tryPut(mapGuideTabByLabel(label, strict = true), icon, strictMode = true)
+                    tryPut(mapGuideTabByLabel(label, strict = false), icon, strictMode = false)
+                }
+
+                val keys = any.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val value = any.opt(key)
+                    val keyTabStrict = mapGuideTabByLabel(key, strict = true)
+                    val keyTabFuzzy = mapGuideTabByLabel(key, strict = false)
+                    if ((keyTabStrict != null || keyTabFuzzy != null) && value != null) {
+                        val iconByValue = firstImageFromAny(value, sourceUrl)
+                        if (iconByValue.isNotBlank()) {
+                            tryPut(keyTabStrict, iconByValue, strictMode = true)
+                            tryPut(keyTabFuzzy, iconByValue, strictMode = false)
+                        }
+                    }
+                    walk(value)
+                }
+            }
+
+            is JSONArray -> {
+                for (i in 0 until any.length()) {
+                    walk(any.opt(i))
+                }
+            }
+        }
+    }
+
+    walk(root.opt("dataSource"))
+    walk(root.opt("tabs"))
+    walk(root)
+
+    return buildMap {
+        GuideTab.entries.forEach { tab ->
+            val icon = strict[tab].orEmpty().ifBlank { fuzzy[tab].orEmpty() }
+            if (icon.isNotBlank()) put(tab, icon)
+        }
+    }
+}
+
+private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): GuideDetailExtract {
+    if (raw.isBlank()) return GuideDetailExtract()
+    return runCatching {
+        val root = JSONObject(raw)
+        val tabIcons = extractGuideTabIcons(root, sourceUrl)
+        val baseData = root.optJSONArray("baseData")
+            ?: return@runCatching GuideDetailExtract(
+                tabSkillIconUrl = tabIcons[GuideTab.Skills].orEmpty(),
+                tabProfileIconUrl = tabIcons[GuideTab.Profile].orEmpty(),
+                tabVoiceIconUrl = tabIcons[GuideTab.Voice].orEmpty(),
+                tabGalleryIconUrl = tabIcons[GuideTab.Gallery].orEmpty(),
+                tabSimulateIconUrl = tabIcons[GuideTab.Simulate].orEmpty()
+            )
+        val baseRows = mutableListOf<GuideBaseRow>()
+        var firstImage = ""
+
+        for (i in 0 until baseData.length()) {
+            val row = baseData.optJSONArray(i) ?: continue
+            if (row.length() == 0) continue
+            val key = stripHtml((row.optJSONObject(0)?.optString("value") ?: "").trim())
+            val textValues = mutableListOf<String>()
+            val imageValues = mutableListOf<String>()
+            for (j in 1 until row.length()) {
+                val cell = row.optJSONObject(j) ?: continue
+                val type = cell.optString("type").trim().lowercase()
+                val rawValue = cell.optString("value").trim()
+                if (rawValue.isBlank()) continue
+                if (type == "image") {
+                    val normalized = normalizeImageUrl(sourceUrl, rawValue)
+                    if (normalized.isNotBlank()) imageValues += normalized
+                } else {
+                    val normalized = stripHtml(rawValue)
+                    if (normalized.isNotBlank()) textValues += normalized
+                }
+            }
+            if (firstImage.isBlank() && imageValues.isNotEmpty()) {
+                firstImage = imageValues.first()
+            }
+            baseRows += GuideBaseRow(
+                key = key,
+                textValues = textValues,
+                imageValues = imageValues
+            )
+        }
+
+        fun containsAny(target: String, keywords: List<String>): Boolean {
+            return keywords.any { key -> target.contains(key, ignoreCase = true) }
+        }
+
+        val skillKeywords = listOf(
+            "技能", "EX", "普通技能", "被动技能", "辅助技能", "固有", "技能COST", "技能图标", "技能描述", "技能名称",
+            "技能类型", "技能名词"
+        )
+        val profileKeywords = listOf(
+            "学生信息", "角色名称", "全名", "假名注音", "简中译名", "繁中译名", "稀有度", "战术作用", "所属学园",
+            "所属社团", "实装日期", "攻击类型", "防御类型", "位置", "市街", "屋外", "屋内", "武器类型", "年龄", "生日",
+            "兴趣爱好", "声优", "画师", "介绍", "个人简介", "MomoTalk", "回忆大厅解锁等级", "同名角色", "角色头像"
+        )
+        val galleryKeywords = listOf(
+            "立绘", "本家画", "TV动画设定图", "回忆大厅文件", "回忆大厅视频", "回忆大厅", "PV", "Live", "巧克力图",
+            "互动家具"
+        )
+        val growthKeywords = listOf(
+            "装备", "专武", "能力解放", "礼物偏好", "羁绊", "升级材料", "所需", "LV", "T1", "T2", "爱用品", "初始数据",
+            "攻击力增加", "生命值增加", "暴击值增加", "暴击伤害增加", "装弹数", "命中值", "治愈力", "稳定值"
+        )
+        val voiceKeywords = listOf("战斗", "活动", "大厅及咖啡馆", "事件", "好感度")
+
+        val skillRows = mutableListOf<BaGuideRow>()
+        val profileRows = mutableListOf<BaGuideRow>()
+        val growthRows = mutableListOf<BaGuideRow>()
+        val voiceRows = mutableListOf<BaGuideRow>()
+        val galleryItems = mutableListOf<BaGuideGalleryItem>()
+        val stats = mutableListOf<Pair<String, String>>()
+        val summaryCandidates = mutableListOf<String>()
+
+        baseRows.forEach { row ->
+            val key = row.key
+            val value = row.textValues.joinToString(" / ")
+            val imageUrl = row.imageValues.firstOrNull().orEmpty()
+            if (key.isBlank() && value.isBlank() && imageUrl.isBlank()) return@forEach
+
+            val guideRow = BaGuideRow(
+                key = key.ifBlank { "信息" },
+                value = value,
+                imageUrl = imageUrl
+            )
+            val normalizedKey = key.ifBlank { value }
+            val isVoice = containsAny(normalizedKey, voiceKeywords)
+            val isSkill = containsAny(normalizedKey, skillKeywords)
+            val isGrowth = containsAny(normalizedKey, growthKeywords)
+            val isGallery = containsAny(normalizedKey, galleryKeywords)
+            val isProfile = containsAny(normalizedKey, profileKeywords)
+
+            when {
+                isVoice -> voiceRows += guideRow
+                isSkill -> skillRows += guideRow
+                isGrowth -> growthRows += guideRow
+                isGallery -> {
+                    if (imageUrl.isNotBlank()) {
+                        galleryItems += BaGuideGalleryItem(
+                            title = guideRow.key.ifBlank { "影画" },
+                            imageUrl = imageUrl
+                        )
+                    } else if (guideRow.value.isNotBlank()) {
+                        profileRows += guideRow
+                    }
+                }
+
+                isProfile -> profileRows += guideRow
+                else -> {
+                    if (guideRow.key.isNotBlank() && guideRow.value.isNotBlank()) {
+                        profileRows += guideRow
+                    }
+                }
+            }
+
+            if (imageUrl.isNotBlank() && (isGallery || guideRow.key.contains("立绘") || guideRow.key.contains("本家画"))) {
+                galleryItems += BaGuideGalleryItem(
+                    title = guideRow.key.ifBlank { "影画" },
+                    imageUrl = imageUrl
+                )
+            }
+            if (guideRow.key.isNotBlank() && guideRow.value.isNotBlank() && stats.none { it.first == guideRow.key }) {
+                stats += guideRow.key to guideRow.value
+                if (summaryCandidates.size < 4) {
+                    summaryCandidates += "${guideRow.key}：${guideRow.value}"
+                }
+            }
+        }
+
+        val distinctGallery = galleryItems
+            .distinctBy { it.imageUrl }
+            .take(24)
+
+        GuideDetailExtract(
+            imageUrl = firstImage,
+            summary = summaryCandidates.joinToString(" · "),
+            stats = stats.take(14),
+            skillRows = skillRows.take(120),
+            profileRows = profileRows.take(120),
+            galleryItems = distinctGallery,
+            growthRows = growthRows.take(160),
+            voiceRows = voiceRows.take(160),
+            tabSkillIconUrl = tabIcons[GuideTab.Skills].orEmpty(),
+            tabProfileIconUrl = tabIcons[GuideTab.Profile].orEmpty(),
+            tabVoiceIconUrl = tabIcons[GuideTab.Voice].orEmpty(),
+            tabGalleryIconUrl = tabIcons[GuideTab.Gallery].orEmpty(),
+            tabSimulateIconUrl = tabIcons[GuideTab.Simulate].orEmpty()
+        )
+    }.getOrDefault(GuideDetailExtract())
+}
+
+private fun extractContentIdFromGuideUrl(sourceUrl: String): Long? {
+    val target = normalizeGuideUrl(sourceUrl)
+    if (target.isBlank()) return null
+    val patterns = listOf(
+        Regex("/v1/content/detail/(\\d+)"),
+        Regex("/tj/(\\d+)\\.html"),
+        Regex("/ba/(\\d+)\\.html"),
+        Regex("/(\\d+)\\.html")
+    )
+    patterns.forEach { regex ->
+        val id = regex.find(target)?.groupValues?.getOrNull(1)?.toLongOrNull()
+        if (id != null && id > 0L) return id
+    }
+    val uri = runCatching { Uri.parse(target) }.getOrNull() ?: return null
+    val qpKeys = listOf("content_id", "id", "cid")
+    qpKeys.forEach { key ->
+        val id = uri.getQueryParameter(key)?.toLongOrNull()
+        if (id != null && id > 0L) return id
+    }
+    uri.pathSegments
+        .asReversed()
+        .firstNotNullOfOrNull { segment -> segment.toLongOrNull() }
+        ?.let { id ->
+            if (id > 0L) return id
+        }
+    return null
+}
+
+private fun fetchGuideInfoByApi(sourceUrl: String): BaStudentGuideInfo {
+    val target = normalizeGuideUrl(sourceUrl)
+    require(target.isNotBlank()) { "empty url" }
+    val contentId = extractContentIdFromGuideUrl(target)
+        ?: error("unable to resolve content_id")
+
+    val refererPath = runCatching { Uri.parse(target).path.orEmpty() }
+        .getOrDefault("/ba/$contentId.html")
+        .ifBlank { "/ba/$contentId.html" }
+
+    val body = GameKeeFetchHelper.fetchJson(
+        pathOrUrl = "/v1/content/detail/$contentId",
+        refererPath = refererPath,
+        extraHeaders = mapOf(
+            "device-num" to "1",
+            "game-alias" to "ba"
+        )
+    )
+    val root = JSONObject(body)
+    if (root.optInt("code", -1) != 0) {
+        error("api code=${root.optInt("code", -1)}")
+    }
+    val data = root.optJSONObject("data") ?: error("empty data")
+    val title = data.optString("title").trim().ifBlank { "图鉴信息" }
+    val subtitle = data.optJSONObject("game")?.optString("name").orEmpty().ifBlank { "GameKee" }
+    val summaryFromApi = stripHtml(data.optString("summary"))
+    val detail = parseGuideDetailFromContentJson(data.optString("content_json"), target)
+    val imageFromData = firstImageFromAny(
+        any = JSONObject().apply {
+            put("thumb", data.opt("thumb"))
+            put("image_list", data.opt("image_list"))
+            put("thumb_list", data.opt("thumb_list"))
+            put("video_list", data.opt("video_list"))
+        },
+        sourceUrl = target
+    )
+    val imageUrl = detail.imageUrl.ifBlank { imageFromData }
+    val stats = detail.stats
+    val summary = detail.summary
+        .ifBlank { summaryFromApi }
+        .ifBlank {
+            stats.take(4).joinToString(" · ") { "${it.first}：${it.second}" }
+        }
+        .ifBlank { "暂无更多参数，可点击来源查看完整图鉴。" }
+    val description = summaryFromApi.ifBlank { summary }
+
+    return BaStudentGuideInfo(
+        sourceUrl = target,
+        title = title,
+        subtitle = subtitle,
+        description = description,
+        imageUrl = imageUrl,
+        summary = summary,
+        stats = stats,
+        skillRows = detail.skillRows,
+        profileRows = detail.profileRows,
+        galleryItems = detail.galleryItems,
+        growthRows = detail.growthRows,
+        voiceRows = detail.voiceRows,
+        tabSkillIconUrl = detail.tabSkillIconUrl,
+        tabProfileIconUrl = detail.tabProfileIconUrl,
+        tabVoiceIconUrl = detail.tabVoiceIconUrl,
+        tabGalleryIconUrl = detail.tabGalleryIconUrl,
+        tabSimulateIconUrl = detail.tabSimulateIconUrl,
+        syncedAtMs = System.currentTimeMillis()
+    )
+}
+
+private fun fetchGuideInfoFromHtml(sourceUrl: String): BaStudentGuideInfo {
+    val target = normalizeGuideUrl(sourceUrl)
+    require(target.isNotBlank()) { "empty url" }
+    val html = GameKeeFetchHelper.fetchHtml(
+        pathOrUrl = target,
+        refererPath = "/ba/"
+    )
+    if (html.isBlank()) error("empty html")
+
+    val ogTitle = extractMeta(html, "og:title")
+    val titleTag = Regex("<title[^>]*>(.*?)</title>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+        .find(html)
+        ?.groupValues
+        ?.getOrNull(1)
+        .orEmpty()
+    val rawTitle = if (ogTitle.isNotBlank()) ogTitle else stripHtml(titleTag)
+    val title = rawTitle.ifBlank { "图鉴信息" }
+
+    val siteName = extractMeta(html, "og:site_name").ifBlank { "GameKee" }
+    val description = extractMeta(html, "og:description")
+        .ifBlank { extractMeta(html, "description") }
+        .ifBlank { "未解析到详细描述，可点击下方来源查看完整图鉴。" }
+    val imageUrl = normalizeImageUrl(target, extractMeta(html, "og:image"))
+
+    val paragraphRegex = Regex(
+        "<p[^>]*>(.*?)</p>",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+    )
+    val summary = paragraphRegex.findAll(html)
+        .map { stripHtml(it.groupValues[1]) }
+        .firstOrNull { it.length >= 12 }
+        ?: description
+
+    val stats = extractStatsFromHtml(html)
+
+    return BaStudentGuideInfo(
+        sourceUrl = target,
+        title = title,
+        subtitle = siteName,
+        description = description,
+        imageUrl = imageUrl,
+        summary = summary,
+        stats = stats,
+        profileRows = stats.map { (k, v) -> BaGuideRow(k, v) },
+        syncedAtMs = System.currentTimeMillis()
+    )
+}
+
+fun fetchGuideInfo(sourceUrl: String): BaStudentGuideInfo {
+    return runCatching { fetchGuideInfoByApi(sourceUrl) }
+        .recoverCatching { fetchGuideInfoFromHtml(sourceUrl) }
+        .getOrThrow()
+}
+
