@@ -97,6 +97,11 @@ data class BaStudentGuideInfo(
     val galleryItems: List<BaGuideGalleryItem> = emptyList(),
     val growthRows: List<BaGuideRow> = emptyList(),
     val voiceRows: List<BaGuideRow> = emptyList(),
+    val tabSkillIconUrl: String = "",
+    val tabProfileIconUrl: String = "",
+    val tabVoiceIconUrl: String = "",
+    val tabGalleryIconUrl: String = "",
+    val tabSimulateIconUrl: String = "",
     val syncedAtMs: Long
 )
 
@@ -114,7 +119,8 @@ data class BaGuideGalleryItem(
 private data class BaGuideMetaItem(
     val title: String,
     val value: String,
-    val imageUrl: String
+    val imageUrl: String,
+    val extraImageUrl: String = ""
 )
 
 private enum class GuideTab(val label: String) {
@@ -229,6 +235,11 @@ object BaStudentGuideStore {
             put("galleryItems", encodeGalleryItems(info.galleryItems))
             put("growthRows", encodeGuideRows(info.growthRows))
             put("voiceRows", encodeGuideRows(info.voiceRows))
+            put("tabSkillIconUrl", info.tabSkillIconUrl)
+            put("tabProfileIconUrl", info.tabProfileIconUrl)
+            put("tabVoiceIconUrl", info.tabVoiceIconUrl)
+            put("tabGalleryIconUrl", info.tabGalleryIconUrl)
+            put("tabSimulateIconUrl", info.tabSimulateIconUrl)
         }.toString()
         kv().encode(cacheKey(info.sourceUrl), raw)
     }
@@ -261,6 +272,11 @@ object BaStudentGuideStore {
                 galleryItems = decodeGalleryItems(obj, "galleryItems"),
                 growthRows = decodeGuideRows(obj, "growthRows"),
                 voiceRows = decodeGuideRows(obj, "voiceRows"),
+                tabSkillIconUrl = obj.optString("tabSkillIconUrl").trim(),
+                tabProfileIconUrl = obj.optString("tabProfileIconUrl").trim(),
+                tabVoiceIconUrl = obj.optString("tabVoiceIconUrl").trim(),
+                tabGalleryIconUrl = obj.optString("tabGalleryIconUrl").trim(),
+                tabSimulateIconUrl = obj.optString("tabSimulateIconUrl").trim(),
                 syncedAtMs = obj.optLong("syncedAtMs", 0L)
             )
         }.getOrNull()
@@ -360,7 +376,12 @@ private data class GuideDetailExtract(
     val profileRows: List<BaGuideRow> = emptyList(),
     val galleryItems: List<BaGuideGalleryItem> = emptyList(),
     val growthRows: List<BaGuideRow> = emptyList(),
-    val voiceRows: List<BaGuideRow> = emptyList()
+    val voiceRows: List<BaGuideRow> = emptyList(),
+    val tabSkillIconUrl: String = "",
+    val tabProfileIconUrl: String = "",
+    val tabVoiceIconUrl: String = "",
+    val tabGalleryIconUrl: String = "",
+    val tabSimulateIconUrl: String = ""
 )
 
 private data class GuideBaseRow(
@@ -412,11 +433,134 @@ private fun firstImageFromAny(any: Any?, sourceUrl: String, depth: Int = 0): Str
     }
 }
 
+private fun normalizeGuideTabLabel(raw: String): String {
+    return stripHtml(raw)
+        .replace(Regex("\\s+"), "")
+        .replace("（", "(")
+        .replace("）", ")")
+        .trim()
+}
+
+private fun mapGuideTabByLabel(rawLabel: String, strict: Boolean): GuideTab? {
+    val label = normalizeGuideTabLabel(rawLabel)
+    if (label.isBlank()) return null
+    if (strict) {
+        return when (label) {
+            GuideTab.Skills.label -> GuideTab.Skills
+            GuideTab.Profile.label -> GuideTab.Profile
+            GuideTab.Voice.label -> GuideTab.Voice
+            GuideTab.Gallery.label -> GuideTab.Gallery
+            GuideTab.Simulate.label -> GuideTab.Simulate
+            else -> null
+        }
+    }
+    return when {
+        label.contains("语音") || label.contains("台词") -> GuideTab.Voice
+        label.contains("影画") || label.contains("鉴赏") -> GuideTab.Gallery
+        label.contains("养成") || label.contains("模拟") -> GuideTab.Simulate
+        label.contains("档案") -> GuideTab.Profile
+        label.contains("技能") -> GuideTab.Skills
+        else -> null
+    }
+}
+
+private fun findImageByKnownKeys(obj: JSONObject, sourceUrl: String): String {
+    val keys = listOf(
+        "icon", "iconUrl", "icon_url", "tabIcon", "tab_icon",
+        "img", "image", "imageUrl", "image_url",
+        "thumb", "cover", "src", "url"
+    )
+    keys.forEach { key ->
+        val any = obj.opt(key) ?: return@forEach
+        val fromAny = when (any) {
+            is String -> normalizeImageUrl(sourceUrl, any)
+            is JSONObject, is JSONArray -> firstImageFromAny(any, sourceUrl)
+            else -> ""
+        }
+        if (looksLikeImageUrl(fromAny)) return fromAny
+    }
+    return ""
+}
+
+private fun extractGuideTabIcons(root: JSONObject, sourceUrl: String): Map<GuideTab, String> {
+    val strict = mutableMapOf<GuideTab, String>()
+    val fuzzy = mutableMapOf<GuideTab, String>()
+    val labelKeys = listOf("name", "title", "label", "tabName", "tab_name", "text", "key")
+
+    fun tryPut(tab: GuideTab?, icon: String, strictMode: Boolean) {
+        if (tab == null || icon.isBlank()) return
+        if (strictMode) {
+            strict.putIfAbsent(tab, icon)
+        } else {
+            fuzzy.putIfAbsent(tab, icon)
+        }
+    }
+
+    fun walk(any: Any?) {
+        when (any) {
+            is JSONObject -> {
+                val label = labelKeys
+                    .asSequence()
+                    .map { key -> any.optString(key).trim() }
+                    .firstOrNull { it.isNotBlank() }
+                    .orEmpty()
+                val icon = findImageByKnownKeys(any, sourceUrl)
+                if (label.isNotBlank() && icon.isNotBlank()) {
+                    tryPut(mapGuideTabByLabel(label, strict = true), icon, strictMode = true)
+                    tryPut(mapGuideTabByLabel(label, strict = false), icon, strictMode = false)
+                }
+
+                val keys = any.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val value = any.opt(key)
+                    val keyTabStrict = mapGuideTabByLabel(key, strict = true)
+                    val keyTabFuzzy = mapGuideTabByLabel(key, strict = false)
+                    if ((keyTabStrict != null || keyTabFuzzy != null) && value != null) {
+                        val iconByValue = firstImageFromAny(value, sourceUrl)
+                        if (iconByValue.isNotBlank()) {
+                            tryPut(keyTabStrict, iconByValue, strictMode = true)
+                            tryPut(keyTabFuzzy, iconByValue, strictMode = false)
+                        }
+                    }
+                    walk(value)
+                }
+            }
+
+            is JSONArray -> {
+                for (i in 0 until any.length()) {
+                    walk(any.opt(i))
+                }
+            }
+        }
+    }
+
+    // Prefer explicit tab/data source definitions first.
+    walk(root.opt("dataSource"))
+    walk(root.opt("tabs"))
+    walk(root)
+
+    return buildMap {
+        GuideTab.entries.forEach { tab ->
+            val icon = strict[tab].orEmpty().ifBlank { fuzzy[tab].orEmpty() }
+            if (icon.isNotBlank()) put(tab, icon)
+        }
+    }
+}
+
 private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): GuideDetailExtract {
     if (raw.isBlank()) return GuideDetailExtract()
     return runCatching {
         val root = JSONObject(raw)
-        val baseData = root.optJSONArray("baseData") ?: return@runCatching GuideDetailExtract()
+        val tabIcons = extractGuideTabIcons(root, sourceUrl)
+        val baseData = root.optJSONArray("baseData")
+            ?: return@runCatching GuideDetailExtract(
+                tabSkillIconUrl = tabIcons[GuideTab.Skills].orEmpty(),
+                tabProfileIconUrl = tabIcons[GuideTab.Profile].orEmpty(),
+                tabVoiceIconUrl = tabIcons[GuideTab.Voice].orEmpty(),
+                tabGalleryIconUrl = tabIcons[GuideTab.Gallery].orEmpty(),
+                tabSimulateIconUrl = tabIcons[GuideTab.Simulate].orEmpty()
+            )
         val baseRows = mutableListOf<GuideBaseRow>()
         var firstImage = ""
 
@@ -546,7 +690,12 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
             profileRows = profileRows.take(120),
             galleryItems = distinctGallery,
             growthRows = growthRows.take(160),
-            voiceRows = voiceRows.take(160)
+            voiceRows = voiceRows.take(160),
+            tabSkillIconUrl = tabIcons[GuideTab.Skills].orEmpty(),
+            tabProfileIconUrl = tabIcons[GuideTab.Profile].orEmpty(),
+            tabVoiceIconUrl = tabIcons[GuideTab.Voice].orEmpty(),
+            tabGalleryIconUrl = tabIcons[GuideTab.Gallery].orEmpty(),
+            tabSimulateIconUrl = tabIcons[GuideTab.Simulate].orEmpty()
         )
     }.getOrDefault(GuideDetailExtract())
 }
@@ -638,6 +787,11 @@ private fun fetchGuideInfoByApi(sourceUrl: String): BaStudentGuideInfo {
         galleryItems = detail.galleryItems,
         growthRows = detail.growthRows,
         voiceRows = detail.voiceRows,
+        tabSkillIconUrl = detail.tabSkillIconUrl,
+        tabProfileIconUrl = detail.tabProfileIconUrl,
+        tabVoiceIconUrl = detail.tabVoiceIconUrl,
+        tabGalleryIconUrl = detail.tabGalleryIconUrl,
+        tabSimulateIconUrl = detail.tabSimulateIconUrl,
         syncedAtMs = System.currentTimeMillis()
     )
 }
@@ -858,9 +1012,13 @@ private fun GuideCombatMetaTile(
     modifier: Modifier = Modifier
 ) {
     val value = item.value.ifBlank { "-" }
-    val adaptiveWide = item.title == "战术作用" || item.title == "武器类型"
+    val adaptiveWide = item.title.contains("战术") || item.title == "武器类型"
+    // Keep a fixed title column width so all summaries start at the same x position.
+    val titleWidth = 112.dp
     val iconWidth = if (adaptiveWide) 28.dp else 18.dp
     val iconHeight = if (adaptiveWide) 18.dp else 18.dp
+    val extraIconWidth = 30.dp
+    val extraIconHeight = 18.dp
     val iconSlotWidth = 30.dp
     val iconSlotHeight = 22.dp
     Row(
@@ -868,10 +1026,24 @@ private fun GuideCombatMetaTile(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.36f))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Text(
+            text = item.title,
+            color = MiuixTheme.colorScheme.onBackgroundVariant,
+            modifier = Modifier.width(titleWidth),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = value,
+            color = MiuixTheme.colorScheme.onBackground,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
         Box(
             modifier = Modifier
                 .width(iconSlotWidth)
@@ -886,19 +1058,20 @@ private fun GuideCombatMetaTile(
                 )
             }
         }
-        Text(
-            text = item.title,
-            color = MiuixTheme.colorScheme.onBackgroundVariant,
-            modifier = Modifier.width(74.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = value,
-            color = MiuixTheme.colorScheme.onBackground,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        if (item.extraImageUrl.isNotBlank()) {
+            Box(
+                modifier = Modifier
+                    .width(iconSlotWidth)
+                    .height(iconSlotHeight),
+                contentAlignment = Alignment.Center
+            ) {
+                GuideRemoteIcon(
+                    imageUrl = item.extraImageUrl,
+                    iconWidth = extraIconWidth,
+                    iconHeight = extraIconHeight
+                )
+            }
+        }
     }
 }
 
@@ -1008,7 +1181,8 @@ fun BaStudentGuidePage(
                     isBlurEnabled = true
                 ) {
                     bottomTabs.forEachIndexed { index, tab ->
-                        val dynamicIconUrl = info?.bottomTabIconUrl(tab).orEmpty()
+                        val useDynamicIcon = tab != GuideBottomTab.Archive
+                        val dynamicIconUrl = if (useDynamicIcon) info?.bottomTabIconUrl(tab).orEmpty() else ""
                         FloatingBottomBarItem(
                             onClick = { selectedBottomTabIndex = index },
                             modifier = Modifier.defaultMinSize(minWidth = 72.dp)
@@ -1155,16 +1329,13 @@ fun BaStudentGuidePage(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 14.dp, vertical = 12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
                                     ) {
-                                        combatItems.forEachIndexed { index, item ->
+                                        combatItems.forEach { item ->
                                             GuideCombatMetaTile(
                                                 item = item,
                                                 modifier = Modifier.fillMaxWidth()
                                             )
-                                            if (index < combatItems.lastIndex) {
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                            }
                                         }
                                     }
                                 }
@@ -1278,36 +1449,14 @@ private fun showLoadingText(loading: Boolean, hasInfo: Boolean): Boolean {
 }
 
 private fun BaStudentGuideInfo.bottomTabIconUrl(tab: GuideBottomTab): String {
+    fun List<BaGuideRow>.firstImage(): String = firstOrNull { it.imageUrl.isNotBlank() }?.imageUrl.orEmpty()
     return when (tab) {
         GuideBottomTab.Archive -> ""
-        GuideBottomTab.Skills -> skillRowsForDisplay()
-            .firstOrNull { row ->
-                row.imageUrl.isNotBlank() &&
-                    (row.key.contains("技能", ignoreCase = true) || row.key.contains("EX", ignoreCase = true))
-            }
-            ?.imageUrl
-            .orEmpty()
-
-        GuideBottomTab.Profile -> profileRowsForDisplay()
-            .firstOrNull { row ->
-                row.imageUrl.isNotBlank() &&
-                    (row.key.contains("学园", ignoreCase = true) ||
-                        row.key.contains("学院", ignoreCase = true) ||
-                        row.key.contains("稀有度", ignoreCase = true) ||
-                        row.key.contains("头像", ignoreCase = true))
-            }
-            ?.imageUrl
-            .orEmpty()
-
-        GuideBottomTab.Voice -> voiceRows.firstOrNull { it.imageUrl.isNotBlank() }?.imageUrl.orEmpty()
-        GuideBottomTab.Gallery -> galleryItems.firstOrNull()?.imageUrl.orEmpty()
-        GuideBottomTab.Simulate -> growthRowsForDisplay()
-            .firstOrNull { row ->
-                row.imageUrl.isNotBlank() &&
-                    !row.key.contains("材料", ignoreCase = true)
-            }
-            ?.imageUrl
-            .orEmpty()
+        GuideBottomTab.Skills -> tabSkillIconUrl.ifBlank { skillRowsForDisplay().firstImage() }
+        GuideBottomTab.Profile -> tabProfileIconUrl.ifBlank { profileRowsForDisplay().firstImage() }
+        GuideBottomTab.Voice -> tabVoiceIconUrl.ifBlank { voiceRows.firstImage() }
+        GuideBottomTab.Gallery -> tabGalleryIconUrl.ifBlank { galleryItems.firstOrNull()?.imageUrl.orEmpty() }
+        GuideBottomTab.Simulate -> tabSimulateIconUrl.ifBlank { growthRowsForDisplay().firstImage() }
     }
 }
 
@@ -1372,14 +1521,32 @@ private fun BaStudentGuideInfo.buildProfileMetaItems(): List<BaGuideMetaItem> {
     return listOf(
         buildMetaItem("稀有度", listOf("稀有度", "星级")),
         buildMetaItem("学院", listOf("所属学园", "所属学院", "学园")),
-        buildMetaItem("所属社团", listOf("所属社团", "社团")),
-        buildMetaItem("位置", listOf("位置"))
+        buildMetaItem("所属社团", listOf("所属社团", "社团"))
     )
 }
 
 private fun BaStudentGuideInfo.buildCombatMetaItems(): List<BaGuideMetaItem> {
+    val mergedTacticalPosition = run {
+        val rows = profileRowsForDisplay() + skillRowsForDisplay()
+        val tacticalIcon = findFirstRowByKeywords(
+            rows = rows,
+            keywords = listOf("战术作用", "作用"),
+            requireImage = true
+        )?.imageUrl.orEmpty()
+        val positionIcon = findFirstRowByKeywords(
+            rows = rows,
+            keywords = listOf("位置"),
+            requireImage = true
+        )?.imageUrl.orEmpty()
+        BaGuideMetaItem(
+            title = "战术位置作用",
+            value = findGuideFieldValue("战术作用", "作用").ifBlank { "-" },
+            imageUrl = tacticalIcon,
+            extraImageUrl = positionIcon
+        )
+    }
     return listOf(
-        buildMetaItem("战术作用", listOf("战术作用", "作用")),
+        mergedTacticalPosition,
         buildMetaItem("攻击类型", listOf("攻击类型")),
         buildMetaItem("防御类型", listOf("防御类型")),
         buildMetaItem("武器类型", listOf("武器类型")),
