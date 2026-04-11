@@ -696,7 +696,8 @@ private fun GuideRemoteImage(
 private fun GuideRemoteIcon(
     imageUrl: String,
     modifier: Modifier = Modifier,
-    iconSize: androidx.compose.ui.unit.Dp = 20.dp
+    iconWidth: androidx.compose.ui.unit.Dp = 20.dp,
+    iconHeight: androidx.compose.ui.unit.Dp = iconWidth
 ) {
     val target = remember(imageUrl) { normalizeGuideUrl(imageUrl) }
     if (target.isBlank()) return
@@ -710,7 +711,9 @@ private fun GuideRemoteIcon(
         bitmap = rendered.asImageBitmap(),
         contentDescription = null,
         contentScale = ContentScale.Fit,
-        modifier = modifier.size(iconSize)
+        modifier = modifier
+            .width(iconWidth)
+            .height(iconHeight)
     )
 }
 
@@ -772,54 +775,51 @@ private fun GuideGallerySection(
 
 @Composable
 private fun GuideProfileMetaLine(item: BaGuideMetaItem) {
-    val rawValue = item.value.ifBlank { "-" }
-    val hideText = item.title == "位置" && rawValue == "-"
-    if (hideText) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (item.imageUrl.isNotBlank()) {
-                Box(modifier = Modifier.size(20.dp)) {
-                    GuideRemoteIcon(
-                        imageUrl = item.imageUrl,
-                        iconSize = 20.dp
-                    )
-                }
-            }
-        }
-        return
-    }
+    val isPosition = item.title == "位置"
+    val summary = if (isPosition) "" else item.value.ifBlank { "-" }
+    val titleSlotWidth = 70.dp
+    val iconSlotWidth = 34.dp
+    val iconSlotHeight = 24.dp
+    val iconWidth = if (isPosition) 30.dp else 20.dp
+    val iconHeight = 20.dp
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (item.imageUrl.isNotBlank()) {
-            Box(modifier = Modifier.size(20.dp)) {
-                GuideRemoteIcon(
-                    imageUrl = item.imageUrl,
-                    iconSize = 20.dp
-                )
-            }
-        } else {
-            Spacer(modifier = Modifier.width(20.dp))
-        }
         Text(
             text = item.title,
             color = MiuixTheme.colorScheme.onBackgroundVariant,
-            modifier = Modifier.width(58.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = rawValue,
-            color = MiuixTheme.colorScheme.onBackground,
+            modifier = Modifier.width(titleSlotWidth),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+        Box(
+            modifier = Modifier
+                .width(iconSlotWidth)
+                .height(iconSlotHeight),
+            contentAlignment = Alignment.Center
+        ) {
+            if (item.imageUrl.isNotBlank()) {
+                GuideRemoteIcon(
+                    imageUrl = item.imageUrl,
+                    iconWidth = iconWidth,
+                    iconHeight = iconHeight
+                )
+            }
+        }
+        if (!isPosition) {
+            Text(
+                text = summary,
+                color = MiuixTheme.colorScheme.onBackground,
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        } else {
+            Spacer(modifier = Modifier.fillMaxWidth())
+        }
     }
 }
 
@@ -829,6 +829,11 @@ private fun GuideCombatMetaTile(
     modifier: Modifier = Modifier
 ) {
     val value = item.value.ifBlank { "-" }
+    val adaptiveWide = item.title == "战术作用" || item.title == "武器类型"
+    val iconWidth = if (adaptiveWide) 28.dp else 18.dp
+    val iconHeight = if (adaptiveWide) 18.dp else 18.dp
+    val iconSlotWidth = 30.dp
+    val iconSlotHeight = 22.dp
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -838,15 +843,19 @@ private fun GuideCombatMetaTile(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (item.imageUrl.isNotBlank()) {
-            Box(modifier = Modifier.size(20.dp)) {
+        Box(
+            modifier = Modifier
+                .width(iconSlotWidth)
+                .height(iconSlotHeight),
+            contentAlignment = Alignment.Center
+        ) {
+            if (item.imageUrl.isNotBlank()) {
                 GuideRemoteIcon(
                     imageUrl = item.imageUrl,
-                    iconSize = 20.dp
+                    iconWidth = iconWidth,
+                    iconHeight = iconHeight
                 )
             }
-        } else {
-            Spacer(modifier = Modifier.width(20.dp))
         }
         Text(
             text = item.title,
@@ -994,19 +1003,19 @@ fun BaStudentGuidePage(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                                     verticalAlignment = Alignment.Top
                                 ) {
-                                    Box(modifier = Modifier.width(122.dp)) {
+                                    Box(modifier = Modifier.width(112.dp)) {
                                         if (guide.imageUrl.isNotBlank()) {
                                             GuideRemoteImage(
                                                 imageUrl = guide.imageUrl,
-                                                imageHeight = 156.dp
+                                                imageHeight = 152.dp
                                             )
                                         } else {
                                             Text(
@@ -1018,7 +1027,7 @@ fun BaStudentGuidePage(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(156.dp),
+                                            .height(152.dp),
                                         verticalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         profileItems.forEach { item ->
