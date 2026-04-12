@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -77,6 +79,7 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowDialog
+import kotlinx.coroutines.delay
 
 @Composable
 fun McpPage(
@@ -91,11 +94,75 @@ fun McpPage(
     val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
     val runningColor = Color(0xFF2E7D32)
     val stoppedColor = Color(0xFFC62828)
-    val overviewGreen = runningColor.copy(alpha = 0.16f)
-    val overviewRed = stoppedColor.copy(alpha = 0.16f)
 
     val context = LocalContext.current
     val uiState by mcpServerManager.uiState.collectAsState()
+    val overviewAccentColor = if (uiState.running) runningColor else stoppedColor
+    val overviewCardColor = overviewAccentColor.copy(alpha = 0.16f)
+    val overviewItemColor = overviewAccentColor.copy(alpha = 0.12f)
+    val runtimeNowMs by produceState(
+        initialValue = System.currentTimeMillis(),
+        key1 = uiState.running,
+        key2 = uiState.runningSinceEpochMs
+    ) {
+        value = System.currentTimeMillis()
+        while (uiState.running && uiState.runningSinceEpochMs > 0L) {
+            delay(1_000L)
+            value = System.currentTimeMillis()
+        }
+    }
+    val runtimeText = remember(uiState.running, uiState.runningSinceEpochMs, runtimeNowMs) {
+        if (!uiState.running || uiState.runningSinceEpochMs <= 0L) {
+            "未运行"
+        } else {
+            formatMcpUptime(runtimeNowMs - uiState.runningSinceEpochMs)
+        }
+    }
+    val bindAddress = remember(uiState.allowExternal, uiState.addresses) {
+        when {
+            !uiState.allowExternal -> "127.0.0.1"
+            uiState.addresses.isNotEmpty() -> uiState.addresses.first()
+            else -> "0.0.0.0"
+        }
+    }
+    val overviewMetrics = remember(
+        uiState.running,
+        uiState.connectedClients,
+        runtimeText,
+        uiState.serverName,
+        bindAddress,
+        uiState.port,
+        uiState.endpointPath,
+        uiState.allowExternal,
+        uiState.tools.size,
+        runningColor,
+        stoppedColor
+    ) {
+        listOf(
+            McpOverviewMetric(
+                label = "状态",
+                value = if (uiState.running) {
+                    "运行中 · ${uiState.connectedClients} 客户端"
+                } else {
+                    "未运行 · 0 客户端"
+                },
+                valueColor = if (uiState.running) runningColor else stoppedColor
+            ),
+            McpOverviewMetric(label = "运行时间", value = runtimeText),
+            McpOverviewMetric(
+                label = "服务名称",
+                value = uiState.serverName.ifBlank { "KeiOS MCP" }
+            ),
+            McpOverviewMetric(label = "绑定地址", value = bindAddress),
+            McpOverviewMetric(label = "端口", value = uiState.port.toString()),
+            McpOverviewMetric(label = "入口路径", value = uiState.endpointPath),
+            McpOverviewMetric(
+                label = "网络模式",
+                value = if (uiState.allowExternal) "局域网可访问" else "仅本机访问"
+            ),
+            McpOverviewMetric(label = "工具数量", value = "${uiState.tools.size} 个")
+        )
+    }
     var portText by remember(uiState.port) { mutableStateOf(uiState.port.toString()) }
     var allowExternal by remember(uiState.allowExternal) { mutableStateOf(uiState.allowExternal) }
     var serverName by remember(uiState.serverName) { mutableStateOf(uiState.serverName) }
@@ -222,7 +289,7 @@ fun McpPage(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.defaultColors(
-                        color = if (uiState.running) overviewGreen else overviewRed,
+                        color = overviewCardColor,
                         contentColor = titleColor
                     ),
                     showIndication = cardPressFeedbackEnabled,
@@ -237,26 +304,40 @@ fun McpPage(
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("MCP Server", color = titleColor)
                             StatusPill(
                                 label = if (uiState.running) "Server Running" else "Server Stopped",
-                                color = if (uiState.running) runningColor else stoppedColor
+                                color = overviewAccentColor
                             )
                         }
-                        Text(
-                            text = "${if (uiState.running) "运行中" else "未运行"} · 在线客户端 ${uiState.connectedClients}",
-                            color = subtitleColor
-                        )
-                        Text(
-                            text = "${uiState.port} 端口 · MCP 协议",
-                            color = subtitleColor
-                        )
-                        Text(
-                            text = if (uiState.allowExternal) "网络模式: 局域网可访问" else "网络模式: 仅本机访问",
-                            color = subtitleColor
-                        )
+                        overviewMetrics.chunked(2).forEach { pair ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                McpOverviewMetricItem(
+                                    metric = pair[0],
+                                    cardColor = overviewItemColor,
+                                    labelColor = subtitleColor,
+                                    defaultValueColor = titleColor,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (pair.size > 1) {
+                                    McpOverviewMetricItem(
+                                        metric = pair[1],
+                                        cardColor = overviewItemColor,
+                                        labelColor = subtitleColor,
+                                        defaultValueColor = titleColor,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -552,6 +633,67 @@ private fun McpNetworkModeOption(
                 onClick = onClick
             )
         }
+    }
+}
+
+@Composable
+private fun McpOverviewMetricItem(
+    metric: McpOverviewMetric,
+    cardColor: Color,
+    labelColor: Color,
+    defaultValueColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        colors = CardDefaults.defaultColors(
+            color = cardColor,
+            contentColor = defaultValueColor
+        ),
+        showIndication = false,
+        onClick = {}
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = metric.label,
+                color = labelColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = metric.value.ifBlank { "N/A" },
+                color = metric.valueColor ?: defaultValueColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+private data class McpOverviewMetric(
+    val label: String,
+    val value: String,
+    val valueColor: Color? = null
+)
+
+private fun formatMcpUptime(durationMs: Long): String {
+    val totalSeconds = (durationMs.coerceAtLeast(0L) / 1000L)
+    val days = totalSeconds / 86_400L
+    val hours = (totalSeconds % 86_400L) / 3_600L
+    val minutes = (totalSeconds % 3_600L) / 60L
+    val seconds = totalSeconds % 60L
+    return if (days > 0L) {
+        "%d天 %02d:%02d:%02d".format(days, hours, minutes, seconds)
+    } else {
+        "%02d:%02d:%02d".format(hours, minutes, seconds)
     }
 }
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
@@ -37,7 +38,7 @@ internal fun GitHubCompactInfoRow(
     valueColor: Color = MiuixTheme.colorScheme.onBackground,
     titleColor: Color = MiuixTheme.colorScheme.onBackgroundVariant,
     emphasized: Boolean = false,
-    titleWidth: Dp = 96.dp,
+    titleMinWidth: Dp = 72.dp,
     onClick: (() -> Unit)? = null
 ) {
     val clickableModifier = if (onClick != null) {
@@ -57,7 +58,7 @@ internal fun GitHubCompactInfoRow(
         Text(
             text = label,
             color = titleColor,
-            modifier = Modifier.width(titleWidth)
+            modifier = Modifier.widthIn(min = titleMinWidth)
         )
         Text(
             text = value,
@@ -84,7 +85,7 @@ internal fun VersionValueRow(
         valueColor = valueColor,
         titleColor = MiuixTheme.colorScheme.primary,
         emphasized = emphasized,
-        titleWidth = 64.dp
+        titleMinWidth = 52.dp
     )
 }
 

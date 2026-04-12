@@ -37,6 +37,7 @@ data class McpLogEntry(
 
 data class McpServerUiState(
     val running: Boolean = false,
+    val runningSinceEpochMs: Long = 0L,
     val host: String = "127.0.0.1",
     val port: Int = 38888,
     val endpointPath: String = "/mcp",
@@ -197,6 +198,7 @@ class McpServerManager(
             startSessionMonitor(server)
             _uiState.value = _uiState.value.copy(
                 running = true,
+                runningSinceEpochMs = System.currentTimeMillis(),
                 host = host,
                 port = port,
                 allowExternal = allowExternal,
@@ -211,6 +213,7 @@ class McpServerManager(
         }.onFailure {
             _uiState.value = _uiState.value.copy(
                 running = false,
+                runningSinceEpochMs = 0L,
                 lastError = it.message ?: it.javaClass.simpleName
             )
             appendLog("ERROR", "Failed to start server: ${it.message ?: it.javaClass.simpleName}")
@@ -288,6 +291,7 @@ class McpServerManager(
         stopInternal()
         _uiState.value = _uiState.value.copy(
             running = false,
+            runningSinceEpochMs = 0L,
             connectedClients = 0,
             lastError = null
         )
