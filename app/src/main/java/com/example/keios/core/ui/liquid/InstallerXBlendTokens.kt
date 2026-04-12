@@ -1,4 +1,4 @@
-package com.example.keios.ui.utils
+package com.example.keios.core.ui.liquid
 
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.blur.BlendColorEntry

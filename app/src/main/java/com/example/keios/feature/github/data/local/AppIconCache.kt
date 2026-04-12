@@ -1,4 +1,4 @@
-package com.example.keios.ui.utils
+package com.example.keios.feature.github.data.local
 
 import android.content.Context
 import android.content.pm.PackageManager

@@ -62,7 +62,7 @@ import com.example.keios.ui.page.main.student.BaStudentGuideStore
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.core.system.ShizukuApiUtils
-import com.example.keios.ui.utils.UiPrefs
+import com.example.keios.core.prefs.UiPrefs
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop

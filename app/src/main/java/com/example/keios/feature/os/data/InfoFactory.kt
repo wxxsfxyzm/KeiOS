@@ -1,4 +1,4 @@
-package com.example.keios.ui.utils
+package com.example.keios.feature.os.data
 
 import android.os.Build
 import com.example.keios.core.system.findJavaPropString

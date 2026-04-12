@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.util.fastCoerceIn
-import com.example.keios.ui.utils.inspectDragGestures
+import com.example.keios.core.ui.gesture.inspectDragGestures
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.intellij.lang.annotations.Language
@@ -102,4 +102,3 @@ class InteractiveHighlight(
         }
     }
 }
-

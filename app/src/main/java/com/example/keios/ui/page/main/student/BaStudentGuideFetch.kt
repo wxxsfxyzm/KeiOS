@@ -1,7 +1,7 @@
 package com.example.keios.ui.page.main.student
 
 import android.net.Uri
-import com.example.keios.ba.helper.GameKeeFetchHelper
+import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import org.json.JSONArray
 import org.json.JSONObject
 

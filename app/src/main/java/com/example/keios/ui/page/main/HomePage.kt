@@ -59,7 +59,7 @@ import com.example.keios.R
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.StatusPill
-import com.example.keios.ui.utils.GitHubTrackStore
+import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberActionBarBackdrop
 import com.kyant.backdrop.drawBackdrop

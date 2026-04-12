@@ -2,9 +2,9 @@ package com.example.keios.mcp
 
 import android.content.Context
 import android.net.Uri
-import com.example.keios.ui.utils.GitHubTrackStore
-import com.example.keios.ui.utils.GitHubTrackedApp
-import com.example.keios.ui.utils.GitHubVersionUtils
+import com.example.keios.feature.github.data.local.GitHubTrackStore
+import com.example.keios.feature.github.data.remote.GitHubVersionUtils
+import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.core.system.ShizukuApiUtils
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions

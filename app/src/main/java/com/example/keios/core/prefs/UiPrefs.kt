@@ -1,4 +1,4 @@
-package com.example.keios.ui.utils
+package com.example.keios.core.prefs
 
 import com.tencent.mmkv.MMKV
 

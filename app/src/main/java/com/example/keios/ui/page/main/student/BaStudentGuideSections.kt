@@ -69,7 +69,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import com.example.keios.ba.helper.GameKeeFetchHelper
+import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.example.keios.R
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixInfoItem

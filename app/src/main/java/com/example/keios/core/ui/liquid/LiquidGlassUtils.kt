@@ -1,4 +1,4 @@
-package com.example.keios.ui.utils
+package com.example.keios.core.ui.liquid
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme

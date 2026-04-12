@@ -2,7 +2,7 @@ package com.example.keios.ui.page.main.student
 
 import android.content.Context
 import android.net.Uri
-import com.example.keios.ba.helper.GameKeeFetchHelper
+import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

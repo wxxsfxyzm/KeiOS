@@ -55,12 +55,12 @@ import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
-import com.example.keios.ui.utils.AppIconCache
-import com.example.keios.ui.utils.GitHubCheckCacheEntry
-import com.example.keios.ui.utils.GitHubTrackStore
-import com.example.keios.ui.utils.GitHubTrackedApp
-import com.example.keios.ui.utils.GitHubVersionUtils
-import com.example.keios.ui.utils.InstalledAppItem
+import com.example.keios.feature.github.data.local.AppIconCache
+import com.example.keios.feature.github.data.local.GitHubTrackStore
+import com.example.keios.feature.github.data.remote.GitHubVersionUtils
+import com.example.keios.feature.github.model.GitHubCheckCacheEntry
+import com.example.keios.feature.github.model.GitHubTrackedApp
+import com.example.keios.feature.github.model.InstalledAppItem
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
@@ -1103,4 +1103,3 @@ fun GitHubPage(
         }
     }
 }
-

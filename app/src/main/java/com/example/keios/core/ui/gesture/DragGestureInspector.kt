@@ -1,4 +1,4 @@
-package com.example.keios.ui.utils
+package com.example.keios.core.ui.gesture
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
