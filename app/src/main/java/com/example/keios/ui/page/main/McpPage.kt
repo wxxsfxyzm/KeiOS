@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -64,7 +65,7 @@ import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Report
+import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -165,7 +166,7 @@ fun McpPage(
                                 onClick = { showEditSheet = true }
                             ),
                             LiquidActionItem(
-                                icon = MiuixIcons.Regular.Report,
+                                icon = MiuixIcons.Regular.Notes,
                                 contentDescription = "查看 SKILL.md",
                                 onClick = onOpenSkill
                             ),
@@ -375,7 +376,8 @@ fun McpPage(
             )
         }
     ) {
-        val sheetTitleColor = MiuixTheme.colorScheme.onBackground
+        val sheetFieldTitleColor = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.92f)
+        val sheetSectionTitleColor = MiuixTheme.colorScheme.onBackground
         val sheetDangerTitleColor = MiuixTheme.colorScheme.error
         Column(
             modifier = Modifier
@@ -397,7 +399,7 @@ fun McpPage(
                 ) {
                     Text(
                         text = "服务名称",
-                        color = sheetTitleColor
+                        color = sheetFieldTitleColor
                     )
                 }
                 GlassSearchField(
@@ -427,7 +429,7 @@ fun McpPage(
                 ) {
                     Text(
                         text = "服务端口",
-                        color = sheetTitleColor
+                        color = sheetFieldTitleColor
                     )
                 }
                 GlassSearchField(
@@ -444,7 +446,8 @@ fun McpPage(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "网络访问范围",
-                color = sheetTitleColor,
+                color = sheetSectionTitleColor,
+                fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             McpNetworkModeOption(
@@ -462,10 +465,11 @@ fun McpPage(
                 selected = allowExternal,
                 onClick = { allowExternal = true }
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "危险操作",
                 color = sheetDangerTitleColor,
+                fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             GlassTextButton(

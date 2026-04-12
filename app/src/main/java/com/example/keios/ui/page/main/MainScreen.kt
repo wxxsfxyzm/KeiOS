@@ -29,6 +29,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -200,7 +201,12 @@ private fun MainPagerLayout(
     shizukuApiUtils: ShizukuApiUtils,
     mcpServerManager: McpServerManager
 ) {
-    val tabs = remember { BottomPage.entries.toTypedArray() }
+    var visibleBottomPageNames by remember { mutableStateOf(UiPrefs.loadVisibleBottomPageNames()) }
+    val tabs = remember(visibleBottomPageNames) {
+        BottomPage.entries.filter { page ->
+            page == BottomPage.Home || visibleBottomPageNames.contains(page.name)
+        }
+    }
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
     val mcpUiState by mcpServerManager.uiState.collectAsState()
@@ -244,6 +250,13 @@ private fun MainPagerLayout(
     val systemInsets = WindowInsets.safeDrawing.union(WindowInsets.navigationBars).asPaddingValues()
     val homeTopInset = systemInsets.calculateTopPadding()
     val homeBottomInset = systemInsets.calculateBottomPadding()
+
+    LaunchedEffect(tabs.size) {
+        val lastIndex = tabs.lastIndex
+        if (lastIndex >= 0 && pagerState.currentPage > lastIndex) {
+            pagerState.scrollToPage(lastIndex)
+        }
+    }
 
     val handlePageSelected: (Int) -> Unit = { index ->
         val selected = tabs[index]
@@ -401,6 +414,17 @@ private fun MainPagerLayout(
                             mcpConnectedClients = mcpUiState.connectedClients,
                             mcpAllowExternal = mcpUiState.allowExternal,
                             homeIconHdrEnabled = homeIconHdrEnabled,
+                            visibleBottomPages = tabs.toSet(),
+                            onBottomPageVisibilityChange = { page, visible ->
+                                if (page == BottomPage.Home) return@HomePage
+                                visibleBottomPageNames = visibleBottomPageNames
+                                    .toMutableSet()
+                                    .apply {
+                                        if (visible) add(page.name) else remove(page.name)
+                                    }
+                                    .toSet()
+                                UiPrefs.saveVisibleBottomPageNames(visibleBottomPageNames)
+                            },
                             onOpenSettings = { navigator.push(KeiosRoute.Settings) },
                             onOpenAbout = { navigator.push(KeiosRoute.About) },
                             onActionBarInteractingChanged = { interacting ->

@@ -64,8 +64,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.keios.R
+import com.example.keios.ui.page.main.model.BottomPage
+import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
+import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.kyant.backdrop.Backdrop
@@ -85,6 +88,7 @@ import com.rosan.installer.ui.library.effect.BgEffectBackground
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
@@ -92,6 +96,8 @@ import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -257,6 +263,8 @@ fun HomePage(
     mcpConnectedClients: Int,
     mcpAllowExternal: Boolean,
     homeIconHdrEnabled: Boolean,
+    visibleBottomPages: Set<BottomPage>,
+    onBottomPageVisibilityChange: (BottomPage, Boolean) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     onActionBarInteractingChanged: (Boolean) -> Unit = {},
@@ -362,7 +370,8 @@ fun HomePage(
     var iconProgress by remember { mutableFloatStateOf(0f) }
     var titleProgress by remember { mutableFloatStateOf(0f) }
     var summaryProgress by remember { mutableFloatStateOf(0f) }
-    var actionBarSelectedIndex by rememberSaveable { mutableIntStateOf(0) }
+    var actionBarSelectedIndex by rememberSaveable { mutableIntStateOf(1) }
+    var showBottomPageEditor by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(lazyListState) {
         snapshotFlow { lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset }
@@ -410,10 +419,18 @@ fun HomePage(
                         backdrop = actionBarBackdrop,
                         items = listOf(
                             LiquidActionItem(
+                                icon = MiuixIcons.Regular.Edit,
+                                contentDescription = "编辑底栏板块",
+                                onClick = {
+                                    actionBarSelectedIndex = 0
+                                    showBottomPageEditor = true
+                                }
+                            ),
+                            LiquidActionItem(
                                 icon = MiuixIcons.Regular.Info,
                                 contentDescription = "关于",
                                 onClick = {
-                                    actionBarSelectedIndex = 0
+                                    actionBarSelectedIndex = 1
                                     onOpenAbout()
                                 }
                             ),
@@ -421,7 +438,7 @@ fun HomePage(
                                 icon = MiuixIcons.Regular.Settings,
                                 contentDescription = "设置",
                                 onClick = {
-                                    actionBarSelectedIndex = 1
+                                    actionBarSelectedIndex = 2
                                     onOpenSettings()
                                 }
                             )
@@ -433,6 +450,78 @@ fun HomePage(
             )
         }
     ) { innerPadding ->
+        val bottomSheetSafePadding = with(density) {
+            WindowInsets.safeDrawing.getBottom(this).toDp()
+        }
+        SnapshotWindowBottomSheet(
+            show = showBottomPageEditor,
+            title = "底栏板块",
+            onDismissRequest = { showBottomPageEditor = false },
+            startAction = {
+                GlassIconButton(
+                    backdrop = actionBarBackdrop,
+                    bottomBarStyle = true,
+                    icon = MiuixIcons.Regular.Close,
+                    contentDescription = "关闭",
+                    onClick = { showBottomPageEditor = false }
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = bottomSheetSafePadding + 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = BottomPage.Home.label,
+                        color = MiuixTheme.colorScheme.onBackground
+                    )
+                    StatusPill(
+                        label = "固定显示",
+                        color = Color(0xFF2563EB)
+                    )
+                }
+
+                BottomPage.entries
+                    .filter { it != BottomPage.Home }
+                    .forEach { page ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = page.label,
+                                color = MiuixTheme.colorScheme.onBackground
+                            )
+                            Switch(
+                                checked = visibleBottomPages.contains(page),
+                                onCheckedChange = { checked ->
+                                    onBottomPageVisibilityChange(page, checked)
+                                }
+                            )
+                        }
+                    }
+
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Home 固定显示，其他板块可按需隐藏或重新显示。",
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    fontSize = 13.sp
+                )
+            }
+        }
+
         val horizontalSafeInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
         val listContentPadding = PaddingValues(
             start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
