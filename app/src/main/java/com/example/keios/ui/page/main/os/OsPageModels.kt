@@ -1,0 +1,486 @@
+package com.example.keios.ui.page.main
+
+import android.app.ActivityManager
+import android.content.Context
+import android.content.pm.FeatureInfo
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.widget.LiquidActionBar
+import com.example.keios.ui.page.main.widget.LiquidActionItem
+import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.GlassSearchField
+import com.example.keios.ui.page.main.widget.MiuixExpandableSection
+import com.example.keios.ui.page.main.widget.MiuixInfoItem
+import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
+import com.example.keios.ui.page.main.widget.StatusPill
+import com.example.keios.core.system.ShizukuApiUtils
+import com.example.keios.core.system.getAllJavaPropString
+import com.example.keios.core.system.getAllSystemProperties
+import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
+import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.tencent.mmkv.MMKV
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Download
+import top.yukonga.miuix.kmp.icon.extended.Edit
+import top.yukonga.miuix.kmp.icon.extended.Filter
+import top.yukonga.miuix.kmp.icon.extended.GridView
+import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.Layers
+import top.yukonga.miuix.kmp.icon.extended.ListView
+import top.yukonga.miuix.kmp.icon.extended.Lock
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Tune
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+internal data class InfoRow(
+    val key: String,
+    val value: String
+)
+
+internal enum class OsSectionCard(val title: String) {
+    TOP_INFO("TopInfo"),
+    SYSTEM("System Table"),
+    SECURE("Secure Table"),
+    GLOBAL("Global Table"),
+    ANDROID("Android Properties"),
+    JAVA("Java Properties"),
+    LINUX("Linux environment")
+}
+
+internal enum class SectionKind {
+    SYSTEM,
+    SECURE,
+    GLOBAL,
+    ANDROID,
+    JAVA,
+    LINUX
+}
+
+internal enum class SystemOverviewState {
+    Idle,
+    Cached,
+    Refreshing,
+    Completed
+}
+
+internal data class SectionState(
+    val rows: List<InfoRow> = emptyList(),
+    val loading: Boolean = false,
+    val loadedFresh: Boolean = false
+)
+
+internal data class CachedSections(
+    val system: List<InfoRow> = emptyList(),
+    val secure: List<InfoRow> = emptyList(),
+    val global: List<InfoRow> = emptyList(),
+    val android: List<InfoRow> = emptyList(),
+    val java: List<InfoRow> = emptyList(),
+    val linux: List<InfoRow> = emptyList()
+)
+
+internal object TopInfoKeys {
+    val system = linkedSetOf(
+        "locked_apps",
+    )
+
+    val secure = linkedSetOf(
+        "AIRPODS_ADAPTER_JAR_ENABLE",
+        "FBO_STATE_OPEN",
+        "FBO_UPLOAD_LIST",
+        "FBO_UPLOAD_TIME",
+        "fbo_app_size",
+        "fbo_remaining_minutes",
+        "fbo_status",
+        "KEY_FBO_DATA",
+        "aod_category_name",
+        "aod_mode_user_set",
+        "aod_show_style",
+        "aod_style_state",
+        "assistant",
+        "auto_download",
+        "auto_update",
+        "autofill_user_data_max_category_count",
+        "backup_transport",
+        "bluetooth_name",
+        "customize_icon_init_time",
+        "enabled_accessibility_services",
+        "enabled_input_methods",
+        "entity_config_key_voice_assistant",
+        "share_camera",
+        "share_launcher",
+        "share_unlock",
+        "theme_rear_widget",
+        "voice_interaction_service",
+        "voice_recognition_service",
+        "package_verifier_state",
+        "packageinstaller_first_boot_time",
+        "pc_security_center_last_fully_charge_time",
+        "autofill_service",
+        "autofill_service_search_uri",
+        "credential_service",
+        "credential_service_primary"
+    )
+
+    val global = linkedSetOf(
+        "adb_allowrd_connection_time",
+        "adb_enabled",
+        "adb_notification_shown",
+        "adb_wifi_enabled",
+        "database_creation_buildid",
+        "device_name",
+        "effect_implementer",
+        "is_auto_update",
+        "is_beta",
+        "key_last_update_timestamp_0",
+        "key_miui_font_weight_scale",
+        "lastVersion",
+        "lastVersionProjection",
+        "last_screenshot_time",
+        "lc3Enable",
+        "lea_device_status",
+        "mi_bt_plugin_consume_traffic_month",
+        "mi_cloud_data_fetch_time",
+        "mi_fastconnect_consume_traffic_day",
+        "mi_fastconnect_consume_traffic_month",
+        "mi_fc_last_sync_data_time",
+        "mi_flashlight_strength",
+        "mi_is_temp_high_close_torch",
+        "miui_current_version_branch",
+        "miui_is_last_auto_update",
+        "miui_memory_size",
+        "miui_nearby_download_device_time",
+        "miui_phone_rssi_threshold",
+        "miui_pre_big_miui_version",
+        "miui_pre_codebase",
+        "miui_pre_version",
+        "miui_process_exit_falg",
+        "miui_ram_size",
+        "miui_terms_agreed_time",
+        "miui_update_ready",
+        "miui_version_name",
+        "network_watchlist_last_report_time",
+        "sc_last_check_dm_time_0",
+        "task_stack_view_layout_style",
+        "upload_apk_enable",
+        "usb_mass_storage_enabled",
+        "xiaomi_mi_play_last_playing_package_name",
+        "zram_enabled"
+    )
+
+    val android = linkedSetOf(
+        "graphics.opengl.es",
+        "graphics.opengl.es.raw",
+        "graphics.opengl.es.decoded",
+        "graphics.vulkan.version",
+        "graphics.vulkan.version.raw",
+        "graphics.vulkan.level",
+        "graphics.gpu.driver.package",
+        "graphics.gpu.driver.version",
+        "graphics.gpu.driver.ro.gfx.driver.0",
+        "graphics.gpu.driver.ro.gfx.driver.1",
+        "prop.ro.hardware.egl",
+        "prop.ro.hardware.vulkan",
+        "feature.bluetooth_le",
+        "feature.wifi_aware",
+        "dalvik.vm.appimageformat",
+        "dalvik.vm.background-dex2oat-threads",
+        "dalvik.vm.boot-dex2oat-threads",
+        "dalvik.vm.dex2oat-Xms",
+        "dalvik.vm.dex2oat-Xmx",
+        "dalvik.vm.dex2oat-max-image-block-size",
+        "dalvik.vm.dex2oat-resolve-startup-strings",
+        "dalvik.vm.dex2oat-threads",
+        "dalvik.vm.dex2oat64.enabled",
+        "dalvik.vm.dexopt.secondary",
+        "dalvik.vm.dexopt.thermal-cutoff",
+        "dalvik.vm.enable_pr_dexopt",
+        "dalvik.vm.isa.arm64.variant",
+        "dalvik.vm.usejit",
+        "debug.device.battery_level_state",
+        "debug.device.usb_state",
+        "debug.hwui.skia_atrace_enabled",
+        "debug.tracing.screen_brightness",
+        "gsm.network.type",
+        "gsm.operator.alpha",
+        "gsm.operator.orig.alpha",
+        "gsm.sim.state",
+        "gsm.version.baseband",
+        "persist.audio.effect.device_map",
+        "persist.radio.modem_build_datetime",
+        "persist.radio.modem_release_datetime",
+        "persist.sys.computility.cpulevel",
+        "persist.sys.computility.gpulevel",
+        "persist.sys.computility.version",
+        "persist.sys.device_config_gki",
+        "persist.sys.grant_version",
+        "persist.sys.locale",
+        "persist.sys.memory.totalsize",
+        "persist.sys.memory.user_freesize",
+        "persist.sys.misight.detecttime",
+        "persist.sys.miui_art_ota_time",
+        "persist.sys.miui_gnss_dc",
+        "persist.sys.miui_resolution",
+        "persist.sys.updater.version",
+        "persist.sys.usb.config",
+        "persist.sys.xms.version",
+        "persist.sys.xring_extm.enable",
+        "persist.sys.zygote.last_pid",
+        "persist.sys.zygote.start_pid",
+        "persist.vendor.audio.effectimplenter",
+        "pm.dexopt.ab-ota",
+        "pm.dexopt.baseline",
+        "pm.dexopt.bg-dexopt",
+        "pm.dexopt.boot-after-mainline-update",
+        "pm.dexopt.boot-after-ota",
+        "pm.dexopt.boot-after-ota.concurrency",
+        "pm.dexopt.cmdline",
+        "pm.dexopt.first-boot",
+        "pm.dexopt.first-use",
+        "pm.dexopt.inactive",
+        "pm.dexopt.install",
+        "pm.dexopt.install-bulk",
+        "pm.dexopt.install-bulk-downgraded",
+        "pm.dexopt.install-bulk-secondary",
+        "pm.dexopt.install-bulk-secondary-downgraded",
+        "pm.dexopt.install-create-dm",
+        "pm.dexopt.install-fast",
+        "pm.dexopt.post-boot",
+        "pm.dexopt.secondary",
+        "pm.dexopt.shared",
+        "qcom.hw.aac.encoder",
+        "ro.adb.secure",
+        "ro.ai.os.version.code",
+        "ro.ai.os.version.name",
+        "ro.apex.updatable",
+        "ro.board.api_frozen",
+        "ro.board.api_level",
+        "ro.board.first_api_level",
+        "ro.board.platform",
+        "ro.boot.avb_version",
+        "ro.boot.baseband",
+        "ro.boot.flash.locked",
+        "ro.boot.hardware",
+        "ro.boot.hardware.cpu.pagesize",
+        "ro.boot.hardware.sku",
+        "ro.boot.hwc",
+        "ro.boot.hwlevel",
+        "ro.boot.hwversion",
+        "ro.boot.hypervisor.version",
+        "ro.boot.vbmeta.avb_version",
+        "ro.boot.vbmeta.device_state",
+        "ro.boot.verifiedbootstate",
+        "ro.boot.veritymode",
+        "ro.bootimage.build.version.sdk_full",
+        "ro.build.ab_update",
+        "ro.build.date",
+        "ro.build.description",
+        "ro.build.display.id",
+        "ro.build.fingerprint",
+        "ro.build.hardware.version",
+        "ro.build.host",
+        "ro.build.id",
+        "ro.build.product",
+        "ro.build.tags",
+        "ro.build.type",
+        "ro.build.user",
+        "ro.build.version.all_codenames",
+        "ro.build.version.codename",
+        "ro.build.version.incremental",
+        "ro.build.version.min_supported_target_sdk",
+        "ro.build.version.preview_sdk",
+        "ro.build.version.preview_sdk_fingerprint",
+        "ro.build.version.release",
+        "ro.build.version.release_or_codename",
+        "ro.build.version.release_or_preview_display",
+        "ro.build.version.sdk",
+        "ro.build.version.sdk_full",
+        "ro.build.version.security_patch",
+        "ro.com.google.clientidbase",
+        "ro.fota.oem",
+        "ro.frp.pst",
+        "ro.gfx.driver.1",
+        "ro.hardware",
+        "ro.hardware.egl",
+        "ro.hardware.vulkan",
+        "ro.kernel.version",
+        "ro.llndk.api_level",
+        "ro.logd.size",
+        "ro.logd.size.stats",
+        "ro.mediaserver.64b.enable",
+        "ro.mi.os.soc.vendor",
+        "ro.mi.os.version.code",
+        "ro.mi.os.version.incremental",
+        "ro.mi.os.version.name",
+        "ro.mi.os.version.publish",
+        "ro.mi.xms.version.incremental",
+        "ro.millet.netlink",
+        "ro.miui.build.region",
+        "ro.miui.business.version",
+        "ro.miui.has_gmscore",
+        "ro.miui.mcc",
+        "ro.miui.mnc",
+        "ro.miui.product.home",
+        "ro.miui.region",
+        "ro.miui.support_miui_ime_bottom",
+        "ro.miui.ui.font.mi_font_path",
+        "ro.miui.ui.font.mi_fonts_customization_xml",
+        "ro.miui.ui.version.code",
+        "ro.miui.ui.version.name",
+        "ro.netflix.bsp_rev",
+        "ro.odm.build.date",
+        "ro.odm.build.fingerprint",
+        "ro.odm.build.media_performance_class",
+        "ro.odm.build.version.incremental",
+        "ro.opengles.version",
+        "ro.product.bootimage.marketname",
+        "ro.product.brand",
+        "ro.product.build.date",
+        "ro.product.build.fingerprint",
+        "ro.product.build.id",
+        "ro.product.build.version.incremental",
+        "ro.product.camera.livephoto.support",
+        "ro.product.cert",
+        "ro.product.cpu.abi",
+        "ro.product.cpu.abilist",
+        "ro.product.cpu.abilist64",
+        "ro.product.cpu.pagesize.max",
+        "ro.product.device",
+        "ro.product.first_api_level",
+        "ro.product.manufacturer",
+        "ro.product.marketname",
+        "ro.product.mod_device",
+        "ro.product.model",
+        "ro.product.name",
+        "ro.product.vendor.model",
+        "ro.product.vendor.name",
+        "ro.secureboot.devicelock",
+        "ro.secureboot.lockstate",
+        "ro.sf.lcd_density",
+        "ro.sf.lcd_sec_density",
+        "ro.soc.model",
+        "ro.system.build.date",
+        "ro.system.build.fingerprint",
+        "ro.system.build.id",
+        "ro.system.build.version.incremental",
+        "ro.system.product.cpu.abilist",
+        "ro.vendor.api_level",
+        "ro.vendor.audio.dolby.dax.version",
+        "ro.vendor.build.date",
+        "ro.vendor.build.security_patch",
+        "ro.vendor.display.dynamic_refresh_rate",
+        "ro.vendor.mi_fake_32bit_support",
+        "ro.vendor.mi_sf.new_dynamic_refresh_rate",
+        "ro.vendor.mi_support_zygote32_lazyload",
+        "ro.zygote",
+        "rust.runtime_version",
+        "sys.abreuse.size",
+        "sys.debug.graphic_buffer_maxsize",
+        "sys.ota.type",
+        "sys.usb.adb.disabled",
+        "sys.usb.config",
+        "sys.usb.configfs",
+        "sys.usb.controller",
+        "sys.usb.mtp.batchcancel",
+        "sys.usb.mtp.device_type",
+        "tango.debug",
+        "tango.enabled",
+        "tango.pretrans.apk",
+        "tango.pretrans.debug",
+        "tango.pretrans.lib",
+        "tango.pretrans.max_size",
+        "tango.pretrans_on_install",
+        "vendor.display.default_resolution",
+        "vendor.display.lcd_density",
+        "vendor.display.lcd_sec_density",
+        "vendor.qvirtmgr.oemvm.status",
+        "vendor.qvirtmgr.trustedvm.status",
+        "vendor.xiaomi.trustedvm.version"
+    )
+
+    val java = linkedSetOf(
+        "android.icu.cldr.version",
+        "android.icu.library.version",
+        "android.icu.unicode.version",
+        "android.openssl.version",
+        "android.zlib.version",
+        "file.encoding",
+        "http.agent",
+        "java.class.version",
+        "java.runtime.version",
+        "java.vm.version",
+        "os.arch",
+        "os.version",
+        "user.language",
+        "user.locale",
+        "user.name",
+        "user.region"
+    )
+
+    val linux = linkedSetOf(
+        "uname-a",
+        "getenforce",
+        "proc.version",
+        "toybox --version",
+        "env.ANDROID_SOCKET_zygote"
+    )
+}
+
