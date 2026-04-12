@@ -70,6 +70,43 @@ data class LiquidActionItem(
 )
 
 @Composable
+fun LiquidActionBarPopupAnchors(
+    itemCount: Int,
+    modifier: Modifier = Modifier,
+    compactSingleItem: Boolean = false,
+    content: @Composable (Int) -> Unit
+) {
+    if (itemCount <= 0) return
+    val minimumWidth = if (compactSingleItem && itemCount == 1) 50.dp else 156.dp
+    val barWidth = maxOf(minimumWidth, (itemCount * 38).dp)
+    Row(
+        modifier = modifier
+            .width(barWidth)
+            .height(50.dp)
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(itemCount) { index ->
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(37.dp)
+                        .height(42.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    content(index)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun RowScope.LiquidActionItemSlot(
     item: LiquidActionItem,
     tint: Color,

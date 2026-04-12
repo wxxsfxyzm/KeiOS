@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.blur.BlurColors
 import top.yukonga.miuix.kmp.blur.BlurDefaults
@@ -53,7 +54,7 @@ fun Modifier.installerXLiquidGlass(
     backdrop: LayerBackdrop?,
     blurColors: BlurColors,
     cornerRadiusDp: Int,
-    blurRadius: Float,
+    blurRadius: Dp = BlurDefaults.BlurRadius.dp,
     contentBlendMode: BlendMode = BlendMode.SrcOver,
 ): Modifier {
     val shape = RoundedCornerShape(cornerRadiusDp.dp)
@@ -62,7 +63,7 @@ fun Modifier.installerXLiquidGlass(
         this.textureBlur(
             backdrop = backdrop,
             shape = shape,
-            blurRadius = blurRadius,
+            blurRadius = blurRadius.value,
             noiseCoefficient = BlurDefaults.NoiseCoefficient,
             colors = blurColors,
             contentBlendMode = contentBlendMode,

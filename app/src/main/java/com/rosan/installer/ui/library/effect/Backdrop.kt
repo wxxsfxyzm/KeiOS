@@ -7,8 +7,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurColors
+import top.yukonga.miuix.kmp.blur.BlurDefaults
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
@@ -33,7 +36,7 @@ fun LayerBackdrop?.getMiuixAppBarColor(): Color =
 fun Modifier.installerMiuixBlurEffect(
     backdrop: LayerBackdrop?,
     enabled: Boolean = true,
-    blurRadius: Float = 25f,
+    blurRadius: Dp = BlurDefaults.BlurRadius.dp,
     shape: Shape = RectangleShape
 ): Modifier {
     if (!enabled || backdrop == null) return this
@@ -42,7 +45,7 @@ fun Modifier.installerMiuixBlurEffect(
         Modifier.textureBlur(
             backdrop = backdrop,
             shape = shape,
-            blurRadius = blurRadius,
+            blurRadius = blurRadius.value,
             colors = BlurColors(blendColors = listOf(BlendColorEntry(color = blendColor)))
         )
     )
@@ -61,7 +64,7 @@ fun LayerBackdrop?.getMaterial3AppBarColor(): Color =
 fun Modifier.installerMaterial3BlurEffect(
     backdrop: LayerBackdrop?,
     enabled: Boolean = true,
-    blurRadius: Float = 25f,
+    blurRadius: Dp = BlurDefaults.BlurRadius.dp,
     shape: Shape = RectangleShape
 ): Modifier {
     if (!enabled || backdrop == null) return this
@@ -70,7 +73,7 @@ fun Modifier.installerMaterial3BlurEffect(
         Modifier.textureBlur(
             backdrop = backdrop,
             shape = shape,
-            blurRadius = blurRadius,
+            blurRadius = blurRadius.value,
             colors = BlurColors(blendColors = listOf(BlendColorEntry(color = blendColor)))
         )
     )

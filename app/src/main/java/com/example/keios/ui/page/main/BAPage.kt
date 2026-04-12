@@ -58,6 +58,7 @@ import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.LiquidActionBar
+import com.example.keios.ui.page.main.widget.LiquidActionBarPopupAnchors
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
@@ -871,60 +872,43 @@ fun BAPage(
                                 onInteractionChanged = onActionBarInteractingChanged
                             )
 
-                            Row(
-                                modifier = Modifier
-                                    .width(156.dp)
-                                    .height(50.dp)
-                                    .padding(horizontal = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(37.dp)
-                                        .height(42.dp)
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .width(37.dp)
-                                        .height(42.dp)
-                                ) {
-                                    if (showCalendarIntervalPopup) {
-                                        WindowListPopup(
-                                            show = showCalendarIntervalPopup,
-                                            alignment = PopupPositionProvider.Align.BottomStart,
-                                            onDismissRequest = { showCalendarIntervalPopup = false },
-                                            enableWindowDim = false
-                                        ) {
-                                            ListPopupColumn {
-                                                val options = BaCalendarRefreshIntervalOption.entries
-                                                val selected = BaCalendarRefreshIntervalOption.fromHours(
-                                                    calendarRefreshIntervalHours
-                                                )
-                                                options.forEachIndexed { index, option ->
-                                                    DropdownImpl(
-                                                        text = option.label,
-                                                        optionSize = options.size,
-                                                        isSelected = selected == option,
-                                                        index = index,
-                                                        onSelectedIndexChange = { selectedIndex ->
-                                                            val picked = options[selectedIndex]
-                                                            calendarRefreshIntervalHours = picked.hours
-                                                            BASettingsStore.saveCalendarRefreshIntervalHours(
-                                                                picked.hours
-                                                            )
-                                                            showCalendarIntervalPopup = false
-                                                            val elapsed = (
-                                                                System.currentTimeMillis() - baCalendarLastSyncMs
-                                                            ).coerceAtLeast(0L)
-                                                            if (baCalendarLastSyncMs <= 0L ||
-                                                                elapsed >= picked.hours * 60L * 60L * 1000L
-                                                            ) {
-                                                                refreshCalendar(force = true)
-                                                                refreshPool(force = true)
-                                                            }
+                            LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex ->
+                                if (slotIndex == 1 && showCalendarIntervalPopup) {
+                                    WindowListPopup(
+                                        show = showCalendarIntervalPopup,
+                                        alignment = PopupPositionProvider.Align.BottomStart,
+                                        onDismissRequest = { showCalendarIntervalPopup = false },
+                                        enableWindowDim = false
+                                    ) {
+                                        ListPopupColumn {
+                                            val options = BaCalendarRefreshIntervalOption.entries
+                                            val selected = BaCalendarRefreshIntervalOption.fromHours(
+                                                calendarRefreshIntervalHours
+                                            )
+                                            options.forEachIndexed { index, option ->
+                                                DropdownImpl(
+                                                    text = option.label,
+                                                    optionSize = options.size,
+                                                    isSelected = selected == option,
+                                                    index = index,
+                                                    onSelectedIndexChange = { selectedIndex ->
+                                                        val picked = options[selectedIndex]
+                                                        calendarRefreshIntervalHours = picked.hours
+                                                        BASettingsStore.saveCalendarRefreshIntervalHours(
+                                                            picked.hours
+                                                        )
+                                                        showCalendarIntervalPopup = false
+                                                        val elapsed = (
+                                                            System.currentTimeMillis() - baCalendarLastSyncMs
+                                                        ).coerceAtLeast(0L)
+                                                        if (baCalendarLastSyncMs <= 0L ||
+                                                            elapsed >= picked.hours * 60L * 60L * 1000L
+                                                        ) {
+                                                            refreshCalendar(force = true)
+                                                            refreshPool(force = true)
                                                         }
-                                                    )
-                                                }
+                                                    }
+                                                )
                                             }
                                         }
                                     }

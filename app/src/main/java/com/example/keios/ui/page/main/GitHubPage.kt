@@ -52,6 +52,7 @@ import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
+import com.example.keios.ui.page.main.widget.LiquidActionBarPopupAnchors
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -549,19 +550,9 @@ fun GitHubPage(
                                 onInteractionChanged = onActionBarInteractingChanged
                             )
 
-                            Row(
-                                modifier = Modifier
-                                    .width(156.dp)
-                                    .height(50.dp)
-                                    .padding(horizontal = 4.dp),
-                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(37.dp)
-                                        .height(42.dp)
-                                ) {
-                                    if (showSortPopup) {
+                            LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex ->
+                                when (slotIndex) {
+                                    0 -> if (showSortPopup) {
                                         WindowListPopup(
                                             show = showSortPopup,
                                             alignment = PopupPositionProvider.Align.BottomStart,
@@ -585,14 +576,8 @@ fun GitHubPage(
                                             }
                                         }
                                     }
-                                }
 
-                                Box(
-                                    modifier = Modifier
-                                        .width(37.dp)
-                                        .height(42.dp)
-                                ) {
-                                    if (showIntervalPopup) {
+                                    1 -> if (showIntervalPopup) {
                                         WindowListPopup(
                                             show = showIntervalPopup,
                                             alignment = PopupPositionProvider.Align.BottomStart,
@@ -620,8 +605,6 @@ fun GitHubPage(
                                         }
                                     }
                                 }
-                                Spacer(modifier = Modifier.width(37.dp))
-                                Spacer(modifier = Modifier.width(37.dp))
                             }
                         }
                     }
