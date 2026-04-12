@@ -276,8 +276,21 @@ private fun parseGalleryItemsFromBaseData(baseData: JSONArray, sourceUrl: String
     val out = mutableListOf<BaGuideGalleryItem>()
     val galleryKeywords = listOf(
         "立绘", "本家画", "TV动画设定图", "回忆大厅视频", "回忆大厅", "PV", "Live", "巧克力图",
-        "互动家具", "角色表情", "表情", "角色演示", "设定集", "官方介绍", "情人节巧克力"
+        "互动家具", "角色表情", "表情", "角色演示", "设定集", "官方介绍", "官方衍生", "情人节巧克力"
     )
+    val nonGalleryFallbackKeywords = listOf(
+        "头像", "技能", "图标", "语音", "台词", "专武", "武器", "装备", "材料",
+        "能力解放", "礼物偏好", "初始数据", "学生信息", "角色名称", "稀有度", "所属学园", "所属社团"
+    )
+
+    fun noteForImageIndex(texts: List<String>, index: Int, imageCount: Int): String {
+        val normalized = texts.map { it.trim() }.filter { it.isNotBlank() }
+        if (normalized.isEmpty()) return ""
+        if (imageCount <= 1) return normalized.joinToString(" / ")
+        if (normalized.size == imageCount) return normalized.getOrElse(index) { "" }
+        if (normalized.size == 1) return if (index == imageCount - 1) normalized.first() else ""
+        return normalized.getOrElse(index) { normalized.last() }
+    }
 
     fun isGalleryKey(raw: String): Boolean {
         val key = stripHtml(raw).trim()
@@ -315,10 +328,10 @@ private fun parseGalleryItemsFromBaseData(baseData: JSONArray, sourceUrl: String
         val key = stripHtml((row.optJSONObject(0)?.optString("value") ?: "").trim())
         if (key == "回忆大厅解锁等级") continue
         if (key.replace(" ", "").startsWith("回忆大厅文件")) continue
-        if (!isGalleryKey(key)) continue
 
         val rowImages = linkedSetOf<String>()
         val rowVideos = linkedSetOf<String>()
+        val rowTexts = mutableListOf<String>()
 
         for (j in 1 until row.length()) {
             val cell = row.optJSONObject(j) ?: continue
@@ -345,9 +358,18 @@ private fun parseGalleryItemsFromBaseData(baseData: JSONArray, sourceUrl: String
                     rowImages += extractImageUrlsFromHtml(sourceUrl, valueText)
                     rowImages += extractImageUrlsFromAny(sourceUrl, valueAny)
                     rowVideos += extractVideoUrlsFromAny(sourceUrl, valueAny)
+                    val plain = stripHtml(valueText)
+                    if (plain.isNotBlank()) rowTexts += plain
                 }
             }
         }
+
+        val hasMedia = rowImages.isNotEmpty() || rowVideos.isNotEmpty()
+        val isFallbackGallery =
+            hasMedia &&
+                key.isNotBlank() &&
+                nonGalleryFallbackKeywords.none { key.contains(it, ignoreCase = true) }
+        if (!isGalleryKey(key) && !isFallbackGallery) continue
 
         if (rowImages.isNotEmpty()) {
             out += rowImages.mapIndexed { index, imageUrl ->
@@ -356,18 +378,21 @@ private fun parseGalleryItemsFromBaseData(baseData: JSONArray, sourceUrl: String
                     imageUrl = imageUrl,
                     mediaType = "image",
                     mediaUrl = imageUrl,
-                    memoryUnlockLevel = if (key.startsWith("回忆大厅")) memoryUnlockLevel else ""
+                    memoryUnlockLevel = if (key.startsWith("回忆大厅")) memoryUnlockLevel else "",
+                    note = noteForImageIndex(rowTexts, index, rowImages.size)
                 )
             }
         }
         if (rowVideos.isNotEmpty()) {
+            val videoNote = rowTexts.joinToString(" / ").trim()
             out += rowVideos.mapIndexed { index, videoUrl ->
                 BaGuideGalleryItem(
                     title = if (rowVideos.size > 1) "$key ${index + 1}" else key,
                     imageUrl = rowImages.firstOrNull().orEmpty(),
                     mediaType = "video",
                     mediaUrl = videoUrl,
-                    memoryUnlockLevel = if (key.startsWith("回忆大厅")) memoryUnlockLevel else ""
+                    memoryUnlockLevel = if (key.startsWith("回忆大厅")) memoryUnlockLevel else "",
+                    note = videoNote
                 )
             }
         }
@@ -800,7 +825,11 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
         )
         val galleryKeywords = listOf(
             "立绘", "本家画", "TV动画设定图", "回忆大厅视频", "回忆大厅", "PV", "Live", "巧克力图",
-            "互动家具", "角色表情", "设定集", "官方介绍", "情人节巧克力"
+            "互动家具", "角色表情", "设定集", "官方介绍", "官方衍生", "情人节巧克力"
+        )
+        val nonGalleryFallbackKeywords = listOf(
+            "头像", "技能", "图标", "语音", "台词", "专武", "武器", "装备", "材料",
+            "能力解放", "礼物偏好", "初始数据", "学生信息", "角色名称", "稀有度", "所属学园", "所属社团"
         )
         val growthKeywords = listOf(
             "装备", "专武", "能力解放", "礼物偏好", "羁绊", "升级材料", "所需", "LV", "T1", "T2", "爱用品", "初始数据",
@@ -817,6 +846,15 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
         val galleryItems = mutableListOf<BaGuideGalleryItem>()
         val stats = mutableListOf<Pair<String, String>>()
         val summaryCandidates = mutableListOf<String>()
+
+        fun noteForGalleryImage(textValues: List<String>, index: Int, imageCount: Int): String {
+            val normalized = textValues.map { it.trim() }.filter { it.isNotBlank() }
+            if (normalized.isEmpty()) return ""
+            if (imageCount <= 1) return normalized.joinToString(" / ")
+            if (normalized.size == imageCount) return normalized.getOrElse(index) { "" }
+            if (normalized.size == 1) return if (index == imageCount - 1) normalized.first() else ""
+            return normalized.getOrElse(index) { normalized.last() }
+        }
 
         var inSkillBlock = false
         var inSkillGlossaryBlock = false
@@ -875,7 +913,15 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
                 (inSkillGlossaryBlock && normalizedKey.isNotBlank() && !inWeaponBlock) ||
                 (matchesSkillKeywords && !inWeaponBlock)
             val isGrowth = inWeaponBlock || (matchesGrowthKeywords && !isSkill)
-            val isGallery = containsAny(normalizedKey, galleryKeywords)
+            val hasMedia = row.imageValues.isNotEmpty() || row.videoValues.isNotEmpty()
+            val isFallbackGallery =
+                hasMedia &&
+                    normalizedKey.isNotBlank() &&
+                    !isSkill &&
+                    !isGrowth &&
+                    !isVoice &&
+                    nonGalleryFallbackKeywords.none { normalizedKey.contains(it, ignoreCase = true) }
+            val isGallery = containsAny(normalizedKey, galleryKeywords) || isFallbackGallery
             val isProfile = containsAny(normalizedKey, profileKeywords)
 
             when {
@@ -890,18 +936,21 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
                                 imageUrl = url,
                                 mediaType = if (row.mediaTypes.contains("live2d")) "live2d" else "image",
                                 mediaUrl = url,
-                                memoryUnlockLevel = if (guideRow.key.startsWith("回忆大厅")) memoryUnlockLevel else ""
+                                memoryUnlockLevel = if (guideRow.key.startsWith("回忆大厅")) memoryUnlockLevel else "",
+                                note = noteForGalleryImage(row.textValues, index, row.imageValues.size)
                             )
                         }
                     }
                     if (row.videoValues.isNotEmpty()) {
+                        val videoNote = row.textValues.joinToString(" / ").trim()
                         galleryItems += row.videoValues.mapIndexed { index, url ->
                             BaGuideGalleryItem(
                                 title = if (row.videoValues.size > 1) "${guideRow.key.ifBlank { "影画" }} ${index + 1}" else guideRow.key.ifBlank { "影画" },
                                 imageUrl = row.imageValues.firstOrNull().orEmpty(),
                                 mediaType = "video",
                                 mediaUrl = url,
-                                memoryUnlockLevel = if (guideRow.key.startsWith("回忆大厅")) memoryUnlockLevel else ""
+                                memoryUnlockLevel = if (guideRow.key.startsWith("回忆大厅")) memoryUnlockLevel else "",
+                                note = videoNote
                             )
                         }
                     }

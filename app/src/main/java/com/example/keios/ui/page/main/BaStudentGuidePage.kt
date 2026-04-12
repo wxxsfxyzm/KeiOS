@@ -65,6 +65,7 @@ import com.example.keios.ui.page.main.student.GuideCombatMetaTile
 import com.example.keios.ui.page.main.student.GuideGalleryCardItem
 import com.example.keios.ui.page.main.student.GuideGalleryExpressionCardItem
 import com.example.keios.ui.page.main.student.GuideGalleryUnlockLevelCardItem
+import com.example.keios.ui.page.main.student.GuideGalleryVideoGroupCardItem
 import com.example.keios.ui.page.main.student.GuideProfileMetaLine
 import com.example.keios.ui.page.main.student.GuideRemoteImage
 import com.example.keios.ui.page.main.student.GuideRowsSection
@@ -828,6 +829,72 @@ fun BaStudentGuidePage(
                                 )
                             }
                             val cleanedGalleryItems = galleryItems.filterNot(::isMemoryHallFileGalleryItem)
+                            val memoryHallPreview = cleanedGalleryItems
+                                .firstOrNull {
+                                    isMemoryHallGalleryItem(it) && isRenderableGalleryImageUrl(it.imageUrl)
+                                }
+                                ?.imageUrl
+                                .orEmpty()
+                            val previewVideoGroups = run {
+                                val orderedCategories = cleanedGalleryItems
+                                    .asSequence()
+                                    .mapNotNull { item ->
+                                        if (!isPreviewVideoGalleryItem(item)) return@mapNotNull null
+                                        val normalized = normalizeGalleryTitle(item.title)
+                                        when {
+                                            normalized.startsWith("回忆大厅视频") -> "回忆大厅视频"
+                                            normalized.startsWith("PV") -> "PV"
+                                            normalized.startsWith("角色演示") -> "角色演示"
+                                            else -> null
+                                        }
+                                    }
+                                    .distinct()
+                                    .toList()
+
+                                orderedCategories.mapNotNull { category ->
+                                    val categoryFallbackPreview =
+                                        if (category == "回忆大厅视频" && isRenderableGalleryImageUrl(memoryHallPreview)) {
+                                            memoryHallPreview
+                                        } else {
+                                            ""
+                                        }
+                                    val categoryItems = cleanedGalleryItems
+                                        .asSequence()
+                                        .filter(::isPreviewVideoGalleryItem)
+                                        .filter { item ->
+                                            val normalized = normalizeGalleryTitle(item.title)
+                                            when (category) {
+                                                "回忆大厅视频" -> normalized.startsWith("回忆大厅视频")
+                                                "PV" -> normalized.startsWith("PV")
+                                                "角色演示" -> normalized.startsWith("角色演示")
+                                                else -> false
+                                            }
+                                        }
+                                        .mapNotNull { item ->
+                                            val currentPreview = item.imageUrl
+                                            val preview = when {
+                                                isRenderableGalleryImageUrl(currentPreview) -> currentPreview
+                                                categoryFallbackPreview.isNotBlank() -> categoryFallbackPreview
+                                                else -> ""
+                                            }
+                                            if (preview.isBlank()) {
+                                                null
+                                            } else if (preview == currentPreview) {
+                                                item
+                                            } else {
+                                                item.copy(imageUrl = preview)
+                                            }
+                                        }
+                                        .toList()
+                                    categoryItems.takeIf { it.isNotEmpty() }?.let { category to it }
+                                }
+                            }
+                            val memoryHallVideoGroup = previewVideoGroups.firstOrNull { it.first == "回忆大厅视频" }
+                            val trailingVideoGroups = previewVideoGroups.filterNot { it.first == "回忆大厅视频" }
+                            // 影画条目若没有可用封面图，则不渲染对应卡片，避免出现空壳卡片。
+                            val displayGalleryItems = cleanedGalleryItems
+                                .filterNot(::isPreviewVideoCategoryGalleryItem)
+                                .filter { isRenderableGalleryImageUrl(it.imageUrl) }
                             val memoryUnlockLevel = cleanedGalleryItems
                                 .asSequence()
                                 .map { it.memoryUnlockLevel }
@@ -840,15 +907,15 @@ fun BaStudentGuidePage(
                                         .orEmpty()
                                     Regex("""\d+""").find(fallback)?.value.orEmpty().ifBlank { fallback }
                                 }
-                            val expressionItems = cleanedGalleryItems
+                            val expressionItems = displayGalleryItems
                                 .withIndex()
                                 .filter { isExpressionGalleryItem(it.value) }
                                 .sortedBy { indexed ->
                                     expressionGalleryOrder(indexed.value.title, indexed.index + 1)
                                 }
                                 .map { it.value }
-                            val firstExpressionIndex = cleanedGalleryItems.indexOfFirst(::isExpressionGalleryItem)
-                            val firstMemoryHallIndex = cleanedGalleryItems.indexOfFirst(::isMemoryHallGalleryItem)
+                            val firstExpressionIndex = displayGalleryItems.indexOfFirst(::isExpressionGalleryItem)
+                            val firstMemoryHallIndex = displayGalleryItems.indexOfFirst(::isMemoryHallGalleryItem)
 
                             if (showLoadingText(loading = loading, hasInfo = true) || !error.isNullOrBlank()) {
                                 item {
@@ -883,10 +950,11 @@ fun BaStudentGuidePage(
                                 item { Spacer(modifier = Modifier.height(10.dp)) }
                             }
 
-                            if (cleanedGalleryItems.isNotEmpty()) {
+                            if (displayGalleryItems.isNotEmpty() || previewVideoGroups.isNotEmpty()) {
                                 var renderedCount = 0
                                 var insertedUnlockLevel = false
-                                cleanedGalleryItems.forEachIndexed { index, item ->
+                                var insertedMemoryHallVideoNearGallery = false
+                                displayGalleryItems.forEachIndexed { index, item ->
                                     val isExpression = isExpressionGalleryItem(item)
                                     if (isExpression && index != firstExpressionIndex) {
                                         return@forEachIndexed
@@ -943,6 +1011,101 @@ fun BaStudentGuidePage(
                                                 }
                                             )
                                         }
+                                    }
+                                    renderedCount += 1
+
+                                    // 将“回忆大厅视频”紧贴“回忆大厅”条目展示。
+                                    if (!insertedMemoryHallVideoNearGallery &&
+                                        memoryHallVideoGroup != null &&
+                                        index == firstMemoryHallIndex
+                                    ) {
+                                        item { Spacer(modifier = Modifier.height(10.dp)) }
+                                        item {
+                                            GuideGalleryVideoGroupCardItem(
+                                                title = memoryHallVideoGroup.first,
+                                                items = memoryHallVideoGroup.second,
+                                                previewFallbackUrl = memoryHallPreview,
+                                                backdrop = backdrop,
+                                                onOpenMedia = ::openExternal,
+                                                mediaUrlResolver = { raw ->
+                                                    galleryCacheRevision.let {
+                                                        BaGuideTempMediaCache.resolveCachedUrl(
+                                                            context = context,
+                                                            sourceUrl = sourceUrl,
+                                                            rawUrl = raw
+                                                        )
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        renderedCount += 1
+                                        insertedMemoryHallVideoNearGallery = true
+                                    }
+                                }
+
+                                if (!insertedUnlockLevel &&
+                                    memoryUnlockLevel.isNotBlank() &&
+                                    memoryHallVideoGroup != null
+                                ) {
+                                    if (renderedCount > 0) {
+                                        item { Spacer(modifier = Modifier.height(10.dp)) }
+                                    }
+                                    item {
+                                        GuideGalleryUnlockLevelCardItem(
+                                            level = memoryUnlockLevel,
+                                            backdrop = backdrop
+                                        )
+                                    }
+                                    insertedUnlockLevel = true
+                                    renderedCount += 1
+                                }
+
+                                if (!insertedMemoryHallVideoNearGallery && memoryHallVideoGroup != null) {
+                                    if (renderedCount > 0) {
+                                        item { Spacer(modifier = Modifier.height(10.dp)) }
+                                    }
+                                    item {
+                                        GuideGalleryVideoGroupCardItem(
+                                            title = memoryHallVideoGroup.first,
+                                            items = memoryHallVideoGroup.second,
+                                            previewFallbackUrl = memoryHallPreview,
+                                            backdrop = backdrop,
+                                            onOpenMedia = ::openExternal,
+                                            mediaUrlResolver = { raw ->
+                                                galleryCacheRevision.let {
+                                                    BaGuideTempMediaCache.resolveCachedUrl(
+                                                        context = context,
+                                                        sourceUrl = sourceUrl,
+                                                        rawUrl = raw
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                    renderedCount += 1
+                                }
+
+                                trailingVideoGroups.forEach { (title, items) ->
+                                    if (renderedCount > 0) {
+                                        item { Spacer(modifier = Modifier.height(10.dp)) }
+                                    }
+                                    item {
+                                        GuideGalleryVideoGroupCardItem(
+                                            title = title,
+                                            items = items,
+                                            previewFallbackUrl = "",
+                                            backdrop = backdrop,
+                                            onOpenMedia = ::openExternal,
+                                            mediaUrlResolver = { raw ->
+                                                galleryCacheRevision.let {
+                                                    BaGuideTempMediaCache.resolveCachedUrl(
+                                                        context = context,
+                                                        sourceUrl = sourceUrl,
+                                                        rawUrl = raw
+                                                    )
+                                                }
+                                            }
+                                        )
                                     }
                                     renderedCount += 1
                                 }
@@ -1123,6 +1286,20 @@ private fun isExpressionGalleryItem(item: BaGuideGalleryItem): Boolean {
 private fun isMemoryHallGalleryItem(item: BaGuideGalleryItem): Boolean {
     val title = normalizeGalleryTitle(item.title)
     return title.startsWith("回忆大厅") && !title.startsWith("回忆大厅视频") && !title.startsWith("回忆大厅文件")
+}
+
+private fun isPreviewVideoCategoryTitle(rawTitle: String): Boolean {
+    val title = normalizeGalleryTitle(rawTitle)
+    return title.startsWith("回忆大厅视频") || title.startsWith("PV") || title.startsWith("角色演示")
+}
+
+private fun isPreviewVideoCategoryGalleryItem(item: BaGuideGalleryItem): Boolean {
+    return isPreviewVideoCategoryTitle(item.title)
+}
+
+private fun isPreviewVideoGalleryItem(item: BaGuideGalleryItem): Boolean {
+    if (item.mediaType.lowercase() != "video") return false
+    return isPreviewVideoCategoryTitle(item.title)
 }
 
 private fun expressionGalleryOrder(title: String, fallback: Int): Int {

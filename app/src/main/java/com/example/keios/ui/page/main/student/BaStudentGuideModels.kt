@@ -44,7 +44,8 @@ data class BaGuideGalleryItem(
     val imageUrl: String,
     val mediaType: String = "image",
     val mediaUrl: String = imageUrl,
-    val memoryUnlockLevel: String = ""
+    val memoryUnlockLevel: String = "",
+    val note: String = ""
 )
 
 data class BaGuideVoiceEntry(
@@ -75,7 +76,7 @@ enum class GuideBottomTab(
     val localLogoRes: Int? = null,
     val guideTab: GuideTab? = null
 ) {
-    Archive("档案", MiuixIcons.Regular.ContactsBook),
+    Archive("属性概览", MiuixIcons.Regular.ContactsBook),
     Skills(
         GuideTab.Skills.label,
         MiuixIcons.Regular.Tasks,

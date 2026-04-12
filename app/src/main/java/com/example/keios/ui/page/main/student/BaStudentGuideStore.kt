@@ -67,6 +67,7 @@ object BaStudentGuideStore {
                         put("mt", item.mediaType)
                         put("mu", item.mediaUrl)
                         put("ml", item.memoryUnlockLevel)
+                        put("n", item.note)
                     }
                 )
             }
@@ -105,14 +106,16 @@ object BaStudentGuideStore {
                 val mediaType = item.optString("mt").trim().ifBlank { "image" }
                 val mediaUrl = item.optString("mu").trim().ifBlank { imageUrl }
                 val memoryUnlockLevel = item.optString("ml").trim()
-                if (imageUrl.isBlank() && mediaUrl.isBlank() && memoryUnlockLevel.isBlank()) continue
+                val note = item.optString("n").trim()
+                if (imageUrl.isBlank() && mediaUrl.isBlank() && memoryUnlockLevel.isBlank() && note.isBlank()) continue
                 add(
                     BaGuideGalleryItem(
                         title = title,
                         imageUrl = imageUrl,
                         mediaType = mediaType,
                         mediaUrl = mediaUrl,
-                        memoryUnlockLevel = memoryUnlockLevel
+                        memoryUnlockLevel = memoryUnlockLevel,
+                        note = note
                     )
                 )
             }

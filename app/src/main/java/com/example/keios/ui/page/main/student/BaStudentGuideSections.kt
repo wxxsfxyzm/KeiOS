@@ -257,6 +257,7 @@ fun GuideGalleryCardItem(
     }
     val displayImageUrl = mediaUrlResolver(item.imageUrl)
     val displayMediaUrl = mediaUrlResolver(item.mediaUrl)
+    val noteText = item.note.trim()
     val isImageType = item.mediaType.lowercase() != "video"
     val canOpenMedia = item.mediaUrl.isNotBlank() && item.mediaUrl != item.imageUrl
     val imageProgressState = remember(displayImageUrl) {
@@ -312,7 +313,16 @@ fun GuideGalleryCardItem(
                 )
             }
 
-            if (displayImageUrl.isNotBlank()) {
+            if (noteText.isNotBlank()) {
+                Text(
+                    text = noteText,
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (displayImageUrl.isNotBlank() && item.mediaType.lowercase() != "video") {
                 GuideRemoteImageAdaptive(
                     imageUrl = displayImageUrl,
                     progressState = if (isImageType) imageProgressState else null,
@@ -328,6 +338,7 @@ fun GuideGalleryCardItem(
                 if (item.mediaType.lowercase() == "video") {
                     GuideInlineVideoPlayer(
                         mediaUrl = displayMediaUrl,
+                        previewImageUrl = displayImageUrl,
                         backdrop = backdrop,
                         onOpenExternal = onOpenMedia
                     )
@@ -446,7 +457,7 @@ fun GuideGalleryExpressionCardItem(
                 }
             }
 
-            if (displayImageUrl.isNotBlank()) {
+            if (displayImageUrl.isNotBlank() && selectedItem.mediaType.lowercase() != "video") {
                 GuideRemoteImageAdaptive(
                     imageUrl = displayImageUrl,
                     progressState = if (isImageType) imageProgressState else null,
@@ -462,6 +473,7 @@ fun GuideGalleryExpressionCardItem(
                 if (selectedItem.mediaType.lowercase() == "video") {
                     GuideInlineVideoPlayer(
                         mediaUrl = displayMediaUrl,
+                        previewImageUrl = displayImageUrl,
                         backdrop = backdrop,
                         onOpenExternal = onOpenMedia
                     )
@@ -475,6 +487,134 @@ fun GuideGalleryExpressionCardItem(
                         onClick = { onOpenMedia(selectedItem.mediaUrl) }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun GuideGalleryVideoGroupCardItem(
+    title: String,
+    items: List<BaGuideGalleryItem>,
+    previewFallbackUrl: String = "",
+    backdrop: Backdrop?,
+    onOpenMedia: (String) -> Unit,
+    mediaUrlResolver: (String) -> String = { it },
+    modifier: Modifier = Modifier
+) {
+    if (items.isEmpty()) return
+    var showPicker by remember(title, items.size) { mutableStateOf(false) }
+    var selectedIndex by rememberSaveable(title, items.size) { mutableStateOf(0) }
+    LaunchedEffect(items.size) {
+        if (selectedIndex !in items.indices) selectedIndex = 0
+    }
+    val selectedItem = items.getOrElse(selectedIndex) { items.first() }
+    val displayMediaUrl = mediaUrlResolver(selectedItem.mediaUrl)
+    val displayPreviewUrl = mediaUrlResolver(
+        selectedItem.imageUrl.ifBlank { previewFallbackUrl }
+    )
+    val noteText = selectedItem.note.trim()
+    val optionLabels = remember(title, items) {
+        if (items.size <= 1) {
+            listOf("视频 1")
+        } else {
+            items.mapIndexed { index, item ->
+                val normalized = item.title.trim()
+                if (normalized.isNotBlank() && normalized != title) normalized else "视频 ${index + 1}"
+            }
+        }
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = Color(0x223B82F6),
+            contentColor = MiuixTheme.colorScheme.onBackground
+        ),
+        onClick = {}
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    color = MiuixTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (items.size > 1) {
+                    Box {
+                        GlassTextButton(
+                            backdrop = backdrop,
+                            text = optionLabels.getOrElse(selectedIndex) { "视频 1" },
+                            textColor = Color(0xFF3B82F6),
+                            bottomBarStyle = true,
+                            onClick = { showPicker = !showPicker }
+                        )
+                        if (showPicker) {
+                            WindowListPopup(
+                                show = showPicker,
+                                alignment = PopupPositionProvider.Align.BottomEnd,
+                                onDismissRequest = { showPicker = false },
+                                enableWindowDim = false
+                            ) {
+                                ListPopupColumn {
+                                    optionLabels.forEachIndexed { idx, option ->
+                                        DropdownImpl(
+                                            text = option,
+                                            optionSize = optionLabels.size,
+                                            isSelected = selectedIndex == idx,
+                                            index = idx,
+                                            onSelectedIndexChange = { selected ->
+                                                selectedIndex = selected
+                                                showPicker = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                GlassTextButton(
+                    backdrop = backdrop,
+                    text = "视频",
+                    enabled = false,
+                    textColor = Color(0xFF3B82F6),
+                    bottomBarStyle = true,
+                    onClick = {}
+                )
+            }
+
+            if (displayMediaUrl.isBlank()) {
+                Text(
+                    text = "未找到可播放的视频地址",
+                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                )
+            } else {
+                if (noteText.isNotBlank()) {
+                    Text(
+                        text = noteText,
+                        color = MiuixTheme.colorScheme.onBackgroundVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                GuideInlineVideoPlayer(
+                    mediaUrl = displayMediaUrl,
+                    previewImageUrl = displayPreviewUrl,
+                    backdrop = backdrop,
+                    onOpenExternal = onOpenMedia
+                )
             }
         }
     }
@@ -524,18 +664,25 @@ fun GuideGalleryUnlockLevelCardItem(
 @Composable
 private fun GuideInlineVideoPlayer(
     mediaUrl: String,
+    previewImageUrl: String = "",
     backdrop: Backdrop?,
     onOpenExternal: (String) -> Unit
 ) {
     val context = LocalContext.current
     var expanded by rememberSaveable(mediaUrl) { mutableStateOf(false) }
     val normalizedUrl = remember(mediaUrl) { normalizeGuideMediaSource(mediaUrl) }
+    val normalizedPreviewUrl = remember(previewImageUrl) { normalizeGuideMediaSource(previewImageUrl) }
     var videoRatio by remember(normalizedUrl) { mutableStateOf(16f / 9f) }
     var isBuffering by remember(normalizedUrl) { mutableStateOf(false) }
     var isPlaying by remember(normalizedUrl) { mutableStateOf(false) }
     var loadError by remember(normalizedUrl) { mutableStateOf<String?>(null) }
 
     if (!expanded) {
+        if (normalizedPreviewUrl.isNotBlank()) {
+            GuideRemoteImageAdaptive(
+                imageUrl = normalizedPreviewUrl
+            )
+        }
         GlassTextButton(
             backdrop = backdrop,
             text = "播放",
