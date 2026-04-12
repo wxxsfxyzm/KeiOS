@@ -87,6 +87,7 @@ import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
+import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.utils.UiPrefs
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
@@ -575,7 +576,7 @@ fun BaStudentGuidePage(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 14.dp, vertical = 12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         combatItems.forEach { item ->
                                             GuideCombatMetaTile(
@@ -695,6 +696,254 @@ fun BaStudentGuidePage(
                                         card = weapon,
                                         backdrop = backdrop
                                     )
+                                }
+                            }
+                        }
+                    }
+
+                    GuideBottomTab.Profile -> {
+                        val guide = info
+                        if (guide == null) {
+                            item {
+                                FrostedBlock(
+                                    backdrop = backdrop,
+                                    title = activeBottomTab.label,
+                                    subtitle = info?.subtitle?.ifBlank { "GameKee" } ?: "GameKee",
+                                    accent = accent,
+                                    content = {
+                                        if (loading) {
+                                            Text("同步中...", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                                        }
+                                        error?.takeIf { it.isNotBlank() }?.let {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = it,
+                                                color = MiuixTheme.colorScheme.error,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        } else {
+                            val allProfileRows = guide.profileRowsForDisplay()
+                                .filterNot(::shouldHideMovedHeaderRow)
+                            val chocolateInfoRows = allProfileRows.filter { row ->
+                                val key = row.key.trim()
+                                key.contains("巧克力", ignoreCase = true)
+                            }
+                            val furnitureInfoRows = allProfileRows.filter { row ->
+                                val key = row.key.trim()
+                                key.contains("互动家具", ignoreCase = true)
+                            }
+                            val normalProfileRows = allProfileRows.filterNot { row ->
+                                val key = row.key.trim()
+                                key.contains("巧克力", ignoreCase = true) ||
+                                    key.contains("互动家具", ignoreCase = true)
+                            }
+                            val chocolateGalleryItems = guide.galleryItems
+                                .filter(::isChocolateGalleryItem)
+                                .filter(::hasRenderableGalleryMedia)
+                                .distinctBy {
+                                    val media = it.mediaUrl.ifBlank { it.imageUrl }
+                                    "${it.mediaType}|$media"
+                                }
+                            val furnitureGalleryItems = guide.galleryItems
+                                .filter(::isInteractiveFurnitureGalleryItem)
+                                .filter(::hasRenderableGalleryMedia)
+                                .distinctBy {
+                                    val media = it.mediaUrl.ifBlank { it.imageUrl }
+                                    "${it.mediaType}|$media"
+                                }
+                                .sortedBy { item ->
+                                    Regex("""(\d+)(?!.*\d)""").find(item.title)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                                        ?: Int.MAX_VALUE
+                                }
+
+                            if (showLoadingText(loading = loading, hasInfo = true) || !error.isNullOrBlank()) {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.defaultColors(
+                                            color = Color(0x223B82F6),
+                                            contentColor = MiuixTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {}
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            if (showLoadingText(loading = loading, hasInfo = true)) {
+                                                Text("同步中...", color = MiuixTheme.colorScheme.onBackgroundVariant)
+                                            }
+                                            error?.takeIf { it.isNotBlank() }?.let {
+                                                Text(
+                                                    text = it,
+                                                    color = MiuixTheme.colorScheme.error,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                item { Spacer(modifier = Modifier.height(10.dp)) }
+                            }
+
+                            if (normalProfileRows.isNotEmpty()) {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.defaultColors(
+                                            color = Color(0x223B82F6),
+                                            contentColor = MiuixTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {}
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            GuideRowsSection(
+                                                rows = normalProfileRows,
+                                                emptyText = "暂未解析到学生档案数据。"
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.defaultColors(
+                                            color = Color(0x223B82F6),
+                                            contentColor = MiuixTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {}
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp)
+                                        ) {
+                                            Text(
+                                                text = "暂未解析到学生档案数据。",
+                                                color = MiuixTheme.colorScheme.onBackgroundVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (chocolateInfoRows.isNotEmpty() || chocolateGalleryItems.isNotEmpty()) {
+                                item { Spacer(modifier = Modifier.height(10.dp)) }
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.defaultColors(
+                                            color = Color(0x223B82F6),
+                                            contentColor = MiuixTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {}
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "巧克力",
+                                                color = MiuixTheme.colorScheme.onBackground
+                                            )
+                                            chocolateInfoRows.forEach { row ->
+                                                val value = row.value.ifBlank { "-" }
+                                                MiuixInfoItem(
+                                                    key = row.key.ifBlank { "信息" },
+                                                    value = value
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                chocolateGalleryItems.forEach { chocolateItem ->
+                                    item { Spacer(modifier = Modifier.height(10.dp)) }
+                                    item {
+                                        GuideGalleryCardItem(
+                                            item = chocolateItem,
+                                            backdrop = backdrop,
+                                            onOpenMedia = ::openExternal,
+                                            mediaUrlResolver = { raw ->
+                                                galleryCacheRevision.let {
+                                                    BaGuideTempMediaCache.resolveCachedUrl(
+                                                        context = context,
+                                                        sourceUrl = sourceUrl,
+                                                        rawUrl = raw
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (furnitureInfoRows.isNotEmpty() || furnitureGalleryItems.isNotEmpty()) {
+                                item { Spacer(modifier = Modifier.height(10.dp)) }
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.defaultColors(
+                                            color = Color(0x223B82F6),
+                                            contentColor = MiuixTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {}
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "互动家具",
+                                                color = MiuixTheme.colorScheme.onBackground
+                                            )
+                                            furnitureInfoRows.forEach { row ->
+                                                val value = row.value.ifBlank { "-" }
+                                                MiuixInfoItem(
+                                                    key = row.key.ifBlank { "信息" },
+                                                    value = value
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                furnitureGalleryItems.forEach { furnitureItem ->
+                                    item { Spacer(modifier = Modifier.height(10.dp)) }
+                                    item {
+                                        GuideGalleryCardItem(
+                                            item = furnitureItem,
+                                            backdrop = backdrop,
+                                            onOpenMedia = ::openExternal,
+                                            mediaUrlResolver = { raw ->
+                                                galleryCacheRevision.let {
+                                                    BaGuideTempMediaCache.resolveCachedUrl(
+                                                        context = context,
+                                                        sourceUrl = sourceUrl,
+                                                        rawUrl = raw
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -891,9 +1140,17 @@ fun BaStudentGuidePage(
                             }
                             val memoryHallVideoGroup = previewVideoGroups.firstOrNull { it.first == "回忆大厅视频" }
                             val trailingVideoGroups = previewVideoGroups.filterNot { it.first == "回忆大厅视频" }
+                            val pvAndRoleVideoGroups = trailingVideoGroups.filter { (title, _) ->
+                                title == "PV" || title == "角色演示"
+                            }
+                            val otherTrailingVideoGroups = trailingVideoGroups.filterNot { (title, _) ->
+                                title == "PV" || title == "角色演示"
+                            }
                             // 影画条目若没有可用封面图，则不渲染对应卡片，避免出现空壳卡片。
                             val displayGalleryItems = cleanedGalleryItems
                                 .filterNot(::isPreviewVideoCategoryGalleryItem)
+                                .filterNot(::isChocolateGalleryItem)
+                                .filterNot(::isInteractiveFurnitureGalleryItem)
                                 .filter { item ->
                                     when (item.mediaType.lowercase()) {
                                         "audio" -> isRenderableGalleryAudioUrl(item.mediaUrl)
@@ -921,6 +1178,7 @@ fun BaStudentGuidePage(
                                 .map { it.value }
                             val firstExpressionIndex = displayGalleryItems.indexOfFirst(::isExpressionGalleryItem)
                             val firstMemoryHallIndex = displayGalleryItems.indexOfFirst(::isMemoryHallGalleryItem)
+                            val lastOfficialIntroIndex = displayGalleryItems.indexOfLast(::isOfficialIntroGalleryItem)
 
                             if (showLoadingText(loading = loading, hasInfo = true) || !error.isNullOrBlank()) {
                                 item {
@@ -959,6 +1217,7 @@ fun BaStudentGuidePage(
                                 var renderedCount = 0
                                 var insertedUnlockLevel = false
                                 var insertedMemoryHallVideoNearGallery = false
+                                var insertedPvRoleAfterOfficial = false
                                 displayGalleryItems.forEachIndexed { index, item ->
                                     val isExpression = isExpressionGalleryItem(item)
                                     if (isExpression && index != firstExpressionIndex) {
@@ -1018,6 +1277,37 @@ fun BaStudentGuidePage(
                                         }
                                     }
                                     renderedCount += 1
+
+                                    if (!insertedPvRoleAfterOfficial &&
+                                        pvAndRoleVideoGroups.isNotEmpty() &&
+                                        index == lastOfficialIntroIndex
+                                    ) {
+                                        pvAndRoleVideoGroups.forEach { (title, items) ->
+                                            if (renderedCount > 0) {
+                                                item { Spacer(modifier = Modifier.height(10.dp)) }
+                                            }
+                                            item {
+                                                GuideGalleryVideoGroupCardItem(
+                                                    title = title,
+                                                    items = items,
+                                                    previewFallbackUrl = "",
+                                                    backdrop = backdrop,
+                                                    onOpenMedia = ::openExternal,
+                                                    mediaUrlResolver = { raw ->
+                                                        galleryCacheRevision.let {
+                                                            BaGuideTempMediaCache.resolveCachedUrl(
+                                                                context = context,
+                                                                sourceUrl = sourceUrl,
+                                                                rawUrl = raw
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                            renderedCount += 1
+                                        }
+                                        insertedPvRoleAfterOfficial = true
+                                    }
 
                                     // 将“回忆大厅视频”紧贴“回忆大厅”条目展示。
                                     if (!insertedMemoryHallVideoNearGallery &&
@@ -1090,7 +1380,34 @@ fun BaStudentGuidePage(
                                     renderedCount += 1
                                 }
 
-                                trailingVideoGroups.forEach { (title, items) ->
+                                if (!insertedPvRoleAfterOfficial) {
+                                    pvAndRoleVideoGroups.forEach { (title, items) ->
+                                        if (renderedCount > 0) {
+                                            item { Spacer(modifier = Modifier.height(10.dp)) }
+                                        }
+                                        item {
+                                            GuideGalleryVideoGroupCardItem(
+                                                title = title,
+                                                items = items,
+                                                previewFallbackUrl = "",
+                                                backdrop = backdrop,
+                                                onOpenMedia = ::openExternal,
+                                                mediaUrlResolver = { raw ->
+                                                    galleryCacheRevision.let {
+                                                        BaGuideTempMediaCache.resolveCachedUrl(
+                                                            context = context,
+                                                            sourceUrl = sourceUrl,
+                                                            rawUrl = raw
+                                                        )
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        renderedCount += 1
+                                    }
+                                }
+
+                                otherTrailingVideoGroups.forEach { (title, items) ->
                                     if (renderedCount > 0) {
                                         item { Spacer(modifier = Modifier.height(10.dp)) }
                                     }
@@ -1315,6 +1632,21 @@ private fun isExpressionGalleryItem(item: BaGuideGalleryItem): Boolean {
 private fun isMemoryHallGalleryItem(item: BaGuideGalleryItem): Boolean {
     val title = normalizeGalleryTitle(item.title)
     return title.startsWith("回忆大厅") && !title.startsWith("回忆大厅视频") && !title.startsWith("回忆大厅文件")
+}
+
+private fun isOfficialIntroGalleryItem(item: BaGuideGalleryItem): Boolean {
+    val title = normalizeGalleryTitle(item.title)
+    return title.startsWith("官方介绍")
+}
+
+private fun isChocolateGalleryItem(item: BaGuideGalleryItem): Boolean {
+    val title = normalizeGalleryTitle(item.title)
+    return title.startsWith("巧克力图") || title.startsWith("情人节巧克力")
+}
+
+private fun isInteractiveFurnitureGalleryItem(item: BaGuideGalleryItem): Boolean {
+    val title = normalizeGalleryTitle(item.title)
+    return title.startsWith("互动家具")
 }
 
 private fun isPreviewVideoCategoryTitle(rawTitle: String): Boolean {

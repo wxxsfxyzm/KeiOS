@@ -1,13 +1,17 @@
 package com.example.keios.ui.page.main.student
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.widget.Toast
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
@@ -17,6 +21,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -36,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -54,6 +61,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -69,6 +78,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
+import com.github.panpf.zoomimage.CoilZoomAsyncImage
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -96,18 +106,61 @@ private fun normalizeGuideMediaSource(raw: String): String {
 
 private fun loadGuideBitmapSource(
     source: String,
+    maxDecodeDimension: Int = 2048,
     onProgress: ((downloadedBytes: Long, totalBytes: Long) -> Unit)? = null
 ): Bitmap? {
     if (source.isBlank()) return null
     val uri = runCatching { Uri.parse(source) }.getOrNull()
     if (uri?.scheme.equals("file", ignoreCase = true)) {
         val path = uri?.path.orEmpty().ifBlank { Uri.decode(uri?.encodedPath.orEmpty()) }
-        return if (path.isNotBlank()) BitmapFactory.decodeFile(path) else null
+        if (path.isBlank()) return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        val srcWidth = bounds.outWidth
+        val srcHeight = bounds.outHeight
+        if (srcWidth <= 0 || srcHeight <= 0) {
+            return BitmapFactory.decodeFile(path)
+        }
+        var sample = 1
+        val safeMax = maxDecodeDimension.coerceAtLeast(512)
+        while ((srcWidth / sample) > safeMax || (srcHeight / sample) > safeMax) {
+            sample *= 2
+        }
+        val decodeOptions = BitmapFactory.Options().apply {
+            inSampleSize = sample.coerceAtLeast(1)
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        return BitmapFactory.decodeFile(path, decodeOptions)
     }
     return if (onProgress != null) {
-        GameKeeFetchHelper.fetchImageWithProgress(source, onProgress)
+        GameKeeFetchHelper.fetchImageWithProgress(
+            imageUrl = source,
+            onProgress = onProgress,
+            maxDecodeDimension = maxDecodeDimension
+        )
     } else {
-        GameKeeFetchHelper.fetchImage(source)
+        GameKeeFetchHelper.fetchImage(
+            imageUrl = source,
+            maxDecodeDimension = maxDecodeDimension
+        )
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? {
+    return when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
+}
+
+private fun normalizeGalleryDisplayTitle(title: String, mediaType: String): String {
+    val raw = title.trim().ifBlank { "影画条目" }
+    if (mediaType.lowercase() != "audio") return raw
+    return if (raw.startsWith("BGM", ignoreCase = true)) {
+        raw.replaceFirst(Regex("^BGM", RegexOption.IGNORE_CASE), "Live2d BGM")
+    } else {
+        raw
     }
 }
 
@@ -115,13 +168,14 @@ private fun loadGuideBitmapSource(
 fun GuideRemoteImage(
     imageUrl: String,
     modifier: Modifier = Modifier,
-    imageHeight: androidx.compose.ui.unit.Dp = 220.dp
+    imageHeight: androidx.compose.ui.unit.Dp = 220.dp,
+    maxDecodeDimension: Int = 1920
 ) {
     val target = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
     if (target.isBlank()) return
     val bitmap by produceState<Bitmap?>(initialValue = null, target) {
         value = withContext(Dispatchers.IO) {
-            runCatching { loadGuideBitmapSource(target) }.getOrNull()
+            runCatching { loadGuideBitmapSource(target, maxDecodeDimension = maxDecodeDimension) }.getOrNull()
         }
     }
     val rendered = bitmap ?: return
@@ -140,6 +194,7 @@ fun GuideRemoteImage(
 fun GuideRemoteImageAdaptive(
     imageUrl: String,
     modifier: Modifier = Modifier,
+    maxDecodeDimension: Int = 2048,
     progressState: MutableStateFlow<Float>? = null,
     onLoadingChanged: ((Boolean) -> Unit)? = null
 ) {
@@ -154,7 +209,10 @@ fun GuideRemoteImageAdaptive(
         onLoadingChanged?.invoke(true)
         value = withContext(Dispatchers.IO) {
             runCatching {
-                loadGuideBitmapSource(target) { downloadedBytes, totalBytes ->
+                loadGuideBitmapSource(
+                    source = target,
+                    maxDecodeDimension = maxDecodeDimension
+                ) { downloadedBytes, totalBytes ->
                     if (totalBytes > 0L) {
                         progressState?.value =
                             (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
@@ -262,8 +320,12 @@ fun GuideGalleryCardItem(
     val displayImageUrl = mediaUrlResolver(item.imageUrl)
     val displayMediaUrl = mediaUrlResolver(item.mediaUrl)
     val noteText = item.note.trim()
+    val displayTitle = remember(item.title, normalizedMediaType) {
+        normalizeGalleryDisplayTitle(item.title, normalizedMediaType)
+    }
     val isImageType = normalizedMediaType != "video" && normalizedMediaType != "audio"
     val canOpenMedia = item.mediaUrl.isNotBlank() && item.mediaUrl != item.imageUrl
+    var showImageFullscreen by remember(displayImageUrl, normalizedMediaType) { mutableStateOf(false) }
     val audioTargetUrl = remember(normalizedMediaType, displayMediaUrl) {
         if (normalizedMediaType == "audio") normalizeGuideMediaSource(displayMediaUrl) else ""
     }
@@ -363,7 +425,7 @@ fun GuideGalleryCardItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = item.title.ifBlank { "影画条目" },
+                    text = displayTitle,
                     color = MiuixTheme.colorScheme.onBackground,
                     modifier = Modifier.weight(1f),
                     maxLines = 2,
@@ -449,15 +511,19 @@ fun GuideGalleryCardItem(
             }
 
             if (displayImageUrl.isNotBlank() && normalizedMediaType != "video" && normalizedMediaType != "audio") {
-                GuideRemoteImageAdaptive(
-                    imageUrl = displayImageUrl,
-                    progressState = if (isImageType) imageProgressState else null,
-                    onLoadingChanged = if (isImageType) {
-                        { loading -> imageLoading = loading }
-                    } else {
-                        null
-                    }
-                )
+                Box(
+                    modifier = Modifier.clickable { showImageFullscreen = true }
+                ) {
+                    GuideRemoteImageAdaptive(
+                        imageUrl = displayImageUrl,
+                        progressState = if (isImageType) imageProgressState else null,
+                        onLoadingChanged = if (isImageType) {
+                            { loading -> imageLoading = loading }
+                        } else {
+                            null
+                        }
+                    )
+                }
             }
 
             if (canOpenMedia && normalizedMediaType != "audio") {
@@ -494,6 +560,13 @@ fun GuideGalleryCardItem(
             }
         }
     }
+
+    if (showImageFullscreen && isImageType && displayImageUrl.isNotBlank()) {
+        GuideImageFullscreenDialog(
+            imageUrl = displayImageUrl,
+            onDismiss = { showImageFullscreen = false }
+        )
+    }
 }
 
 @Composable
@@ -519,6 +592,7 @@ fun GuideGalleryExpressionCardItem(
     }
     val canOpenMedia = selectedItem.mediaUrl.isNotBlank() && selectedItem.mediaUrl != selectedItem.imageUrl
     val isImageType = selectedItem.mediaType.lowercase() != "video"
+    var showImageFullscreen by remember(displayImageUrl) { mutableStateOf(false) }
     val imageProgressState = remember(displayImageUrl) {
         MutableStateFlow(if (displayImageUrl.isBlank()) 1f else 0f)
     }
@@ -600,15 +674,19 @@ fun GuideGalleryExpressionCardItem(
             }
 
             if (displayImageUrl.isNotBlank() && selectedItem.mediaType.lowercase() != "video") {
-                GuideRemoteImageAdaptive(
-                    imageUrl = displayImageUrl,
-                    progressState = if (isImageType) imageProgressState else null,
-                    onLoadingChanged = if (isImageType) {
-                        { loading -> imageLoading = loading }
-                    } else {
-                        null
-                    }
-                )
+                Box(
+                    modifier = Modifier.clickable { showImageFullscreen = true }
+                ) {
+                    GuideRemoteImageAdaptive(
+                        imageUrl = displayImageUrl,
+                        progressState = if (isImageType) imageProgressState else null,
+                        onLoadingChanged = if (isImageType) {
+                            { loading -> imageLoading = loading }
+                        } else {
+                            null
+                        }
+                    )
+                }
             }
 
             if (canOpenMedia) {
@@ -631,6 +709,13 @@ fun GuideGalleryExpressionCardItem(
                 }
             }
         }
+    }
+
+    if (showImageFullscreen && isImageType && displayImageUrl.isNotBlank()) {
+        GuideImageFullscreenDialog(
+            imageUrl = displayImageUrl,
+            onDismiss = { showImageFullscreen = false }
+        )
     }
 }
 
@@ -812,6 +897,7 @@ private fun GuideInlineVideoPlayer(
 ) {
     val context = LocalContext.current
     var expanded by rememberSaveable(mediaUrl) { mutableStateOf(false) }
+    var showFullscreen by rememberSaveable(mediaUrl) { mutableStateOf(false) }
     val normalizedUrl = remember(mediaUrl) { normalizeGuideMediaSource(mediaUrl) }
     val normalizedPreviewUrl = remember(previewImageUrl) { normalizeGuideMediaSource(previewImageUrl) }
     var videoRatio by remember(normalizedUrl) { mutableStateOf(16f / 9f) }
@@ -819,27 +905,63 @@ private fun GuideInlineVideoPlayer(
     var isPlaying by remember(normalizedUrl) { mutableStateOf(false) }
     var loadError by remember(normalizedUrl) { mutableStateOf<String?>(null) }
 
+    if (showFullscreen && normalizedUrl.isNotBlank()) {
+        GuideVideoFullscreenDialog(
+            mediaUrl = normalizedUrl,
+            onDismiss = { showFullscreen = false }
+        )
+    }
+
     if (!expanded) {
         if (normalizedPreviewUrl.isNotBlank()) {
-            GuideRemoteImageAdaptive(
-                imageUrl = normalizedPreviewUrl
+            Box(
+                modifier = Modifier.clickable {
+                    if (normalizedUrl.isBlank()) {
+                        Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                    } else {
+                        showFullscreen = true
+                    }
+                }
+            ) {
+                GuideRemoteImageAdaptive(
+                    imageUrl = normalizedPreviewUrl
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            GlassTextButton(
+                backdrop = backdrop,
+                text = "播放",
+                leadingIcon = MiuixIcons.Regular.Play,
+                textColor = Color(0xFF3B82F6),
+                bottomBarStyle = true,
+                onClick = {
+                    if (normalizedUrl.isBlank()) {
+                        Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                        return@GlassTextButton
+                    }
+                    loadError = null
+                    expanded = true
+                }
+            )
+            GlassTextButton(
+                backdrop = backdrop,
+                text = "全屏",
+                textColor = Color(0xFF3B82F6),
+                bottomBarStyle = true,
+                onClick = {
+                    if (normalizedUrl.isBlank()) {
+                        Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                        return@GlassTextButton
+                    }
+                    showFullscreen = true
+                }
             )
         }
-        GlassTextButton(
-            backdrop = backdrop,
-            text = "播放",
-            leadingIcon = MiuixIcons.Regular.Play,
-            textColor = Color(0xFF3B82F6),
-            bottomBarStyle = true,
-            onClick = {
-                if (normalizedUrl.isBlank()) {
-                    Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
-                    return@GlassTextButton
-                }
-                loadError = null
-                expanded = true
-            }
-        )
         return
     }
 
@@ -942,6 +1064,13 @@ private fun GuideInlineVideoPlayer(
         )
         GlassTextButton(
             backdrop = backdrop,
+            text = "全屏",
+            textColor = Color(0xFF3B82F6),
+            bottomBarStyle = true,
+            onClick = { showFullscreen = true }
+        )
+        GlassTextButton(
+            backdrop = backdrop,
             text = "外部打开",
             textColor = Color(0xFF3B82F6),
             bottomBarStyle = true,
@@ -986,6 +1115,203 @@ private fun GuideInlineVideoPlayer(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+private fun GuideRequestedOrientationEffect(requestedOrientation: Int) {
+    val activity = LocalContext.current.findActivity()
+    DisposableEffect(activity, requestedOrientation) {
+        if (activity == null || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+            onDispose { }
+        } else {
+            val previousOrientation = activity.requestedOrientation
+            val applied = runCatching {
+                activity.requestedOrientation = requestedOrientation
+            }.isSuccess
+            onDispose {
+                if (applied) {
+                    runCatching {
+                        activity.requestedOrientation = previousOrientation
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuideImageFullscreenDialog(
+    imageUrl: String,
+    onDismiss: () -> Unit
+) {
+    val normalizedImageUrl = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
+    if (normalizedImageUrl.isBlank()) return
+    val sampledBitmap by produceState<Bitmap?>(initialValue = null, normalizedImageUrl) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                loadGuideBitmapSource(
+                    source = normalizedImageUrl,
+                    maxDecodeDimension = 1024
+                )
+            }.getOrNull()
+        }
+    }
+    val ratio = remember(sampledBitmap?.width, sampledBitmap?.height) {
+        val width = sampledBitmap?.width ?: 0
+        val height = sampledBitmap?.height ?: 0
+        if (width > 0 && height > 0) width.toFloat() / height.toFloat() else 1f
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            if (ratio > 1.02f) {
+                val rotatedRatio = if (ratio > 0f) (1f / ratio) else 1f
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CoilZoomAsyncImage(
+                        model = normalizedImageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .aspectRatio(rotatedRatio)
+                            .rotate(90f),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            } else {
+                CoilZoomAsyncImage(
+                    model = normalizedImageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center),
+                    contentScale = ContentScale.Fit
+                )
+            }
+            GlassTextButton(
+                backdrop = null,
+                text = "关闭",
+                textColor = Color(0xFFBFDBFE),
+                bottomBarStyle = true,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 20.dp, end = 16.dp),
+                onClick = onDismiss
+            )
+        }
+    }
+}
+
+@Composable
+private fun GuideVideoFullscreenDialog(
+    mediaUrl: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val normalizedUrl = remember(mediaUrl) { normalizeGuideMediaSource(mediaUrl) }
+    GuideRequestedOrientationEffect(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
+    var loadError by remember(normalizedUrl) { mutableStateOf<String?>(null) }
+
+    val player = remember(context, normalizedUrl) {
+        if (normalizedUrl.isBlank()) {
+            null
+        } else {
+            buildGuideVideoPlayer(context).apply {
+                setMediaItem(MediaItem.fromUri(normalizedUrl))
+                playWhenReady = true
+                prepare()
+            }
+        }
+    }
+
+    DisposableEffect(player) {
+        val boundPlayer = player ?: return@DisposableEffect onDispose { }
+        val listener = object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                loadError = error.errorCodeName
+            }
+        }
+        boundPlayer.addListener(listener)
+        onDispose {
+            boundPlayer.removeListener(listener)
+            runCatching { boundPlayer.release() }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            val activePlayer = player
+            if (activePlayer != null) {
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { ctx ->
+                        PlayerView(ctx).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                            useController = true
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                            this.player = activePlayer
+                        }
+                    },
+                    update = { view ->
+                        view.player = activePlayer
+                        view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    }
+                )
+            } else {
+                Text(
+                    text = "视频地址无效",
+                    color = Color(0xFFBFDBFE),
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+
+            GlassTextButton(
+                backdrop = null,
+                text = "关闭",
+                textColor = Color(0xFFBFDBFE),
+                bottomBarStyle = true,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 20.dp, end = 16.dp),
+                onClick = onDismiss
+            )
+
+            loadError?.takeIf { it.isNotBlank() }?.let { err ->
+                Text(
+                    text = "视频播放失败：$err",
+                    color = Color(0xFFFCA5A5),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 24.dp)
+                )
+            }
+        }
     }
 }
 

@@ -104,5 +104,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:5.3.2")
     implementation("androidx.media3:media3-exoplayer:1.10.0")
     implementation("androidx.media3:media3-ui:1.10.0")
+    implementation("io.github.panpf.zoomimage:zoomimage-compose-coil3:1.4.0")
     implementation("com.xzakota.hyper.notification:focus-api:1.4")
 }

@@ -32,6 +32,7 @@ object GameKeeFetchHelper {
     private const val ACCEPT_HTML = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
     private const val ACCEPT_IMAGE = "image/*,*/*"
     private const val ACCEPT_LANGUAGE = "zh-CN"
+    private const val DEFAULT_MAX_DECODE_EDGE = 2560
     private const val DNS_CACHE_TTL_MS = 10 * 60 * 1000L
     private val GAMEKEE_RESOLVE_IPS = listOf(
         "39.96.244.149"
@@ -440,6 +441,7 @@ object GameKeeFetchHelper {
 
     private fun decodeBitmap(
         response: Response,
+        maxDecodeDimension: Int = DEFAULT_MAX_DECODE_EDGE,
         onProgress: ((downloadedBytes: Long, totalBytes: Long) -> Unit)? = null
     ): Bitmap? {
         if (!response.isSuccessful) return null
@@ -458,12 +460,29 @@ object GameKeeFetchHelper {
             }
             val bytes = output.toByteArray()
             if (bytes.isEmpty()) return null
-            return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            val safeMax = maxDecodeDimension.coerceAtLeast(512)
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            val srcWidth = bounds.outWidth
+            val srcHeight = bounds.outHeight
+            if (srcWidth <= 0 || srcHeight <= 0) {
+                return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            }
+            var sample = 1
+            while ((srcWidth / sample) > safeMax || (srcHeight / sample) > safeMax) {
+                sample *= 2
+            }
+            val decodeOptions = BitmapFactory.Options().apply {
+                inSampleSize = sample.coerceAtLeast(1)
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
+            return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
         }
     }
 
     private fun fetchImageInternal(
         imageUrl: String,
+        maxDecodeDimension: Int = DEFAULT_MAX_DECODE_EDGE,
         onProgress: ((downloadedBytes: Long, totalBytes: Long) -> Unit)? = null
     ): Bitmap? {
         val normalized = imageUrl.trim()
@@ -495,7 +514,11 @@ object GameKeeFetchHelper {
                         .build()
                     val result = runCatching {
                         client.newCall(req).execute().use { resp: Response ->
-                            decodeBitmap(resp, onProgress)
+                            decodeBitmap(
+                                response = resp,
+                                maxDecodeDimension = maxDecodeDimension,
+                                onProgress = onProgress
+                            )
                         }
                     }
                     if (result.isSuccess && result.getOrNull() != null) return result.getOrNull()
@@ -508,15 +531,27 @@ object GameKeeFetchHelper {
         return null
     }
 
-    fun fetchImage(imageUrl: String): Bitmap? {
-        return fetchImageInternal(imageUrl, onProgress = null)
+    fun fetchImage(
+        imageUrl: String,
+        maxDecodeDimension: Int = DEFAULT_MAX_DECODE_EDGE
+    ): Bitmap? {
+        return fetchImageInternal(
+            imageUrl = imageUrl,
+            maxDecodeDimension = maxDecodeDimension,
+            onProgress = null
+        )
     }
 
     fun fetchImageWithProgress(
         imageUrl: String,
-        onProgress: (downloadedBytes: Long, totalBytes: Long) -> Unit
+        onProgress: (downloadedBytes: Long, totalBytes: Long) -> Unit,
+        maxDecodeDimension: Int = DEFAULT_MAX_DECODE_EDGE
     ): Bitmap? {
-        return fetchImageInternal(imageUrl, onProgress = onProgress)
+        return fetchImageInternal(
+            imageUrl = imageUrl,
+            maxDecodeDimension = maxDecodeDimension,
+            onProgress = onProgress
+        )
     }
 
     fun downloadToFile(
