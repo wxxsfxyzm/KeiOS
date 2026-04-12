@@ -62,7 +62,7 @@ import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Report
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
+import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 
 @Composable
 fun McpPage(
@@ -317,7 +317,7 @@ fun McpPage(
         }
     }
 
-    WindowBottomSheet(
+    SnapshotWindowBottomSheet(
         show = showEditSheet,
         title = "编辑 MCP 服务",
         onDismissRequest = { showEditSheet = false },
@@ -361,7 +361,6 @@ fun McpPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 12.dp)
         ) {
             GlassSearchField(
                 value = serverName,

@@ -93,7 +93,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowListPopup
+import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 
 private fun normalizeGuideMediaSource(raw: String): String {
     val value = raw.trim()
@@ -650,7 +650,7 @@ fun GuideGalleryExpressionCardItem(
                         onClick = { showPicker = !showPicker }
                     )
                     if (showPicker) {
-                        WindowListPopup(
+                        SnapshotWindowListPopup(
                             show = showPicker,
                             alignment = PopupPositionProvider.Align.BottomEnd,
                             onDismissRequest = { showPicker = false },
@@ -790,7 +790,7 @@ fun GuideGalleryVideoGroupCardItem(
                             onClick = { showPicker = !showPicker }
                         )
                         if (showPicker) {
-                            WindowListPopup(
+                            SnapshotWindowListPopup(
                                 show = showPicker,
                                 alignment = PopupPositionProvider.Align.BottomEnd,
                                 onDismissRequest = { showPicker = false },
@@ -1618,7 +1618,7 @@ fun GuideSkillCardItem(
                             onClick = { showLevelPopup = !showLevelPopup }
                         )
                         if (showLevelPopup) {
-                            WindowListPopup(
+                            SnapshotWindowListPopup(
                                 show = showLevelPopup,
                                 alignment = PopupPositionProvider.Align.BottomEnd,
                                 onDismissRequest = { showLevelPopup = false },
@@ -1907,7 +1907,7 @@ fun GuideWeaponCardItem(
                                     onClick = { showLevelPopup = !showLevelPopup }
                                 )
                                 if (showLevelPopup) {
-                                    WindowListPopup(
+                                    SnapshotWindowListPopup(
                                         show = showLevelPopup,
                                         alignment = PopupPositionProvider.Align.BottomEnd,
                                         onDismissRequest = { showLevelPopup = false },
@@ -2177,7 +2177,7 @@ private fun GuideEffectLevelPicker(
             onClick = onTogglePopup
         )
         if (showLevelPopup) {
-            WindowListPopup(
+            SnapshotWindowListPopup(
                 show = showLevelPopup,
                 alignment = PopupPositionProvider.Align.BottomEnd,
                 onDismissRequest = onDismissPopup,

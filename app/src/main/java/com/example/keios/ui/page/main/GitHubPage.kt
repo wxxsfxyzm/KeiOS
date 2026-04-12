@@ -55,6 +55,8 @@ import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.LiquidActionBarPopupAnchors
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
+import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
+import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.feature.github.data.local.AppIconCache
 import com.example.keios.feature.github.data.local.GitHubTrackStore
@@ -98,9 +100,7 @@ import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.icon.extended.Timer
 import top.yukonga.miuix.kmp.icon.extended.Update
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowDialog
-import top.yukonga.miuix.kmp.window.WindowListPopup
 import kotlin.math.max
 
 
@@ -553,7 +553,7 @@ fun GitHubPage(
                             LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex ->
                                 when (slotIndex) {
                                     0 -> if (showSortPopup) {
-                                        WindowListPopup(
+                                        SnapshotWindowListPopup(
                                             show = showSortPopup,
                                             alignment = PopupPositionProvider.Align.BottomStart,
                                             onDismissRequest = { showSortPopup = false },
@@ -578,7 +578,7 @@ fun GitHubPage(
                                     }
 
                                     1 -> if (showIntervalPopup) {
-                                        WindowListPopup(
+                                        SnapshotWindowListPopup(
                                             show = showIntervalPopup,
                                             alignment = PopupPositionProvider.Align.BottomStart,
                                             onDismissRequest = { showIntervalPopup = false },
@@ -914,7 +914,7 @@ fun GitHubPage(
         }
     }
 
-    WindowBottomSheet(
+    SnapshotWindowBottomSheet(
         show = showAddSheet,
         title = if (editingTrackedItem == null) "新增跟踪" else "编辑跟踪",
         onDismissRequest = {
@@ -951,7 +951,6 @@ fun GitHubPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 12.dp)
         ) {
             GlassSearchField(
                 value = repoUrlInput,

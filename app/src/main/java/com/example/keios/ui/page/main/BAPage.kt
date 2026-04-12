@@ -60,6 +60,8 @@ import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionBarPopupAnchors
 import com.example.keios.ui.page.main.widget.LiquidActionItem
+import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
+import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
@@ -93,8 +95,6 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Timer
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
-import top.yukonga.miuix.kmp.window.WindowListPopup
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -874,7 +874,7 @@ fun BAPage(
 
                             LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex ->
                                 if (slotIndex == 1 && showCalendarIntervalPopup) {
-                                    WindowListPopup(
+                                    SnapshotWindowListPopup(
                                         show = showCalendarIntervalPopup,
                                         alignment = PopupPositionProvider.Align.BottomStart,
                                         onDismissRequest = { showCalendarIntervalPopup = false },
@@ -997,7 +997,7 @@ fun BAPage(
                                     onClick = { showOverviewServerPopup = !showOverviewServerPopup }
                                 )
                                 if (showOverviewServerPopup) {
-                                    WindowListPopup(
+                                    SnapshotWindowListPopup(
                                         show = showOverviewServerPopup,
                                         alignment = PopupPositionProvider.Align.BottomEnd,
                                         onDismissRequest = { showOverviewServerPopup = false },
@@ -1816,7 +1816,7 @@ fun BAPage(
         }
     }
 
-    WindowBottomSheet(
+    SnapshotWindowBottomSheet(
         show = showSettingsSheet,
         title = "BA 配置",
         onDismissRequest = { closeSettingsSheet() },
@@ -1846,8 +1846,7 @@ fun BAPage(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 12.dp),
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
@@ -1876,7 +1875,7 @@ fun BAPage(
                         onClick = { showCafeLevelPopup = !showCafeLevelPopup }
                     )
                     if (showCafeLevelPopup) {
-                        WindowListPopup(
+                        SnapshotWindowListPopup(
                             show = showCafeLevelPopup,
                             alignment = PopupPositionProvider.Align.BottomEnd,
                             onDismissRequest = { showCafeLevelPopup = false },
