@@ -48,6 +48,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -708,49 +709,91 @@ private fun buildGuideVideoPlayer(context: Context): ExoPlayer {
 @Composable
 fun GuideProfileMetaLine(item: BaGuideMetaItem) {
     val isPosition = item.title == "位置"
+    val isRarity = item.title == "稀有度"
+    val inlineTitleIcon = isRarity || item.title == "学院"
     val summary = if (isPosition) "" else item.value.ifBlank { "-" }
     val titleSlotWidth = 70.dp
     val iconSlotWidth = 34.dp
     val iconSlotHeight = 24.dp
-    val iconWidth = if (isPosition) 30.dp else 20.dp
-    val iconHeight = 20.dp
+    val iconWidth = when {
+        isRarity -> 30.dp
+        isPosition -> 30.dp
+        else -> 20.dp
+    }
+    val iconHeight = when {
+        isRarity -> 24.dp
+        else -> 20.dp
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = item.title,
-            color = MiuixTheme.colorScheme.onBackgroundVariant,
-            modifier = Modifier.width(titleSlotWidth),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        Box(
-            modifier = Modifier
-                .width(iconSlotWidth)
-                .height(iconSlotHeight),
-            contentAlignment = Alignment.Center
-        ) {
-            if (item.imageUrl.isNotBlank()) {
-                GuideRemoteIcon(
-                    imageUrl = item.imageUrl,
-                    iconWidth = iconWidth,
-                    iconHeight = iconHeight
+        if (inlineTitleIcon) {
+            Row(
+                modifier = Modifier,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = item.title,
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+                if (item.imageUrl.isNotBlank()) {
+                    GuideRemoteIcon(
+                        imageUrl = item.imageUrl,
+                        iconWidth = iconWidth,
+                        iconHeight = iconHeight
+                    )
+                }
             }
-        }
-        if (!isPosition) {
+        } else {
+            val hasLeadingIcon = item.imageUrl.isNotBlank()
+            val nonInlineTitleWidth = if (hasLeadingIcon) {
+                titleSlotWidth
+            } else {
+                titleSlotWidth + iconSlotWidth + 8.dp
+            }
             Text(
-                text = summary,
-                color = MiuixTheme.colorScheme.onBackground,
-                modifier = Modifier.fillMaxWidth(),
+                text = item.title,
+                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                modifier = Modifier.width(nonInlineTitleWidth),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
+            if (hasLeadingIcon) {
+                Box(
+                    modifier = Modifier
+                        .width(iconSlotWidth)
+                        .height(iconSlotHeight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    GuideRemoteIcon(
+                        imageUrl = item.imageUrl,
+                        iconWidth = iconWidth,
+                        iconHeight = iconHeight
+                    )
+                }
+            }
+        }
+        if (!isPosition) {
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    text = summary,
+                    color = MiuixTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.End,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         } else {
-            Spacer(modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }

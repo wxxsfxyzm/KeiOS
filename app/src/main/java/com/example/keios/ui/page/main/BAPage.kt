@@ -111,6 +111,10 @@ private enum class BAInitState {
     Draft
 }
 
+private object BASessionState {
+    var didResetScrollOnThisProcess: Boolean = false
+}
+
 private enum class BaCalendarRefreshIntervalOption(val hours: Int, val label: String) {
     Hour1(1, "1 小时"),
     Hour3(3, "3 小时"),
@@ -1114,13 +1118,10 @@ private object BASettingsStore {
         kv().encode(KEY_COFFEE_INVITE2_USED_MS, epochMs.coerceAtLeast(0L))
     }
 
-    fun loadListScrollIndex(): Int = kv().decodeInt(KEY_LIST_SCROLL_INDEX, 0).coerceAtLeast(0)
-
-    fun loadListScrollOffset(): Int = kv().decodeInt(KEY_LIST_SCROLL_OFFSET, 0).coerceAtLeast(0)
-
-    fun saveListScrollState(index: Int, offset: Int) {
-        kv().encode(KEY_LIST_SCROLL_INDEX, index.coerceAtLeast(0))
-        kv().encode(KEY_LIST_SCROLL_OFFSET, offset.coerceAtLeast(0))
+    fun clearListScrollState() {
+        val store = kv()
+        store.removeValueForKey(KEY_LIST_SCROLL_INDEX)
+        store.removeValueForKey(KEY_LIST_SCROLL_OFFSET)
     }
 }
 
@@ -1132,12 +1133,7 @@ fun BAPage(
     onActionBarInteractingChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val initialScrollIndex = remember { BASettingsStore.loadListScrollIndex() }
-    val initialScrollOffset = remember { BASettingsStore.loadListScrollOffset() }
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = initialScrollIndex,
-        initialFirstVisibleItemScrollOffset = initialScrollOffset
-    )
+    val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     val surfaceColor = MiuixTheme.colorScheme.surface
     val backdrop: LayerBackdrop = rememberLayerBackdrop {
@@ -1157,6 +1153,15 @@ fun BAPage(
     var showOverviewServerPopup by remember { mutableStateOf(false) }
     var showCafeLevelPopup by remember { mutableStateOf(false) }
     var showCalendarIntervalPopup by remember { mutableStateOf(false) }
+
+    // Reset once per cold process start so app relaunch always lands at BA top.
+    LaunchedEffect(Unit) {
+        if (!BASessionState.didResetScrollOnThisProcess) {
+            BASettingsStore.clearListScrollState()
+            listState.scrollToItem(0)
+            BASessionState.didResetScrollOnThisProcess = true
+        }
+    }
 
     val initialServerIndex = remember { BASettingsStore.loadServerIndex() }
     val initialSnapshotNowMs = remember { System.currentTimeMillis() }
@@ -1639,15 +1644,6 @@ fun BAPage(
 
     DisposableEffect(Unit) {
         onDispose { onActionBarInteractingChanged(false) }
-    }
-
-    DisposableEffect(listState) {
-        onDispose {
-            BASettingsStore.saveListScrollState(
-                index = listState.firstVisibleItemIndex,
-                offset = listState.firstVisibleItemScrollOffset
-            )
-        }
     }
 
     LaunchedEffect(scrollToTopSignal) {
@@ -2652,10 +2648,6 @@ fun BAPage(
                                         .fillMaxWidth()
                                         .combinedClickable(
                                             onClick = {
-                                                BASettingsStore.saveListScrollState(
-                                                    index = listState.firstVisibleItemIndex,
-                                                    offset = listState.firstVisibleItemScrollOffset
-                                                )
                                                 onOpenPoolStudentGuide(pool.linkUrl)
                                             },
                                             onLongClick = { openCalendarLink(pool.linkUrl) }

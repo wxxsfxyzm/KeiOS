@@ -430,10 +430,16 @@ fun BaStudentGuidePage(
                                         scaleY = 1f
                                     }
                                 if (tab.localLogoRes != null) {
+                                    val useThemeTintForLocalLogo =
+                                        tab == GuideBottomTab.Skills || tab == GuideBottomTab.Profile || tab == GuideBottomTab.Simulate
                                     Icon(
                                         painter = painterResource(id = tab.localLogoRes),
                                         contentDescription = tab.label,
-                                        tint = Color.Unspecified,
+                                        tint = if (useThemeTintForLocalLogo) {
+                                            MiuixTheme.colorScheme.onSurface
+                                        } else {
+                                            Color.Unspecified
+                                        },
                                         modifier = tabIconModifier
                                     )
                                 } else {
