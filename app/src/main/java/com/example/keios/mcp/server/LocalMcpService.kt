@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
+import com.example.keios.feature.github.domain.GitHubReleaseCheckService
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.core.system.ShizukuApiUtils
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -809,92 +810,14 @@ class LocalMcpService(
     }
 
     private fun evaluateTrackedApp(item: GitHubTrackedApp): GitHubCheckRow {
-        val preReleaseCheckEnabled = item.checkPreRelease
-        val local = runCatching {
-            GitHubVersionUtils.localVersionName(appContext, item.packageName)
-        }.getOrDefault("unknown")
-        val atomEntries = GitHubVersionUtils.fetchReleaseEntriesFromAtom(item.owner, item.repo, limit = 30)
-            .getOrDefault(emptyList())
-        val matchedEntry = atomEntries.firstOrNull {
-            GitHubVersionUtils.compareVersionToCandidates(local, it.candidates) == 0
-        }
-        val latestPreEntry = atomEntries.firstOrNull { it.isLikelyPreRelease }
-        val stableResult = GitHubVersionUtils.fetchLatestReleaseSignals(
-            owner = item.owner,
-            repo = item.repo,
-            atomEntriesHint = atomEntries
-        )
-
-        return stableResult.fold(
-            onSuccess = { stable ->
-                val cmp = GitHubVersionUtils.compareVersionToCandidates(local, stable.candidates)
-                val latestPreLabel = latestPreEntry?.tag?.ifBlank {
-                    latestPreEntry.title
-                }.orEmpty()
-                val preVsStable = if (latestPreLabel.isNotBlank()) {
-                    GitHubVersionUtils.compareVersionToCandidates(latestPreLabel, stable.candidates)
-                } else {
-                    null
-                }
-                val preRelevant = latestPreEntry != null && (preVsStable == null || preVsStable > 0)
-                val localIsPre = matchedEntry?.isLikelyPreRelease == true
-                val preCmp = if (latestPreEntry != null) {
-                    GitHubVersionUtils.compareVersionToCandidates(local, latestPreEntry.candidates)
-                } else null
-                val hasPreUpdate = preReleaseCheckEnabled &&
-                    localIsPre &&
-                    preRelevant &&
-                    (preCmp?.let { it < 0 } == true)
-                val stableUpdate = cmp?.let { it < 0 } == true
-                val hasUpdate = hasPreUpdate || stableUpdate
-                val preReleaseDisplay = latestPreEntry?.title?.ifBlank { latestPreEntry.tag }.orEmpty()
-                val status = when {
-                    hasPreUpdate -> "预发有更新"
-                    stableUpdate -> "发现更新"
-                    preReleaseCheckEnabled && localIsPre && preRelevant -> "预发行"
-                    hasUpdate.not() -> "已是最新"
-                    else -> "版本格式无法精确比较"
-                }
-                GitHubCheckRow(
-                    item = item,
-                    localVersion = local,
-                    stableVersion = stable.displayVersion,
-                    preReleaseVersion = when {
-                        preReleaseCheckEnabled && localIsPre && preRelevant -> matchedEntry.title.ifBlank { matchedEntry.tag }
-                        preReleaseCheckEnabled && preRelevant -> preReleaseDisplay
-                        else -> ""
-                    },
-                    status = status,
-                    hasUpdate = hasUpdate
-                )
-            },
-            onFailure = { err ->
-                if (matchedEntry != null) {
-                    val localIsPre = matchedEntry.isLikelyPreRelease
-                    val preInfo = if (preReleaseCheckEnabled && localIsPre) {
-                        matchedEntry.title.ifBlank { matchedEntry.tag }
-                    } else {
-                        ""
-                    }
-                    GitHubCheckRow(
-                        item = item,
-                        localVersion = local,
-                        stableVersion = matchedEntry.title.ifBlank { matchedEntry.tag },
-                        preReleaseVersion = preInfo,
-                        status = if (preReleaseCheckEnabled && localIsPre) "预发行" else "已匹配发行",
-                        hasUpdate = false
-                    )
-                } else {
-                    GitHubCheckRow(
-                        item = item,
-                        localVersion = local,
-                        stableVersion = "unknown",
-                        preReleaseVersion = "",
-                        status = "检查失败: ${err.message ?: "unknown"}",
-                        hasUpdate = false
-                    )
-                }
-            }
+        val check = GitHubReleaseCheckService.evaluateTrackedApp(appContext, item)
+        return GitHubCheckRow(
+            item = item,
+            localVersion = check.localVersion,
+            stableVersion = check.stableRelease?.displayVersion.orEmpty().ifBlank { "unknown" },
+            preReleaseVersion = check.preReleaseInfo,
+            status = check.message,
+            hasUpdate = check.hasUpdate == true
         )
     }
 

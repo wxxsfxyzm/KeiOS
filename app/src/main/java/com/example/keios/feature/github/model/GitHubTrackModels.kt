@@ -17,32 +17,20 @@ data class InstalledAppItem(
     val packageName: String
 )
 
-data class GitHubReleaseVersionSignals(
-    val displayVersion: String,
-    val rawTag: String,
-    val rawName: String,
-    val candidates: List<String>
-)
-
 data class GitHubCheckCacheEntry(
     val loading: Boolean = false,
     val localVersion: String = "",
     val localVersionCode: Long = -1L,
     val latestTag: String = "",
     val latestStableRawTag: String = "",
+    val latestStableUrl: String = "",
     val latestPreRawTag: String = "",
+    val latestPreUrl: String = "",
     val hasUpdate: Boolean? = null,
     val message: String = "",
     val isPreRelease: Boolean = false,
     val preReleaseInfo: String = "",
     val showPreReleaseInfo: Boolean = false,
-    val hasPreReleaseUpdate: Boolean = false
-)
-
-data class GitHubAtomReleaseEntry(
-    val tag: String,
-    val title: String,
-    val link: String,
-    val candidates: List<String>,
-    val isLikelyPreRelease: Boolean
+    val hasPreReleaseUpdate: Boolean = false,
+    val sourceStrategyId: String = ""
 )

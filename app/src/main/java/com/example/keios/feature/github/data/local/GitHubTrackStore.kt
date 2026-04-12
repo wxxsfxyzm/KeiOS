@@ -86,13 +86,16 @@ object GitHubTrackStore {
                             localVersionCode = item.optLong("localVersionCode", -1L),
                             latestTag = item.optString("latestTag"),
                             latestStableRawTag = item.optString("latestStableRawTag"),
+                            latestStableUrl = item.optString("latestStableUrl"),
                             latestPreRawTag = item.optString("latestPreRawTag"),
+                            latestPreUrl = item.optString("latestPreUrl"),
                             hasUpdate = if (item.has("hasUpdate")) item.optBoolean("hasUpdate") else null,
                             message = item.optString("message"),
                             isPreRelease = item.optBoolean("isPreRelease", false),
                             preReleaseInfo = item.optString("preReleaseInfo"),
                             showPreReleaseInfo = item.optBoolean("showPreReleaseInfo", false),
-                            hasPreReleaseUpdate = item.optBoolean("hasPreReleaseUpdate", false)
+                            hasPreReleaseUpdate = item.optBoolean("hasPreReleaseUpdate", false),
+                            sourceStrategyId = item.optString("sourceStrategyId")
                         )
                     )
                 }
@@ -111,13 +114,16 @@ object GitHubTrackStore {
                     .put("localVersionCode", state.localVersionCode)
                     .put("latestTag", state.latestTag)
                     .put("latestStableRawTag", state.latestStableRawTag)
+                    .put("latestStableUrl", state.latestStableUrl)
                     .put("latestPreRawTag", state.latestPreRawTag)
+                    .put("latestPreUrl", state.latestPreUrl)
                     .put("hasUpdate", state.hasUpdate)
                     .put("message", state.message)
                     .put("isPreRelease", state.isPreRelease)
                     .put("preReleaseInfo", state.preReleaseInfo)
                     .put("showPreReleaseInfo", state.showPreReleaseInfo)
                     .put("hasPreReleaseUpdate", state.hasPreReleaseUpdate)
+                    .put("sourceStrategyId", state.sourceStrategyId)
             )
         }
         kv().encode(KEY_CHECK_CACHE, obj.toString())

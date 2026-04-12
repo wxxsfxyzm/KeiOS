@@ -147,4 +147,7 @@ dependencies {
     implementation("androidx.media3:media3-ui:$media3Version")
     implementation("io.github.panpf.zoomimage:zoomimage-compose-coil3:$zoomImageVersion")
     implementation("com.xzakota.hyper.notification:focus-api:$focusApiVersion")
+
+    testImplementation(kotlin("test"))
+    testImplementation("junit:junit:4.13.2")
 }

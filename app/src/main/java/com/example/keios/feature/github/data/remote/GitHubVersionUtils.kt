@@ -2,51 +2,18 @@ package com.example.keios.feature.github.data.remote
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
-import com.example.keios.feature.github.model.GitHubAtomReleaseEntry
-import com.example.keios.feature.github.model.GitHubReleaseVersionSignals
+import com.example.keios.feature.github.model.GitHubReleaseChannel
+import com.example.keios.feature.github.model.GitHubVersionCandidate
+import com.example.keios.feature.github.model.GitHubVersionCandidateSource
 import com.example.keios.feature.github.model.InstalledAppItem
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.xmlpull.v1.XmlPullParser
-import org.xmlpull.v1.XmlPullParserFactory
 import java.net.URI
-import java.net.URLDecoder
 import java.util.Locale
-import java.util.concurrent.TimeUnit
-
-private data class CachedValue<T>(
-    val value: T,
-    val timestamp: Long
-)
+import kotlin.math.abs
 
 object GitHubVersionUtils {
-    private const val CACHE_TTL_MS = 90_000L
-    private const val GITHUB_USER_AGENT = "KeiOS-App/1.0 (Android)"
-    private val stableCache = mutableMapOf<String, CachedValue<Result<GitHubReleaseVersionSignals>>>()
-    private val atomCache = mutableMapOf<String, CachedValue<Result<List<GitHubAtomReleaseEntry>>>>()
-    private val githubClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .callTimeout(10, TimeUnit.SECONDS)
-            .connectTimeout(8, TimeUnit.SECONDS)
-            .readTimeout(8, TimeUnit.SECONDS)
-            .writeTimeout(8, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .fastFallback(true)
-            .build()
-    }
-    private val githubNoRedirectClient: OkHttpClient by lazy {
-        githubClient.newBuilder()
-            .followRedirects(false)
-            .followSslRedirects(false)
-            .build()
-    }
-
     fun buildReleaseUrl(owner: String, repo: String): String {
         return "https://github.com/$owner/$repo/releases"
     }
@@ -102,7 +69,9 @@ object GitHubVersionUtils {
     fun localVersionCode(context: Context, packageName: String): Long {
         val pm = context.packageManager
         val pkgInfo = pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pkgInfo.longVersionCode else {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            pkgInfo.longVersionCode
+        } else {
             @Suppress("DEPRECATION")
             pkgInfo.versionCode.toLong()
         }
@@ -137,82 +106,270 @@ object GitHubVersionUtils {
         return null
     }
 
-    private fun normalizeVersionCandidates(text: String): List<String> {
-        val base = text.trim().ifBlank { return emptyList() }
-        val tokens = linkedSetOf<String>()
-        fun addCandidate(v: String) {
-            val trimmed = v.trim().trim('"', '\'', '(', ')', '[', ']', '{', '}')
-            if (trimmed.isBlank()) return
-            tokens += trimmed
-            tokens += trimmed.removePrefix("v")
-            tokens += trimmed.removePrefix("V")
-            tokens += trimmed.replace('_', '.')
-        }
-
-        addCandidate(base)
-        Regex("""[vV]?\d+(?:[._-]\d+)*(?:[a-zA-Z]+\d*)?(?:[-.]?(?:alpha|beta|rc|preview|canary|dev)\d*)?""")
-            .findAll(base)
-            .forEach { addCandidate(it.value) }
-
-        return tokens
-            .map { it.trim().lowercase(Locale.ROOT) }
-            .filter { it.isNotBlank() }
-            .distinct()
-    }
-
-    fun compareVersionToCandidates(localVersion: String, candidates: List<String>): Int? {
-        val localTokens = normalizeVersionCandidates(localVersion)
-        if (localTokens.isEmpty() || candidates.isEmpty()) return null
-
-        var best: Int? = null
-        for (local in localTokens) {
-            for (remote in candidates) {
-                val cmp = compareSemverLike(local, remote)
-                if (cmp != null) {
-                    if (best == null || kotlin.math.abs(cmp) < kotlin.math.abs(best)) {
-                        best = cmp
-                    }
-                    if (cmp == 0) return 0
+    fun buildVersionCandidates(vararg inputs: Pair<GitHubVersionCandidateSource, String>): List<GitHubVersionCandidate> {
+        val dedup = linkedMapOf<String, GitHubVersionCandidate>()
+        inputs.forEach { (source, text) ->
+            normalizeVersionCandidates(text).forEach { candidate ->
+                val existing = dedup[candidate]
+                if (existing == null || source.priority < existing.source.priority) {
+                    dedup[candidate] = GitHubVersionCandidate(candidate, source)
                 }
             }
         }
-        return best
+        return dedup.values.toList()
     }
 
-    private fun compareSemverLike(a: String, b: String): Int? {
-        val pa = parseVersionParts(a) ?: return null
-        val pb = parseVersionParts(b) ?: return null
+    fun normalizeVersionCandidates(text: String): List<String> {
+        val base = text.trim()
+        if (base.isBlank()) return emptyList()
 
-        val max = maxOf(pa.numbers.size, pb.numbers.size)
-        for (i in 0 until max) {
-            val va = pa.numbers.getOrElse(i) { 0 }
-            val vb = pb.numbers.getOrElse(i) { 0 }
-            if (va != vb) return va.compareTo(vb)
+        val tokens = linkedSetOf<String>()
+
+        fun push(candidate: String) {
+            val normalized = candidate.trim().lowercase(Locale.ROOT)
+            if (normalized.isNotBlank()) tokens += normalized
         }
 
-        if (pa.channel != pb.channel) {
-            return pa.channel.rank.compareTo(pb.channel.rank)
+        fun addCandidate(value: String) {
+            val trimmed = value.trim()
+                .trim('"', '\'', '(', ')', '[', ']', '{', '}', ',', ';', ':')
+            if (trimmed.isBlank()) return
+
+            val canonical = canonicalizeCandidate(trimmed)
+            if (canonical.isBlank()) return
+
+            push(canonical)
+            push(canonical.removePrefix("v"))
+            push(canonical.removePrefix("V"))
+
+            val withoutBuild = canonical.substringBefore('+')
+            if (withoutBuild != canonical) {
+                push(withoutBuild)
+                push(withoutBuild.removePrefix("v"))
+            }
         }
 
-        if (pa.channelNumber != pb.channelNumber) {
-            return pa.channelNumber.compareTo(pb.channelNumber)
+        addCandidate(base)
+
+        val versionRegex = Regex(
+            """[vV]?\d+(?:[._-]\d+)*(?:\s*[-._ ]?\s*(?:dev|nightly|canary|snapshot|alpha|beta|rc|preview|pre(?:-release)?)(?:\s*[-._ ]?\s*\d+)?)?(?:\+[0-9A-Za-z.-]+)?"""
+        )
+        versionRegex.findAll(base).forEach { addCandidate(it.value) }
+
+        return filterLessSpecificCandidates(tokens.toList())
+    }
+
+    fun compareVersionToCandidates(localVersion: String, candidates: List<String>): Int? {
+        return compareCandidateSets(normalizeVersionCandidates(localVersion), candidates)
+    }
+
+    fun compareVersionToStructuredCandidates(localVersion: String, candidates: List<GitHubVersionCandidate>): Int? {
+        return compareCandidateSetsWithSources(normalizeVersionCandidates(localVersion), candidates)
+    }
+
+    fun compareStructuredCandidateSets(
+        leftCandidates: List<GitHubVersionCandidate>,
+        rightCandidates: List<GitHubVersionCandidate>
+    ): Int? {
+        val left = leftCandidates.map { it.value }
+        return compareCandidateSetsWithSources(left, rightCandidates)
+    }
+
+    fun classifyVersionChannel(text: String): GitHubReleaseChannel? {
+        val normalized = normalizeVersionCandidates(text)
+        val parsed = normalized
+            .mapNotNull(::parseVersionParts)
+            .maxByOrNull(::versionPartsSpecificityScore)
+            ?.channel
+        return parsed
+    }
+
+    fun compareCandidateSets(
+        leftCandidates: List<String>,
+        rightCandidates: List<String>
+    ): Int? {
+        val comparableRight = rightCandidates.map { GitHubVersionCandidate(it, GitHubVersionCandidateSource.Content) }
+        return compareCandidateSetsWithSources(leftCandidates, comparableRight)
+    }
+
+    fun compareCandidateSetsWithSources(
+        leftCandidates: List<String>,
+        rightCandidates: List<GitHubVersionCandidate>
+    ): Int? {
+        val left = leftCandidates
+            .flatMap(::normalizeVersionCandidates)
+            .distinct()
+            .mapNotNull { parseComparableCandidate(it, sourcePriority = 0) }
+        val right = rightCandidates
+            .flatMap { candidate ->
+                normalizeVersionCandidates(candidate.value).mapNotNull { parsed ->
+                    parseComparableCandidate(parsed, candidate.source.priority)
+                }
+            }
+            .distinctBy { it.normalized to it.sourcePriority }
+
+        if (left.isEmpty() || right.isEmpty()) return null
+
+        var bestCmp: Int? = null
+        var bestScore = Int.MIN_VALUE
+        for (local in left) {
+            for (remote in right) {
+                val cmp = compareParsedVersionParts(local.parts, remote.parts)
+                val score = similarityScore(local, remote)
+                if (cmp == 0 && score >= bestScore) {
+                    bestCmp = 0
+                    bestScore = score
+                    continue
+                }
+                if (score > bestScore) {
+                    bestScore = score
+                    bestCmp = cmp
+                }
+            }
+        }
+        return bestCmp
+    }
+
+    private fun canonicalizeCandidate(raw: String): String {
+        return raw
+            .replace(Regex("""(?i)pre[- ]release"""), "preview")
+            .replace(Regex("""(?i)snapshot"""), "dev")
+            .replace(Regex("""(?i)nightly"""), "dev")
+            .replace(Regex("""(?i)canary"""), "dev")
+            .replace('_', '.')
+            .replace(Regex("""\s+"""), "")
+            .replace(Regex("""\.\-|\-\.|--"""), "-")
+    }
+
+    private fun filterLessSpecificCandidates(candidates: List<String>): List<String> {
+        if (candidates.size <= 1) return candidates
+
+        val richerKeys = candidates.mapNotNull { candidate ->
+            parseVersionParts(candidate)?.takeIf { parts ->
+                parts.channel != GitHubReleaseChannel.STABLE || parts.channelNumber > 0
+            }?.numbers
+        }.toSet()
+
+        return candidates.filter { candidate ->
+            val parts = parseVersionParts(candidate) ?: return@filter true
+            val isTruncatedStable = parts.channel == GitHubReleaseChannel.STABLE &&
+                parts.channelNumber == 0 &&
+                parts.numbers in richerKeys
+            !isTruncatedStable
+        }.distinct()
+    }
+
+    private data class ComparableVersionCandidate(
+        val normalized: String,
+        val parts: VersionParts,
+        val sourcePriority: Int,
+        val semanticDepth: Int,
+        val looksLikeDateStamp: Boolean
+    )
+
+    private fun parseComparableCandidate(
+        raw: String,
+        sourcePriority: Int
+    ): ComparableVersionCandidate? {
+        val normalized = canonicalizeCandidate(raw).lowercase(Locale.ROOT)
+        val parts = parseVersionParts(normalized) ?: return null
+        return ComparableVersionCandidate(
+            normalized = normalized,
+            parts = parts,
+            sourcePriority = sourcePriority,
+            semanticDepth = parts.numbers.size + if (parts.channel != GitHubReleaseChannel.STABLE) 1 else 0,
+            looksLikeDateStamp = parts.channel == GitHubReleaseChannel.STABLE &&
+                parts.numbers.size == 1 &&
+                parts.numbers.firstOrNull() in 20_000_000..29_999_999
+        )
+    }
+
+    private fun similarityScore(
+        left: ComparableVersionCandidate,
+        right: ComparableVersionCandidate
+    ): Int {
+        val sameRawBonus = if (left.normalized == right.normalized) 180 else 0
+        val sharedNumericPrefix = sharedNumericPrefix(left.parts.numbers, right.parts.numbers)
+        val sameNumericLengthBonus = if (left.parts.numbers.size == right.parts.numbers.size) 30 else 0
+        val sameChannelBonus = if (left.parts.channel == right.parts.channel) 50 else 0
+        val sameChannelNumberBonus = if (left.parts.channelNumber == right.parts.channelNumber) 25 else 0
+        val sourceBonus = sourceReliabilityBonus(right.sourcePriority)
+        val semanticDepthBonus = right.semanticDepth * 70
+        val numericLengthPenalty = abs(left.parts.numbers.size - right.parts.numbers.size) * 10
+        val channelNumberPenalty = abs(left.parts.channelNumber - right.parts.channelNumber).coerceAtMost(20) * 6
+        val dateStampPenalty = if (right.looksLikeDateStamp && left.parts.numbers.size >= 2) 420 else 0
+        return sameRawBonus +
+            sharedNumericPrefix * 160 +
+            sameNumericLengthBonus +
+            sameChannelBonus +
+            sameChannelNumberBonus +
+            sourceBonus -
+            dateStampPenalty +
+            semanticDepthBonus -
+            numericLengthPenalty -
+            channelNumberPenalty
+    }
+
+    private fun sourceReliabilityBonus(sourcePriority: Int): Int {
+        return when (sourcePriority) {
+            GitHubVersionCandidateSource.Tag.priority -> 520
+            GitHubVersionCandidateSource.Title.priority -> 420
+            GitHubVersionCandidateSource.Link.priority -> 280
+            GitHubVersionCandidateSource.Id.priority -> 160
+            else -> 40
+        }
+    }
+
+    private fun versionPartsSpecificityScore(parts: VersionParts): Int {
+        val channelBonus = if (parts.channel != GitHubReleaseChannel.STABLE) 100 else 0
+        val depthBonus = parts.numbers.size * 10
+        val channelNumberBonus = parts.channelNumber.coerceAtMost(9)
+        return channelBonus + depthBonus + channelNumberBonus
+    }
+
+    private fun sharedNumericPrefix(left: List<Int>, right: List<Int>): Int {
+        val max = minOf(left.size, right.size)
+        var count = 0
+        for (index in 0 until max) {
+            if (left[index] != right[index]) break
+            count++
+        }
+        return count
+    }
+
+    private fun compareParsedVersionParts(a: VersionParts, b: VersionParts): Int {
+        val max = maxOf(a.numbers.size, b.numbers.size)
+        for (index in 0 until max) {
+            val av = a.numbers.getOrElse(index) { 0 }
+            val bv = b.numbers.getOrElse(index) { 0 }
+            if (av != bv) return av.compareTo(bv)
+        }
+
+        val channelCmp = channelRank(a.channel).compareTo(channelRank(b.channel))
+        if (channelCmp != 0) return channelCmp
+
+        if (a.channelNumber != b.channelNumber) {
+            return a.channelNumber.compareTo(b.channelNumber)
         }
 
         return 0
     }
 
-    private enum class Channel(val rank: Int) {
-        DEV(0),
-        ALPHA(1),
-        BETA(2),
-        RC(3),
-        PREVIEW(4),
-        STABLE(5)
+    private fun channelRank(channel: GitHubReleaseChannel): Int {
+        return when (channel) {
+            GitHubReleaseChannel.DEV -> 0
+            GitHubReleaseChannel.ALPHA -> 1
+            GitHubReleaseChannel.BETA -> 2
+            GitHubReleaseChannel.RC -> 3
+            GitHubReleaseChannel.PREVIEW -> 4
+            GitHubReleaseChannel.STABLE -> 5
+            GitHubReleaseChannel.UNKNOWN -> 5
+        }
     }
 
     private data class VersionParts(
         val numbers: List<Int>,
-        val channel: Channel,
+        val channel: GitHubReleaseChannel,
         val channelNumber: Int
     )
 
@@ -229,16 +386,16 @@ object GitHubVersionUtils {
 
         val suffix = normalized.substring(coreMatch.range.last + 1)
         val channelMatch = Regex(
-            """(?:^|[^a-z])(dev|canary|alpha|beta|rc|preview|pre(?:-release)?)(?:[^a-z0-9]*(\d+))?"""
+            """(?:^|[^a-z])(dev|nightly|canary|snapshot|alpha|beta|rc|preview|pre(?:-release)?)(?:[^a-z0-9]*(\d+))?"""
         ).find(suffix.ifBlank { normalized })
 
         val channel = when (channelMatch?.groupValues?.getOrNull(1).orEmpty()) {
-            "dev", "canary" -> Channel.DEV
-            "alpha" -> Channel.ALPHA
-            "beta" -> Channel.BETA
-            "rc" -> Channel.RC
-            "preview", "pre", "pre-release" -> Channel.PREVIEW
-            else -> Channel.STABLE
+            "dev", "nightly", "canary", "snapshot" -> GitHubReleaseChannel.DEV
+            "alpha" -> GitHubReleaseChannel.ALPHA
+            "beta" -> GitHubReleaseChannel.BETA
+            "rc" -> GitHubReleaseChannel.RC
+            "preview", "pre", "pre-release" -> GitHubReleaseChannel.PREVIEW
+            else -> GitHubReleaseChannel.STABLE
         }
 
         val channelNumber = channelMatch
@@ -247,177 +404,10 @@ object GitHubVersionUtils {
             ?.toIntOrNull()
             ?: 0
 
-        return VersionParts(coreNumbers, channel, channelNumber)
-    }
-
-    private fun String.decodeXmlEscapes(): String {
-        return this
-            .replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", "\"")
-            .replace("&#39;", "'")
-    }
-
-    private fun parseAtomEntries(xml: String): List<GitHubAtomReleaseEntry> {
-        val parser = XmlPullParserFactory.newInstance().newPullParser().apply {
-            setInput(xml.reader())
-        }
-
-        val result = mutableListOf<GitHubAtomReleaseEntry>()
-        var event = parser.eventType
-
-        var inEntry = false
-        var title = ""
-        var link = ""
-        var id = ""
-
-        while (event != XmlPullParser.END_DOCUMENT) {
-            when (event) {
-                XmlPullParser.START_TAG -> {
-                    when (parser.name) {
-                        "entry" -> {
-                            inEntry = true
-                            title = ""
-                            link = ""
-                            id = ""
-                        }
-                        "title" -> if (inEntry) {
-                            title = parser.nextText().decodeXmlEscapes().trim()
-                        }
-                        "id" -> if (inEntry) {
-                            id = parser.nextText().decodeXmlEscapes().trim()
-                        }
-                        "link" -> if (inEntry) {
-                            val rel = parser.getAttributeValue(null, "rel").orEmpty()
-                            val href = parser.getAttributeValue(null, "href").orEmpty()
-                            if (rel == "alternate" && href.isNotBlank()) {
-                                link = href
-                            }
-                        }
-                    }
-                }
-
-                XmlPullParser.END_TAG -> {
-                    if (parser.name == "entry" && inEntry) {
-                        val effectiveLink = link.ifBlank { id }
-                        val tag = when {
-                            effectiveLink.contains("/releases/tag/") -> {
-                                effectiveLink.substringAfter("/releases/tag/")
-                            }
-                            else -> title
-                        }.trim()
-
-                        if (tag.isNotBlank()) {
-                            val candidates = normalizeVersionCandidates(listOf(title, tag).joinToString(" "))
-                            val lower = listOf(title, tag).joinToString(" ").lowercase(Locale.ROOT)
-                            val likelyPre = lower.contains("beta") || lower.contains("alpha") ||
-                                lower.contains("rc") || lower.contains("preview") || lower.contains("pre-release")
-                            result += GitHubAtomReleaseEntry(
-                                tag = tag,
-                                title = title.ifBlank { tag },
-                                link = effectiveLink,
-                                candidates = candidates,
-                                isLikelyPreRelease = likelyPre
-                            )
-                        }
-                        inEntry = false
-                    }
-                }
-            }
-            event = parser.next()
-        }
-
-        return result
-    }
-
-    private fun fetch(url: String): Result<String> = runCatching {
-        val request = Request.Builder()
-            .url(url)
-            .get()
-            .header("User-Agent", GITHUB_USER_AGENT)
-            .build()
-        githubClient.newCall(request).execute().use { resp ->
-            if (!resp.isSuccessful) error("HTTP ${resp.code}")
-            resp.body?.string().orEmpty()
-        }
-    }
-
-    fun fetchReleaseEntriesFromAtom(
-        owner: String,
-        repo: String,
-        limit: Int = 30
-    ): Result<List<GitHubAtomReleaseEntry>> {
-        val key = "$owner/$repo"
-        val now = System.currentTimeMillis()
-        atomCache[key]?.takeIf { now - it.timestamp < CACHE_TTL_MS }?.let { return it.value }
-
-        val url = "https://github.com/$owner/$repo/releases.atom"
-        val result = fetch(url).map { body ->
-            parseAtomEntries(body).take(limit)
-        }
-        atomCache[key] = CachedValue(result, now)
-        return result
-    }
-
-    fun fetchLatestReleaseSignals(
-        owner: String,
-        repo: String,
-        atomEntriesHint: List<GitHubAtomReleaseEntry>? = null
-    ): Result<GitHubReleaseVersionSignals> {
-        val key = "$owner/$repo"
-        val now = System.currentTimeMillis()
-        stableCache[key]?.takeIf { now - it.timestamp < CACHE_TTL_MS }?.let { return it.value }
-
-        val releaseLatestUrl = "https://github.com/$owner/$repo/releases/latest"
-        val request = Request.Builder()
-            .url(releaseLatestUrl)
-            .get()
-            .header("User-Agent", GITHUB_USER_AGENT)
-            .build()
-
-        val result = runCatching {
-            githubNoRedirectClient.newCall(request).execute().use { response ->
-                val location = response.header("Location").orEmpty()
-                val finalUrl = when {
-                    location.isNotBlank() -> location
-                    response.request.url.toString().contains("/releases/tag/") -> response.request.url.toString()
-                    else -> ""
-                }
-
-                if (finalUrl.contains("/releases/tag/")) {
-                    val rawTag = finalUrl.substringAfterLast("/releases/tag/").trim('/')
-                    val decodedTag = URLDecoder.decode(rawTag, Charsets.UTF_8.name())
-                    val normalized = normalizeVersionCandidates(decodedTag)
-                    GitHubReleaseVersionSignals(
-                        displayVersion = decodedTag,
-                        rawTag = decodedTag,
-                        rawName = decodedTag,
-                        candidates = normalized.ifEmpty { listOf(decodedTag.lowercase(Locale.ROOT)) }
-                    )
-                } else {
-                    val entries = atomEntriesHint ?: fetchReleaseEntriesFromAtom(owner, repo).getOrDefault(emptyList())
-                    val stable = entries.firstOrNull { !it.isLikelyPreRelease }
-                        ?: entries.firstOrNull()
-                        ?: error("no release entries")
-                    GitHubReleaseVersionSignals(
-                        displayVersion = stable.title.ifBlank { stable.tag },
-                        rawTag = stable.tag,
-                        rawName = stable.title,
-                        candidates = stable.candidates.ifEmpty {
-                            normalizeVersionCandidates(stable.title.ifBlank { stable.tag })
-                        }
-                    )
-                }
-            }
-        }
-
-        stableCache[key] = CachedValue(result, now)
-        return result
-    }
-
-    fun clearCaches() {
-        stableCache.clear()
-        atomCache.clear()
+        return VersionParts(
+            numbers = coreNumbers,
+            channel = channel,
+            channelNumber = channelNumber
+        )
     }
 }

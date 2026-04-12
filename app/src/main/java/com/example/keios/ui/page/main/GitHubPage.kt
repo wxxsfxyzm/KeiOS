@@ -63,7 +63,9 @@ import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.feature.github.data.local.AppIconCache
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
+import com.example.keios.feature.github.domain.GitHubReleaseCheckService
 import com.example.keios.feature.github.model.GitHubCheckCacheEntry
+import com.example.keios.feature.github.model.GitHubTrackedReleaseCheck
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.feature.github.model.InstalledAppItem
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
@@ -157,13 +159,16 @@ fun GitHubPage(
         localVersionCode = localVersionCode,
         latestTag = latestTag,
         latestStableRawTag = latestStableRawTag,
+        latestStableUrl = latestStableUrl,
         latestPreRawTag = latestPreRawTag,
+        latestPreUrl = latestPreUrl,
         hasUpdate = hasUpdate,
         message = message,
         isPreRelease = isPreRelease,
         preReleaseInfo = preReleaseInfo,
         showPreReleaseInfo = showPreReleaseInfo,
-        hasPreReleaseUpdate = hasPreReleaseUpdate
+        hasPreReleaseUpdate = hasPreReleaseUpdate,
+        sourceStrategyId = sourceStrategyId
     )
 
     fun GitHubCheckCacheEntry.toUi(): VersionCheckUi = VersionCheckUi(
@@ -172,13 +177,34 @@ fun GitHubPage(
         localVersionCode = localVersionCode,
         latestTag = latestTag,
         latestStableRawTag = latestStableRawTag,
+        latestStableUrl = latestStableUrl,
         latestPreRawTag = latestPreRawTag,
+        latestPreUrl = latestPreUrl,
         hasUpdate = hasUpdate,
         message = message,
         isPreRelease = isPreRelease,
         preReleaseInfo = preReleaseInfo,
         showPreReleaseInfo = showPreReleaseInfo,
-        hasPreReleaseUpdate = hasPreReleaseUpdate
+        hasPreReleaseUpdate = hasPreReleaseUpdate,
+        sourceStrategyId = sourceStrategyId
+    )
+
+    fun GitHubTrackedReleaseCheck.toUi(): VersionCheckUi = VersionCheckUi(
+        loading = false,
+        localVersion = localVersion,
+        localVersionCode = localVersionCode,
+        latestTag = stableRelease?.displayVersion.orEmpty(),
+        latestStableRawTag = stableRelease?.rawTag.orEmpty(),
+        latestStableUrl = stableRelease?.link.orEmpty(),
+        latestPreRawTag = preRelease?.rawTag.orEmpty(),
+        latestPreUrl = preRelease?.link.orEmpty(),
+        hasUpdate = hasUpdate,
+        message = message,
+        isPreRelease = isPreReleaseInstalled,
+        preReleaseInfo = preReleaseInfo,
+        showPreReleaseInfo = showPreReleaseInfo,
+        hasPreReleaseUpdate = hasPreReleaseUpdate,
+        sourceStrategyId = strategyId
     )
 
     fun persistCheckCache(refreshTimestamp: Long = lastRefreshMs) {
@@ -201,121 +227,8 @@ fun GitHubPage(
 
     suspend fun resolveItemState(item: GitHubTrackedApp): VersionCheckUi {
         return withContext(Dispatchers.IO) {
-                val preReleaseCheckEnabled = item.checkPreRelease
-                val local = runCatching { GitHubVersionUtils.localVersionName(context, item.packageName) }
-                    .getOrDefault("unknown")
-                val localVersionCode = runCatching { GitHubVersionUtils.localVersionCode(context, item.packageName) }
-                    .getOrDefault(-1L)
-                val atomEntries = GitHubVersionUtils.fetchReleaseEntriesFromAtom(item.owner, item.repo)
-                    .getOrDefault(emptyList())
-                val matchedEntry = atomEntries.firstOrNull {
-                    GitHubVersionUtils.compareVersionToCandidates(local, it.candidates) == 0
-                }
-                val latestPreEntry = atomEntries.firstOrNull { it.isLikelyPreRelease }
-                val stableResult = GitHubVersionUtils.fetchLatestReleaseSignals(
-                    owner = item.owner,
-                    repo = item.repo,
-                    atomEntriesHint = atomEntries
-                )
-
-                stableResult.fold(
-                    onSuccess = { signals ->
-                        val cmp = GitHubVersionUtils.compareVersionToCandidates(local, signals.candidates)
-                        val latestPreLabel = latestPreEntry?.tag?.ifBlank {
-                            latestPreEntry.title
-                        }.orEmpty()
-                        val preVsStable = if (latestPreLabel.isNotBlank()) {
-                            GitHubVersionUtils.compareVersionToCandidates(latestPreLabel, signals.candidates)
-                        } else {
-                            null
-                        }
-                        val preRelevant = latestPreEntry != null && (preVsStable == null || preVsStable > 0)
-                        val localIsPreReleaseInstalled = matchedEntry?.isLikelyPreRelease == true
-                        val preCmp = if (latestPreEntry != null) {
-                            GitHubVersionUtils.compareVersionToCandidates(local, latestPreEntry.candidates)
-                        } else {
-                            null
-                        }
-                        val hasPreReleaseUpdate = preReleaseCheckEnabled &&
-                            localIsPreReleaseInstalled &&
-                            preRelevant &&
-                            (preCmp?.let { it < 0 } == true)
-                        val stableHasUpdate = cmp?.let { it < 0 } == true
-                        val hasUpdate = stableHasUpdate || hasPreReleaseUpdate
-                        val message = when {
-                            hasPreReleaseUpdate -> "预发有更新"
-                            stableHasUpdate -> "发现更新"
-                            preReleaseCheckEnabled && localIsPreReleaseInstalled && preRelevant -> "预发行"
-                            hasUpdate == false -> "已是最新"
-                            else -> "版本格式无法精确比较"
-                        }
-                        val preInfo = when {
-                            preReleaseCheckEnabled && localIsPreReleaseInstalled && preRelevant ->
-                                matchedEntry.let { entry -> entry.title.ifBlank { entry.tag } }
-                            preReleaseCheckEnabled && preRelevant ->
-                                latestPreEntry.title.ifBlank { latestPreEntry.tag }
-                            else -> ""
-                        }
-                        VersionCheckUi(
-                            loading = false,
-                            localVersion = local,
-                            localVersionCode = localVersionCode,
-                            latestTag = signals.displayVersion,
-                            latestStableRawTag = signals.rawTag,
-                            latestPreRawTag = latestPreEntry?.tag.orEmpty(),
-                            hasUpdate = hasUpdate,
-                            message = message,
-                            isPreRelease = preReleaseCheckEnabled && localIsPreReleaseInstalled && preRelevant,
-                            preReleaseInfo = preInfo,
-                            showPreReleaseInfo = preReleaseCheckEnabled && preInfo.isNotBlank(),
-                            hasPreReleaseUpdate = hasPreReleaseUpdate
-                        )
-                    },
-                    onFailure = { err ->
-                        if (matchedEntry != null) {
-                            val localIsPreRelease = matchedEntry.isLikelyPreRelease
-                            val latestPre = latestPreEntry?.takeIf { entry ->
-                                GitHubVersionUtils.compareVersionToCandidates(
-                                    entry.title.ifBlank { entry.tag },
-                                    matchedEntry.candidates
-                                )?.let { it > 0 } == true
-                            }?.takeIf { preReleaseCheckEnabled }
-                            VersionCheckUi(
-                                loading = false,
-                                localVersion = local,
-                                localVersionCode = localVersionCode,
-                                latestTag = matchedEntry.title.ifBlank { matchedEntry.tag },
-                                latestStableRawTag = matchedEntry.tag,
-                                latestPreRawTag = latestPre?.tag.orEmpty(),
-                                hasUpdate = latestPre != null,
-                                message = when {
-                                    latestPre != null -> "预发有更新"
-                                    preReleaseCheckEnabled && localIsPreRelease -> "预发行"
-                                    else -> "已匹配发行"
-                                },
-                                isPreRelease = preReleaseCheckEnabled && localIsPreRelease,
-                                preReleaseInfo = when {
-                                    latestPre != null -> latestPre.title.ifBlank { latestPre.tag }
-                                    preReleaseCheckEnabled && localIsPreRelease -> matchedEntry.title.ifBlank { matchedEntry.tag }
-                                    else -> ""
-                                },
-                                showPreReleaseInfo = preReleaseCheckEnabled && (localIsPreRelease || latestPre != null),
-                                hasPreReleaseUpdate = latestPre != null
-                            )
-                        } else {
-                            VersionCheckUi(
-                                loading = false,
-                                localVersion = local,
-                                localVersionCode = localVersionCode,
-                                message = "检查失败: ${err.message ?: "unknown"}",
-                                preReleaseInfo = "",
-                                showPreReleaseInfo = false,
-                                hasPreReleaseUpdate = false
-                            )
-                        }
-                    }
-                )
-            }
+            GitHubReleaseCheckService.evaluateTrackedApp(context, item).toUi()
+        }
     }
 
     fun refreshItem(item: GitHubTrackedApp, showToastOnError: Boolean = false) {
@@ -818,10 +731,16 @@ fun GitHubPage(
                             val clickableModifier = if (state.hasUpdate == true || state.isPreRelease) {
                                 Modifier.clickable {
                                     val releaseUrl = when {
+                                        state.hasPreReleaseUpdate && state.latestPreUrl.isNotBlank() ->
+                                            state.latestPreUrl
                                         state.hasPreReleaseUpdate && state.latestPreRawTag.isNotBlank() ->
                                             GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestPreRawTag)
+                                        state.hasUpdate == true && state.latestStableUrl.isNotBlank() ->
+                                            state.latestStableUrl
                                         state.hasUpdate == true && state.latestStableRawTag.isNotBlank() ->
                                             GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestStableRawTag)
+                                        state.isPreRelease && state.latestPreUrl.isNotBlank() ->
+                                            state.latestPreUrl
                                         state.isPreRelease && state.latestPreRawTag.isNotBlank() ->
                                             GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestPreRawTag)
                                         else -> GitHubVersionUtils.buildReleaseUrl(item.owner, item.repo)

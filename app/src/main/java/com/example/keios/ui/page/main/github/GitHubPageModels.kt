@@ -8,13 +8,16 @@ internal data class VersionCheckUi(
     val localVersionCode: Long = -1L,
     val latestTag: String = "",
     val latestStableRawTag: String = "",
+    val latestStableUrl: String = "",
     val latestPreRawTag: String = "",
+    val latestPreUrl: String = "",
     val hasUpdate: Boolean? = null,
     val message: String = "",
     val isPreRelease: Boolean = false,
     val preReleaseInfo: String = "",
     val showPreReleaseInfo: Boolean = false,
-    val hasPreReleaseUpdate: Boolean = false
+    val hasPreReleaseUpdate: Boolean = false,
+    val sourceStrategyId: String = ""
 )
 
 internal enum class GitHubSortMode(val label: String) {
