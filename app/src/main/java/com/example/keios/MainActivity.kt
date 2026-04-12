@@ -1,6 +1,7 @@
 package com.example.keios
 
 import android.Manifest
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
@@ -22,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import com.example.keios.mcp.LocalMcpService
 import com.example.keios.mcp.McpNotificationHelper
 import com.example.keios.mcp.McpServerManager
+import com.example.keios.core.prefs.UiPrefs
 import com.example.keios.ui.page.main.MainScreen
 import com.example.keios.core.system.ShizukuApiUtils
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
@@ -43,6 +45,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        applyWindowColorMode(UiPrefs.isHomeIconHdrEnabled())
         window.isNavigationBarContrastEnforced = false
         notificationPermissionGranted = hasNotificationPermission()
         if (!notificationPermissionGranted) {
@@ -112,6 +115,17 @@ class MainActivity : ComponentActivity() {
             this,
             Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
+
+    private fun applyWindowColorMode(hdrEnabled: Boolean) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        runCatching {
+            window.colorMode = if (hdrEnabled) {
+                ActivityInfo.COLOR_MODE_HDR
+            } else {
+                ActivityInfo.COLOR_MODE_DEFAULT
+            }
+        }
+    }
 }
 
 private fun PackageManager.getPackageInfoCompat(packageName: String): PackageInfo {

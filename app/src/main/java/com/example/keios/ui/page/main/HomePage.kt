@@ -1,6 +1,11 @@
 package com.example.keios.ui.page.main
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -37,8 +42,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -54,7 +63,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.keios.R
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
@@ -248,6 +256,7 @@ fun HomePage(
     mcpPort: Int,
     mcpConnectedClients: Int,
     mcpAllowExternal: Boolean,
+    homeIconHdrEnabled: Boolean,
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     onActionBarInteractingChanged: (Boolean) -> Unit = {},
@@ -336,6 +345,20 @@ fun HomePage(
     var titleY by remember { mutableFloatStateOf(0f) }
     var summaryY by remember { mutableFloatStateOf(0f) }
     var initialLogoAreaY by remember { mutableFloatStateOf(0f) }
+    val hdrSweepProgress = if (homeIconHdrEnabled) {
+        val hdrSweep = rememberInfiniteTransition(label = "kei_hdr_sweep")
+        val animated by hdrSweep.animateFloat(
+            initialValue = -0.35f,
+            targetValue = 1.35f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 4600, easing = LinearEasing)
+            ),
+            label = "kei_hdr_sweep_progress"
+        )
+        animated
+    } else {
+        0f
+    }
     var iconProgress by remember { mutableFloatStateOf(0f) }
     var titleProgress by remember { mutableFloatStateOf(0f) }
     var summaryProgress by remember { mutableFloatStateOf(0f) }
@@ -460,7 +483,43 @@ fun HomePage(
                     Image(
                         painter = painterResource(id = R.drawable.ic_kei_logo_color),
                         contentDescription = null,
-                        modifier = Modifier.size(96.dp)
+                        modifier = Modifier
+                            .size(96.dp)
+                            .graphicsLayer {
+                                alpha = (1f - iconProgress) * 0.95f
+                                compositingStrategy = CompositingStrategy.Offscreen
+                            }
+                            .then(
+                                if (homeIconHdrEnabled) {
+                                    Modifier.drawWithContent {
+                                        drawContent()
+                                        drawRect(
+                                            brush = Brush.linearGradient(
+                                                colorStops = arrayOf(
+                                                    0f to Color.Transparent,
+                                                    (hdrSweepProgress - 0.16f).coerceIn(0f, 1f) to Color.Transparent,
+                                                    hdrSweepProgress.coerceIn(0f, 1f) to Color.White.copy(alpha = 0.82f),
+                                                    (hdrSweepProgress + 0.16f).coerceIn(0f, 1f) to Color.Transparent,
+                                                    1f to Color.Transparent
+                                                )
+                                            ),
+                                            blendMode = BlendMode.SrcAtop
+                                        )
+                                        drawRect(
+                                            brush = Brush.radialGradient(
+                                                colors = listOf(
+                                                    Color.White.copy(alpha = 0.30f),
+                                                    Color.Transparent
+                                                ),
+                                                radius = size.minDimension * 0.72f
+                                            ),
+                                            blendMode = BlendMode.SrcAtop
+                                        )
+                                    }
+                                } else {
+                                    Modifier
+                                }
+                            )
                     )
                 }
 
@@ -496,7 +555,7 @@ fun HomePage(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "MCP / GitHub Overview",
+                        text = "System · MCP · GitHub · BA 一体化工具台",
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,

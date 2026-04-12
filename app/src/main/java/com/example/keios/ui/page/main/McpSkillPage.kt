@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -54,6 +56,20 @@ private sealed interface MarkdownBlock {
     data class Code(val text: String) : MarkdownBlock
 }
 
+private data class SkillSection(
+    val level: Int,
+    val title: String,
+    val items: List<SkillSectionItem>
+)
+
+private sealed interface SkillSectionItem {
+    data class SubHeading(val level: Int, val text: String) : SkillSectionItem
+    data class Paragraph(val text: String) : SkillSectionItem
+    data class Bullet(val text: String) : SkillSectionItem
+    data class Ordered(val index: Int, val text: String) : SkillSectionItem
+    data class Code(val text: String) : SkillSectionItem
+}
+
 @Composable
 fun McpSkillPage(
     mcpServerManager: McpServerManager,
@@ -64,9 +80,11 @@ fun McpSkillPage(
             mcpServerManager.getSkillMarkdown()
         }
     }
-    val blocks = remember(markdown) {
-        parseMarkdownBlocks(markdown.ifBlank { "# MCP Skill\n\n暂无内容" })
+    val sections = remember(markdown) {
+        val blocks = parseMarkdownBlocks(markdown.ifBlank { "# MCP Skill\n\n暂无内容" })
+        buildSkillSections(blocks)
     }
+
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     val titleColor = MiuixTheme.colorScheme.onBackground
@@ -108,8 +126,8 @@ fun McpSkillPage(
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 bottom = innerPadding.calculateBottomPadding() + 16.dp,
-                start = 12.dp,
-                end = 12.dp
+                start = 16.dp,
+                end = 16.dp
             )
         ) {
             item {
@@ -126,140 +144,322 @@ fun McpSkillPage(
                 )
             }
 
-            items(items = blocks) { block ->
-                when (block) {
-                    is MarkdownBlock.Heading -> {
-                        val size = when (block.level) {
-                            1 -> 22.sp
-                            2 -> 19.sp
-                            3 -> 17.sp
-                            else -> 16.sp
-                        }
-                        Text(
-                            text = buildInlineStyledText(
-                                text = block.text,
-                                baseStyle = SpanStyle(color = titleColor, fontWeight = FontWeight.SemiBold),
-                                accentStyle = SpanStyle(
-                                    color = accentColor,
-                                    fontWeight = FontWeight.Medium,
-                                    background = accentColor.copy(alpha = 0.12f)
-                                ),
-                                linkStyle = SpanStyle(
-                                    color = accentColor,
-                                    textDecoration = TextDecoration.Underline,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            ),
-                            color = titleColor,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = size,
-                            lineHeight = (size.value + 7f).sp
-                        )
-                    }
-
-                    is MarkdownBlock.Paragraph -> {
-                        Text(
-                            text = buildInlineStyledText(
-                                text = block.text,
-                                baseStyle = SpanStyle(color = subtitleColor),
-                                accentStyle = SpanStyle(
-                                    color = accentColor,
-                                    background = accentColor.copy(alpha = 0.10f),
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                linkStyle = SpanStyle(
-                                    color = accentColor,
-                                    textDecoration = TextDecoration.Underline,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            ),
-                            color = subtitleColor,
-                            fontSize = 15.sp,
-                            lineHeight = 22.sp
-                        )
-                    }
-
-                    is MarkdownBlock.Bullet -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text("•", color = subtitleColor, fontSize = 15.sp)
-                            Text(
-                                text = buildInlineStyledText(
-                                    text = block.text,
-                                    baseStyle = SpanStyle(color = subtitleColor),
-                                    accentStyle = SpanStyle(
-                                        color = accentColor,
-                                        background = accentColor.copy(alpha = 0.10f),
-                                        fontWeight = FontWeight.Medium
-                                    ),
-                                    linkStyle = SpanStyle(
-                                        color = accentColor,
-                                        textDecoration = TextDecoration.Underline,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                ),
-                                color = subtitleColor,
-                                fontSize = 15.sp,
-                                lineHeight = 22.sp
-                            )
-                        }
-                    }
-
-                    is MarkdownBlock.Ordered -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text("${block.index}.", color = subtitleColor, fontSize = 15.sp)
-                            Text(
-                                text = buildInlineStyledText(
-                                    text = block.text,
-                                    baseStyle = SpanStyle(color = subtitleColor),
-                                    accentStyle = SpanStyle(
-                                        color = accentColor,
-                                        background = accentColor.copy(alpha = 0.10f),
-                                        fontWeight = FontWeight.Medium
-                                    ),
-                                    linkStyle = SpanStyle(
-                                        color = accentColor,
-                                        textDecoration = TextDecoration.Underline,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                ),
-                                color = subtitleColor,
-                                fontSize = 15.sp,
-                                lineHeight = 22.sp
-                            )
-                        }
-                    }
-
-                    is MarkdownBlock.Code -> {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.defaultColors(
-                                color = codeColor,
-                                contentColor = titleColor
-                            )
-                        ) {
-                            Text(
-                                text = block.text,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(codeColor)
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                color = titleColor,
-                                fontSize = 13.sp,
-                                lineHeight = 19.sp
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
+            items(items = sections) { section ->
+                SkillSectionCard(
+                    section = section,
+                    titleColor = titleColor,
+                    subtitleColor = subtitleColor,
+                    accentColor = accentColor,
+                    codeColor = codeColor
+                )
+                Spacer(modifier = Modifier.height(10.dp))
             }
         }
     }
+}
+
+@Composable
+private fun SkillSectionCard(
+    section: SkillSection,
+    titleColor: androidx.compose.ui.graphics.Color,
+    subtitleColor: androidx.compose.ui.graphics.Color,
+    accentColor: androidx.compose.ui.graphics.Color,
+    codeColor: androidx.compose.ui.graphics.Color
+) {
+    val titleSize = when (section.level) {
+        1 -> 20.sp
+        2 -> 18.sp
+        else -> 17.sp
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = androidx.compose.ui.graphics.Color(0x223B82F6),
+            contentColor = titleColor
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = buildInlineStyledText(
+                    text = section.title,
+                    baseStyle = SpanStyle(color = titleColor, fontWeight = FontWeight.SemiBold),
+                    accentStyle = SpanStyle(
+                        color = accentColor,
+                        background = accentColor.copy(alpha = 0.12f),
+                        fontWeight = FontWeight.Medium
+                    ),
+                    linkStyle = SpanStyle(
+                        color = accentColor,
+                        textDecoration = TextDecoration.Underline,
+                        fontWeight = FontWeight.Medium
+                    )
+                ),
+                color = titleColor,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = titleSize,
+                lineHeight = (titleSize.value + 6f).sp
+            )
+
+            if (section.items.isEmpty()) {
+                Text("暂无条目", color = subtitleColor)
+            } else {
+                section.items.forEachIndexed { index, item ->
+                    SkillSectionItemView(
+                        item = item,
+                        titleColor = titleColor,
+                        subtitleColor = subtitleColor,
+                        accentColor = accentColor,
+                        codeColor = codeColor
+                    )
+                    if (index < section.items.lastIndex) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SkillSectionItemView(
+    item: SkillSectionItem,
+    titleColor: androidx.compose.ui.graphics.Color,
+    subtitleColor: androidx.compose.ui.graphics.Color,
+    accentColor: androidx.compose.ui.graphics.Color,
+    codeColor: androidx.compose.ui.graphics.Color
+) {
+    when (item) {
+        is SkillSectionItem.SubHeading -> {
+            val size = if (item.level <= 3) 16.sp else 15.sp
+            Text(
+                text = buildInlineStyledText(
+                    text = item.text,
+                    baseStyle = SpanStyle(color = titleColor, fontWeight = FontWeight.Medium),
+                    accentStyle = SpanStyle(
+                        color = accentColor,
+                        background = accentColor.copy(alpha = 0.10f),
+                        fontWeight = FontWeight.Medium
+                    ),
+                    linkStyle = SpanStyle(
+                        color = accentColor,
+                        textDecoration = TextDecoration.Underline,
+                        fontWeight = FontWeight.Medium
+                    )
+                ),
+                color = titleColor,
+                fontSize = size,
+                fontWeight = FontWeight.Medium,
+                lineHeight = (size.value + 6f).sp,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+
+        is SkillSectionItem.Paragraph -> {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Text("·", color = subtitleColor, fontSize = 15.sp)
+                Text(
+                    text = buildInlineStyledText(
+                        text = item.text,
+                        baseStyle = SpanStyle(color = subtitleColor),
+                        accentStyle = SpanStyle(
+                            color = accentColor,
+                            background = accentColor.copy(alpha = 0.10f),
+                            fontWeight = FontWeight.Medium
+                        ),
+                        linkStyle = SpanStyle(
+                            color = accentColor,
+                            textDecoration = TextDecoration.Underline,
+                            fontWeight = FontWeight.Medium
+                        )
+                    ),
+                    color = subtitleColor,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        is SkillSectionItem.Bullet -> {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Text("•", color = subtitleColor, fontSize = 15.sp)
+                Text(
+                    text = buildInlineStyledText(
+                        text = item.text,
+                        baseStyle = SpanStyle(color = subtitleColor),
+                        accentStyle = SpanStyle(
+                            color = accentColor,
+                            background = accentColor.copy(alpha = 0.10f),
+                            fontWeight = FontWeight.Medium
+                        ),
+                        linkStyle = SpanStyle(
+                            color = accentColor,
+                            textDecoration = TextDecoration.Underline,
+                            fontWeight = FontWeight.Medium
+                        )
+                    ),
+                    color = subtitleColor,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        is SkillSectionItem.Ordered -> {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Text("${item.index}.", color = subtitleColor, fontSize = 15.sp)
+                Text(
+                    text = buildInlineStyledText(
+                        text = item.text,
+                        baseStyle = SpanStyle(color = subtitleColor),
+                        accentStyle = SpanStyle(
+                            color = accentColor,
+                            background = accentColor.copy(alpha = 0.10f),
+                            fontWeight = FontWeight.Medium
+                        ),
+                        linkStyle = SpanStyle(
+                            color = accentColor,
+                            textDecoration = TextDecoration.Underline,
+                            fontWeight = FontWeight.Medium
+                        )
+                    ),
+                    color = subtitleColor,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        is SkillSectionItem.Code -> {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.defaultColors(
+                    color = codeColor,
+                    contentColor = titleColor
+                )
+            ) {
+                Text(
+                    text = item.text,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(codeColor)
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    color = titleColor,
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp
+                )
+            }
+        }
+    }
+}
+
+private fun buildSkillSections(blocks: List<MarkdownBlock>): List<SkillSection> {
+    if (blocks.isEmpty()) {
+        return listOf(
+            SkillSection(
+                level = 1,
+                title = "MCP Skill",
+                items = listOf(SkillSectionItem.Paragraph("暂无内容"))
+            )
+        )
+    }
+
+    val sections = mutableListOf<SkillSection>()
+    val currentItems = mutableListOf<SkillSectionItem>()
+    var currentTitle = ""
+    var currentLevel = 2
+
+    fun ensureSectionStarted() {
+        if (currentTitle.isBlank()) {
+            currentTitle = "概览"
+            currentLevel = 2
+        }
+    }
+
+    fun flushSection() {
+        if (currentTitle.isBlank() && currentItems.isEmpty()) return
+        if (currentItems.isEmpty() && currentLevel == 1 && sections.isEmpty()) {
+            currentTitle = ""
+            return
+        }
+        if (currentItems.isEmpty() && sections.isNotEmpty()) {
+            currentTitle = ""
+            return
+        }
+        sections += SkillSection(
+            level = currentLevel,
+            title = currentTitle.ifBlank { "内容" },
+            items = currentItems.toList()
+        )
+        currentItems.clear()
+    }
+
+    blocks.forEach { block ->
+        when (block) {
+            is MarkdownBlock.Heading -> {
+                if (block.level <= 2) {
+                    flushSection()
+                    currentTitle = block.text.ifBlank { "未命名章节" }
+                    currentLevel = block.level
+                } else {
+                    ensureSectionStarted()
+                    currentItems += SkillSectionItem.SubHeading(block.level, block.text)
+                }
+            }
+
+            is MarkdownBlock.Paragraph -> {
+                ensureSectionStarted()
+                currentItems += SkillSectionItem.Paragraph(block.text)
+            }
+
+            is MarkdownBlock.Bullet -> {
+                ensureSectionStarted()
+                currentItems += SkillSectionItem.Bullet(block.text)
+            }
+
+            is MarkdownBlock.Ordered -> {
+                ensureSectionStarted()
+                currentItems += SkillSectionItem.Ordered(block.index, block.text)
+            }
+
+            is MarkdownBlock.Code -> {
+                ensureSectionStarted()
+                currentItems += SkillSectionItem.Code(block.text)
+            }
+        }
+    }
+
+    flushSection()
+    if (sections.isEmpty()) {
+        return listOf(
+            SkillSection(
+                level = 1,
+                title = "MCP Skill",
+                items = listOf(SkillSectionItem.Paragraph("暂无内容"))
+            )
+        )
+    }
+    return sections
 }
 
 private fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {

@@ -1,6 +1,9 @@
 package com.example.keios.ui.page.main
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageInfo
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -26,6 +29,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -43,6 +47,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
@@ -88,6 +93,22 @@ fun MainScreen(
 
     var liquidBottomBarEnabled by remember { mutableStateOf(UiPrefs.isLiquidBottomBarEnabled()) }
     var cardPressFeedbackEnabled by remember { mutableStateOf(UiPrefs.isCardPressFeedbackEnabled()) }
+    var homeIconHdrEnabled by remember { mutableStateOf(UiPrefs.isHomeIconHdrEnabled()) }
+    val view = LocalView.current
+
+    if (!view.isInEditMode) {
+        SideEffect {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@SideEffect
+            val activity = view.context as? Activity ?: return@SideEffect
+            runCatching {
+                activity.window.colorMode = if (homeIconHdrEnabled) {
+                    ActivityInfo.COLOR_MODE_HDR
+                } else {
+                    ActivityInfo.COLOR_MODE_DEFAULT
+                }
+            }
+        }
+    }
 
     val entryProvider = remember(backStack) {
         entryProvider<NavKey> {
@@ -97,6 +118,7 @@ fun MainScreen(
                     navigator = navigator,
                     liquidBottomBarEnabled = liquidBottomBarEnabled,
                     cardPressFeedbackEnabled = cardPressFeedbackEnabled,
+                    homeIconHdrEnabled = homeIconHdrEnabled,
                     appLabel = appLabel,
                     packageInfo = packageInfo,
                     shizukuStatus = shizukuStatus,
@@ -117,6 +139,11 @@ fun MainScreen(
                     onCardPressFeedbackChanged = {
                         cardPressFeedbackEnabled = it
                         UiPrefs.setCardPressFeedbackEnabled(it)
+                    },
+                    homeIconHdrEnabled = homeIconHdrEnabled,
+                    onHomeIconHdrChanged = {
+                        homeIconHdrEnabled = it
+                        UiPrefs.setHomeIconHdrEnabled(it)
                     },
                     onBack = { navigator.pop() }
                 )
@@ -164,6 +191,7 @@ private fun MainPagerLayout(
     navigator: Navigator,
     liquidBottomBarEnabled: Boolean,
     cardPressFeedbackEnabled: Boolean,
+    homeIconHdrEnabled: Boolean,
     appLabel: String,
     packageInfo: PackageInfo?,
     shizukuStatus: String,
@@ -372,6 +400,7 @@ private fun MainPagerLayout(
                             mcpPort = mcpUiState.port,
                             mcpConnectedClients = mcpUiState.connectedClients,
                             mcpAllowExternal = mcpUiState.allowExternal,
+                            homeIconHdrEnabled = homeIconHdrEnabled,
                             onOpenSettings = { navigator.push(KeiosRoute.Settings) },
                             onOpenAbout = { navigator.push(KeiosRoute.About) },
                             onActionBarInteractingChanged = { interacting ->

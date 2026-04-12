@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -1321,13 +1323,25 @@ private fun buildGuideVideoPlayer(context: Context): ExoPlayer {
         .build()
 }
 
+private fun adaptiveValueMaxLines(value: String, lineCharBudget: Int): Int {
+    val normalized = value.trim()
+    if (normalized.isBlank()) return 1
+    if (normalized.contains('\n')) return 2
+    val budget = lineCharBudget.coerceIn(10, 52)
+    val breakable = normalized.any {
+        it == ' ' || it == '/' || it == '-' || it == ',' || it == '，' || it == '、' || it == ':' || it == '：'
+    }
+    val veryLong = normalized.length > budget + budget / 2
+    val longAndBreakable = breakable && normalized.length > budget
+    return if (veryLong || longAndBreakable) 2 else 1
+}
+
 @Composable
 fun GuideProfileMetaLine(item: BaGuideMetaItem) {
     val isPosition = item.title == "位置"
     val isRarity = item.title == "稀有度"
     val inlineTitleIcon = isRarity || item.title == "学院"
     val summary = if (isPosition) "" else item.value.ifBlank { "-" }
-    val titleSlotWidth = 70.dp
     val iconSlotWidth = 34.dp
     val iconSlotHeight = 24.dp
     val iconWidth = when {
@@ -1340,75 +1354,83 @@ fun GuideProfileMetaLine(item: BaGuideMetaItem) {
         else -> 20.dp
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (inlineTitleIcon) {
-            Row(
-                modifier = Modifier,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = item.title,
-                    color = MiuixTheme.colorScheme.onBackgroundVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (item.imageUrl.isNotBlank()) {
-                    GuideRemoteIcon(
-                        imageUrl = item.imageUrl,
-                        iconWidth = iconWidth,
-                        iconHeight = iconHeight
-                    )
-                }
-            }
-        } else {
-            val hasLeadingIcon = item.imageUrl.isNotBlank()
-            val nonInlineTitleWidth = if (hasLeadingIcon) {
-                titleSlotWidth
-            } else {
-                titleSlotWidth + iconSlotWidth + 8.dp
-            }
-            Text(
-                text = item.title,
-                color = MiuixTheme.colorScheme.onBackgroundVariant,
-                modifier = Modifier.width(nonInlineTitleWidth),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (hasLeadingIcon) {
-                Box(
-                    modifier = Modifier
-                        .width(iconSlotWidth)
-                        .height(iconSlotHeight),
-                    contentAlignment = Alignment.Center
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val titleMaxWidth = (maxWidth * 0.48f).coerceIn(80.dp, 176.dp)
+        val valueCharBudget = ((maxWidth - titleMaxWidth).value / 7.2f).toInt().coerceAtLeast(10)
+        val summaryMaxLines = adaptiveValueMaxLines(summary, valueCharBudget)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (inlineTitleIcon) {
+                Row(
+                    modifier = Modifier.widthIn(max = titleMaxWidth),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GuideRemoteIcon(
-                        imageUrl = item.imageUrl,
-                        iconWidth = iconWidth,
-                        iconHeight = iconHeight
+                    Text(
+                        text = item.title,
+                        color = MiuixTheme.colorScheme.onBackgroundVariant,
+                        modifier = Modifier.weight(1f, fill = false),
+                        maxLines = 2,
+                        overflow = TextOverflow.Clip
                     )
+                    if (item.imageUrl.isNotBlank()) {
+                        GuideRemoteIcon(
+                            imageUrl = item.imageUrl,
+                            iconWidth = iconWidth,
+                            iconHeight = iconHeight
+                        )
+                    }
+                }
+            } else {
+                val hasLeadingIcon = item.imageUrl.isNotBlank()
+                Row(
+                    modifier = Modifier.widthIn(max = titleMaxWidth),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.title,
+                        color = MiuixTheme.colorScheme.onBackgroundVariant,
+                        modifier = Modifier.weight(1f, fill = false),
+                        maxLines = 2,
+                        overflow = TextOverflow.Clip
+                    )
+                    if (hasLeadingIcon) {
+                        Box(
+                            modifier = Modifier
+                                .width(iconSlotWidth)
+                                .height(iconSlotHeight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            GuideRemoteIcon(
+                                imageUrl = item.imageUrl,
+                                iconWidth = iconWidth,
+                                iconHeight = iconHeight
+                            )
+                        }
+                    }
                 }
             }
-        }
-        if (!isPosition) {
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                Text(
-                    text = summary,
-                    color = MiuixTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.End,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+            if (!isPosition) {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Text(
+                        text = summary,
+                        color = MiuixTheme.colorScheme.onBackground,
+                        textAlign = TextAlign.End,
+                        maxLines = summaryMaxLines,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
             }
-        } else {
-            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -1420,62 +1442,73 @@ fun GuideCombatMetaTile(
 ) {
     val value = item.value.ifBlank { "-" }
     val adaptiveWide = item.title.contains("战术") || item.title == "武器类型"
-    val titleWidth = 112.dp
     val iconWidth = if (adaptiveWide) 28.dp else 18.dp
     val iconHeight = if (adaptiveWide) 18.dp else 18.dp
     val extraIconWidth = 30.dp
     val extraIconHeight = 18.dp
     val iconSlotWidth = 30.dp
     val iconSlotHeight = 22.dp
-    Row(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.36f))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
-        Text(
-            text = item.title,
-            color = MiuixTheme.colorScheme.onBackgroundVariant,
-            modifier = Modifier.width(titleWidth),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = value,
-            color = MiuixTheme.colorScheme.onBackground,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Box(
-            modifier = Modifier
-                .width(iconSlotWidth)
-                .height(iconSlotHeight),
-            contentAlignment = Alignment.Center
+        val trailingSlotsWidth = if (item.extraImageUrl.isNotBlank()) iconSlotWidth * 2 else iconSlotWidth
+        val titleMaxWidth = ((maxWidth - trailingSlotsWidth) * if (adaptiveWide) 0.52f else 0.46f)
+            .coerceIn(86.dp, 180.dp)
+        val valueCharBudget = ((maxWidth - titleMaxWidth - trailingSlotsWidth).value / 7.2f)
+            .toInt()
+            .coerceAtLeast(10)
+        val valueMaxLines = adaptiveValueMaxLines(value, valueCharBudget)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (item.imageUrl.isNotBlank()) {
-                GuideRemoteIcon(
-                    imageUrl = item.imageUrl,
-                    iconWidth = iconWidth,
-                    iconHeight = iconHeight
-                )
-            }
-        }
-        if (item.extraImageUrl.isNotBlank()) {
+            Text(
+                text = item.title,
+                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                modifier = Modifier.widthIn(max = titleMaxWidth),
+                maxLines = 2,
+                overflow = TextOverflow.Clip
+            )
+            Text(
+                text = value,
+                color = MiuixTheme.colorScheme.onBackground,
+                modifier = Modifier.weight(1f),
+                maxLines = valueMaxLines,
+                overflow = TextOverflow.Ellipsis
+            )
             Box(
                 modifier = Modifier
                     .width(iconSlotWidth)
                     .height(iconSlotHeight),
                 contentAlignment = Alignment.Center
             ) {
-                GuideRemoteIcon(
-                    imageUrl = item.extraImageUrl,
-                    iconWidth = extraIconWidth,
-                    iconHeight = extraIconHeight
-                )
+                if (item.imageUrl.isNotBlank()) {
+                    GuideRemoteIcon(
+                        imageUrl = item.imageUrl,
+                        iconWidth = iconWidth,
+                        iconHeight = iconHeight
+                    )
+                }
+            }
+            if (item.extraImageUrl.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .width(iconSlotWidth)
+                        .height(iconSlotHeight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    GuideRemoteIcon(
+                        imageUrl = item.extraImageUrl,
+                        iconWidth = extraIconWidth,
+                        iconHeight = extraIconHeight
+                    )
+                }
             }
         }
     }
@@ -1743,21 +1776,32 @@ fun GuideVoiceEntryCard(
 
             val compareLines = listOf(jpLabel to jpText, cnLabel to cnText)
             compareLines.forEach { (label, line) ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Text(
-                        text = label,
-                        color = MiuixTheme.colorScheme.onBackgroundVariant,
-                        modifier = Modifier.width(58.dp)
-                    )
-                    Text(
-                        text = line.ifBlank { "暂无台词文本" },
-                        color = MiuixTheme.colorScheme.onBackground,
-                        modifier = Modifier.weight(1f)
-                    )
+                val text = line.ifBlank { "暂无台词文本" }
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val labelMaxWidth = (maxWidth * 0.28f).coerceIn(52.dp, 92.dp)
+                    val lineCharBudget = ((maxWidth - labelMaxWidth).value / 7f).toInt().coerceAtLeast(10)
+                    val valueMaxLines = adaptiveValueMaxLines(text, lineCharBudget)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = label,
+                            color = MiuixTheme.colorScheme.onBackgroundVariant,
+                            modifier = Modifier.widthIn(max = labelMaxWidth),
+                            maxLines = 2,
+                            overflow = TextOverflow.Clip
+                        )
+                        Text(
+                            text = text,
+                            color = MiuixTheme.colorScheme.onBackground,
+                            modifier = Modifier.weight(1f),
+                            maxLines = valueMaxLines,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
@@ -1890,23 +1934,32 @@ fun GuideWeaponCardItem(
                     }
 
                     card.statRows.forEach { stat ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = stat.title,
-                                color = MiuixTheme.colorScheme.onBackgroundVariant,
-                                modifier = Modifier.width(72.dp)
-                            )
-                            Text(
-                                text = levelValue(stat),
-                                color = MiuixTheme.colorScheme.onBackground,
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                        val valueText = levelValue(stat)
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val titleMaxWidth = (maxWidth * 0.34f).coerceIn(64.dp, 128.dp)
+                            val valueCharBudget = ((maxWidth - titleMaxWidth).value / 7f).toInt().coerceAtLeast(10)
+                            val valueMaxLines = adaptiveValueMaxLines(valueText, valueCharBudget)
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = stat.title,
+                                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                    modifier = Modifier.widthIn(max = titleMaxWidth),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Clip
+                                )
+                                Text(
+                                    text = valueText,
+                                    color = MiuixTheme.colorScheme.onBackground,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = valueMaxLines,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }

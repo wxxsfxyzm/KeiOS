@@ -147,6 +147,7 @@ fun GlassTextButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     textColor: Color = MiuixTheme.colorScheme.primary,
+    containerColor: Color? = null,
     leadingIcon: ImageVector? = null,
     iconTint: Color = textColor,
     enabled: Boolean = true,
@@ -184,6 +185,9 @@ fun GlassTextButton(
     }
     val borderAlpha = if (bottomBarStyle) 0f else if (lightMaterial) 0.10f else 0.16f
     val bottomBarSurface = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+    val containerOverlay = containerColor?.copy(
+        alpha = if (bottomBarStyle) 0.34f else if (lightMaterial) 0.22f else 0.26f
+    )
     val borderModifier = if (!bottomBarStyle) {
         Modifier.border(
             width = 1.dp,
@@ -252,10 +256,12 @@ fun GlassTextButton(
                                     drawRect(Color.Black.copy(alpha = overlayAlpha))
                                 }
                             }
+                            containerOverlay?.let { drawRect(it) }
                         }
                     )
                 } else {
-                    Modifier.background(fallbackSurface.copy(alpha = if (lightMaterial) 0.68f else 0.9f))
+                    val fallbackColor = containerOverlay ?: fallbackSurface.copy(alpha = if (lightMaterial) 0.68f else 0.9f)
+                    Modifier.background(fallbackColor)
                 }
             )
             .then(borderModifier)

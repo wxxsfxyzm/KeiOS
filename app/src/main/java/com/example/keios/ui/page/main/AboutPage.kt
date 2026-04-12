@@ -161,6 +161,7 @@ fun AboutPage(
     val readyColor = Color(0xFF2E7D32)
     val notReadyColor = Color(0xFFC62828)
     val infoCardColor = Color(0x223B82F6)
+    val frameworkCardColor = Color(0x223B82F6)
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -171,6 +172,19 @@ fun AboutPage(
     val appInfo: ApplicationInfo? = packageInfo?.applicationInfo
     val shizukuDetailMap = remember(shizukuStatus) {
         shizukuApiUtils.detailedRows().toMap()
+    }
+    val frameworkRows = remember {
+        listOf(
+            "UI 主框架" to "Miuix UI 0.9.0",
+            "Compose" to "Jetpack Compose 1.10.6",
+            "导航框架" to "Navigation3 1.1.0",
+            "玻璃效果" to "Backdrop 1.0.6 · Capsule 2.1.3",
+            "权限框架" to "Shizuku API ${ShizukuApiUtils.API_VERSION}",
+            "MCP 协议" to "kotlin-sdk 0.11.0 · Ktor 3.4.2",
+            "网络请求" to "OkHttp 5.3.2",
+            "多媒体" to "Media3 1.10.0 · ZoomImage 1.4.0",
+            "本地存储" to "MMKV 2.4.0"
+        )
     }
     val shizukuReady = shizukuStatus.contains("granted", ignoreCase = true)
     val permissionCardColor = if (shizukuReady) Color(0x2222C55E) else Color(0x22EF4444)
@@ -256,10 +270,43 @@ fun AboutPage(
                                 "运行时",
                                 "API ${Build.VERSION.SDK_INT} · Security Patch ${Build.VERSION.SECURITY_PATCH ?: "unknown"}"
                             )
-                            AboutCompactInfoRow(
-                                "框架",
-                                "Miuix UI 0.9.0 · Shizuku API ${ShizukuApiUtils.API_VERSION}"
-                            )
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(14.dp)) }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
+                        color = frameworkCardColor,
+                        contentColor = MiuixTheme.colorScheme.onBackground
+                    ),
+                    onClick = {}
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "框架",
+                            color = accent
+                        )
+                        Text(
+                            text = "项目依赖与技术栈",
+                            color = subtitleColor
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                            frameworkRows.forEach { (title, value) ->
+                                AboutCompactInfoRow(
+                                    title = title,
+                                    value = value
+                                )
+                            }
                         }
                     }
                 }
