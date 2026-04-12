@@ -177,7 +177,7 @@ private fun MainPagerLayout(
     val coroutineScope = rememberCoroutineScope()
     val mcpUiState by mcpServerManager.uiState.collectAsState()
 
-    var systemScrollToTopSignal by remember { mutableIntStateOf(0) }
+    var osScrollToTopSignal by remember { mutableIntStateOf(0) }
     var baScrollToTopSignal by remember { mutableIntStateOf(0) }
     var mcpScrollToTopSignal by remember { mutableIntStateOf(0) }
     var githubScrollToTopSignal by remember { mutableIntStateOf(0) }
@@ -222,7 +222,7 @@ private fun MainPagerLayout(
         showBottomBar = true
         if (index == pagerState.currentPage) {
             when (selected) {
-                BottomPage.System -> systemScrollToTopSignal++
+                BottomPage.Os -> osScrollToTopSignal++
                 BottomPage.Ba -> baScrollToTopSignal++
                 BottomPage.Mcp -> mcpScrollToTopSignal++
                 BottomPage.GitHub -> githubScrollToTopSignal++
@@ -336,7 +336,7 @@ private fun MainPagerLayout(
 
             val currentPageType = tabs[pageIndex]
             val isHome = currentPageType == BottomPage.Home
-            val isTopBarManagedPage = currentPageType == BottomPage.System ||
+            val isTopBarManagedPage = currentPageType == BottomPage.Os ||
                 currentPageType == BottomPage.Ba ||
                 currentPageType == BottomPage.Mcp ||
                 currentPageType == BottomPage.GitHub
@@ -381,9 +381,9 @@ private fun MainPagerLayout(
                             contentBottomPadding = homeBottomInset
                         )
                     }
-                    BottomPage.System -> {
-                        SystemPage(
-                            scrollToTopSignal = systemScrollToTopSignal,
+                    BottomPage.Os -> {
+                        OsPage(
+                            scrollToTopSignal = osScrollToTopSignal,
                             shizukuStatus = shizukuStatus,
                             shizukuApiUtils = shizukuApiUtils,
                             cardPressFeedbackEnabled = cardPressFeedbackEnabled,

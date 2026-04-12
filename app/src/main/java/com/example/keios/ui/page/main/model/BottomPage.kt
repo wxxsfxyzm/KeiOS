@@ -12,7 +12,7 @@ enum class BottomPage(
     val iconScale: Float = 1f,
 ) {
     Home("Home", iconRes = R.drawable.ic_kei_logo_color, keepOriginalColors = true, iconScale = 1.22f),
-    System("OS", iconRes = R.drawable.ic_hyperos_symbol),
+    Os("OS", iconRes = R.drawable.ic_hyperos_symbol),
     Mcp("MCP", iconRes = R.drawable.ic_mcp_lobehub),
     GitHub("GitHub", iconRes = R.drawable.ic_github_invertocat),
     Ba("BA", iconRes = R.drawable.ic_ba_schale, iconScale = 1.16f)

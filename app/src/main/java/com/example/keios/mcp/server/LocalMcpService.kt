@@ -52,13 +52,22 @@ class LocalMcpService(
     )
 
     companion object {
-        private const val SYSTEM_CACHE_KV_ID = "system_info_cache"
-        private const val KEY_SYSTEM = "section_system_table"
-        private const val KEY_SECURE = "section_secure_table"
-        private const val KEY_GLOBAL = "section_global_table"
-        private const val KEY_ANDROID = "section_android_properties"
-        private const val KEY_JAVA = "section_java_properties"
-        private const val KEY_LINUX = "section_linux_environment"
+        private const val OS_CACHE_KV_ID = "os_info_cache"
+        private const val LEGACY_SYSTEM_CACHE_KV_ID = "system_info_cache"
+
+        private const val KEY_OS_SYSTEM = "section_os_system_table"
+        private const val KEY_OS_SECURE = "section_os_secure_table"
+        private const val KEY_OS_GLOBAL = "section_os_global_table"
+        private const val KEY_OS_ANDROID = "section_os_android_properties"
+        private const val KEY_OS_JAVA = "section_os_java_properties"
+        private const val KEY_OS_LINUX = "section_os_linux_environment"
+
+        private const val LEGACY_KEY_SYSTEM = "section_system_table"
+        private const val LEGACY_KEY_SECURE = "section_secure_table"
+        private const val LEGACY_KEY_GLOBAL = "section_global_table"
+        private const val LEGACY_KEY_ANDROID = "section_android_properties"
+        private const val LEGACY_KEY_JAVA = "section_java_properties"
+        private const val LEGACY_KEY_LINUX = "section_linux_environment"
 
         private const val DEFAULT_TOPINFO_LIMIT = 120
         private const val MAX_TOPINFO_LIMIT = 300
@@ -902,14 +911,19 @@ class LocalMcpService(
         maxCount: Int,
         query: String?
     ): List<InfoRow> {
-        val kv = com.tencent.mmkv.MMKV.mmkvWithID(SYSTEM_CACHE_KV_ID)
+        val kv = com.tencent.mmkv.MMKV.mmkvWithID(OS_CACHE_KV_ID)
+        val legacyKv = com.tencent.mmkv.MMKV.mmkvWithID(LEGACY_SYSTEM_CACHE_KV_ID)
+        val readRaw: (String, String) -> String? = { newKey, legacyKey ->
+            val newRaw = kv.decodeString(newKey)
+            if (!newRaw.isNullOrBlank()) newRaw else legacyKv.decodeString(legacyKey)
+        }
         val allRows = (
-            decodeRows(kv.decodeString(KEY_SYSTEM)) +
-                decodeRows(kv.decodeString(KEY_SECURE)) +
-                decodeRows(kv.decodeString(KEY_GLOBAL)) +
-                decodeRows(kv.decodeString(KEY_ANDROID)) +
-                decodeRows(kv.decodeString(KEY_JAVA)) +
-                decodeRows(kv.decodeString(KEY_LINUX))
+            decodeRows(readRaw(KEY_OS_SYSTEM, LEGACY_KEY_SYSTEM)) +
+                decodeRows(readRaw(KEY_OS_SECURE, LEGACY_KEY_SECURE)) +
+                decodeRows(readRaw(KEY_OS_GLOBAL, LEGACY_KEY_GLOBAL)) +
+                decodeRows(readRaw(KEY_OS_ANDROID, LEGACY_KEY_ANDROID)) +
+                decodeRows(readRaw(KEY_OS_JAVA, LEGACY_KEY_JAVA)) +
+                decodeRows(readRaw(KEY_OS_LINUX, LEGACY_KEY_LINUX))
             )
             .distinctBy { "${it.key}\u0000${it.value}" }
 

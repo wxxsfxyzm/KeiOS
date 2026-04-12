@@ -1,0 +1,151 @@
+package com.example.keios.ui.page.main.student
+
+import android.net.Uri
+
+internal fun normalizeGalleryTitle(raw: String): String {
+    return raw.replace(Regex("\\s+"), "").trim()
+}
+
+internal fun isPlaceholderGalleryToken(raw: String): Boolean {
+    val value = raw.trim().lowercase()
+    if (value.isBlank()) return true
+    if (value == "n" || value == "null" || value == "undefined" || value == "nan") return true
+    return value.matches(Regex("""^\d+$"""))
+}
+
+internal fun hasInvalidGameKeeMediaTail(rawUrl: String): Boolean {
+    val value = rawUrl.trim()
+    if (value.isBlank()) return true
+    val normalized = if (value.startsWith("//")) "https:$value" else value
+    val uri = runCatching { Uri.parse(normalized) }.getOrNull() ?: return false
+    val host = uri.host?.lowercase().orEmpty()
+    if (!host.endsWith("gamekee.com")) return false
+    val segments = uri.pathSegments.filter { it.isNotBlank() }
+    if (segments.size != 1) return false
+    return isPlaceholderGalleryToken(segments.first())
+}
+
+internal fun isRenderableGalleryImageUrl(raw: String): Boolean {
+    val value = raw.trim()
+    if (value.isBlank()) return false
+    if (value.startsWith("data:image", ignoreCase = true)) return true
+    if (isPlaceholderGalleryToken(value)) return false
+    val normalized = if (value.startsWith("//")) "https:$value" else value
+    val lower = normalized.lowercase()
+    if (Regex("""\.(mp3|ogg|wav|m4a|aac)(\?.*)?(#.*)?$""").containsMatchIn(lower)) {
+        return false
+    }
+    if (Regex("""\.(png|jpg|jpeg|webp|gif|bmp|svg|avif)(\?.*)?(#.*)?$""").containsMatchIn(lower)) {
+        return true
+    }
+    if (hasInvalidGameKeeMediaTail(normalized)) return false
+    val uri = runCatching { Uri.parse(normalized) }.getOrNull()
+    val host = uri?.host?.lowercase().orEmpty()
+    val path = (uri?.encodedPath ?: uri?.path ?: "").lowercase()
+    if (host.contains("cdnimg") || host.contains("img")) return true
+    if (path.contains("/upload") || path.contains("/uploads") || path.contains("/images/") || path.contains("/wiki/")) {
+        return true
+    }
+    return lower.contains("x-oss-process=image")
+}
+
+internal fun isRenderableGalleryVideoUrl(raw: String): Boolean {
+    val value = raw.trim()
+    if (value.isBlank()) return false
+    if (value.startsWith("data:video", ignoreCase = true)) return true
+    if (isPlaceholderGalleryToken(value)) return false
+    val normalized = if (value.startsWith("//")) "https:$value" else value
+    val lower = normalized.lowercase()
+    if (hasInvalidGameKeeMediaTail(normalized)) return false
+    return lower.endsWith(".mp4") ||
+        lower.endsWith(".webm") ||
+        lower.endsWith(".mov") ||
+        lower.endsWith(".m3u8") ||
+        lower.contains(".mp4?") ||
+        lower.contains(".m3u8?")
+}
+
+internal fun isRenderableGalleryAudioUrl(raw: String): Boolean {
+    val value = raw.trim()
+    if (value.isBlank()) return false
+    if (value.startsWith("data:audio", ignoreCase = true)) return true
+    if (isPlaceholderGalleryToken(value)) return false
+    val normalized = if (value.startsWith("//")) "https:$value" else value
+    val lower = normalized.lowercase()
+    if (hasInvalidGameKeeMediaTail(normalized)) return false
+    return lower.endsWith(".mp3") ||
+        lower.endsWith(".ogg") ||
+        lower.endsWith(".wav") ||
+        lower.endsWith(".m4a") ||
+        lower.endsWith(".aac") ||
+        lower.contains(".mp3?") ||
+        lower.contains(".ogg?") ||
+        lower.contains(".wav?") ||
+        lower.contains(".m4a?") ||
+        lower.contains(".aac?")
+}
+
+internal fun hasRenderableGalleryMedia(item: BaGuideGalleryItem): Boolean {
+    val imageRenderable = isRenderableGalleryImageUrl(item.imageUrl)
+    val mediaRenderable = when (item.mediaType.lowercase()) {
+        "video" -> isRenderableGalleryVideoUrl(item.mediaUrl)
+        "audio" -> isRenderableGalleryAudioUrl(item.mediaUrl)
+        else -> isRenderableGalleryImageUrl(item.mediaUrl)
+    }
+    return imageRenderable || mediaRenderable
+}
+
+internal fun isMemoryHallFileGalleryItem(item: BaGuideGalleryItem): Boolean {
+    val title = normalizeGalleryTitle(item.title)
+    return title.startsWith("回忆大厅文件")
+}
+
+internal fun isExpressionGalleryItem(item: BaGuideGalleryItem): Boolean {
+    val title = normalizeGalleryTitle(item.title)
+    return title.startsWith("角色表情")
+}
+
+internal fun isMemoryHallGalleryItem(item: BaGuideGalleryItem): Boolean {
+    val title = normalizeGalleryTitle(item.title)
+    return title.startsWith("回忆大厅") && !title.startsWith("回忆大厅视频") && !title.startsWith("回忆大厅文件")
+}
+
+internal fun isOfficialIntroGalleryItem(item: BaGuideGalleryItem): Boolean {
+    val title = normalizeGalleryTitle(item.title)
+    return title.startsWith("官方介绍")
+}
+
+internal fun isChocolateGalleryItem(item: BaGuideGalleryItem): Boolean {
+    val title = normalizeGalleryTitle(item.title)
+    return title.startsWith("巧克力图") || title.startsWith("情人节巧克力")
+}
+
+internal fun isInteractiveFurnitureGalleryItem(item: BaGuideGalleryItem): Boolean {
+    val title = normalizeGalleryTitle(item.title)
+    return title.startsWith("互动家具")
+}
+
+internal fun isPreviewVideoCategoryTitle(rawTitle: String): Boolean {
+    val title = normalizeGalleryTitle(rawTitle)
+    return title.startsWith("回忆大厅视频") || title.startsWith("PV") || title.startsWith("角色演示")
+}
+
+internal fun isPreviewVideoCategoryGalleryItem(item: BaGuideGalleryItem): Boolean {
+    return isPreviewVideoCategoryTitle(item.title)
+}
+
+internal fun isPreviewVideoGalleryItem(item: BaGuideGalleryItem): Boolean {
+    if (item.mediaType.lowercase() != "video") return false
+    return isPreviewVideoCategoryTitle(item.title)
+}
+
+internal fun expressionGalleryOrder(title: String, fallback: Int): Int {
+    val normalized = normalizeGalleryTitle(title)
+    if (normalized == "角色表情") return 1
+    return Regex("""角色表情(\d+)""")
+        .find(normalized)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.toIntOrNull()
+        ?: fallback
+}

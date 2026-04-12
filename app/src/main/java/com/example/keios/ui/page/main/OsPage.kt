@@ -458,14 +458,23 @@ private object TopInfoKeys {
     )
 }
 
-private object SystemInfoCache {
-    private const val KV_ID = "system_info_cache"
-    private const val KEY_SYSTEM = "section_system_table"
-    private const val KEY_SECURE = "section_secure_table"
-    private const val KEY_GLOBAL = "section_global_table"
-    private const val KEY_ANDROID = "section_android_properties"
-    private const val KEY_JAVA = "section_java_properties"
-    private const val KEY_LINUX = "section_linux_environment"
+private object OsInfoCache {
+    private const val KV_ID = "os_info_cache"
+    private const val LEGACY_KV_ID = "system_info_cache"
+
+    private const val KEY_OS_SYSTEM = "section_os_system_table"
+    private const val KEY_OS_SECURE = "section_os_secure_table"
+    private const val KEY_OS_GLOBAL = "section_os_global_table"
+    private const val KEY_OS_ANDROID = "section_os_android_properties"
+    private const val KEY_OS_JAVA = "section_os_java_properties"
+    private const val KEY_OS_LINUX = "section_os_linux_environment"
+
+    private const val LEGACY_KEY_SYSTEM = "section_system_table"
+    private const val LEGACY_KEY_SECURE = "section_secure_table"
+    private const val LEGACY_KEY_GLOBAL = "section_global_table"
+    private const val LEGACY_KEY_ANDROID = "section_android_properties"
+    private const val LEGACY_KEY_JAVA = "section_java_properties"
+    private const val LEGACY_KEY_LINUX = "section_linux_environment"
 
     private fun encodeRows(rows: List<InfoRow>): String {
         return rows.joinToString("\n") { row ->
@@ -484,75 +493,115 @@ private object SystemInfoCache {
         }.toList()
     }
 
+    private fun readRaw(newKv: MMKV, legacyKv: MMKV, newKey: String, legacyKey: String): String? {
+        val newRaw = newKv.decodeString(newKey)
+        if (!newRaw.isNullOrBlank()) return newRaw
+        return legacyKv.decodeString(legacyKey)
+    }
+
+    private fun hasAllKeys(kv: MMKV, keys: List<String>): Boolean {
+        return keys.all { kv.containsKey(it) }
+    }
+
     fun read(): CachedSections {
         val kv = MMKV.mmkvWithID(KV_ID)
+        val legacyKv = MMKV.mmkvWithID(LEGACY_KV_ID)
         return CachedSections(
-            system = decodeRows(kv.decodeString(KEY_SYSTEM)),
-            secure = decodeRows(kv.decodeString(KEY_SECURE)),
-            global = decodeRows(kv.decodeString(KEY_GLOBAL)),
-            android = decodeRows(kv.decodeString(KEY_ANDROID)),
-            java = decodeRows(kv.decodeString(KEY_JAVA)),
-            linux = decodeRows(kv.decodeString(KEY_LINUX))
+            system = decodeRows(readRaw(kv, legacyKv, KEY_OS_SYSTEM, LEGACY_KEY_SYSTEM)),
+            secure = decodeRows(readRaw(kv, legacyKv, KEY_OS_SECURE, LEGACY_KEY_SECURE)),
+            global = decodeRows(readRaw(kv, legacyKv, KEY_OS_GLOBAL, LEGACY_KEY_GLOBAL)),
+            android = decodeRows(readRaw(kv, legacyKv, KEY_OS_ANDROID, LEGACY_KEY_ANDROID)),
+            java = decodeRows(readRaw(kv, legacyKv, KEY_OS_JAVA, LEGACY_KEY_JAVA)),
+            linux = decodeRows(readRaw(kv, legacyKv, KEY_OS_LINUX, LEGACY_KEY_LINUX))
         )
     }
 
     fun write(section: SectionKind, rows: List<InfoRow>) {
         val kv = MMKV.mmkvWithID(KV_ID)
         when (section) {
-            SectionKind.SYSTEM -> kv.encode(KEY_SYSTEM, encodeRows(rows))
-            SectionKind.SECURE -> kv.encode(KEY_SECURE, encodeRows(rows))
-            SectionKind.GLOBAL -> kv.encode(KEY_GLOBAL, encodeRows(rows))
-            SectionKind.ANDROID -> kv.encode(KEY_ANDROID, encodeRows(rows))
-            SectionKind.JAVA -> kv.encode(KEY_JAVA, encodeRows(rows))
-            SectionKind.LINUX -> kv.encode(KEY_LINUX, encodeRows(rows))
+            SectionKind.SYSTEM -> kv.encode(KEY_OS_SYSTEM, encodeRows(rows))
+            SectionKind.SECURE -> kv.encode(KEY_OS_SECURE, encodeRows(rows))
+            SectionKind.GLOBAL -> kv.encode(KEY_OS_GLOBAL, encodeRows(rows))
+            SectionKind.ANDROID -> kv.encode(KEY_OS_ANDROID, encodeRows(rows))
+            SectionKind.JAVA -> kv.encode(KEY_OS_JAVA, encodeRows(rows))
+            SectionKind.LINUX -> kv.encode(KEY_OS_LINUX, encodeRows(rows))
         }
     }
 
     fun hasPersistedCache(): Boolean {
         val kv = MMKV.mmkvWithID(KV_ID)
-        return kv.containsKey(KEY_SYSTEM) &&
-            kv.containsKey(KEY_SECURE) &&
-            kv.containsKey(KEY_GLOBAL) &&
-            kv.containsKey(KEY_ANDROID) &&
-            kv.containsKey(KEY_JAVA) &&
-            kv.containsKey(KEY_LINUX)
+        val legacyKv = MMKV.mmkvWithID(LEGACY_KV_ID)
+        val hasNew = hasAllKeys(
+            kv,
+            listOf(KEY_OS_SYSTEM, KEY_OS_SECURE, KEY_OS_GLOBAL, KEY_OS_ANDROID, KEY_OS_JAVA, KEY_OS_LINUX)
+        )
+        val hasLegacy = hasAllKeys(
+            legacyKv,
+            listOf(
+                LEGACY_KEY_SYSTEM,
+                LEGACY_KEY_SECURE,
+                LEGACY_KEY_GLOBAL,
+                LEGACY_KEY_ANDROID,
+                LEGACY_KEY_JAVA,
+                LEGACY_KEY_LINUX
+            )
+        )
+        return hasNew || hasLegacy
     }
 }
 
-private object SystemUiStateStore {
-    private const val KV_ID = "system_ui_state"
-    private const val KEY_OVERVIEW = "expanded_overview"
-    private const val KEY_TOP_INFO = "expanded_top_info"
-    private const val KEY_SYSTEM_TABLE = "expanded_system_table"
-    private const val KEY_SECURE_TABLE = "expanded_secure_table"
-    private const val KEY_GLOBAL_TABLE = "expanded_global_table"
-    private const val KEY_ANDROID_PROPS = "expanded_android_props"
-    private const val KEY_JAVA_PROPS = "expanded_java_props"
-    private const val KEY_LINUX_ENV = "expanded_linux_env"
+private object OsUiStateStore {
+    private const val KV_ID = "os_ui_state"
+    private const val LEGACY_KV_ID = "system_ui_state"
+
+    private const val KEY_OVERVIEW = "expanded_os_overview"
+    private const val KEY_TOP_INFO = "expanded_os_top_info"
+    private const val KEY_SYSTEM_TABLE = "expanded_os_system_table"
+    private const val KEY_SECURE_TABLE = "expanded_os_secure_table"
+    private const val KEY_GLOBAL_TABLE = "expanded_os_global_table"
+    private const val KEY_ANDROID_PROPS = "expanded_os_android_props"
+    private const val KEY_JAVA_PROPS = "expanded_os_java_props"
+    private const val KEY_LINUX_ENV = "expanded_os_linux_env"
+
+    private const val LEGACY_KEY_OVERVIEW = "expanded_overview"
+    private const val LEGACY_KEY_TOP_INFO = "expanded_top_info"
+    private const val LEGACY_KEY_SYSTEM_TABLE = "expanded_system_table"
+    private const val LEGACY_KEY_SECURE_TABLE = "expanded_secure_table"
+    private const val LEGACY_KEY_GLOBAL_TABLE = "expanded_global_table"
+    private const val LEGACY_KEY_ANDROID_PROPS = "expanded_android_props"
+    private const val LEGACY_KEY_JAVA_PROPS = "expanded_java_props"
+    private const val LEGACY_KEY_LINUX_ENV = "expanded_linux_env"
+
+    private fun readBool(key: String, legacyKey: String, defaultValue: Boolean): Boolean {
+        val kv = MMKV.mmkvWithID(KV_ID)
+        if (kv.containsKey(key)) return kv.decodeBool(key, defaultValue)
+        val legacyKv = MMKV.mmkvWithID(LEGACY_KV_ID)
+        return legacyKv.decodeBool(legacyKey, defaultValue)
+    }
 
     fun topInfoExpanded(defaultValue: Boolean = true): Boolean =
-        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_TOP_INFO, defaultValue)
+        readBool(KEY_TOP_INFO, LEGACY_KEY_TOP_INFO, defaultValue)
 
     fun overviewExpanded(defaultValue: Boolean = true): Boolean =
-        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_OVERVIEW, defaultValue)
+        readBool(KEY_OVERVIEW, LEGACY_KEY_OVERVIEW, defaultValue)
 
-    fun systemTableExpanded(defaultValue: Boolean = false): Boolean =
-        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_SYSTEM_TABLE, defaultValue)
+    fun osSystemTableExpanded(defaultValue: Boolean = false): Boolean =
+        readBool(KEY_SYSTEM_TABLE, LEGACY_KEY_SYSTEM_TABLE, defaultValue)
 
     fun secureTableExpanded(defaultValue: Boolean = false): Boolean =
-        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_SECURE_TABLE, defaultValue)
+        readBool(KEY_SECURE_TABLE, LEGACY_KEY_SECURE_TABLE, defaultValue)
 
     fun globalTableExpanded(defaultValue: Boolean = false): Boolean =
-        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_GLOBAL_TABLE, defaultValue)
+        readBool(KEY_GLOBAL_TABLE, LEGACY_KEY_GLOBAL_TABLE, defaultValue)
 
     fun androidPropsExpanded(defaultValue: Boolean = false): Boolean =
-        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_ANDROID_PROPS, defaultValue)
+        readBool(KEY_ANDROID_PROPS, LEGACY_KEY_ANDROID_PROPS, defaultValue)
 
     fun javaPropsExpanded(defaultValue: Boolean = false): Boolean =
-        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_JAVA_PROPS, defaultValue)
+        readBool(KEY_JAVA_PROPS, LEGACY_KEY_JAVA_PROPS, defaultValue)
 
     fun linuxEnvExpanded(defaultValue: Boolean = false): Boolean =
-        MMKV.mmkvWithID(KV_ID).decodeBool(KEY_LINUX_ENV, defaultValue)
+        readBool(KEY_LINUX_ENV, LEGACY_KEY_LINUX_ENV, defaultValue)
 
     fun setTopInfoExpanded(value: Boolean) {
         MMKV.mmkvWithID(KV_ID).encode(KEY_TOP_INFO, value)
@@ -562,7 +611,7 @@ private object SystemUiStateStore {
         MMKV.mmkvWithID(KV_ID).encode(KEY_OVERVIEW, value)
     }
 
-    fun setSystemTableExpanded(value: Boolean) {
+    fun setOsSystemTableExpanded(value: Boolean) {
         MMKV.mmkvWithID(KV_ID).encode(KEY_SYSTEM_TABLE, value)
     }
 
@@ -982,13 +1031,13 @@ private fun appendSectionMarkdown(builder: StringBuilder, title: String, rows: L
     builder.appendLine()
 }
 
-private fun buildSystemMarkdown(
+private fun buildOsMarkdown(
     generatedAt: String,
     shizukuStatus: String,
     sections: ExportSections
 ): String {
     return buildString {
-        appendLine("# KeiOS System Export")
+        appendLine("# KeiOS OS Export")
         appendLine()
         appendLine("- Generated at: $generatedAt")
         appendLine("- Shizuku status: $shizukuStatus")
@@ -1005,7 +1054,7 @@ private fun buildSystemMarkdown(
 }
 
 @Composable
-fun SystemPage(
+fun OsPage(
     scrollToTopSignal: Int,
     shizukuStatus: String,
     shizukuApiUtils: ShizukuApiUtils,
@@ -1028,13 +1077,13 @@ fun SystemPage(
     var cachePersisted by remember { mutableStateOf(false) }
     var queryInput by remember { mutableStateOf("") }
     var queryApplied by remember { mutableStateOf("") }
-    var topInfoExpanded by remember { mutableStateOf(SystemUiStateStore.topInfoExpanded(defaultValue = true)) }
-    var systemTableExpanded by remember { mutableStateOf(SystemUiStateStore.systemTableExpanded(defaultValue = false)) }
-    var secureTableExpanded by remember { mutableStateOf(SystemUiStateStore.secureTableExpanded(defaultValue = false)) }
-    var globalTableExpanded by remember { mutableStateOf(SystemUiStateStore.globalTableExpanded(defaultValue = false)) }
-    var androidPropsExpanded by remember { mutableStateOf(SystemUiStateStore.androidPropsExpanded(defaultValue = false)) }
-    var javaPropsExpanded by remember { mutableStateOf(SystemUiStateStore.javaPropsExpanded(defaultValue = false)) }
-    var linuxEnvExpanded by remember { mutableStateOf(SystemUiStateStore.linuxEnvExpanded(defaultValue = false)) }
+    var topInfoExpanded by remember { mutableStateOf(OsUiStateStore.topInfoExpanded(defaultValue = true)) }
+    var systemTableExpanded by remember { mutableStateOf(OsUiStateStore.osSystemTableExpanded(defaultValue = false)) }
+    var secureTableExpanded by remember { mutableStateOf(OsUiStateStore.secureTableExpanded(defaultValue = false)) }
+    var globalTableExpanded by remember { mutableStateOf(OsUiStateStore.globalTableExpanded(defaultValue = false)) }
+    var androidPropsExpanded by remember { mutableStateOf(OsUiStateStore.androidPropsExpanded(defaultValue = false)) }
+    var javaPropsExpanded by remember { mutableStateOf(OsUiStateStore.javaPropsExpanded(defaultValue = false)) }
+    var linuxEnvExpanded by remember { mutableStateOf(OsUiStateStore.linuxEnvExpanded(defaultValue = false)) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     var pendingExportContent by remember { mutableStateOf<String?>(null) }
@@ -1099,8 +1148,8 @@ fun SystemPage(
         }
         updateSection(section) { it.copy(rows = fresh, loading = false, loadedFresh = true) }
         cachePersisted = withContext(Dispatchers.IO) {
-            SystemInfoCache.write(section, fresh)
-            SystemInfoCache.hasPersistedCache()
+            OsInfoCache.write(section, fresh)
+            OsInfoCache.hasPersistedCache()
         }
     }
 
@@ -1130,7 +1179,7 @@ fun SystemPage(
 
     LaunchedEffect(Unit) {
         val (cached, persisted) = withContext(Dispatchers.IO) {
-            SystemInfoCache.read() to SystemInfoCache.hasPersistedCache()
+            OsInfoCache.read() to OsInfoCache.hasPersistedCache()
         }
         sectionStates = mapOf(
             SectionKind.SYSTEM to SectionState(rows = cached.system),
@@ -1152,25 +1201,25 @@ fun SystemPage(
     }
 
     LaunchedEffect(topInfoExpanded) {
-        withContext(Dispatchers.IO) { SystemUiStateStore.setTopInfoExpanded(topInfoExpanded) }
+        withContext(Dispatchers.IO) { OsUiStateStore.setTopInfoExpanded(topInfoExpanded) }
     }
     LaunchedEffect(systemTableExpanded) {
-        withContext(Dispatchers.IO) { SystemUiStateStore.setSystemTableExpanded(systemTableExpanded) }
+        withContext(Dispatchers.IO) { OsUiStateStore.setOsSystemTableExpanded(systemTableExpanded) }
     }
     LaunchedEffect(secureTableExpanded) {
-        withContext(Dispatchers.IO) { SystemUiStateStore.setSecureTableExpanded(secureTableExpanded) }
+        withContext(Dispatchers.IO) { OsUiStateStore.setSecureTableExpanded(secureTableExpanded) }
     }
     LaunchedEffect(globalTableExpanded) {
-        withContext(Dispatchers.IO) { SystemUiStateStore.setGlobalTableExpanded(globalTableExpanded) }
+        withContext(Dispatchers.IO) { OsUiStateStore.setGlobalTableExpanded(globalTableExpanded) }
     }
     LaunchedEffect(androidPropsExpanded) {
-        withContext(Dispatchers.IO) { SystemUiStateStore.setAndroidPropsExpanded(androidPropsExpanded) }
+        withContext(Dispatchers.IO) { OsUiStateStore.setAndroidPropsExpanded(androidPropsExpanded) }
     }
     LaunchedEffect(javaPropsExpanded) {
-        withContext(Dispatchers.IO) { SystemUiStateStore.setJavaPropsExpanded(javaPropsExpanded) }
+        withContext(Dispatchers.IO) { OsUiStateStore.setJavaPropsExpanded(javaPropsExpanded) }
     }
     LaunchedEffect(linuxEnvExpanded) {
-        withContext(Dispatchers.IO) { SystemUiStateStore.setLinuxEnvExpanded(linuxEnvExpanded) }
+        withContext(Dispatchers.IO) { OsUiStateStore.setLinuxEnvExpanded(linuxEnvExpanded) }
     }
 
     LaunchedEffect(systemTableExpanded) {
@@ -1293,7 +1342,7 @@ fun SystemPage(
                             items = listOf(
                                 LiquidActionItem(
                                     icon = MiuixIcons.Regular.Refresh,
-                                    contentDescription = "刷新系统参数",
+                                    contentDescription = "刷新OS参数",
                                     onClick = {
                                         if (refreshing) return@LiquidActionItem
                                         scope.launch { refreshAllSections() }
@@ -1309,9 +1358,9 @@ fun SystemPage(
                                             val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
                                             val markdown = withContext(Dispatchers.IO) {
                                                 val exportSections = buildExportSections(context, shizukuStatus, shizukuApiUtils)
-                                                buildSystemMarkdown(generatedAt, shizukuStatus, exportSections)
+                                                buildOsMarkdown(generatedAt, shizukuStatus, exportSections)
                                             }
-                                            val fileName = "keios-system-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())}.md"
+                                            val fileName = "keios-os-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date())}.md"
                                             pendingExportContent = markdown
                                             exportPreparing = false
                                             exportLauncher.launch(fileName)
@@ -1329,7 +1378,7 @@ fun SystemPage(
                         .padding(horizontal = 12.dp),
                     value = queryInput,
                     onValueChange = { queryInput = it },
-                    label = "搜索系统参数",
+                    label = "搜索OS参数",
                     backdrop = backdrop,
                     bottomBarStyle = true,
                     singleLine = true
