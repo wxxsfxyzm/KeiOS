@@ -100,9 +100,9 @@ dependencies {
     implementation("com.tencent:mmkv:2.4.0")
     implementation("io.modelcontextprotocol:kotlin-sdk:0.11.0")
     implementation("io.ktor:ktor-server-cio:3.4.2")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:4.12.0")
-    implementation("androidx.media3:media3-exoplayer:1.5.1")
-    implementation("androidx.media3:media3-ui:1.5.1")
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
+    implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:5.3.2")
+    implementation("androidx.media3:media3-exoplayer:1.10.0")
+    implementation("androidx.media3:media3-ui:1.10.0")
     implementation("com.xzakota.hyper.notification:focus-api:1.4")
 }

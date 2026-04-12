@@ -280,7 +280,7 @@ object GameKeeFetchHelper {
 
         client.newCall(builder.build()).execute().use { resp ->
             if (!resp.isSuccessful) throw IOException("HTTP ${resp.code}")
-            val body = resp.body?.string().orEmpty()
+            val body = resp.body.string()
             if (requireJsonBody && !isJsonLike(body)) {
                 throw IOException("non-json body")
             }
@@ -444,7 +444,7 @@ object GameKeeFetchHelper {
         onProgress: ((downloadedBytes: Long, totalBytes: Long) -> Unit)? = null
     ): Bitmap? {
         if (!response.isSuccessful) return null
-        val body = response.body ?: return null
+        val body = response.body
         val total = body.contentLength()
         body.byteStream().use { input ->
             val output = ByteArrayOutputStream()
@@ -560,7 +560,7 @@ object GameKeeFetchHelper {
                     val result = runCatching {
                         client.newCall(req).execute().use { resp ->
                             if (!resp.isSuccessful) return@use false
-                            val body = resp.body ?: return@use false
+                            val body = resp.body
                             val total = body.contentLength()
                             body.byteStream().use { input ->
                                 tempFile.outputStream().use { out ->
