@@ -1922,6 +1922,47 @@ fun BAPage(
                 )
             }
 
+            if (sheetApNotifyEnabled) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "AP提醒阈值",
+                        color = MiuixTheme.colorScheme.onBackground
+                    )
+                    GlassSearchField(
+                        modifier = Modifier.width(70.dp),
+                        value = sheetApNotifyThresholdText,
+                        onValueChange = { input ->
+                            val digits = input.filter { it.isDigit() }.take(3)
+                            if (digits.isBlank()) {
+                                sheetApNotifyThresholdText = ""
+                            } else {
+                                val normalized = digits.toIntOrNull()?.coerceIn(0, BA_AP_MAX)
+                                sheetApNotifyThresholdText = normalized?.toString() ?: ""
+                            }
+                        },
+                        onImeActionDone = {
+                            val normalized = sheetApNotifyThresholdText.toIntOrNull()?.coerceIn(0, BA_AP_MAX) ?: 120
+                            sheetApNotifyThresholdText = normalized.toString()
+                        },
+                        label = "120",
+                        backdrop = backdrop,
+                        blurRadius = baGlassBlur,
+                        lightMaterial = baLightGlass,
+                        bottomBarStyle = baBottomBarGlass,
+                        singleLine = true,
+                        textAlign = TextAlign.Center,
+                        fontSize = 18.sp,
+                        textColor = Color(0xFF22C55E)
+                    )
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1986,47 +2027,6 @@ fun BAPage(
                     checked = sheetShowCalendarPoolImages,
                     onCheckedChange = { checked -> sheetShowCalendarPoolImages = checked }
                 )
-            }
-
-            if (sheetApNotifyEnabled) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "提醒阈值",
-                        color = MiuixTheme.colorScheme.onBackground
-                    )
-                    GlassSearchField(
-                        modifier = Modifier.width(70.dp),
-                        value = sheetApNotifyThresholdText,
-                        onValueChange = { input ->
-                            val digits = input.filter { it.isDigit() }.take(3)
-                            if (digits.isBlank()) {
-                                sheetApNotifyThresholdText = ""
-                            } else {
-                                val normalized = digits.toIntOrNull()?.coerceIn(0, BA_AP_MAX)
-                                sheetApNotifyThresholdText = normalized?.toString() ?: ""
-                            }
-                        },
-                        onImeActionDone = {
-                            val normalized = sheetApNotifyThresholdText.toIntOrNull()?.coerceIn(0, BA_AP_MAX) ?: 120
-                            sheetApNotifyThresholdText = normalized.toString()
-                        },
-                        label = "120",
-                        backdrop = backdrop,
-                        blurRadius = baGlassBlur,
-                        lightMaterial = baLightGlass,
-                        bottomBarStyle = baBottomBarGlass,
-                        singleLine = true,
-                        textAlign = TextAlign.Center,
-                        fontSize = 18.sp,
-                        textColor = Color(0xFF22C55E)
-                    )
-                }
             }
 
             Text(

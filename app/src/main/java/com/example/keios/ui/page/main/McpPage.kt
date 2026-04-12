@@ -375,6 +375,8 @@ fun McpPage(
             )
         }
     ) {
+        val sheetTitleColor = MiuixTheme.colorScheme.onBackground
+        val sheetDangerTitleColor = MiuixTheme.colorScheme.error
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -395,7 +397,7 @@ fun McpPage(
                 ) {
                     Text(
                         text = "服务名称",
-                        color = MiuixTheme.colorScheme.onBackgroundVariant
+                        color = sheetTitleColor
                     )
                 }
                 GlassSearchField(
@@ -425,7 +427,7 @@ fun McpPage(
                 ) {
                     Text(
                         text = "服务端口",
-                        color = MiuixTheme.colorScheme.onBackgroundVariant
+                        color = sheetTitleColor
                     )
                 }
                 GlassSearchField(
@@ -442,7 +444,7 @@ fun McpPage(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "网络访问范围",
-                color = MiuixTheme.colorScheme.onBackground,
+                color = sheetTitleColor,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             McpNetworkModeOption(
@@ -463,7 +465,7 @@ fun McpPage(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "危险操作",
-                color = MiuixTheme.colorScheme.error,
+                color = sheetDangerTitleColor,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             GlassTextButton(
