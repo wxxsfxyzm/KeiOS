@@ -457,14 +457,6 @@ fun OsPage(
                             backdrop = backdrop,
                             items = listOf(
                                 LiquidActionItem(
-                                    icon = MiuixIcons.Regular.Refresh,
-                                    contentDescription = "刷新OS参数",
-                                    onClick = {
-                                        if (refreshing) return@LiquidActionItem
-                                        scope.launch { refreshAllSections() }
-                                    }
-                                ),
-                                LiquidActionItem(
                                     icon = MiuixIcons.Regular.Edit,
                                     contentDescription = "管理卡片显示",
                                     onClick = { showCardManager = true }
@@ -486,6 +478,14 @@ fun OsPage(
                                             exportPreparing = false
                                             exportLauncher.launch(fileName)
                                         }
+                                    }
+                                ),
+                                LiquidActionItem(
+                                    icon = MiuixIcons.Regular.Refresh,
+                                    contentDescription = "刷新OS参数",
+                                    onClick = {
+                                        if (refreshing) return@LiquidActionItem
+                                        scope.launch { refreshAllSections() }
                                     }
                                 )
                             ),

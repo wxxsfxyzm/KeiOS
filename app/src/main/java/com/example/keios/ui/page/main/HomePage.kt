@@ -180,8 +180,11 @@ private fun loadHomeBaOverview(): HomeBaOverview {
 private fun Modifier.homeKeiHdrAccent(
     enabled: Boolean,
     sweepProgress: Float,
+    sweepAlpha: Float = 0.82f,
     radialAlpha: Float = 0.30f,
-    radialRadiusScale: Float = 0.72f
+    radialRadiusScale: Float = 0.72f,
+    radialCenterX: Float = 0.5f,
+    radialCenterY: Float = 0.5f
 ): Modifier {
     if (!enabled) return this
     return this
@@ -195,7 +198,7 @@ private fun Modifier.homeKeiHdrAccent(
                     colorStops = arrayOf(
                         0f to Color.Transparent,
                         (sweepProgress - 0.16f).coerceIn(0f, 1f) to Color.Transparent,
-                        sweepProgress.coerceIn(0f, 1f) to Color.White.copy(alpha = 0.82f),
+                        sweepProgress.coerceIn(0f, 1f) to Color.White.copy(alpha = sweepAlpha),
                         (sweepProgress + 0.16f).coerceIn(0f, 1f) to Color.Transparent,
                         1f to Color.Transparent
                     )
@@ -208,6 +211,7 @@ private fun Modifier.homeKeiHdrAccent(
                         Color.White.copy(alpha = radialAlpha),
                         Color.Transparent
                     ),
+                    center = Offset(size.width * radialCenterX, size.height * radialCenterY),
                     radius = size.minDimension * radialRadiusScale
                 ),
                 blendMode = BlendMode.SrcAtop
@@ -657,7 +661,9 @@ fun HomePage(
                                 enabled = homeIconHdrEnabled,
                                 sweepProgress = hdrSweepProgress,
                                 radialAlpha = 0.30f,
-                                radialRadiusScale = 0.72f
+                                radialRadiusScale = 0.72f,
+                                radialCenterX = 0.5f,
+                                radialCenterY = 0.48f
                             )
                     )
                 }
@@ -665,7 +671,11 @@ fun HomePage(
                 BasicText(
                     text = "KeiOS",
                     style = TextStyle(
-                        brush = Brush.linearGradient(HOME_KEI_TITLE_GRADIENT_COLORS),
+                        brush = Brush.linearGradient(
+                            colors = HOME_KEI_TITLE_GRADIENT_COLORS,
+                            start = Offset(14f, 6f),
+                            end = Offset(260f, 104f)
+                        ),
                         fontWeight = FontWeight.Bold,
                         fontSize = 33.sp,
                         shadow = ComposeTextShadow(
@@ -688,8 +698,10 @@ fun HomePage(
                         .homeKeiHdrAccent(
                             enabled = homeIconHdrEnabled,
                             sweepProgress = hdrSweepProgress,
-                            radialAlpha = 0.22f,
-                            radialRadiusScale = 0.92f
+                            radialAlpha = 0.26f,
+                            radialRadiusScale = 0.82f,
+                            radialCenterX = 0.32f,
+                            radialCenterY = 0.34f
                         )
                 )
 

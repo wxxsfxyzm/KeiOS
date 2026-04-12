@@ -160,11 +160,6 @@ fun McpPage(
                         backdrop = backdrop,
                         items = listOf(
                             LiquidActionItem(
-                                icon = if (uiState.running) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
-                                contentDescription = if (uiState.running) "停止服务" else "启动服务",
-                                onClick = toggleServer
-                            ),
-                            LiquidActionItem(
                                 icon = MiuixIcons.Regular.Edit,
                                 contentDescription = "编辑服务参数",
                                 onClick = { showEditSheet = true }
@@ -195,6 +190,11 @@ fun McpPage(
                                     mcpServerManager.refreshNow()
                                     Toast.makeText(context, "已刷新", Toast.LENGTH_SHORT).show()
                                 }
+                            ),
+                            LiquidActionItem(
+                                icon = if (uiState.running) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
+                                contentDescription = if (uiState.running) "停止服务" else "启动服务",
+                                onClick = toggleServer
                             )
                         ),
                         onInteractionChanged = onActionBarInteractingChanged

@@ -17,10 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
-import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -47,13 +44,8 @@ fun SettingsPage(
 ) {
     val titleColor = MiuixTheme.colorScheme.onBackground
     val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
-    val surfaceColor = MiuixTheme.colorScheme.surface
-    val enabledPillColor = Color(0xFF34C759)
-    val disabledPillColor = Color(0xFF64748B)
-    val backdrop: LayerBackdrop = rememberLayerBackdrop {
-        drawRect(surfaceColor)
-        drawContent()
-    }
+    val enabledCardColor = Color(0x2234C759)
+    val disabledCardColor = Color(0x2264748B)
 
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -94,7 +86,7 @@ fun SettingsPage(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.defaultColors(
-                        color = Color(0x223B82F6),
+                        color = if (liquidBottomBarEnabled) enabledCardColor else disabledCardColor,
                         contentColor = MiuixTheme.colorScheme.onBackground
                     ),
                     onClick = {}
@@ -105,24 +97,7 @@ fun SettingsPage(
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Bottom Bar", color = titleColor)
-                            GlassTextButton(
-                                backdrop = backdrop,
-                                text = if (liquidBottomBarEnabled) "ON" else "OFF",
-                                enabled = false,
-                                textColor = Color.White,
-                                containerColor = if (liquidBottomBarEnabled) enabledPillColor else disabledPillColor,
-                                blurRadius = 4.dp,
-                                lightMaterial = true,
-                                bottomBarStyle = true,
-                                onClick = {}
-                            )
-                        }
+                        Text("Bottom Bar", color = titleColor)
 
                         Column(
                             modifier = Modifier
@@ -165,7 +140,7 @@ fun SettingsPage(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.defaultColors(
-                        color = Color(0x223B82F6),
+                        color = if (cardPressFeedbackEnabled) enabledCardColor else disabledCardColor,
                         contentColor = MiuixTheme.colorScheme.onBackground
                     ),
                     onClick = {}
@@ -176,24 +151,7 @@ fun SettingsPage(
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Card Feedback", color = titleColor)
-                            GlassTextButton(
-                                backdrop = backdrop,
-                                text = if (cardPressFeedbackEnabled) "ON" else "OFF",
-                                enabled = false,
-                                textColor = Color.White,
-                                containerColor = if (cardPressFeedbackEnabled) enabledPillColor else disabledPillColor,
-                                blurRadius = 4.dp,
-                                lightMaterial = true,
-                                bottomBarStyle = true,
-                                onClick = {}
-                            )
-                        }
+                        Text("Card Feedback", color = titleColor)
 
                         Column(
                             modifier = Modifier
@@ -240,7 +198,7 @@ fun SettingsPage(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.defaultColors(
-                        color = Color(0x223B82F6),
+                        color = if (homeIconHdrEnabled) enabledCardColor else disabledCardColor,
                         contentColor = MiuixTheme.colorScheme.onBackground
                     ),
                     onClick = {}
@@ -251,24 +209,7 @@ fun SettingsPage(
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Home HDR", color = titleColor)
-                            GlassTextButton(
-                                backdrop = backdrop,
-                                text = if (homeIconHdrEnabled) "ON" else "OFF",
-                                enabled = false,
-                                textColor = Color.White,
-                                containerColor = if (homeIconHdrEnabled) enabledPillColor else disabledPillColor,
-                                blurRadius = 4.dp,
-                                lightMaterial = true,
-                                bottomBarStyle = true,
-                                onClick = {}
-                            )
-                        }
+                        Text("Home Shine", color = titleColor)
 
                         Column(
                             modifier = Modifier
@@ -282,7 +223,7 @@ fun SettingsPage(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "主页图标 HDR 高光",
+                                    text = "主页图标与标题 HDR 高光",
                                     color = titleColor,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -293,9 +234,9 @@ fun SettingsPage(
                             }
                             Text(
                                 text = if (homeIconHdrEnabled) {
-                                    "启用 KeiOS 图标动态高光（亮屏时更明显）"
+                                    "启用主页 Kei 图标与 KeiOS 标题联动高光（亮屏时更明显）"
                                 } else {
-                                    "关闭主页图标高光，减少夜间眩光感"
+                                    "关闭主页图标与标题高光，减少夜间眩光感"
                                 },
                                 color = subtitleColor
                             )
@@ -303,7 +244,7 @@ fun SettingsPage(
 
                         MiuixInfoItem(
                             key = "作用范围",
-                            value = "仅影响主页 KeiOS 图标高光效果"
+                            value = "影响主页 Kei 图标与 KeiOS 标题的联动高光效果"
                         )
                     }
                 }

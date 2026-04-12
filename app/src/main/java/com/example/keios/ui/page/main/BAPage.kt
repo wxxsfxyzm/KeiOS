@@ -846,6 +846,21 @@ fun BAPage(
                                 backdrop = backdrop,
                                 items = listOf(
                                     LiquidActionItem(
+                                        icon = MiuixIcons.Regular.Edit,
+                                        contentDescription = "编辑",
+                                        onClick = { openSettingsSheet() }
+                                    ),
+                                    LiquidActionItem(
+                                        icon = MiuixIcons.Regular.Timer,
+                                        contentDescription = "刷新间隔",
+                                        onClick = { showCalendarIntervalPopup = !showCalendarIntervalPopup }
+                                    ),
+                                    LiquidActionItem(
+                                        icon = MiuixIcons.Regular.Copy,
+                                        contentDescription = "复制好友码",
+                                        onClick = { copyFriendCodeToClipboard() }
+                                    ),
+                                    LiquidActionItem(
                                         icon = MiuixIcons.Regular.Refresh,
                                         contentDescription = "刷新",
                                         onClick = {
@@ -854,21 +869,6 @@ fun BAPage(
                                             refreshCalendar(force = true)
                                             refreshPool(force = true)
                                         }
-                                    ),
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Timer,
-                                        contentDescription = "刷新间隔",
-                                        onClick = { showCalendarIntervalPopup = !showCalendarIntervalPopup }
-                                    ),
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Edit,
-                                        contentDescription = "编辑",
-                                        onClick = { openSettingsSheet() }
-                                    ),
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Copy,
-                                        contentDescription = "复制好友码",
-                                        onClick = { copyFriendCodeToClipboard() }
                                     )
                                 ),
                                 onInteractionChanged = onActionBarInteractingChanged
