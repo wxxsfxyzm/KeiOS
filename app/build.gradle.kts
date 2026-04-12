@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 fun runGitCommandOrNull(vararg args: String): String? {
     return try {
@@ -14,6 +15,16 @@ fun runGitCommandOrNull(vararg args: String): String? {
     }
 }
 
+fun readLocalPropertyOrNull(key: String): String? {
+    val localPropsFile = rootProject.file("local.properties")
+    if (!localPropsFile.exists()) return null
+    return runCatching {
+        val props = Properties()
+        localPropsFile.inputStream().use(props::load)
+        props.getProperty(key)
+    }.getOrNull()
+}
+
 val baseVersionName = "1.0"
 val gitCommitCount = runGitCommandOrNull("rev-list", "--count", "HEAD")?.toIntOrNull() ?: 1
 val gitShortHash = runGitCommandOrNull("rev-parse", "--short", "HEAD") ?: "nogit"
@@ -27,6 +38,10 @@ val autoVersionName = buildString {
     append(gitShortHash)
     if (gitDirty) append("-dirty")
 }
+val miuixVersion =
+    providers.gradleProperty("miuix.version").orNull
+        ?: readLocalPropertyOrNull("miuix.version")
+        ?: "0.9.0"
 
 plugins {
     id("com.android.application")
@@ -85,12 +100,12 @@ dependencies {
     implementation("androidx.navigation:navigation-common-ktx:2.9.7")
     debugImplementation("androidx.compose.ui:ui-tooling:1.10.6")
 
-    implementation("top.yukonga.miuix.kmp:miuix-ui-android:0.9.0")
-    implementation("top.yukonga.miuix.kmp:miuix-preference-android:0.9.0")
-    implementation("top.yukonga.miuix.kmp:miuix-icons-android:0.9.0")
-    implementation("top.yukonga.miuix.kmp:miuix-shapes-android:0.9.0")
-    implementation("top.yukonga.miuix.kmp:miuix-blur-android:0.9.0")
-    implementation("top.yukonga.miuix.kmp:miuix-navigation3-ui-android:0.9.0")
+    implementation("top.yukonga.miuix.kmp:miuix-ui-android:$miuixVersion")
+    implementation("top.yukonga.miuix.kmp:miuix-preference-android:$miuixVersion")
+    implementation("top.yukonga.miuix.kmp:miuix-icons-android:$miuixVersion")
+    implementation("top.yukonga.miuix.kmp:miuix-shapes-android:$miuixVersion")
+    implementation("top.yukonga.miuix.kmp:miuix-blur-android:$miuixVersion")
+    implementation("top.yukonga.miuix.kmp:miuix-navigation3-ui-android:$miuixVersion")
     implementation("io.github.kyant0:backdrop:1.0.6")
     implementation("io.github.kyant0:capsule:2.1.3")
     implementation("io.github.kyant0:shapes:1.2.0")

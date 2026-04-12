@@ -863,17 +863,19 @@ fun GitHubPage(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            MiuixInfoItem(
-                                "应用包名（点击刷新）",
-                                item.packageName,
+                            GitHubCompactInfoRow(
+                                label = "应用包名",
+                                value = item.packageName,
+                                valueColor = MiuixTheme.colorScheme.primary,
                                 onClick = {
                                     refreshItem(item, showToastOnError = true)
                                     Toast.makeText(context, "已刷新 ${item.appLabel}", Toast.LENGTH_SHORT).show()
                                 }
                             )
-                            MiuixInfoItem(
-                                "仓库地址",
-                                item.repoUrl,
+                            GitHubCompactInfoRow(
+                                label = "仓库地址",
+                                value = item.repoUrl,
+                                valueColor = MiuixTheme.colorScheme.primary,
                                 onClick = {
                                     val releaseUrl = GitHubVersionUtils.buildReleaseUrl(item.owner, item.repo)
                                     runCatching {
