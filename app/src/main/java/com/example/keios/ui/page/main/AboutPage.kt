@@ -3,31 +3,38 @@ package com.example.keios.ui.page.main
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.os.Build
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.style.TextOverflow.Companion.Clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.keios.ui.page.main.widget.FrostedBlock
-import com.example.keios.ui.page.main.widget.MiuixInfoItem
-import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.core.system.ShizukuApiUtils
-import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.example.keios.ui.page.main.widget.StatusPill
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -48,6 +55,96 @@ private fun formatTime(epochMillis: Long): String {
 }
 
 @Composable
+private fun AboutCompactRow(
+    title: String,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    valueContent: @Composable RowScope.() -> Unit
+) {
+    val clickableModifier = if (onClick != null) {
+        Modifier.clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(clickableModifier)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = title,
+            color = MiuixTheme.colorScheme.onBackgroundVariant,
+            maxLines = Int.MAX_VALUE,
+            overflow = Clip,
+            modifier = Modifier.width(92.dp)
+        )
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+            content = valueContent
+        )
+    }
+}
+
+@Composable
+private fun AboutCompactInfoRow(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color = MiuixTheme.colorScheme.onBackground,
+    onClick: (() -> Unit)? = null
+) {
+    AboutCompactRow(
+        title = title,
+        modifier = modifier,
+        onClick = onClick
+    ) {
+        Text(
+            text = value,
+            color = valueColor,
+            maxLines = Int.MAX_VALUE,
+            overflow = Clip,
+            textAlign = TextAlign.End
+        )
+    }
+}
+
+@Composable
+private fun AboutCompactPillRow(
+    title: String,
+    label: String,
+    color: Color,
+    onClick: (() -> Unit)? = null
+) {
+    AboutCompactRow(
+        title = title,
+        onClick = onClick
+    ) {
+        StatusPill(
+            label = label,
+            color = color
+        )
+    }
+}
+
+private fun normalizeLower(value: String): String = value.trim().lowercase(Locale.ROOT)
+
+private fun selinuxStatusColor(selinuxState: String): Color {
+    return when (normalizeLower(selinuxState)) {
+        "enforcing" -> Color(0xFF2E7D32)
+        "permissive" -> Color(0xFFB26A00)
+        "disabled" -> Color(0xFFC62828)
+        "n/a", "", "unknown" -> Color(0xFF6B7280)
+        else -> Color(0xFF2563EB)
+    }
+}
+
+@Composable
 fun AboutPage(
     appLabel: String,
     packageInfo: PackageInfo?,
@@ -63,14 +160,9 @@ fun AboutPage(
     val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
     val readyColor = Color(0xFF2E7D32)
     val notReadyColor = Color(0xFFC62828)
+    val infoCardColor = Color(0x223B82F6)
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
-    val surfaceColor = MiuixTheme.colorScheme.surface
-
-    val backdrop: LayerBackdrop = rememberLayerBackdrop {
-        drawRect(surfaceColor)
-        drawContent()
-    }
 
     LaunchedEffect(scrollToTopSignal) {
         if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
@@ -81,6 +173,7 @@ fun AboutPage(
         shizukuApiUtils.detailedRows().toMap()
     }
     val shizukuReady = shizukuStatus.contains("granted", ignoreCase = true)
+    val permissionCardColor = if (shizukuReady) Color(0x2222C55E) else Color(0x22EF4444)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -122,85 +215,112 @@ fun AboutPage(
             item { Spacer(modifier = Modifier.height(14.dp)) }
 
             item {
-                FrostedBlock(
-                    backdrop = backdrop,
-                    title = "App",
-                    subtitle = "应用身份与运行时信息",
-                    accent = accent,
-                    content = {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            MiuixInfoItem(
-                                "名称",
-                                appLabel
-                            )
-                            MiuixInfoItem(
-                                "包名",
-                                packageInfo?.packageName ?: "unknown"
-                            )
-                            MiuixInfoItem(
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
+                        color = infoCardColor,
+                        contentColor = MiuixTheme.colorScheme.onBackground
+                    ),
+                    onClick = {}
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "App",
+                            color = accent
+                        )
+                        Text(
+                            text = "应用身份与运行时信息",
+                            color = subtitleColor
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                            AboutCompactInfoRow("名称", appLabel)
+                            AboutCompactInfoRow("包名", packageInfo?.packageName ?: "unknown")
+                            AboutCompactInfoRow(
                                 "版本",
                                 "${packageInfo?.versionName ?: "unknown"} (${packageInfo?.longVersionCode ?: -1})"
                             )
-                            MiuixInfoItem(
-                                "Debuggable",
-                                (((appInfo?.flags ?: 0) and ApplicationInfo.FLAG_DEBUGGABLE) != 0).toString()
-                            )
-                            MiuixInfoItem(
-                                "运行时",
-                                "API ${Build.VERSION.SDK_INT} · Security Patch ${Build.VERSION.SECURITY_PATCH ?: "unknown"}"
-                            )
-                            MiuixInfoItem(
+                            AboutCompactInfoRow(
                                 "最后更新",
                                 packageInfo?.lastUpdateTime?.let(::formatTime) ?: "unknown"
                             )
-                            MiuixInfoItem(
+                            AboutCompactInfoRow(
+                                "Debug",
+                                (((appInfo?.flags ?: 0) and ApplicationInfo.FLAG_DEBUGGABLE) != 0).toString()
+                            )
+                            AboutCompactInfoRow(
+                                "运行时",
+                                "API ${Build.VERSION.SDK_INT} · Security Patch ${Build.VERSION.SECURITY_PATCH ?: "unknown"}"
+                            )
+                            AboutCompactInfoRow(
                                 "框架",
                                 "Miuix UI 0.9.0 · Shizuku API ${ShizukuApiUtils.API_VERSION}"
                             )
                         }
                     }
-                )
+                }
             }
 
             item { Spacer(modifier = Modifier.height(14.dp)) }
 
             item {
-                FrostedBlock(
-                    backdrop = backdrop,
-                    title = "Permissions",
-                    subtitle = "权限与服务状态",
-                    accent = if (shizukuReady) readyColor else notReadyColor,
-                    content = {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            StatusPill(
-                                label = if (shizukuReady) "Shizuku Ready" else "Shizuku Limited",
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
+                        color = permissionCardColor,
+                        contentColor = MiuixTheme.colorScheme.onBackground
+                    ),
+                    onClick = {}
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Permissions",
                                 color = if (shizukuReady) readyColor else notReadyColor
                             )
-                            Text(
-                                text = if (shizukuReady) {
-                                    "当前已具备完整 Shizuku 能力"
-                                } else {
-                                    "当前未就绪，点击下方可重新检查"
-                                },
-                                color = subtitleColor
+                            StatusPill(
+                                label = "Shizuku",
+                                color = if (shizukuReady) readyColor else notReadyColor
                             )
-                            MiuixInfoItem(
+                        }
+                        Text(
+                            text = "权限与服务状态",
+                            color = subtitleColor
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            AboutCompactPillRow(
                                 "通知权限",
-                                if (notificationPermissionGranted) "granted" else "not granted"
+                                label = if (notificationPermissionGranted) "Granted" else "Not Granted",
+                                color = if (notificationPermissionGranted) readyColor else notReadyColor
                             )
-                            MiuixInfoItem(
-                                "Shizuku uname",
-                                shizukuDetailMap["Shizuku uname"] ?: "N/A",
+                            AboutCompactPillRow(
+                                "SELinux",
+                                label = shizukuDetailMap["Shizuku getenforce"] ?: "N/A",
+                                color = selinuxStatusColor(shizukuDetailMap["Shizuku getenforce"] ?: "N/A"),
                                 onClick = onCheckShizuku
                             )
-                            MiuixInfoItem(
-                                "SELinux",
-                                shizukuDetailMap["Shizuku getenforce"] ?: "N/A",
+                            AboutCompactInfoRow(
+                                "uname",
+                                shizukuDetailMap["Shizuku uname"] ?: "N/A",
+                                valueColor = accent,
                                 onClick = onCheckShizuku
                             )
                         }
                     }
-                )
+                }
             }
         }
     }

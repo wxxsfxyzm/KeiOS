@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -123,9 +125,18 @@ fun BaStudentGuidePage(
     val context = LocalContext.current
     val accent = MiuixTheme.colorScheme.primary
     val surfaceColor = MiuixTheme.colorScheme.surface
-    val backdrop: LayerBackdrop = rememberLayerBackdrop {
-        drawRect(surfaceColor)
-        drawContent()
+    // Keep backdrop allocation stable per page lifecycle to avoid RenderThread native crashes
+    // when rapidly switching guide tabs on some HyperOS builds.
+    var activationCount by rememberSaveable { mutableIntStateOf(0) }
+    DisposableEffect(Unit) {
+        activationCount++
+        onDispose { }
+    }
+    val backdrop: LayerBackdrop = key(activationCount) {
+        rememberLayerBackdrop {
+            drawRect(surfaceColor)
+            drawContent()
+        }
     }
     val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     val scrollBehavior = MiuixScrollBehavior()
@@ -358,6 +369,7 @@ fun BaStudentGuidePage(
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
+            .background(MiuixTheme.colorScheme.background)
             .nestedScroll(bottomBarNestedScrollConnection),
         topBar = {
             TopAppBar(
