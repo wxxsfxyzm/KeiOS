@@ -950,6 +950,14 @@ fun GitHubPage(
                             )
                         }
                         StatusPill(
+                            label = formatRefreshAgo(lastRefreshMs),
+                            color = overviewRefreshState.color(
+                                neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
+                            ),
+                            backgroundAlphaOverride = if (isDark) 0.18f else 0.24f,
+                            borderAlphaOverride = if (isDark) 0.35f else 0.42f
+                        )
+                        StatusPill(
                             label = when (overviewRefreshState) {
                                 OverviewRefreshState.Cached -> StatusLabelText.Cached
                                 OverviewRefreshState.Refreshing -> StatusLabelText.Checking
@@ -961,14 +969,6 @@ fun GitHubPage(
                             )
                         )
                     }
-                    GitHubOverviewMetricItem(
-                        label = "上次检查",
-                        value = formatRefreshAgo(lastRefreshMs),
-                        titleColor = overviewTitleColor,
-                        valueColor = overviewRefreshState.color(
-                            neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
-                        )
-                    )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
