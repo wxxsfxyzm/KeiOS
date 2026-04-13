@@ -59,7 +59,10 @@ import com.example.keios.ui.page.main.widget.LiquidActionBarPopupAnchors
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.SheetContentColumn
+import com.example.keios.ui.page.main.widget.SheetDescriptionText
+import com.example.keios.ui.page.main.widget.SheetInputTitle
 import com.example.keios.ui.page.main.widget.SheetRow
+import com.example.keios.ui.page.main.widget.SheetSectionTitle
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
@@ -67,12 +70,17 @@ import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.page.main.widget.StatusLabelText
 import com.example.keios.feature.github.data.local.AppIconCache
 import com.example.keios.feature.github.data.local.GitHubTrackStore
+import com.example.keios.feature.github.data.remote.GitHubApiTokenReleaseStrategy
 import com.example.keios.feature.github.data.remote.GitHubReleaseStrategyRegistry
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.domain.GitHubReleaseCheckService
+import com.example.keios.feature.github.domain.GitHubStrategyBenchmarkService
+import com.example.keios.feature.github.model.GitHubApiAuthMode
 import com.example.keios.feature.github.model.GitHubCheckCacheEntry
+import com.example.keios.feature.github.model.GitHubApiCredentialStatus
 import com.example.keios.feature.github.model.GitHubLookupConfig
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
+import com.example.keios.feature.github.model.GitHubStrategyLoadTrace
 import com.example.keios.feature.github.model.GitHubTrackedReleaseCheck
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.feature.github.model.InstalledAppItem
@@ -159,6 +167,12 @@ fun GitHubPage(
     var selectedStrategyInput by remember { mutableStateOf(lookupConfig.selectedStrategy) }
     var githubApiTokenInput by remember { mutableStateOf(lookupConfig.apiToken) }
     var showApiTokenPlainText by remember { mutableStateOf(false) }
+    var strategyBenchmarkRunning by remember { mutableStateOf(false) }
+    var strategyBenchmarkError by remember { mutableStateOf<String?>(null) }
+    var strategyBenchmarkReport by remember { mutableStateOf<com.example.keios.feature.github.model.GitHubStrategyBenchmarkReport?>(null) }
+    var credentialCheckRunning by remember { mutableStateOf(false) }
+    var credentialCheckError by remember { mutableStateOf<String?>(null) }
+    var credentialCheckStatus by remember { mutableStateOf<GitHubApiCredentialStatus?>(null) }
 
     val trackedItems = remember { mutableStateListOf<GitHubTrackedApp>() }
     val checkStates = remember { mutableStateMapOf<String, VersionCheckUi>() }
@@ -242,12 +256,18 @@ fun GitHubPage(
         selectedStrategyInput = config.selectedStrategy
         githubApiTokenInput = config.apiToken
         showApiTokenPlainText = false
+        credentialCheckRunning = false
+        credentialCheckError = null
+        credentialCheckStatus = null
+        strategyBenchmarkError = null
+        strategyBenchmarkReport = null
         showStrategySheet = true
     }
 
     fun closeStrategySheet() {
         showStrategySheet = false
         showApiTokenPlainText = false
+        credentialCheckRunning = false
     }
 
     suspend fun reloadApps() {
@@ -313,10 +333,6 @@ fun GitHubPage(
     fun applyLookupConfig() {
         val previousConfig = GitHubTrackStore.loadLookupConfig()
         val sanitizedToken = githubApiTokenInput.trim()
-        if (selectedStrategyInput.requiresToken && sanitizedToken.isBlank()) {
-            Toast.makeText(context, "选择 GitHub API Token 时需要填写 GitHub API token", Toast.LENGTH_SHORT).show()
-            return
-        }
         val newConfig = GitHubLookupConfig(
             selectedStrategy = selectedStrategyInput,
             apiToken = sanitizedToken
@@ -326,7 +342,7 @@ fun GitHubPage(
         closeStrategySheet()
 
         val strategyChanged = previousConfig.selectedStrategy != newConfig.selectedStrategy
-        val activeTokenChanged = newConfig.selectedStrategy.requiresToken &&
+        val activeTokenChanged = newConfig.selectedStrategy == GitHubLookupStrategyOption.GitHubApiToken &&
             previousConfig.apiToken != newConfig.apiToken
         when {
             strategyChanged || activeTokenChanged -> {
@@ -352,10 +368,56 @@ fun GitHubPage(
                 }
             }
             previousConfig.apiToken != newConfig.apiToken -> {
-                Toast.makeText(context, "已保存 GitHub API token", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "已保存 API 凭证设置", Toast.LENGTH_SHORT).show()
             }
             else -> {
                 Toast.makeText(context, "抓取方案未变化", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun runStrategyBenchmark() {
+        if (strategyBenchmarkRunning) return
+        val targets = GitHubStrategyBenchmarkService.buildTargets(trackedItems.toList())
+        if (targets.isEmpty()) {
+            Toast.makeText(context, "请先新增至少一个跟踪项目", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            strategyBenchmarkRunning = true
+            strategyBenchmarkError = null
+            val benchmarkToken = githubApiTokenInput.trim()
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    GitHubStrategyBenchmarkService.compareTargets(
+                        targets = targets,
+                        apiToken = benchmarkToken
+                    )
+                }
+            }.onSuccess { report ->
+                strategyBenchmarkReport = report
+            }.onFailure { error ->
+                strategyBenchmarkError = error.message ?: "unknown"
+            }
+            strategyBenchmarkRunning = false
+        }
+    }
+
+    fun runCredentialCheck() {
+        if (credentialCheckRunning) return
+        scope.launch {
+            credentialCheckRunning = true
+            credentialCheckError = null
+            credentialCheckStatus = null
+            try {
+                val token = githubApiTokenInput.trim()
+                val trace: GitHubStrategyLoadTrace<GitHubApiCredentialStatus> = withContext(Dispatchers.IO) {
+                    GitHubApiTokenReleaseStrategy(token).checkCredentialTrace()
+                }
+                credentialCheckStatus = trace.result.getOrNull()
+                credentialCheckError = trace.result.exceptionOrNull()?.message
+            } finally {
+                credentialCheckRunning = false
             }
         }
     }
@@ -734,17 +796,17 @@ fun GitHubPage(
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         GitHubOverviewMetricItem(
-                            label = "当前方案",
-                            value = lookupConfig.selectedStrategy.label,
+                            label = "策略",
+                            value = lookupConfig.selectedStrategy.overviewLabel(),
                             valueColor = MiuixTheme.colorScheme.primary,
                             modifier = Modifier.weight(1f)
                         )
                         GitHubOverviewMetricItem(
-                            label = "Token 状态",
-                            value = lookupConfig.tokenStatusLabel(),
-                            valueColor = if (lookupConfig.selectedStrategy.requiresToken) {
+                            label = "API",
+                            value = lookupConfig.overviewApiLabel(),
+                            valueColor = if (lookupConfig.selectedStrategy == GitHubLookupStrategyOption.GitHubApiToken) {
                                 if (lookupConfig.apiToken.isBlank()) {
-                                    GitHubStatusPalette.Error
+                                    GitHubStatusPalette.PreRelease
                                 } else {
                                     GitHubStatusPalette.Active
                                 }
@@ -967,7 +1029,44 @@ fun GitHubPage(
             )
         }
     ) {
-        SheetContentColumn {
+        val sanitizedTokenInput = githubApiTokenInput.trim()
+        val draftChanged = selectedStrategyInput != lookupConfig.selectedStrategy ||
+            sanitizedTokenInput != lookupConfig.apiToken
+        val tokenStatusLabel = when {
+            selectedStrategyInput != GitHubLookupStrategyOption.GitHubApiToken -> "未使用"
+            sanitizedTokenInput.isBlank() -> "游客"
+            else -> "已填写"
+        }
+        val tokenStatusColor = when {
+            selectedStrategyInput != GitHubLookupStrategyOption.GitHubApiToken -> MiuixTheme.colorScheme.onBackgroundVariant
+            sanitizedTokenInput.isBlank() -> GitHubStatusPalette.PreRelease
+            else -> GitHubStatusPalette.Update
+        }
+        val credentialAvailabilityLabel = when {
+            credentialCheckRunning -> "检测中"
+            credentialCheckStatus != null -> "可用"
+            credentialCheckError != null -> "不可用"
+            else -> "未检测"
+        }
+        val credentialAvailabilityColor = when {
+            credentialCheckRunning -> MiuixTheme.colorScheme.primary
+            credentialCheckStatus != null -> GitHubStatusPalette.Update
+            credentialCheckError != null -> GitHubStatusPalette.Error
+            else -> MiuixTheme.colorScheme.onBackgroundVariant
+        }
+
+        SheetContentColumn(
+            verticalSpacing = 10.dp
+        ) {
+            SheetSectionTitle("配置摘要")
+            GitHubStrategyDraftSummaryCard(
+                selectedStrategy = selectedStrategyInput,
+                tokenInput = sanitizedTokenInput,
+                trackedCount = trackedItems.size,
+                changed = draftChanged
+            )
+
+            SheetSectionTitle("抓取方案")
             githubStrategyGuides.forEach { guide ->
                 GitHubStrategyGuideCard(
                     guide = guide,
@@ -975,11 +1074,34 @@ fun GitHubPage(
                     onSelect = { selectedStrategyInput = guide.option }
                 )
             }
+
             if (selectedStrategyInput == GitHubLookupStrategyOption.GitHubApiToken) {
+                SheetSectionTitle("凭证设置")
+                SheetRow {
+                    SheetInputTitle("Token 状态")
+                    Spacer(modifier = Modifier.weight(1f))
+                    StatusPill(
+                        label = tokenStatusLabel,
+                        color = tokenStatusColor
+                    )
+                }
+                SheetRow {
+                    SheetInputTitle("可用性")
+                    Spacer(modifier = Modifier.weight(1f))
+                    StatusPill(
+                        label = credentialAvailabilityLabel,
+                        color = credentialAvailabilityColor
+                    )
+                }
+                SheetInputTitle("GitHub API Token")
                 GlassSearchField(
                     value = githubApiTokenInput,
-                    onValueChange = { githubApiTokenInput = it },
-                    label = "GitHub API token（必填）",
+                    onValueChange = {
+                        githubApiTokenInput = it
+                        credentialCheckError = null
+                        credentialCheckStatus = null
+                    },
+                    label = "GitHub API token（选填）",
                     backdrop = backdrop,
                     variant = GlassVariant.SheetInput,
                     singleLine = true,
@@ -990,13 +1112,12 @@ fun GitHubPage(
                     }
                 )
                 SheetRow {
-                    Text(
-                        text = if (githubApiTokenInput.isBlank()) {
-                            "当前未填写 token"
+                    SheetInputTitle(
+                        text = if (sanitizedTokenInput.isBlank()) {
+                            "当前使用游客 API，可随时补充 token"
                         } else {
                             "当前已填写 token，可在此替换"
                         },
-                        color = MiuixTheme.colorScheme.onBackgroundVariant,
                         modifier = Modifier.weight(1f)
                     )
                     GlassTextButton(
@@ -1006,15 +1127,64 @@ fun GitHubPage(
                         onClick = { showApiTokenPlainText = !showApiTokenPlainText }
                     )
                 }
-                Text(
-                    text = "选择 GitHub API Token 方案时，用户必须提供 GitHub API token。token 只保存在当前设备本地，用于发起 GitHub API 请求。",
-                    color = MiuixTheme.colorScheme.primary
+                SheetDescriptionText(
+                    text = "API 方案会直接调用 Releases API。未填写 token 时自动走游客 API，适合刚开始少量追踪；若追踪项目增多或遇到限流，再补充本地 token 即可。token 仅保存在当前设备 MMKV。"
                 )
+                GlassTextButton(
+                    backdrop = backdrop,
+                    variant = GlassVariant.SheetAction,
+                    text = if (credentialCheckRunning) "检测中..." else "检测当前凭证",
+                    enabled = !credentialCheckRunning,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { runCredentialCheck() }
+                )
+                credentialCheckError?.let { error ->
+                    SheetDescriptionText(
+                        text = "凭证检测失败：$error"
+                    )
+                }
+                credentialCheckStatus?.let { status ->
+                    GitHubCredentialStatusCard(status = status)
+                    SheetDescriptionText(
+                        text = if (status.authMode == GitHubApiAuthMode.Guest) {
+                            "当前结果表明游客 API 可访问，但额度较低。若后续追踪仓库数量增加，建议补充本地 token。"
+                        } else {
+                            "当前 token 已被 GitHub API 接受。此结果仅表示凭证本身可用，不代表对所有私有仓库都具备访问权限。"
+                        }
+                    )
+                }
             } else {
-                Text(
-                    text = "当前选择 Atom Feed 方案，无需填写 token。",
-                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                SheetSectionTitle("方案说明")
+                SheetDescriptionText(
+                    text = "Atom Feed 方案无需 Token，适合公开仓库与轻量检查。若后续需要更稳定的 release 元数据或私有仓库支持，可切换到 GitHub API Token。"
                 )
+            }
+
+            SheetSectionTitle("本地对比")
+            SheetDescriptionText(
+                text = if (trackedItems.isEmpty()) {
+                    "对比测试会使用当前已追踪仓库，最多抽取 6 个样本。当前还没有可用样本。"
+                } else {
+                    "对比测试会使用当前已追踪仓库做一轮冷启动和一轮缓存复测，便于直接观察 Atom、游客 API、Token API 的耗时与缓存命中差异。"
+                }
+            )
+            if (trackedItems.isNotEmpty()) {
+                GlassTextButton(
+                    backdrop = backdrop,
+                    variant = GlassVariant.SheetAction,
+                    text = if (strategyBenchmarkRunning) "对比中..." else "运行双策略对比",
+                    enabled = !strategyBenchmarkRunning,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { runStrategyBenchmark() }
+                )
+            }
+            strategyBenchmarkError?.let { error ->
+                SheetDescriptionText(
+                    text = "对比测试失败：$error"
+                )
+            }
+            strategyBenchmarkReport?.results?.forEach { result ->
+                GitHubStrategyBenchmarkCard(result = result)
             }
         }
     }

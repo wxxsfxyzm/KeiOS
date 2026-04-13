@@ -5,6 +5,7 @@ import com.example.keios.feature.github.model.GitHubAtomReleaseEntry
 import com.example.keios.feature.github.model.GitHubReleaseSignalSource
 import com.example.keios.feature.github.model.GitHubReleaseVersionSignals
 import com.example.keios.feature.github.model.GitHubRepositoryReleaseSnapshot
+import com.example.keios.feature.github.model.GitHubStrategyLoadTrace
 import com.example.keios.feature.github.model.GitHubVersionCandidateSource
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -49,55 +50,124 @@ object GitHubAtomReleaseStrategy : GitHubReleaseLookupStrategy {
     }
 
     override fun loadSnapshot(owner: String, repo: String): Result<GitHubRepositoryReleaseSnapshot> {
-        return runCatching {
-            val feed = fetchAtomFeed(owner, repo).getOrThrow()
-            val latestStable = fetchLatestStableSignal(owner, repo, feed).getOrThrow()
-            val latestPre = pickPreferredEntry(feed.entries.filter { it.isLikelyPreRelease })
-                ?.toReleaseSignal(GitHubReleaseSignalSource.AtomEntry)
+        return loadSnapshotTrace(owner, repo).result
+    }
 
-            GitHubRepositoryReleaseSnapshot(
-                strategyId = id,
-                feed = feed,
-                latestStable = latestStable,
-                latestPreRelease = latestPre
+    fun loadSnapshotTrace(
+        owner: String,
+        repo: String,
+        atomFeedUrl: String = buildFeedUrl(owner, repo),
+        latestReleaseUrl: String = buildLatestReleaseUrl(owner, repo),
+        requestClient: OkHttpClient = githubClient,
+        noRedirectRequestClient: OkHttpClient = githubNoRedirectClient
+    ): GitHubStrategyLoadTrace<GitHubRepositoryReleaseSnapshot> {
+        val startedAt = System.currentTimeMillis()
+        val feedTrace = fetchAtomFeedTrace(
+            owner = owner,
+            repo = repo,
+            atomFeedUrl = atomFeedUrl,
+            requestClient = requestClient
+        )
+        val feed = feedTrace.result.getOrElse { error ->
+            return GitHubStrategyLoadTrace(
+                result = Result.failure(error),
+                fromCache = feedTrace.fromCache,
+                elapsedMs = System.currentTimeMillis() - startedAt
             )
         }
+        val latestStableTrace = fetchLatestStableSignalTrace(
+            owner = owner,
+            repo = repo,
+            feed = feed,
+            latestReleaseUrl = latestReleaseUrl,
+            noRedirectRequestClient = noRedirectRequestClient
+        )
+        val latestStable = latestStableTrace.result.getOrElse { error ->
+            return GitHubStrategyLoadTrace(
+                result = Result.failure(error),
+                fromCache = feedTrace.fromCache && latestStableTrace.fromCache,
+                elapsedMs = System.currentTimeMillis() - startedAt
+            )
+        }
+        val latestPre = pickPreferredEntry(feed.entries.filter { it.isLikelyPreRelease })
+            ?.toReleaseSignal(GitHubReleaseSignalSource.AtomEntry)
+
+        return GitHubStrategyLoadTrace(
+            result = Result.success(
+                GitHubRepositoryReleaseSnapshot(
+                    strategyId = id,
+                    feed = feed,
+                    latestStable = latestStable,
+                    latestPreRelease = latestPre
+                )
+            ),
+            fromCache = feedTrace.fromCache && latestStableTrace.fromCache,
+            elapsedMs = System.currentTimeMillis() - startedAt
+        )
     }
 
     fun fetchAtomFeed(owner: String, repo: String): Result<GitHubAtomFeed> {
-        val key = "$owner/$repo"
-        val now = System.currentTimeMillis()
-        feedCache[key]?.takeIf { now - it.timestamp < CACHE_TTL_MS }?.let { return it.value }
+        return fetchAtomFeedTrace(owner, repo).result
+    }
 
-        val url = "https://github.com/$owner/$repo/releases.atom"
-        val result = fetch(url).map { body ->
-            parseAtomFeed(xml = body, feedUrl = url)
+    internal fun fetchAtomFeedTrace(
+        owner: String,
+        repo: String,
+        atomFeedUrl: String = buildFeedUrl(owner, repo),
+        requestClient: OkHttpClient = githubClient
+    ): GitHubStrategyLoadTrace<GitHubAtomFeed> {
+        val startedAt = System.currentTimeMillis()
+        val key = "$owner/$repo|$atomFeedUrl"
+        val now = System.currentTimeMillis()
+        feedCache[key]?.takeIf { now - it.timestamp < CACHE_TTL_MS }?.let {
+            return GitHubStrategyLoadTrace(
+                result = it.value,
+                fromCache = true,
+                elapsedMs = System.currentTimeMillis() - startedAt
+            )
+        }
+
+        val result = fetch(atomFeedUrl, requestClient).map { body ->
+            parseAtomFeed(xml = body, feedUrl = atomFeedUrl)
         }
         feedCache[key] = CachedValue(result, now)
-        return result
+        return GitHubStrategyLoadTrace(
+            result = result,
+            fromCache = false,
+            elapsedMs = System.currentTimeMillis() - startedAt
+        )
     }
 
     fun fetchReleaseEntries(owner: String, repo: String, limit: Int = 30): Result<List<GitHubAtomReleaseEntry>> {
         return fetchAtomFeed(owner, repo).map { it.entries.take(limit) }
     }
 
-    private fun fetchLatestStableSignal(
+    private fun fetchLatestStableSignalTrace(
         owner: String,
         repo: String,
-        feed: GitHubAtomFeed
-    ): Result<GitHubReleaseVersionSignals> {
-        val key = "$owner/$repo"
+        feed: GitHubAtomFeed,
+        latestReleaseUrl: String = buildLatestReleaseUrl(owner, repo),
+        noRedirectRequestClient: OkHttpClient = githubNoRedirectClient
+    ): GitHubStrategyLoadTrace<GitHubReleaseVersionSignals> {
+        val startedAt = System.currentTimeMillis()
+        val key = "$owner/$repo|$latestReleaseUrl"
         val now = System.currentTimeMillis()
-        stableCache[key]?.takeIf { now - it.timestamp < CACHE_TTL_MS }?.let { return it.value }
+        stableCache[key]?.takeIf { now - it.timestamp < CACHE_TTL_MS }?.let {
+            return GitHubStrategyLoadTrace(
+                result = it.value,
+                fromCache = true,
+                elapsedMs = System.currentTimeMillis() - startedAt
+            )
+        }
 
         val request = Request.Builder()
-            .url("https://github.com/$owner/$repo/releases/latest")
+            .url(latestReleaseUrl)
             .get()
             .header("User-Agent", GITHUB_USER_AGENT)
             .build()
 
         val result = runCatching {
-            githubNoRedirectClient.newCall(request).execute().use { response ->
+            noRedirectRequestClient.newCall(request).execute().use { response ->
                 val location = response.header("Location").orEmpty()
                 val finalUrl = when {
                     location.isNotBlank() -> location
@@ -144,7 +214,11 @@ object GitHubAtomReleaseStrategy : GitHubReleaseLookupStrategy {
         }
 
         stableCache[key] = CachedValue(result, now)
-        return result
+        return GitHubStrategyLoadTrace(
+            result = result,
+            fromCache = false,
+            elapsedMs = System.currentTimeMillis() - startedAt
+        )
     }
 
     override fun clearCaches() {
@@ -152,16 +226,24 @@ object GitHubAtomReleaseStrategy : GitHubReleaseLookupStrategy {
         stableCache.clear()
     }
 
-    private fun fetch(url: String): Result<String> = runCatching {
+    private fun fetch(url: String, requestClient: OkHttpClient = githubClient): Result<String> = runCatching {
         val request = Request.Builder()
             .url(url)
             .get()
             .header("User-Agent", GITHUB_USER_AGENT)
             .build()
-        githubClient.newCall(request).execute().use { response ->
+        requestClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("HTTP ${response.code}")
             response.body.string()
         }
+    }
+
+    private fun buildFeedUrl(owner: String, repo: String): String {
+        return "https://github.com/$owner/$repo/releases.atom"
+    }
+
+    private fun buildLatestReleaseUrl(owner: String, repo: String): String {
+        return "https://github.com/$owner/$repo/releases/latest"
     }
 
     private fun parseAtomFeed(

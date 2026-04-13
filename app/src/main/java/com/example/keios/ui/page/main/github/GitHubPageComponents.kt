@@ -7,10 +7,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
@@ -27,11 +27,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.feature.github.data.local.AppIconCache
+import com.example.keios.feature.github.model.GitHubApiCredentialStatus
+import com.example.keios.feature.github.model.GitHubStrategyBenchmarkResult
+import com.example.keios.feature.github.model.GitHubLookupStrategyOption
+import com.example.keios.ui.page.main.widget.StatusPill
 import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.RadioButton
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -133,18 +138,99 @@ internal fun GitHubStrategyGuideCard(
     selected: Boolean,
     onSelect: () -> Unit
 ) {
-    val accent = if (selected) {
-        MiuixTheme.colorScheme.primary
-    } else {
-        MiuixTheme.colorScheme.onBackground
-    }
+    val accent = guide.option.accentColor()
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.defaultColors(
-            color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = if (selected) 0.88f else 0.7f),
+            color = if (selected) {
+                accent.copy(alpha = 0.12f)
+            } else {
+                MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.68f)
+            },
             contentColor = MiuixTheme.colorScheme.onBackground
         ),
         onClick = onSelect
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = guide.option.label,
+                        color = if (selected) accent else MiuixTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (selected) {
+                        StatusPill(
+                            label = "已选择",
+                            color = accent
+                        )
+                    }
+                }
+                Text(
+                    text = guide.summary,
+                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                )
+                Text(
+                    text = "优点：${guide.pros.joinToString("；")}",
+                    color = MiuixTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "注意：${guide.cons.joinToString("；")}",
+                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                )
+                Text(
+                    text = "要求：${guide.requirement}",
+                    color = accent,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            RadioButton(
+                selected = selected,
+                onClick = onSelect
+            )
+        }
+    }
+}
+
+@Composable
+internal fun GitHubStrategyDraftSummaryCard(
+    selectedStrategy: GitHubLookupStrategyOption,
+    tokenInput: String,
+    trackedCount: Int,
+    changed: Boolean
+) {
+    val accent = selectedStrategy.accentColor()
+    val tokenStatusLabel = when {
+        selectedStrategy != GitHubLookupStrategyOption.GitHubApiToken -> "未使用"
+        tokenInput.isNotBlank() -> "已填写"
+        else -> "游客"
+    }
+    val tokenStatusColor = when {
+        selectedStrategy != GitHubLookupStrategyOption.GitHubApiToken -> MiuixTheme.colorScheme.onBackgroundVariant
+        tokenInput.isNotBlank() -> GitHubStatusPalette.Update
+        else -> GitHubStatusPalette.PreRelease
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = if (changed) 0.82f else 0.66f),
+            contentColor = MiuixTheme.colorScheme.onBackground
+        ),
+        showIndication = false,
+        onClick = {}
     ) {
         Column(
             modifier = Modifier
@@ -152,33 +238,202 @@ internal fun GitHubStrategyGuideCard(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = guide.option.label,
-                color = accent,
-                fontWeight = FontWeight.Bold
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "当前待保存配置",
+                    color = MiuixTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                StatusPill(
+                    label = if (changed) "待保存" else "与当前一致",
+                    color = if (changed) accent else MiuixTheme.colorScheme.onBackgroundVariant
+                )
+            }
+            GitHubCompactInfoRow(
+                label = "方案",
+                value = selectedStrategy.label,
+                valueColor = accent,
+                emphasized = true,
+                titleMinWidth = 44.dp
             )
-            Text(
-                text = if (selected) "当前使用中" else "点击切换到此方案",
-                color = accent
+            GitHubCompactInfoRow(
+                label = "Token",
+                value = tokenStatusLabel,
+                valueColor = tokenStatusColor,
+                emphasized = selectedStrategy == GitHubLookupStrategyOption.GitHubApiToken,
+                titleMinWidth = 44.dp
             )
-            Text(
-                text = guide.summary,
-                color = MiuixTheme.colorScheme.onBackgroundVariant
-            )
-            Text(
-                text = "优点：${guide.pros.joinToString("；")}",
-                color = MiuixTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "缺点：${guide.cons.joinToString("；")}",
-                color = MiuixTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "要求：${guide.requirement}",
-                color = accent,
-                fontWeight = FontWeight.Medium
+            GitHubCompactInfoRow(
+                label = "影响",
+                value = if (trackedCount > 0) {
+                    "保存后将重新检查 $trackedCount 个跟踪项目"
+                } else {
+                    "当前还没有已跟踪项目"
+                },
+                valueColor = MiuixTheme.colorScheme.onBackgroundVariant,
+                titleMinWidth = 44.dp
             )
         }
+    }
+}
+
+@Composable
+internal fun GitHubStrategyBenchmarkCard(
+    result: GitHubStrategyBenchmarkResult
+) {
+    val accent = when (result.displayName) {
+        "API" -> GitHubStatusPalette.Update
+        else -> GitHubStatusPalette.Active
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.7f),
+            contentColor = MiuixTheme.colorScheme.onBackground
+        ),
+        showIndication = false,
+        onClick = {}
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = result.summaryLabel,
+                    color = accent,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                StatusPill(
+                    label = "${result.coldSuccessCount}/${result.totalTargets}",
+                    color = if (result.failures.isEmpty()) GitHubStatusPalette.Update else GitHubStatusPalette.PreRelease
+                )
+            }
+            GitHubOverviewMetricItem(
+                label = "首轮均时",
+                value = "${result.coldAverageMs} ms",
+                valueColor = accent
+            )
+            GitHubOverviewMetricItem(
+                label = "缓存均时",
+                value = "${result.warmAverageMs} ms",
+                valueColor = GitHubStatusPalette.Stable
+            )
+            GitHubOverviewMetricItem(
+                label = "缓存命中",
+                value = "${result.cacheHitCount}/${result.warmSamples.size}",
+                valueColor = if (result.cacheHitCount == result.warmSamples.size) {
+                    GitHubStatusPalette.Update
+                } else {
+                    GitHubStatusPalette.PreRelease
+                }
+            )
+            GitHubOverviewMetricItem(
+                label = "失败",
+                value = "${result.failures.size}",
+                valueColor = if (result.failures.isEmpty()) {
+                    MiuixTheme.colorScheme.onBackgroundVariant
+                } else {
+                    GitHubStatusPalette.Error
+                }
+            )
+            if (result.failures.isNotEmpty()) {
+                Text(
+                    text = result.failures.take(2).joinToString("\n"),
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun GitHubCredentialStatusCard(
+    status: GitHubApiCredentialStatus
+) {
+    val accent = when (status.authMode) {
+        com.example.keios.feature.github.model.GitHubApiAuthMode.Token -> GitHubStatusPalette.Update
+        com.example.keios.feature.github.model.GitHubApiAuthMode.Guest -> GitHubStatusPalette.PreRelease
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f),
+            contentColor = MiuixTheme.colorScheme.onBackground
+        ),
+        showIndication = false,
+        onClick = {}
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "凭证检测",
+                    color = accent,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                StatusPill(
+                    label = status.summaryLabel,
+                    color = accent
+                )
+            }
+            GitHubCompactInfoRow(
+                label = "模式",
+                value = status.authMode.label,
+                valueColor = accent,
+                emphasized = true,
+                titleMinWidth = 44.dp
+            )
+            GitHubCompactInfoRow(
+                label = "配额",
+                value = "${status.coreRemaining} / ${status.coreLimit}",
+                valueColor = if (status.coreRemaining > 0) accent else GitHubStatusPalette.Error,
+                emphasized = true,
+                titleMinWidth = 44.dp
+            )
+            GitHubCompactInfoRow(
+                label = "已用",
+                value = status.coreUsed.toString(),
+                valueColor = MiuixTheme.colorScheme.onBackgroundVariant,
+                titleMinWidth = 44.dp
+            )
+            GitHubCompactInfoRow(
+                label = "恢复",
+                value = formatFutureEta(status.resetAtMillis),
+                valueColor = MiuixTheme.colorScheme.onBackgroundVariant,
+                titleMinWidth = 44.dp
+            )
+        }
+    }
+}
+
+private fun GitHubLookupStrategyOption.accentColor(): Color {
+    return when (this) {
+        GitHubLookupStrategyOption.AtomFeed -> GitHubStatusPalette.Active
+        GitHubLookupStrategyOption.GitHubApiToken -> GitHubStatusPalette.Update
     }
 }
 

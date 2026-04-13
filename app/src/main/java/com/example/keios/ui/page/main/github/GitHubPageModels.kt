@@ -67,16 +67,65 @@ internal fun formatRefreshAgo(lastRefreshMs: Long, nowMs: Long = System.currentT
     return if (mins == 0L) "$hours 小时前" else "$hours 小时 $mins 分钟前"
 }
 
-internal fun GitHubLookupConfig.tokenStatusLabel(): String {
-    return when {
-        selectedStrategy.requiresToken && apiToken.isBlank() -> "未填写"
-        selectedStrategy.requiresToken -> "已填写"
-        else -> "无需 Token"
-    }
+internal fun formatFutureEta(targetMs: Long?, nowMs: Long = System.currentTimeMillis()): String {
+    if (targetMs == null || targetMs <= 0L) return "未知"
+    val deltaMs = (targetMs - nowMs).coerceAtLeast(0L)
+    val minutes = deltaMs / 60_000L
+    if (minutes <= 0L) return "即将恢复"
+    if (minutes < 60L) return "$minutes 分钟后"
+    val hours = minutes / 60L
+    val mins = minutes % 60L
+    return if (mins == 0L) "$hours 小时后" else "$hours 小时 $mins 分钟后"
 }
 
 internal fun strategyLabelForId(id: String): String {
     return GitHubLookupStrategyOption.fromStorageId(id).label
+}
+
+internal fun GitHubLookupStrategyOption.overviewLabel(): String {
+    return when (this) {
+        GitHubLookupStrategyOption.AtomFeed -> "Atom"
+        GitHubLookupStrategyOption.GitHubApiToken -> "API"
+    }
+}
+
+internal fun GitHubLookupConfig.overviewApiLabel(): String {
+    return when {
+        selectedStrategy != GitHubLookupStrategyOption.GitHubApiToken -> "未使用"
+        apiToken.isBlank() -> "游客"
+        else -> apiToken.maskedApiPreview()
+    }
+}
+
+private fun String.maskedApiPreview(): String {
+    val token = trim()
+    if (token.isBlank()) return "游客"
+
+    val prefix = when {
+        token.startsWith("github_pat_") -> "PAT"
+        token.startsWith("ghp_") -> "GHP"
+        token.startsWith("gho_") -> "GHO"
+        token.startsWith("ghu_") -> "GHU"
+        token.startsWith("ghs_") -> "GHS"
+        token.startsWith("ghr_") -> "GHR"
+        else -> "KEY"
+    }
+    val body = token.substringAfterLast('_', token)
+    val head = when {
+        body.length >= 10 -> body.take(4)
+        body.length >= 6 -> body.take(3)
+        else -> body.take(2)
+    }
+    val tail = when {
+        body.length >= 10 -> body.takeLast(4)
+        body.length >= 6 -> body.takeLast(3)
+        else -> body.takeLast(2)
+    }
+    return if (body.length <= 4) {
+        "$prefix $body"
+    } else {
+        "$prefix $head…$tail"
+    }
 }
 
 internal val githubStrategyGuides: List<GitHubStrategyGuide> = listOf(
@@ -98,12 +147,12 @@ internal val githubStrategyGuides: List<GitHubStrategyGuide> = listOf(
         summary = "通过 GitHub Releases API 直接读取 release 列表和 prerelease 标记。",
         pros = listOf(
             "数据结构更稳定，能直接识别 GitHub 的 prerelease 标记。",
-            "更适合高频检查，也更容易覆盖私有仓库场景。"
+            "空 token 时也可先走游客 API，适合少量追踪快速体验。"
         ),
         cons = listOf(
-            "必须由用户提供 GitHub API token，并自行维护有效期与权限。",
-            "token 失效、权限不足或被撤销时会直接导致检查失败。"
+            "游客 API 额度很低，追踪项目较多时更容易遇到限流。",
+            "token 失效、权限不足或被撤销时会退回错误或访问受限。"
         ),
-        requirement = "选择此方案时需要填写 GitHub API token。"
+        requirement = "token 选填；未填写时自动使用游客 API。"
     )
 )
