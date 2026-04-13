@@ -63,6 +63,7 @@ val mmkvVersion = "2.4.0"
 val mcpKotlinSdkVersion = "0.11.0"
 val ktorVersion = "3.4.2"
 val okhttpVersion = "5.3.2"
+val jsonVersion = "20251224"
 val xmlPullVersion = "1.1.3.4d_b4_min"
 val kxml2Version = "2.3.0"
 val media3Version = "1.10.0"
@@ -170,9 +171,10 @@ dependencies {
     implementation("io.github.panpf.zoomimage:zoomimage-compose-coil3:$zoomImageVersion")
     implementation("com.xzakota.hyper.notification:focus-api:$focusApiVersion")
 
+    // Keep kotlin-test aligned with the applied Kotlin plugin version to avoid version skew.
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20240303")
+    testImplementation("org.json:json:$jsonVersion")
     testImplementation("com.squareup.okhttp3:mockwebserver:$okhttpVersion")
     testImplementation("xmlpull:xmlpull:$xmlPullVersion")
     testImplementation("net.sf.kxml:kxml2:$kxml2Version")
