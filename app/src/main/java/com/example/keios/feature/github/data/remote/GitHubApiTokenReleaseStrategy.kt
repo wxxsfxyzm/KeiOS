@@ -62,15 +62,17 @@ class GitHubApiTokenReleaseStrategy(
                         GitHubVersionUtils.hasComparableVersionCandidates(
                             entry.versionCandidates,
                             GitHubVersionCandidateSource.Link.priority
-                        ) &&
-                        GitHubVersionUtils.isRelevantPreRelease(
-                            preReleaseCandidates = entry.versionCandidates,
-                            stableCandidates = latestStableSignal.versionCandidates,
-                            preReleaseUpdatedAtMillis = entry.updatedAtMillis,
-                            stableUpdatedAtMillis = latestStableSignal.updatedAtMillis
                         )
                 }
             )
+            val latestPreSignal = latestPreEntry
+                ?.toReleaseSignal()
+                ?.takeUnless { preReleaseSignal ->
+                    GitHubVersionUtils.compareCandidateSetsWithSources(
+                        preReleaseSignal.candidates,
+                        latestStableSignal.versionCandidates
+                    ) == 0
+                }
             val updatedAt = entries.maxOfOrNull { it.updatedAtMillis ?: Long.MIN_VALUE }
                 ?.takeIf { it > Long.MIN_VALUE }
 
@@ -83,7 +85,7 @@ class GitHubApiTokenReleaseStrategy(
                     entries = entries
                 ),
                 latestStable = latestStableSignal,
-                latestPreRelease = latestPreEntry?.toReleaseSignal()
+                latestPreRelease = latestPreSignal
             )
         }
         return GitHubStrategyLoadTrace(

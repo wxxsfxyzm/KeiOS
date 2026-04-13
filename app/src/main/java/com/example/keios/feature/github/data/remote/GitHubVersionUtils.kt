@@ -201,6 +201,8 @@ object GitHubVersionUtils {
     ): Boolean {
         val compare = compareStructuredCandidateSets(preReleaseCandidates, stableCandidates)
         return when {
+            preReleaseUpdatedAtMillis != null && stableUpdatedAtMillis != null &&
+                preReleaseUpdatedAtMillis > stableUpdatedAtMillis -> true
             compare != null -> compare > 0
             else -> (preReleaseUpdatedAtMillis ?: Long.MIN_VALUE) > (stableUpdatedAtMillis ?: Long.MIN_VALUE)
         }

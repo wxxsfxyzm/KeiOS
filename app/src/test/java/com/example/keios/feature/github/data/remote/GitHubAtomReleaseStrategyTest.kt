@@ -39,7 +39,7 @@ class GitHubAtomReleaseStrategyTest {
 
             assertFalse(trace.fromCache)
             assertEquals("v1.1.0", snapshot.latestStable.rawTag)
-            assertNull(snapshot.latestPreRelease)
+            assertEquals("v1.2.0-beta1", snapshot.latestPreRelease?.rawTag)
             assertEquals(2, snapshot.feed.entries.size)
         }
     }

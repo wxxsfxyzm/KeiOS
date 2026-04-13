@@ -15,9 +15,9 @@ class GitHubTrackedRepoCorpusTest {
         assertEquals("Version.26.4.Alpha2_C384", fixtures.getValue("FrancoGiudans/Capsulyric").tokenPreRawTag)
         assertEquals("1.9.0.n488.nightly", fixtures.getValue("JanYoStudio/WhatAnime").tokenPreRawTag)
         assertEquals("v26.4.9.C01-Dev", fixtures.getValue("badnng/Hyper-pick-up-code").tokenPreRawTag)
+        assertEquals("3.8.0-rc04", fixtures.getValue("T8RIN/ImageToolbox").tokenPreRawTag)
+        assertEquals("v5.4.0-beta05", fixtures.getValue("open-ani/animeko").tokenPreRawTag)
 
-        assertNull(fixtures.getValue("T8RIN/ImageToolbox").tokenPreRawTag)
-        assertNull(fixtures.getValue("open-ani/animeko").tokenPreRawTag)
         assertNull(fixtures.getValue("anilbeesetti/nextplayer").tokenPreRawTag)
         assertNull(fixtures.getValue("Moriafly/SaltPlayerSource").tokenPreRawTag)
         assertNull(fixtures.getValue("YumeLira/YumeBox").tokenPreRawTag)

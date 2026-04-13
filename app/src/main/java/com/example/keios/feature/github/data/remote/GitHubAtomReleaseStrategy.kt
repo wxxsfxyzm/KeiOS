@@ -95,16 +95,16 @@ object GitHubAtomReleaseStrategy : GitHubReleaseLookupStrategy {
                     GitHubVersionUtils.hasComparableVersionCandidates(
                         entry.versionCandidates,
                         GitHubVersionCandidateSource.Link.priority
-                    ) &&
-                    GitHubVersionUtils.isRelevantPreRelease(
-                        preReleaseCandidates = entry.versionCandidates,
-                        stableCandidates = latestStable.versionCandidates,
-                        preReleaseUpdatedAtMillis = entry.updatedAtMillis,
-                        stableUpdatedAtMillis = latestStable.updatedAtMillis
                     )
             }
         )
             ?.toReleaseSignal(GitHubReleaseSignalSource.AtomEntry)
+            ?.takeUnless { preReleaseSignal ->
+                GitHubVersionUtils.compareCandidateSetsWithSources(
+                    preReleaseSignal.candidates,
+                    latestStable.versionCandidates
+                ) == 0
+            }
 
         return GitHubStrategyLoadTrace(
             result = Result.success(

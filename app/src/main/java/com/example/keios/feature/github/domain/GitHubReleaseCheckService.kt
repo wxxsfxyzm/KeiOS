@@ -5,6 +5,8 @@ import com.example.keios.feature.github.data.remote.GitHubAtomReleaseStrategy
 import com.example.keios.feature.github.data.remote.GitHubReleaseLookupStrategy
 import com.example.keios.feature.github.data.remote.GitHubReleaseStrategyRegistry
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
+import com.example.keios.feature.github.model.GitHubReleaseChannel
+import com.example.keios.feature.github.model.GitHubRepositoryReleaseSnapshot
 import com.example.keios.feature.github.model.GitHubCheckCacheEntry
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.feature.github.model.GitHubTrackedReleaseCheck
@@ -42,21 +44,38 @@ object GitHubReleaseCheckService {
             )
         }
 
+        return evaluateSnapshot(
+            item = item,
+            localVersion = localVersion,
+            localVersionCode = localVersionCode,
+            snapshot = snapshot
+        )
+    }
+
+    internal fun evaluateSnapshot(
+        item: GitHubTrackedApp,
+        localVersion: String,
+        localVersionCode: Long,
+        snapshot: GitHubRepositoryReleaseSnapshot
+    ): GitHubTrackedReleaseCheck {
         val matchedEntry = snapshot.feed.entries.firstOrNull { entry ->
             GitHubVersionUtils.compareVersionToStructuredCandidates(localVersion, entry.versionCandidates) == 0
         }
         val latestStable = snapshot.latestStable
         val latestPre = snapshot.latestPreRelease
         val preReleaseCheckEnabled = item.checkPreRelease
+        val localChannel = matchedEntry?.channel
+            ?: GitHubVersionUtils.classifyVersionChannel(localVersion)
+            ?: GitHubReleaseChannel.UNKNOWN
+        val isLocalPreReleaseInstalled = matchedEntry?.isLikelyPreRelease == true || localChannel.isPreRelease
 
         val stableCmp = GitHubVersionUtils.compareVersionToStructuredCandidates(localVersion, latestStable.versionCandidates)
-        val latestPreVsStable = if (latestPre != null) {
-            GitHubVersionUtils.compareCandidateSetsWithSources(latestPre.candidates, latestStable.versionCandidates)
-        } else {
-            null
-        }
-        val latestPreIsRelevant = latestPre != null && (latestPreVsStable == null || latestPreVsStable > 0)
-        val isLocalPreReleaseInstalled = matchedEntry?.isLikelyPreRelease == true
+        val latestPreIsRelevant = latestPre != null && GitHubVersionUtils.isRelevantPreRelease(
+            preReleaseCandidates = latestPre.versionCandidates,
+            stableCandidates = latestStable.versionCandidates,
+            preReleaseUpdatedAtMillis = latestPre.updatedAtMillis,
+            stableUpdatedAtMillis = latestStable.updatedAtMillis
+        )
         val latestPreCmp = if (latestPre != null) {
             GitHubVersionUtils.compareVersionToStructuredCandidates(localVersion, latestPre.versionCandidates)
         } else {
@@ -64,19 +83,14 @@ object GitHubReleaseCheckService {
         }
 
         val hasPreReleaseUpdate = preReleaseCheckEnabled &&
-            isLocalPreReleaseInstalled &&
             latestPreIsRelevant &&
             (latestPreCmp?.let { it < 0 } == true)
         val stableHasUpdate = stableCmp?.let { it < 0 } == true
         val hasUpdate = stableHasUpdate || hasPreReleaseUpdate
-        val relevantPreRelease = latestPre.takeIf { latestPreIsRelevant }
-        val matchedPreReleaseEntry = matchedEntry.takeIf { isLocalPreReleaseInstalled }
 
         val preReleaseInfo = when {
-            preReleaseCheckEnabled && matchedPreReleaseEntry != null && relevantPreRelease != null ->
-                matchedPreReleaseEntry.displayVersion.ifBlank { relevantPreRelease.displayVersion }
-            preReleaseCheckEnabled && relevantPreRelease != null ->
-                relevantPreRelease.displayVersion
+            preReleaseCheckEnabled && latestPre != null -> latestPre.displayVersion
+            preReleaseCheckEnabled && isLocalPreReleaseInstalled && matchedEntry != null -> matchedEntry.displayVersion
             else -> ""
         }
         val showPreReleaseInfo = preReleaseCheckEnabled && preReleaseInfo.isNotBlank()
@@ -84,8 +98,7 @@ object GitHubReleaseCheckService {
         val status = when {
             hasPreReleaseUpdate -> GitHubTrackedReleaseStatus.PreReleaseUpdateAvailable
             stableHasUpdate -> GitHubTrackedReleaseStatus.UpdateAvailable
-            preReleaseCheckEnabled && isLocalPreReleaseInstalled && latestPreIsRelevant ->
-                GitHubTrackedReleaseStatus.PreReleaseTracked
+            preReleaseCheckEnabled && isLocalPreReleaseInstalled -> GitHubTrackedReleaseStatus.PreReleaseTracked
             stableCmp != null && hasUpdate == false -> GitHubTrackedReleaseStatus.UpToDate
             matchedEntry != null -> GitHubTrackedReleaseStatus.MatchedRelease
             else -> GitHubTrackedReleaseStatus.ComparisonUncertain
@@ -100,7 +113,7 @@ object GitHubReleaseCheckService {
             preRelease = latestPre,
             hasUpdate = hasUpdate,
             hasPreReleaseUpdate = hasPreReleaseUpdate,
-            isPreReleaseInstalled = preReleaseCheckEnabled && isLocalPreReleaseInstalled && latestPreIsRelevant,
+            isPreReleaseInstalled = preReleaseCheckEnabled && isLocalPreReleaseInstalled,
             preReleaseInfo = preReleaseInfo,
             showPreReleaseInfo = showPreReleaseInfo,
             status = status,

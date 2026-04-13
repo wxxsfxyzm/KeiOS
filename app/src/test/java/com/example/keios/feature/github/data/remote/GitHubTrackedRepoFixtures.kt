@@ -142,10 +142,10 @@ internal object GitHubTrackedRepoFixtures {
             localVersion = "5.4.0",
             checkPreRelease = true,
             atomStableRawTag = "v5.4.3",
-            atomPreRawTag = null,
+            atomPreRawTag = "v5.4.0-beta05",
             tokenStableRawTag = "v5.4.3",
-            tokenPreRawTag = null,
-            notes = "Historic beta lower than stable should not remain visible as latest prerelease"
+            tokenPreRawTag = "v5.4.0-beta05",
+            notes = "Older beta should still be visible as latest prerelease info, while stable remains the recommended install"
         ),
         GitHubTrackedRepoFixture(
             owner = "anilbeesetti",
@@ -199,10 +199,10 @@ internal object GitHubTrackedRepoFixtures {
             localVersion = "3.8.0-rc04",
             checkPreRelease = true,
             atomStableRawTag = "3.8.0",
-            atomPreRawTag = null,
+            atomPreRawTag = "3.8.0-rc04",
             tokenStableRawTag = "3.8.0",
-            tokenPreRawTag = null,
-            notes = "Stable 3.8.0 supersedes rc04; same-version stable must not also be exposed as prerelease"
+            tokenPreRawTag = "3.8.0-rc04",
+            notes = "Stable 3.8.0 supersedes rc04 for recommendation, but rc04 should still remain visible as latest prerelease info"
         ),
         GitHubTrackedRepoFixture(
             owner = "JanYoStudio",

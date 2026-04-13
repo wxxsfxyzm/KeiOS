@@ -259,7 +259,7 @@ class GitHubApiTokenReleaseStrategyTest {
             val snapshot = tokenStrategy.loadSnapshot(owner = "demo", repo = "app").getOrThrow()
 
             assertEquals("3.8.0", snapshot.latestStable.rawTag)
-            assertNull(snapshot.latestPreRelease)
+            assertEquals("3.8.0-rc04", snapshot.latestPreRelease?.rawTag)
         }
     }
 
@@ -444,6 +444,83 @@ class GitHubApiTokenReleaseStrategyTest {
 
             assertEquals("v1.4.4-release", snapshot.latestStable.rawTag)
             assertEquals("v1.4.7-prerelease3", snapshot.latestPreRelease?.rawTag)
+        }
+    }
+
+    @Test
+    fun `latest prerelease selection prefers newer animeko beta over older major branch beta`() {
+        MockWebServer().use { server ->
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody(
+                        """
+                            [
+                              {
+                                "id": 1,
+                                "node_id": "R_1",
+                                "tag_name": "v5.4.3",
+                                "name": "5.4.3",
+                                "html_url": "https://github.com/demo/app/releases/tag/v5.4.3",
+                                "body": "stable",
+                                "draft": false,
+                                "prerelease": false,
+                                "published_at": "2026-04-12T02:42:30Z"
+                              },
+                              {
+                                "id": 2,
+                                "node_id": "R_2",
+                                "tag_name": "v5.4.0-beta05",
+                                "name": "5.4.0-beta05",
+                                "html_url": "https://github.com/demo/app/releases/tag/v5.4.0-beta05",
+                                "body": "preview",
+                                "draft": false,
+                                "prerelease": true,
+                                "published_at": "2026-03-25T07:25:53Z"
+                              },
+                              {
+                                "id": 3,
+                                "node_id": "R_3",
+                                "tag_name": "v4.11.0-beta01",
+                                "name": "4.11.0-beta01",
+                                "html_url": "https://github.com/demo/app/releases/tag/v4.11.0-beta01",
+                                "body": "preview",
+                                "draft": false,
+                                "prerelease": true,
+                                "published_at": "2026-02-01T07:25:53Z"
+                              }
+                            ]
+                        """.trimIndent()
+                    )
+            )
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody(
+                        """
+                            {
+                              "id": 1,
+                              "node_id": "R_1",
+                              "tag_name": "v5.4.3",
+                              "name": "5.4.3",
+                              "html_url": "https://github.com/demo/app/releases/tag/v5.4.3",
+                              "body": "stable",
+                              "draft": false,
+                              "prerelease": false,
+                              "published_at": "2026-04-12T02:42:30Z"
+                            }
+                        """.trimIndent()
+                    )
+            )
+            val tokenStrategy = GitHubApiTokenReleaseStrategy(
+                apiToken = "ghp_testtoken123",
+                apiBaseUrl = server.url("/").toString()
+            )
+
+            val snapshot = tokenStrategy.loadSnapshot(owner = "demo", repo = "app").getOrThrow()
+
+            assertEquals("v5.4.3", snapshot.latestStable.rawTag)
+            assertEquals("v5.4.0-beta05", snapshot.latestPreRelease?.rawTag)
         }
     }
 

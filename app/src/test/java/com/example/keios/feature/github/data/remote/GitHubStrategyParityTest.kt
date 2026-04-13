@@ -26,8 +26,8 @@ class GitHubStrategyParityTest {
                 "T8RIN/ImageToolbox" -> {
                     assertEquals("3.8.0", fixture.atomStableRawTag)
                     assertEquals("3.8.0", fixture.tokenStableRawTag)
-                    assertNull(fixture.atomPreRawTag)
-                    assertNull(fixture.tokenPreRawTag)
+                    assertEquals("3.8.0-rc04", fixture.atomPreRawTag)
+                    assertEquals("3.8.0-rc04", fixture.tokenPreRawTag)
                 }
                 "DimensionDev/Flare" -> {
                     assertEquals("1.4.3", fixture.atomStableRawTag)
@@ -44,8 +44,8 @@ class GitHubStrategyParityTest {
                 "open-ani/animeko" -> {
                     assertEquals("v5.4.3", fixture.atomStableRawTag)
                     assertEquals("v5.4.3", fixture.tokenStableRawTag)
-                    assertNull(fixture.atomPreRawTag)
-                    assertNull(fixture.tokenPreRawTag)
+                    assertEquals("v5.4.0-beta05", fixture.atomPreRawTag)
+                    assertEquals("v5.4.0-beta05", fixture.tokenPreRawTag)
                 }
                 "CeuiLiSA/Pixiv-Shaft" -> {
                     assertEquals("v4.5.3", fixture.atomStableRawTag)
