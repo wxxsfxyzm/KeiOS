@@ -153,7 +153,7 @@ fun GitHubPage(
     var showAddSheet by remember { mutableStateOf(false) }
     var showStrategySheet by remember { mutableStateOf(false) }
     var editingTrackedItem by remember { mutableStateOf<GitHubTrackedApp?>(null) }
-    var checkPreReleaseInput by remember { mutableStateOf(false) }
+    var preferPreReleaseInput by remember { mutableStateOf(false) }
     var selectedApp by remember { mutableStateOf<InstalledAppItem?>(null) }
     var appList by remember { mutableStateOf<List<InstalledAppItem>>(emptyList()) }
     var appListLoaded by remember { mutableStateOf(false) }
@@ -200,6 +200,7 @@ fun GitHubPage(
         preReleaseInfo = preReleaseInfo,
         showPreReleaseInfo = showPreReleaseInfo,
         hasPreReleaseUpdate = hasPreReleaseUpdate,
+        recommendsPreRelease = recommendsPreRelease,
         sourceStrategyId = sourceStrategyId
     )
 
@@ -218,6 +219,7 @@ fun GitHubPage(
         preReleaseInfo = preReleaseInfo,
         showPreReleaseInfo = showPreReleaseInfo,
         hasPreReleaseUpdate = hasPreReleaseUpdate,
+        recommendsPreRelease = recommendsPreRelease,
         sourceStrategyId = sourceStrategyId
     )
 
@@ -236,6 +238,7 @@ fun GitHubPage(
         preReleaseInfo = preReleaseInfo,
         showPreReleaseInfo = showPreReleaseInfo,
         hasPreReleaseUpdate = hasPreReleaseUpdate,
+        recommendsPreRelease = recommendsPreRelease,
         sourceStrategyId = strategyId
     )
 
@@ -341,7 +344,8 @@ fun GitHubPage(
         val sanitizedToken = githubApiTokenInput.trim()
         val newConfig = GitHubLookupConfig(
             selectedStrategy = selectedStrategyInput,
-            apiToken = sanitizedToken
+            apiToken = sanitizedToken,
+            checkAllTrackedPreReleases = previousConfig.checkAllTrackedPreReleases
         )
         GitHubTrackStore.saveLookupConfig(newConfig)
         lookupConfig = newConfig
@@ -446,7 +450,7 @@ fun GitHubPage(
         selectedApp = null
         appSearch = ""
         pickerExpanded = false
-        checkPreReleaseInput = false
+        preferPreReleaseInput = false
         showAddSheet = true
     }
 
@@ -457,7 +461,7 @@ fun GitHubPage(
             ?: InstalledAppItem(label = item.appLabel, packageName = item.packageName)
         appSearch = ""
         pickerExpanded = false
-        checkPreReleaseInput = item.checkPreRelease
+        preferPreReleaseInput = item.preferPreRelease
         showAddSheet = true
     }
 
@@ -474,7 +478,7 @@ fun GitHubPage(
             repo = parsed.second,
             packageName = app.packageName,
             appLabel = app.label,
-            checkPreRelease = checkPreReleaseInput
+            preferPreRelease = preferPreReleaseInput
         )
         val editing = editingTrackedItem
         if (editing == null) {
@@ -510,7 +514,7 @@ fun GitHubPage(
         selectedApp = null
         appSearch = ""
         pickerExpanded = false
-        checkPreReleaseInput = false
+        preferPreReleaseInput = false
         showAddSheet = false
     }
 
@@ -910,17 +914,23 @@ fun GitHubPage(
                             val statusColor = state.statusColor(
                                 neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
                             )
-                            val clickableModifier = if (state.hasUpdate == true || state.isPreRelease) {
+                            val clickableModifier = if (
+                                state.hasUpdate == true || state.hasPreReleaseUpdate || state.isPreRelease
+                            ) {
                                 Modifier.clickable {
                                     val releaseUrl = when {
-                                        state.hasPreReleaseUpdate && state.latestPreUrl.isNotBlank() ->
+                                        state.recommendsPreRelease && state.latestPreUrl.isNotBlank() ->
                                             state.latestPreUrl
-                                        state.hasPreReleaseUpdate && state.latestPreRawTag.isNotBlank() ->
+                                        state.recommendsPreRelease && state.latestPreRawTag.isNotBlank() ->
                                             GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestPreRawTag)
                                         state.hasUpdate == true && state.latestStableUrl.isNotBlank() ->
                                             state.latestStableUrl
                                         state.hasUpdate == true && state.latestStableRawTag.isNotBlank() ->
                                             GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestStableRawTag)
+                                        state.hasPreReleaseUpdate && state.latestPreUrl.isNotBlank() ->
+                                            state.latestPreUrl
+                                        state.hasPreReleaseUpdate && state.latestPreRawTag.isNotBlank() ->
+                                            GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestPreRawTag)
                                         state.isPreRelease && state.latestPreUrl.isNotBlank() ->
                                             state.latestPreUrl
                                         state.isPreRelease && state.latestPreRawTag.isNotBlank() ->
@@ -998,7 +1008,7 @@ fun GitHubPage(
                                     label = "稳定版本",
                                     value = state.latestTag,
                                     valueColor = latestColor,
-                                    emphasized = state.hasUpdate == true
+                                    emphasized = state.hasUpdate == true && !state.recommendsPreRelease
                                 )
                             }
                             if (state.showPreReleaseInfo && state.preReleaseInfo.isNotBlank()) {
@@ -1009,7 +1019,7 @@ fun GitHubPage(
                                     label = "预发版本",
                                     value = state.preReleaseInfo,
                                     valueColor = preColor,
-                                    emphasized = state.hasPreReleaseUpdate
+                                    emphasized = state.recommendsPreRelease || state.hasPreReleaseUpdate
                                 )
                             }
                         }
@@ -1262,6 +1272,7 @@ fun GitHubPage(
             showAddSheet = false
             pickerExpanded = false
             appSearch = ""
+            preferPreReleaseInput = false
             editingTrackedItem = null
         },
         startAction = {
@@ -1274,6 +1285,7 @@ fun GitHubPage(
                     showAddSheet = false
                     pickerExpanded = false
                     appSearch = ""
+                    preferPreReleaseInput = false
                     editingTrackedItem = null
                 }
             )
@@ -1323,10 +1335,13 @@ fun GitHubPage(
             }
             SheetSectionTitle("检查选项")
             SheetSectionCard {
-                SheetControlRow(label = "检查预发行版本") {
+                SheetControlRow(
+                    label = "优先预发行版本",
+                    summary = "仅影响这个项目的推荐更新目标，不影响全局是否检查预发行"
+                ) {
                     Switch(
-                        checked = checkPreReleaseInput,
-                        onCheckedChange = { checked -> checkPreReleaseInput = checked }
+                        checked = preferPreReleaseInput,
+                        onCheckedChange = { checked -> preferPreReleaseInput = checked }
                     )
                 }
             }

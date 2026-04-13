@@ -8,7 +8,7 @@ internal data class GitHubTrackedRepoSnapshotItem(
     val repo: String,
     val packageName: String,
     val appLabel: String,
-    val checkPreRelease: Boolean
+    val preferPreRelease: Boolean
 ) {
     val id: String = "$owner/$repo"
 }
@@ -31,7 +31,10 @@ internal object GitHubTrackedRepoDeviceSnapshot {
                         repo = item.getString("repo"),
                         packageName = item.getString("packageName"),
                         appLabel = item.optString("appLabel"),
-                        checkPreRelease = item.optBoolean("checkPreRelease", false)
+                        preferPreRelease = when {
+                            item.has("preferPreRelease") -> item.optBoolean("preferPreRelease", false)
+                            else -> item.optBoolean("checkPreRelease", false)
+                        }
                     )
                 )
             }

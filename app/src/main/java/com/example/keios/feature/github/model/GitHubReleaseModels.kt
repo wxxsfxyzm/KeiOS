@@ -28,6 +28,7 @@ enum class GitHubVersionCandidateSource(val priority: Int) {
 enum class GitHubTrackedReleaseStatus(val defaultMessage: String) {
     UpdateAvailable("发现更新"),
     PreReleaseUpdateAvailable("预发有更新"),
+    PreReleaseOptional("预发可选"),
     PreReleaseTracked("预发行"),
     UpToDate("已是最新"),
     MatchedRelease("已匹配发行"),
@@ -100,6 +101,7 @@ data class GitHubTrackedReleaseCheck(
     val preRelease: GitHubReleaseVersionSignals? = null,
     val hasUpdate: Boolean? = null,
     val hasPreReleaseUpdate: Boolean = false,
+    val recommendsPreRelease: Boolean = false,
     val isPreReleaseInstalled: Boolean = false,
     val preReleaseInfo: String = "",
     val showPreReleaseInfo: Boolean = false,

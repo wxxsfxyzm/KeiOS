@@ -17,8 +17,8 @@ import kotlin.test.assertTrue
 
 class GitHubReleaseCheckServiceTest {
     @Test
-    fun `pre release tracking prefers newer prerelease for BatteryRecorder style repo`() {
-        val item = trackedApp(checkPreRelease = true)
+    fun `preferred prerelease recommends newer prerelease for BatteryRecorder style repo`() {
+        val item = trackedApp(preferPreRelease = true)
         val snapshot = snapshot(
             stable = signal("v1.4.4-release"),
             preRelease = signal("v1.4.7-prerelease3"),
@@ -35,12 +35,60 @@ class GitHubReleaseCheckServiceTest {
         assertEquals(GitHubTrackedReleaseStatus.PreReleaseUpdateAvailable, result.status)
         assertTrue(result.hasUpdate == true)
         assertTrue(result.hasPreReleaseUpdate)
+        assertTrue(result.recommendsPreRelease)
         assertEquals("v1.4.7-prerelease3", result.preRelease?.rawTag)
     }
 
     @Test
+    fun `global prerelease checking keeps stable recommendation when item does not prefer prerelease`() {
+        val item = trackedApp(preferPreRelease = false)
+        val snapshot = snapshot(
+            stable = signal("v1.4.4-release"),
+            preRelease = signal("v1.4.7-prerelease3"),
+            entries = listOf(entry("v1.4.7-prerelease3"), entry("v1.4.4-release"), entry("v1.4.2-release"))
+        )
+
+        val result = GitHubReleaseCheckService.evaluateSnapshot(
+            item = item,
+            localVersion = "1.4.2-release",
+            localVersionCode = 551L,
+            snapshot = snapshot,
+            checkAllTrackedPreReleases = true
+        )
+
+        assertEquals(GitHubTrackedReleaseStatus.UpdateAvailable, result.status)
+        assertTrue(result.hasUpdate == true)
+        assertTrue(result.hasPreReleaseUpdate)
+        assertFalse(result.recommendsPreRelease)
+        assertEquals("v1.4.7-prerelease3", result.preReleaseInfo)
+    }
+
+    @Test
+    fun `newer prerelease becomes optional when stable is already latest and item does not prefer prerelease`() {
+        val item = trackedApp(preferPreRelease = false)
+        val snapshot = snapshot(
+            stable = signal("v1.4.4-release"),
+            preRelease = signal("v1.4.7-prerelease3"),
+            entries = listOf(entry("v1.4.7-prerelease3"), entry("v1.4.4-release"))
+        )
+
+        val result = GitHubReleaseCheckService.evaluateSnapshot(
+            item = item,
+            localVersion = "1.4.4-release",
+            localVersionCode = 554L,
+            snapshot = snapshot,
+            checkAllTrackedPreReleases = true
+        )
+
+        assertEquals(GitHubTrackedReleaseStatus.PreReleaseOptional, result.status)
+        assertFalse(result.hasUpdate == true)
+        assertTrue(result.hasPreReleaseUpdate)
+        assertFalse(result.recommendsPreRelease)
+    }
+
+    @Test
     fun `local prerelease older than stable prefers stable update for ImageToolbox style repo`() {
-        val item = trackedApp(checkPreRelease = true)
+        val item = trackedApp(preferPreRelease = true)
         val snapshot = snapshot(
             stable = signal("3.8.0"),
             preRelease = signal("3.8.0-rc04"),
@@ -57,13 +105,14 @@ class GitHubReleaseCheckServiceTest {
         assertEquals(GitHubTrackedReleaseStatus.UpdateAvailable, result.status)
         assertTrue(result.hasUpdate == true)
         assertFalse(result.hasPreReleaseUpdate)
+        assertFalse(result.recommendsPreRelease)
         assertTrue(result.isPreReleaseInstalled)
         assertEquals("3.8.0-rc04", result.preReleaseInfo)
     }
 
     @Test
     fun `unmatched local prerelease still gets prerelease update through channel inference for Capsulyric`() {
-        val item = trackedApp(checkPreRelease = true)
+        val item = trackedApp(preferPreRelease = false)
         val snapshot = snapshot(
             stable = signal("Version.1.3.Fix2_C359", updatedAtMillis = 1_743_790_000_000L),
             preRelease = signal("Version.26.4.Alpha2_C384", updatedAtMillis = 1_744_137_000_000L),
@@ -78,19 +127,21 @@ class GitHubReleaseCheckServiceTest {
             item = item,
             localVersion = "Version.26.4.Canary_C378",
             localVersionCode = 378L,
-            snapshot = snapshot
+            snapshot = snapshot,
+            checkAllTrackedPreReleases = true
         )
 
         assertEquals(GitHubTrackedReleaseStatus.PreReleaseUpdateAvailable, result.status)
         assertTrue(result.hasUpdate == true)
         assertTrue(result.hasPreReleaseUpdate)
+        assertTrue(result.recommendsPreRelease)
         assertTrue(result.isPreReleaseInstalled)
         assertEquals("Version.26.4.Alpha2_C384", result.preRelease?.rawTag)
     }
 
     @Test
     fun `older prerelease remains visible for animeko but does not override stable recommendation`() {
-        val item = trackedApp(checkPreRelease = true)
+        val item = trackedApp(preferPreRelease = true)
         val snapshot = snapshot(
             stable = signal("v5.4.3", title = "5.4.3", updatedAtMillis = 1_744_426_950_000L),
             preRelease = signal("v5.4.0-beta05", title = "5.4.0-beta05", updatedAtMillis = 1_742_888_753_000L),
@@ -107,13 +158,13 @@ class GitHubReleaseCheckServiceTest {
         assertEquals(GitHubTrackedReleaseStatus.UpdateAvailable, result.status)
         assertTrue(result.hasUpdate == true)
         assertFalse(result.hasPreReleaseUpdate)
-        assertEquals("v5.4.0-beta05", result.preRelease?.rawTag)
+        assertFalse(result.recommendsPreRelease)
         assertEquals("5.4.0-beta05", result.preReleaseInfo)
     }
 
     @Test
-    fun `dev prerelease newer than stable is recommended for Hyper pick up code`() {
-        val item = trackedApp(checkPreRelease = true)
+    fun `dev prerelease newer than stable is recommended when prerelease is preferred`() {
+        val item = trackedApp(preferPreRelease = true)
         val snapshot = snapshot(
             stable = signal("v26.4.3.C01"),
             preRelease = signal("v26.4.9.C01-Dev"),
@@ -130,17 +181,18 @@ class GitHubReleaseCheckServiceTest {
         assertEquals(GitHubTrackedReleaseStatus.PreReleaseUpdateAvailable, result.status)
         assertTrue(result.hasUpdate == true)
         assertTrue(result.hasPreReleaseUpdate)
+        assertTrue(result.recommendsPreRelease)
         assertEquals("v26.4.9.C01-Dev", result.preRelease?.rawTag)
     }
 
-    private fun trackedApp(checkPreRelease: Boolean): GitHubTrackedApp {
+    private fun trackedApp(preferPreRelease: Boolean): GitHubTrackedApp {
         return GitHubTrackedApp(
             repoUrl = "https://github.com/demo/app",
             owner = "demo",
             repo = "app",
             packageName = "demo.app",
             appLabel = "Demo",
-            checkPreRelease = checkPreRelease
+            preferPreRelease = preferPreRelease
         )
     }
 

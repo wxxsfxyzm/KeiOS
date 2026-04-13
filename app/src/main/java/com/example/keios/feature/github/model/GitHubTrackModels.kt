@@ -6,7 +6,7 @@ data class GitHubTrackedApp(
     val repo: String,
     val packageName: String,
     val appLabel: String,
-    val checkPreRelease: Boolean = false
+    val preferPreRelease: Boolean = false
 ) {
     val id: String
         get() = "$owner/$repo|$packageName"
@@ -32,5 +32,6 @@ data class GitHubCheckCacheEntry(
     val preReleaseInfo: String = "",
     val showPreReleaseInfo: Boolean = false,
     val hasPreReleaseUpdate: Boolean = false,
+    val recommendsPreRelease: Boolean = false,
     val sourceStrategyId: String = ""
 )

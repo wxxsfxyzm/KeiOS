@@ -16,6 +16,7 @@ object GitHubTrackStore {
     private const val KEY_REFRESH_INTERVAL_HOURS = "refresh_interval_hours"
     private const val KEY_LOOKUP_STRATEGY = "lookup_strategy"
     private const val KEY_GITHUB_API_TOKEN = "github_api_token"
+    private const val KEY_CHECK_ALL_TRACKED_PRE_RELEASES = "check_all_tracked_pre_releases"
 
     @Volatile
     private var didAutoRefreshInSession: Boolean = false
@@ -43,10 +44,10 @@ object GitHubTrackStore {
                                 repo = repo,
                                 packageName = packageName,
                                 appLabel = appLabel.ifBlank { packageName },
-                                checkPreRelease = if (obj.has("checkPreRelease")) {
-                                    obj.optBoolean("checkPreRelease", false)
-                                } else {
-                                    false
+                                preferPreRelease = when {
+                                    obj.has("preferPreRelease") -> obj.optBoolean("preferPreRelease", false)
+                                    obj.has("checkPreRelease") -> obj.optBoolean("checkPreRelease", false)
+                                    else -> false
                                 }
                             )
                         )
@@ -65,7 +66,8 @@ object GitHubTrackStore {
                 .put("repo", item.repo)
                 .put("packageName", item.packageName)
                 .put("appLabel", item.appLabel)
-                .put("checkPreRelease", item.checkPreRelease)
+                .put("preferPreRelease", item.preferPreRelease)
+                .put("checkPreRelease", item.preferPreRelease)
             array.put(obj)
         }
         kv().encode(KEY_ITEMS, array.toString())
@@ -99,6 +101,7 @@ object GitHubTrackStore {
                             preReleaseInfo = item.optString("preReleaseInfo"),
                             showPreReleaseInfo = item.optBoolean("showPreReleaseInfo", false),
                             hasPreReleaseUpdate = item.optBoolean("hasPreReleaseUpdate", false),
+                            recommendsPreRelease = item.optBoolean("recommendsPreRelease", false),
                             sourceStrategyId = item.optString("sourceStrategyId")
                         )
                     )
@@ -127,6 +130,7 @@ object GitHubTrackStore {
                     .put("preReleaseInfo", state.preReleaseInfo)
                     .put("showPreReleaseInfo", state.showPreReleaseInfo)
                     .put("hasPreReleaseUpdate", state.hasPreReleaseUpdate)
+                    .put("recommendsPreRelease", state.recommendsPreRelease)
                     .put("sourceStrategyId", state.sourceStrategyId)
             )
         }
@@ -161,12 +165,14 @@ object GitHubTrackStore {
             selectedStrategy = GitHubLookupStrategyOption.fromStorageId(
                 kv().decodeString(KEY_LOOKUP_STRATEGY).orEmpty()
             ),
-            apiToken = kv().decodeString(KEY_GITHUB_API_TOKEN).orEmpty().trim()
+            apiToken = kv().decodeString(KEY_GITHUB_API_TOKEN).orEmpty().trim(),
+            checkAllTrackedPreReleases = kv().decodeBool(KEY_CHECK_ALL_TRACKED_PRE_RELEASES, false)
         )
     }
 
     fun saveLookupConfig(config: GitHubLookupConfig) {
         kv().encode(KEY_LOOKUP_STRATEGY, config.selectedStrategy.storageId)
         kv().encode(KEY_GITHUB_API_TOKEN, config.apiToken.trim())
+        kv().encode(KEY_CHECK_ALL_TRACKED_PRE_RELEASES, config.checkAllTrackedPreReleases)
     }
 }

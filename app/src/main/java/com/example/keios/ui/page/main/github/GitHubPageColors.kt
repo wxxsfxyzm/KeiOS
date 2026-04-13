@@ -57,7 +57,8 @@ internal fun VersionCheckUi.statusIcon(): ImageVector {
     return when {
         loading -> MiuixIcons.Regular.Refresh
         isFailed() -> MiuixIcons.Regular.Report
-        hasPreReleaseUpdate -> MiuixIcons.Regular.Update
+        recommendsPreRelease -> MiuixIcons.Regular.Update
+        hasPreReleaseUpdate -> MiuixIcons.Regular.Report
         hasUpdate == true -> MiuixIcons.Regular.Update
         isPreRelease -> MiuixIcons.Regular.Report
         hasUpdate == false -> MiuixIcons.Regular.Ok
@@ -69,6 +70,7 @@ internal fun VersionCheckUi.statusColor(neutralColor: Color): Color {
     return when {
         loading -> GitHubStatusPalette.Active
         isFailed() -> GitHubStatusPalette.Error
+        recommendsPreRelease -> GitHubStatusPalette.PreRelease
         hasPreReleaseUpdate -> GitHubStatusPalette.PreRelease
         hasUpdate == true -> GitHubStatusPalette.Update
         isPreRelease -> GitHubStatusPalette.PreRelease
@@ -79,7 +81,7 @@ internal fun VersionCheckUi.statusColor(neutralColor: Color): Color {
 
 internal fun VersionCheckUi.stableVersionColor(neutralColor: Color): Color {
     return when {
-        hasUpdate == true -> GitHubStatusPalette.Update
+        hasUpdate == true && !recommendsPreRelease -> GitHubStatusPalette.Update
         hasUpdate == false -> GitHubStatusPalette.Stable
         else -> neutralColor
     }
@@ -87,6 +89,7 @@ internal fun VersionCheckUi.stableVersionColor(neutralColor: Color): Color {
 
 internal fun VersionCheckUi.preReleaseVersionColor(neutralColor: Color): Color {
     return when {
+        recommendsPreRelease -> GitHubStatusPalette.PreRelease
         hasPreReleaseUpdate -> GitHubStatusPalette.PreRelease
         isPreRelease -> GitHubStatusPalette.PreRelease
         else -> neutralColor

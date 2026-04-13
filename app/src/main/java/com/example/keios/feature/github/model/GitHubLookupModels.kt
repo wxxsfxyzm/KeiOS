@@ -22,5 +22,6 @@ enum class GitHubLookupStrategyOption(
 
 data class GitHubLookupConfig(
     val selectedStrategy: GitHubLookupStrategyOption = GitHubLookupStrategyOption.AtomFeed,
-    val apiToken: String = ""
+    val apiToken: String = "",
+    val checkAllTrackedPreReleases: Boolean = false
 )

@@ -19,6 +19,7 @@ internal data class VersionCheckUi(
     val preReleaseInfo: String = "",
     val showPreReleaseInfo: Boolean = false,
     val hasPreReleaseUpdate: Boolean = false,
+    val recommendsPreRelease: Boolean = false,
     val sourceStrategyId: String = ""
 )
 
