@@ -28,7 +28,8 @@ data class GitHubReleaseAssetBundle(
     val tagName: String,
     val htmlUrl: String,
     val assets: List<GitHubReleaseAssetFile>,
-    val showingAllAssets: Boolean = false
+    val showingAllAssets: Boolean = false,
+    val shortCommitSha: String = ""
 )
 
 object GitHubReleaseAssetRepository {
@@ -79,10 +80,12 @@ object GitHubReleaseAssetRepository {
         }
 
         return (primary.takeIf { it.isSuccess } ?: fallback).mapCatching { release ->
-            parseReleaseBundle(release).selectDisplayAssets(
-                aggressiveFiltering = aggressiveFiltering,
-                includeAllAssets = includeAllAssets
-            )
+            parseReleaseBundle(release)
+                .withResolvedShortCommitSha(owner, repo, normalizedTag, apiToken)
+                .selectDisplayAssets(
+                    aggressiveFiltering = aggressiveFiltering,
+                    includeAllAssets = includeAllAssets
+                )
         }
     }
 
@@ -146,6 +149,18 @@ object GitHubReleaseAssetRepository {
         return asSequence()
             .filter { asset -> !isSourceCodeArchive(asset.name) }
             .toList()
+    }
+
+    private fun GitHubReleaseAssetBundle.withResolvedShortCommitSha(
+        owner: String,
+        repo: String,
+        rawTag: String,
+        apiToken: String
+    ): GitHubReleaseAssetBundle {
+        val token = apiToken.trim()
+        if (token.isBlank()) return copy(shortCommitSha = "")
+        val commitSha = resolveShortCommitSha(owner, repo, rawTag, token).getOrDefault("")
+        return copy(shortCommitSha = commitSha)
     }
 
     private fun GitHubReleaseAssetBundle.selectDisplayAssets(
@@ -239,6 +254,35 @@ object GitHubReleaseAssetRepository {
             else -> "GitHub API 资产下载失败 (HTTP ${response.code})"
         }
     }
+
+    private fun resolveShortCommitSha(
+        owner: String,
+        repo: String,
+        rawTag: String,
+        apiToken: String
+    ): Result<String> = runCatching {
+        val encodedTag = URLEncoder.encode(rawTag, Charsets.UTF_8.name()).replace("+", "%20")
+        val refUrl = "${DEFAULT_GITHUB_API_BASE_URL.trimEnd('/')}/repos/$owner/$repo/git/ref/tags/$encodedTag"
+        val refObject = JSONObject(fetchJson(refUrl, apiToken)).optJSONObject("object")
+            ?: error("Git tag ref 响应缺少 object")
+        val refType = refObject.optString("type").trim()
+        val refSha = refObject.optString("sha").trim()
+        val commitSha = when {
+            refType.equals("commit", ignoreCase = true) -> refSha
+            refType.equals("tag", ignoreCase = true) && refSha.isNotBlank() -> {
+                val tagUrl = "${DEFAULT_GITHUB_API_BASE_URL.trimEnd('/')}/repos/$owner/$repo/git/tags/$refSha"
+                val tagObject = JSONObject(fetchJson(tagUrl, apiToken)).optJSONObject("object")
+                    ?: error("Annotated tag 响应缺少 object")
+                if (tagObject.optString("type").trim().equals("commit", ignoreCase = true)) {
+                    tagObject.optString("sha").trim()
+                } else {
+                    ""
+                }
+            }
+            else -> ""
+        }
+        commitSha.take(7)
+    }.getOrElse { "" }.let { Result.success(it) }
 
     private fun fetchReleaseByTag(
         owner: String,
@@ -469,7 +513,8 @@ object GitHubReleaseAssetRepository {
             releaseName = releaseName,
             tagName = tagName,
             htmlUrl = htmlUrl,
-            assets = assets
+            assets = assets,
+            shortCommitSha = ""
         )
     }
 

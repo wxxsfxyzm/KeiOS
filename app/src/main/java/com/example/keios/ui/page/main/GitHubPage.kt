@@ -1,6 +1,7 @@
 package com.example.keios.ui.page.main
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.graphics.Bitmap
 import android.widget.Toast
@@ -198,6 +199,7 @@ fun GitHubPage(
     var githubApiTokenInput by remember { mutableStateOf("") }
     var checkAllTrackedPreReleasesInput by remember { mutableStateOf(false) }
     var aggressiveApkFilteringInput by remember { mutableStateOf(false) }
+    var installerXRevivedOnlineLinkingInput by remember { mutableStateOf(false) }
     var refreshIntervalHoursInput by remember { mutableStateOf(refreshIntervalHours) }
     var showApiTokenPlainText by remember { mutableStateOf(false) }
     var strategyBenchmarkRunning by remember { mutableStateOf(false) }
@@ -226,6 +228,23 @@ fun GitHubPage(
     val apkAssetLoading = remember { mutableStateMapOf<String, Boolean>() }
     val apkAssetErrors = remember { mutableStateMapOf<String, String>() }
     val apkAssetExpanded = remember { mutableStateMapOf<String, Boolean>() }
+    val installerXRevivedPackageName = "com.rosan.installer.x.revived"
+
+    fun isPackageInstalled(packageName: String): Boolean {
+        return runCatching {
+            context.packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+            true
+        }.recoverCatching {
+            @Suppress("DEPRECATION")
+            context.packageManager.getPackageInfo(packageName, 0)
+            true
+        }.getOrDefault(false)
+    }
+
+    val isInstallerXRevivedInstalled = remember(appListLoaded, appList) {
+        appList.any { it.packageName == installerXRevivedPackageName } || isPackageInstalled(installerXRevivedPackageName)
+    }
+
     val trackSnapshot by produceState(initialValue = GitHubTrackSnapshot()) {
         value = withContext(Dispatchers.IO) { GitHubTrackStore.loadSnapshot() }
     }
@@ -237,6 +256,7 @@ fun GitHubPage(
         githubApiTokenInput = trackSnapshot.lookupConfig.apiToken
         checkAllTrackedPreReleasesInput = trackSnapshot.lookupConfig.checkAllTrackedPreReleases
         aggressiveApkFilteringInput = trackSnapshot.lookupConfig.aggressiveApkFiltering
+        installerXRevivedOnlineLinkingInput = trackSnapshot.lookupConfig.installerXRevivedOnlineLinking
         refreshIntervalHours = trackSnapshot.refreshIntervalHours
         refreshIntervalHoursInput = trackSnapshot.refreshIntervalHours
 
@@ -295,6 +315,17 @@ fun GitHubPage(
 
     DisposableEffect(Unit) {
         onDispose { onActionBarInteractingChanged(false) }
+    }
+
+    LaunchedEffect(isInstallerXRevivedInstalled) {
+        if (!isInstallerXRevivedInstalled) {
+            installerXRevivedOnlineLinkingInput = false
+            if (lookupConfig.installerXRevivedOnlineLinking) {
+                val updatedConfig = lookupConfig.copy(installerXRevivedOnlineLinking = false)
+                GitHubTrackStore.saveLookupConfig(updatedConfig)
+                lookupConfig = updatedConfig
+            }
+        }
     }
 
     fun VersionCheckUi.toCacheEntry(): GitHubCheckCacheEntry = GitHubCheckCacheEntry(
@@ -426,6 +457,7 @@ fun GitHubPage(
         lookupConfig = config
         checkAllTrackedPreReleasesInput = config.checkAllTrackedPreReleases
         aggressiveApkFilteringInput = config.aggressiveApkFiltering
+        installerXRevivedOnlineLinkingInput = config.installerXRevivedOnlineLinking
         refreshIntervalHoursInput = GitHubTrackStore.loadRefreshIntervalHours()
         showCheckLogicIntervalPopup = false
         showCheckLogicSheet = true
@@ -509,7 +541,8 @@ fun GitHubPage(
             selectedStrategy = selectedStrategyInput,
             apiToken = sanitizedToken,
             checkAllTrackedPreReleases = previousConfig.checkAllTrackedPreReleases,
-            aggressiveApkFiltering = previousConfig.aggressiveApkFiltering
+            aggressiveApkFiltering = previousConfig.aggressiveApkFiltering,
+            installerXRevivedOnlineLinking = previousConfig.installerXRevivedOnlineLinking
         )
         GitHubTrackStore.saveLookupConfig(newConfig)
         lookupConfig = newConfig
@@ -555,7 +588,8 @@ fun GitHubPage(
         val previousRefreshIntervalHours = GitHubTrackStore.loadRefreshIntervalHours()
         val newConfig = previousConfig.copy(
             checkAllTrackedPreReleases = checkAllTrackedPreReleasesInput,
-            aggressiveApkFiltering = aggressiveApkFilteringInput
+            aggressiveApkFiltering = aggressiveApkFilteringInput,
+            installerXRevivedOnlineLinking = installerXRevivedOnlineLinkingInput && isInstallerXRevivedInstalled
         )
         GitHubTrackStore.saveLookupConfig(newConfig)
         GitHubTrackStore.saveRefreshIntervalHours(refreshIntervalHoursInput)
@@ -721,6 +755,10 @@ fun GitHubPage(
         return if (bundle.assets.any { prefersApiAssetTransport(it) }) "API" else "直链"
     }
 
+    fun bundleCommitLabel(bundle: GitHubReleaseAssetBundle?): String? {
+        return bundle?.shortCommitSha?.trim().takeIf { !it.isNullOrBlank() }
+    }
+
     fun assetAbiLabel(fileName: String): String? {
         val lowerName = fileName.lowercase()
         return when {
@@ -773,9 +811,19 @@ fun GitHubPage(
                 type = "text/plain"
                 putExtra(Intent.EXTRA_SUBJECT, asset.name)
                 putExtra(Intent.EXTRA_TEXT, resolvedUrl)
+                if (lookupConfig.installerXRevivedOnlineLinking && isInstallerXRevivedInstalled) {
+                    `package` = installerXRevivedPackageName
+                    putExtra("channel", "Online")
+                    putExtra("extra_channel", "Online")
+                    putExtra("online_channel", true)
+                }
             }
             runCatching {
-                context.startActivity(Intent.createChooser(intent, "分享 APK 下载链接"))
+                if (lookupConfig.installerXRevivedOnlineLinking && isInstallerXRevivedInstalled) {
+                    context.startActivity(intent)
+                } else {
+                    context.startActivity(Intent.createChooser(intent, "分享 APK 下载链接"))
+                }
             }.onFailure {
                 Toast.makeText(context, "无法分享链接", Toast.LENGTH_SHORT).show()
             }
@@ -1532,6 +1580,13 @@ fun GitHubPage(
                                                         maxLines = 1,
                                                         overflow = TextOverflow.Ellipsis
                                                     )
+                                                    val commitLabel = bundleCommitLabel(assetBundle)
+                                                    if (commitLabel != null && !assetLoading && assetError.isBlank()) {
+                                                        StatusPill(
+                                                            label = commitLabel,
+                                                            color = MiuixTheme.colorScheme.onBackgroundVariant
+                                                        )
+                                                    }
                                                     val transportLabel = bundleTransportLabel(assetBundle)
                                                     if (transportLabel != null && !assetLoading && assetError.isBlank()) {
                                                         StatusPill(
@@ -1542,8 +1597,8 @@ fun GitHubPage(
                                                     StatusPill(
                                                         label = when {
                                                             assetLoading -> "加载中"
-                                                            assetBundle?.showingAllAssets == true -> "全资源"
-                                                            assetBundle != null -> "${assetBundle.assets.size} 项"
+                                                            assetBundle?.showingAllAssets == true -> "All"
+                                                            assetBundle != null -> assetBundle.assets.size.toString()
                                                             assetError.isNotBlank() -> "异常"
                                                             else -> "待展开"
                                                         },
@@ -1648,7 +1703,6 @@ fun GitHubPage(
                                                 val displayName = assetDisplayName(asset.name)
                                                 val sizeLabel = formatAssetSize(asset.sizeBytes)
                                                 val relativeTimeLabel = assetRelativeTimeLabel(asset.updatedAtMillis)
-                                                val usesApiTransport = assetTransportLabel(asset) == "API"
                                                 Card(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     colors = CardDefaults.defaultColors(
@@ -1666,21 +1720,27 @@ fun GitHubPage(
                                                             color = MiuixTheme.colorScheme.onBackground,
                                                             fontWeight = FontWeight.Bold
                                                         )
-                                                        FlowRow(
+                                                        Row(
                                                             modifier = Modifier.fillMaxWidth(),
-                                                            horizontalArrangement = Arrangement.spacedBy(if (relativeTimeLabel != null) 8.dp else 6.dp),
-                                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                                                         ) {
-                                                            extensionLabel?.let { label ->
+                                                            FlowRow(
+                                                                modifier = Modifier.weight(1f),
+                                                                horizontalArrangement = Arrangement.spacedBy(if (relativeTimeLabel != null) 8.dp else 6.dp),
+                                                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                                            ) {
+                                                                extensionLabel?.let { label ->
+                                                                    StatusPill(
+                                                                        label = label,
+                                                                        color = MiuixTheme.colorScheme.primary
+                                                                    )
+                                                                }
                                                                 StatusPill(
-                                                                    label = label,
-                                                                    color = MiuixTheme.colorScheme.primary
+                                                                    label = sizeLabel,
+                                                                    color = MiuixTheme.colorScheme.onBackgroundVariant
                                                                 )
                                                             }
-                                                            StatusPill(
-                                                                label = sizeLabel,
-                                                                color = MiuixTheme.colorScheme.onBackgroundVariant
-                                                            )
                                                             relativeTimeLabel?.let { label ->
                                                                 StatusPill(
                                                                     label = label,
@@ -1688,54 +1748,22 @@ fun GitHubPage(
                                                                 )
                                                             }
                                                         }
-                                                        if (usesApiTransport) {
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                                        ) {
+                                                            abiLabel?.let { label ->
+                                                                StatusPill(
+                                                                    label = label,
+                                                                    color = actionAccent
+                                                                )
+                                                            }
+                                                            Spacer(modifier = Modifier.weight(1f))
                                                             Row(
-                                                                modifier = Modifier.fillMaxWidth(),
-                                                                horizontalArrangement = Arrangement.Center,
+                                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                                                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                                                             ) {
-                                                                Row(
-                                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                                                                ) {
-                                                                    abiLabel?.let { label ->
-                                                                        StatusPill(
-                                                                            label = label,
-                                                                            color = actionAccent
-                                                                        )
-                                                                    }
-                                                                    GlassIconButton(
-                                                                        backdrop = backdrop,
-                                                                        icon = MiuixIcons.Regular.Download,
-                                                                        contentDescription = "下载 ${asset.name}",
-                                                                        onClick = { openApkInDownloader(asset) },
-                                                                        width = 40.dp,
-                                                                        height = 40.dp,
-                                                                        variant = GlassVariant.SheetAction
-                                                                    )
-                                                                    GlassIconButton(
-                                                                        backdrop = backdrop,
-                                                                        icon = MiuixIcons.Regular.Share,
-                                                                        contentDescription = "分享 ${asset.name}",
-                                                                        onClick = { shareApkLink(asset) },
-                                                                        width = 40.dp,
-                                                                        height = 40.dp,
-                                                                        variant = GlassVariant.SheetAction
-                                                                    )
-                                                                }
-                                                            }
-                                                        } else {
-                                                            FlowRow(
-                                                                modifier = Modifier.fillMaxWidth(),
-                                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                                                            ) {
-                                                                abiLabel?.let { label ->
-                                                                    StatusPill(
-                                                                        label = label,
-                                                                        color = actionAccent
-                                                                    )
-                                                                }
                                                                 GlassIconButton(
                                                                     backdrop = backdrop,
                                                                     icon = MiuixIcons.Regular.Download,
@@ -2060,7 +2088,8 @@ fun GitHubPage(
         val selectedRefreshOption = RefreshIntervalOption.fromHours(refreshIntervalHoursInput)
         val logicChanged = refreshIntervalHoursInput != refreshIntervalHours ||
             checkAllTrackedPreReleasesInput != lookupConfig.checkAllTrackedPreReleases ||
-            aggressiveApkFilteringInput != lookupConfig.aggressiveApkFiltering
+            aggressiveApkFilteringInput != lookupConfig.aggressiveApkFiltering ||
+            installerXRevivedOnlineLinkingInput != lookupConfig.installerXRevivedOnlineLinking
 
         SheetContentColumn(verticalSpacing = 10.dp) {
             SheetSectionTitle("当前摘要")
@@ -2121,6 +2150,24 @@ fun GitHubPage(
                         onCheckedChange = { checked -> aggressiveApkFilteringInput = checked }
                     )
                 }
+                SheetControlRow(
+                    label = "InstallerX Revived Online 联动",
+                    summary = if (isInstallerXRevivedInstalled) {
+                        "开启后，直链/API 分享会直接分享到 InstallerX Revived 的 Online 通道"
+                    } else {
+                        "未检测到 com.rosan.installer.x.revived，当前不可开启"
+                    }
+                ) {
+                    Switch(
+                        checked = installerXRevivedOnlineLinkingInput && isInstallerXRevivedInstalled,
+                        enabled = isInstallerXRevivedInstalled,
+                        onCheckedChange = { checked ->
+                            if (isInstallerXRevivedInstalled) {
+                                installerXRevivedOnlineLinkingInput = checked
+                            }
+                        }
+                    )
+                }
                 SheetControlRow(label = "保存状态") {
                     StatusPill(
                         label = if (logicChanged) "待保存" else "已同步",
@@ -2139,6 +2186,9 @@ fun GitHubPage(
                 )
                 SheetDescriptionText(
                     text = "若你的设备主要只关心 arm64 版本，可以开启“更激进的过滤方式”；它会直接排除文件名明确写着 `armeabi-v7a`、`armeabi`、`x86_64`、`x86` 的 APK，且仅当同一 release 已存在 `arm64-v8a` 时才会连带排除 universal。"
+                )
+                SheetDescriptionText(
+                    text = "InstallerX Revived Online 联动只会影响“分享”动作；若设备未安装 `com.rosan.installer.x.revived`，该开关会保持关闭且不可开启。"
                 )
             }
         }

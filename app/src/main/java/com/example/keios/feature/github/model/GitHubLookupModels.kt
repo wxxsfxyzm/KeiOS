@@ -24,5 +24,6 @@ data class GitHubLookupConfig(
     val selectedStrategy: GitHubLookupStrategyOption = GitHubLookupStrategyOption.AtomFeed,
     val apiToken: String = "",
     val checkAllTrackedPreReleases: Boolean = false,
-    val aggressiveApkFiltering: Boolean = false
+    val aggressiveApkFiltering: Boolean = false,
+    val installerXRevivedOnlineLinking: Boolean = false
 )

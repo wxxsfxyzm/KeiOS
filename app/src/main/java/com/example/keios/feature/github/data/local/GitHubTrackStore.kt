@@ -26,6 +26,7 @@ object GitHubTrackStore {
     private const val KEY_GITHUB_API_TOKEN = "github_api_token"
     private const val KEY_CHECK_ALL_TRACKED_PRE_RELEASES = "check_all_tracked_pre_releases"
     private const val KEY_AGGRESSIVE_APK_FILTERING = "github_aggressive_apk_filtering"
+    private const val KEY_INSTALLERX_REVIVED_ONLINE_LINKING = "github_installerx_revived_online_linking"
 
     @Volatile
     private var didAutoRefreshInSession: Boolean = false
@@ -244,7 +245,8 @@ object GitHubTrackStore {
             ),
             apiToken = kv().decodeString(KEY_GITHUB_API_TOKEN).orEmpty().trim(),
             checkAllTrackedPreReleases = kv().decodeBool(KEY_CHECK_ALL_TRACKED_PRE_RELEASES, false),
-            aggressiveApkFiltering = kv().decodeBool(KEY_AGGRESSIVE_APK_FILTERING, false)
+            aggressiveApkFiltering = kv().decodeBool(KEY_AGGRESSIVE_APK_FILTERING, false),
+            installerXRevivedOnlineLinking = kv().decodeBool(KEY_INSTALLERX_REVIVED_ONLINE_LINKING, false)
         )
     }
 
@@ -253,5 +255,6 @@ object GitHubTrackStore {
         kv().encode(KEY_GITHUB_API_TOKEN, config.apiToken.trim())
         kv().encode(KEY_CHECK_ALL_TRACKED_PRE_RELEASES, config.checkAllTrackedPreReleases)
         kv().encode(KEY_AGGRESSIVE_APK_FILTERING, config.aggressiveApkFiltering)
+        kv().encode(KEY_INSTALLERX_REVIVED_ONLINE_LINKING, config.installerXRevivedOnlineLinking)
     }
 }
