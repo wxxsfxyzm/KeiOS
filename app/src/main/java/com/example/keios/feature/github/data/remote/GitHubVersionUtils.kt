@@ -181,6 +181,26 @@ object GitHubVersionUtils {
         return compareCandidateSetsWithSources(left, rightCandidates)
     }
 
+    internal fun referToSameReleaseVersion(
+        leftCandidates: List<GitHubVersionCandidate>,
+        rightCandidates: List<GitHubVersionCandidate>
+    ): Boolean {
+        val left = leftCandidates
+            .flatMap { normalizeVersionCandidates(it.value) }
+            .mapNotNull(::parseVersionParts)
+            .filter(::isMeaningfulReleaseIdentity)
+            .map(::releaseIdentityKey)
+            .toSet()
+        val right = rightCandidates
+            .flatMap { normalizeVersionCandidates(it.value) }
+            .mapNotNull(::parseVersionParts)
+            .filter(::isMeaningfulReleaseIdentity)
+            .map(::releaseIdentityKey)
+            .toSet()
+        if (left.isEmpty() || right.isEmpty()) return false
+        return left.any(right::contains)
+    }
+
     internal fun hasComparableVersionCandidates(
         candidates: List<GitHubVersionCandidate>,
         maxSourcePriority: Int = GitHubVersionCandidateSource.Link.priority
@@ -189,6 +209,21 @@ object GitHubVersionUtils {
             candidate.source.priority <= maxSourcePriority &&
                 normalizeVersionCandidates(candidate.value).any { normalized ->
                     parseVersionParts(normalized) != null
+                }
+        }
+    }
+
+    internal fun hasMeaningfulPreReleaseVersionCandidates(
+        candidates: List<GitHubVersionCandidate>,
+        maxSourcePriority: Int = GitHubVersionCandidateSource.Link.priority
+    ): Boolean {
+        return candidates.any { candidate ->
+            candidate.source.priority <= maxSourcePriority &&
+                normalizeVersionCandidates(candidate.value).mapNotNull { normalized ->
+                    parseVersionParts(normalized)
+                }.any { parts ->
+                    parts.numbers.size >= 2 ||
+                        (parts.channel.isPreRelease && parts.channelNumber > 0)
                 }
         }
     }
@@ -405,6 +440,20 @@ object GitHubVersionUtils {
         val channel: GitHubReleaseChannel,
         val channelNumber: Int
     )
+
+    private fun isMeaningfulReleaseIdentity(parts: VersionParts): Boolean {
+        return parts.numbers.size >= 2 || (parts.channel.isPreRelease && parts.channelNumber > 0)
+    }
+
+    private fun releaseIdentityKey(parts: VersionParts): String {
+        return buildString {
+            append(parts.numbers.joinToString("."))
+            append('|')
+            append(parts.channel.name)
+            append('|')
+            append(parts.channelNumber)
+        }
+    }
 
     private fun parseVersionParts(raw: String): VersionParts? {
         val src = raw.trim().lowercase(Locale.ROOT)

@@ -196,10 +196,13 @@ fun GitHubPage(
         localVersion = localVersion,
         localVersionCode = localVersionCode,
         latestTag = latestTag,
+        latestStableName = latestStableName,
         latestStableRawTag = latestStableRawTag,
         latestStableUrl = latestStableUrl,
+        latestPreName = latestPreName,
         latestPreRawTag = latestPreRawTag,
         latestPreUrl = latestPreUrl,
+        hasStableRelease = hasStableRelease,
         hasUpdate = hasUpdate,
         message = message,
         isPreRelease = isPreRelease,
@@ -207,6 +210,7 @@ fun GitHubPage(
         showPreReleaseInfo = showPreReleaseInfo,
         hasPreReleaseUpdate = hasPreReleaseUpdate,
         recommendsPreRelease = recommendsPreRelease,
+        releaseHint = releaseHint,
         sourceStrategyId = sourceStrategyId
     )
 
@@ -215,10 +219,13 @@ fun GitHubPage(
         localVersion = localVersion,
         localVersionCode = localVersionCode,
         latestTag = latestTag,
+        latestStableName = latestStableName,
         latestStableRawTag = latestStableRawTag,
         latestStableUrl = latestStableUrl,
+        latestPreName = latestPreName,
         latestPreRawTag = latestPreRawTag,
         latestPreUrl = latestPreUrl,
+        hasStableRelease = hasStableRelease,
         hasUpdate = hasUpdate,
         message = message,
         isPreRelease = isPreRelease,
@@ -226,6 +233,7 @@ fun GitHubPage(
         showPreReleaseInfo = showPreReleaseInfo,
         hasPreReleaseUpdate = hasPreReleaseUpdate,
         recommendsPreRelease = recommendsPreRelease,
+        releaseHint = releaseHint,
         sourceStrategyId = sourceStrategyId
     )
 
@@ -234,10 +242,13 @@ fun GitHubPage(
         localVersion = localVersion,
         localVersionCode = localVersionCode,
         latestTag = stableRelease?.displayVersion.orEmpty(),
+        latestStableName = stableRelease?.rawName.orEmpty(),
         latestStableRawTag = stableRelease?.rawTag.orEmpty(),
         latestStableUrl = stableRelease?.link.orEmpty(),
+        latestPreName = preRelease?.rawName.orEmpty(),
         latestPreRawTag = preRelease?.rawTag.orEmpty(),
         latestPreUrl = preRelease?.link.orEmpty(),
+        hasStableRelease = hasStableRelease,
         hasUpdate = hasUpdate,
         message = message,
         isPreRelease = isPreReleaseInstalled,
@@ -245,6 +256,7 @@ fun GitHubPage(
         showPreReleaseInfo = showPreReleaseInfo,
         hasPreReleaseUpdate = hasPreReleaseUpdate,
         recommendsPreRelease = recommendsPreRelease,
+        releaseHint = releaseHint,
         sourceStrategyId = strategyId
     )
 
@@ -1030,26 +1042,48 @@ fun GitHubPage(
                                     valueColor = MiuixTheme.colorScheme.primary
                                 )
                             }
-                            if (state.latestTag.isNotBlank()) {
+                            if (state.hasStableRelease &&
+                                (state.latestStableName.isNotBlank() ||
+                                    state.latestStableRawTag.isNotBlank() ||
+                                    state.latestTag.isNotBlank())
+                            ) {
                                 val latestColor = state.stableVersionColor(
                                     neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
                                 )
                                 VersionValueRow(
                                     label = "稳定版本",
-                                    value = state.latestTag,
+                                    value = formatReleaseValue(
+                                        releaseName = state.latestStableName.ifBlank { state.latestTag },
+                                        rawTag = state.latestStableRawTag
+                                    ),
                                     valueColor = latestColor,
                                     emphasized = state.hasUpdate == true && !state.recommendsPreRelease
                                 )
                             }
-                            if (state.showPreReleaseInfo && state.preReleaseInfo.isNotBlank()) {
+                            if (state.showPreReleaseInfo &&
+                                (state.latestPreName.isNotBlank() ||
+                                    state.latestPreRawTag.isNotBlank() ||
+                                    state.preReleaseInfo.isNotBlank())
+                            ) {
                                 val preColor = state.preReleaseVersionColor(
                                     neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
                                 )
                                 VersionValueRow(
                                     label = "预发版本",
-                                    value = state.preReleaseInfo,
+                                    value = formatReleaseValue(
+                                        releaseName = state.latestPreName.ifBlank { state.preReleaseInfo },
+                                        rawTag = state.latestPreRawTag
+                                    ),
                                     valueColor = preColor,
                                     emphasized = state.recommendsPreRelease || state.hasPreReleaseUpdate
+                                )
+                            }
+                            if (state.releaseHint.isNotBlank()) {
+                                GitHubCompactInfoRow(
+                                    label = "提示",
+                                    value = state.releaseHint,
+                                    valueColor = MiuixTheme.colorScheme.onBackgroundVariant,
+                                    titleColor = MiuixTheme.colorScheme.onBackgroundVariant
                                 )
                             }
                         }

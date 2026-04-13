@@ -91,10 +91,21 @@ object GitHubTrackStore {
                             localVersion = item.optString("localVersion"),
                             localVersionCode = item.optLong("localVersionCode", -1L),
                             latestTag = item.optString("latestTag"),
+                            latestStableName = item.optString("latestStableName").ifBlank {
+                                item.optString("latestTag")
+                            },
                             latestStableRawTag = item.optString("latestStableRawTag"),
                             latestStableUrl = item.optString("latestStableUrl"),
+                            latestPreName = item.optString("latestPreName").ifBlank {
+                                item.optString("preReleaseInfo")
+                            },
                             latestPreRawTag = item.optString("latestPreRawTag"),
                             latestPreUrl = item.optString("latestPreUrl"),
+                            hasStableRelease = if (item.has("hasStableRelease")) {
+                                item.optBoolean("hasStableRelease", true)
+                            } else {
+                                item.optString("latestStableRawTag").isNotBlank() || item.optString("latestTag").isNotBlank()
+                            },
                             hasUpdate = if (item.has("hasUpdate")) item.optBoolean("hasUpdate") else null,
                             message = item.optString("message"),
                             isPreRelease = item.optBoolean("isPreRelease", false),
@@ -102,6 +113,7 @@ object GitHubTrackStore {
                             showPreReleaseInfo = item.optBoolean("showPreReleaseInfo", false),
                             hasPreReleaseUpdate = item.optBoolean("hasPreReleaseUpdate", false),
                             recommendsPreRelease = item.optBoolean("recommendsPreRelease", false),
+                            releaseHint = item.optString("releaseHint"),
                             sourceStrategyId = item.optString("sourceStrategyId")
                         )
                     )
@@ -120,10 +132,13 @@ object GitHubTrackStore {
                     .put("localVersion", state.localVersion)
                     .put("localVersionCode", state.localVersionCode)
                     .put("latestTag", state.latestTag)
+                    .put("latestStableName", state.latestStableName)
                     .put("latestStableRawTag", state.latestStableRawTag)
                     .put("latestStableUrl", state.latestStableUrl)
+                    .put("latestPreName", state.latestPreName)
                     .put("latestPreRawTag", state.latestPreRawTag)
                     .put("latestPreUrl", state.latestPreUrl)
+                    .put("hasStableRelease", state.hasStableRelease)
                     .put("hasUpdate", state.hasUpdate)
                     .put("message", state.message)
                     .put("isPreRelease", state.isPreRelease)
@@ -131,6 +146,7 @@ object GitHubTrackStore {
                     .put("showPreReleaseInfo", state.showPreReleaseInfo)
                     .put("hasPreReleaseUpdate", state.hasPreReleaseUpdate)
                     .put("recommendsPreRelease", state.recommendsPreRelease)
+                    .put("releaseHint", state.releaseHint)
                     .put("sourceStrategyId", state.sourceStrategyId)
             )
         }

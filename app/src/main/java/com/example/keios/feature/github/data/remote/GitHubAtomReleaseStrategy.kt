@@ -75,6 +75,16 @@ object GitHubAtomReleaseStrategy : GitHubReleaseLookupStrategy {
                 elapsedMs = System.currentTimeMillis() - startedAt
             )
         }
+        val fallbackStableEntry = pickLatestStableEntry(feed.entries.filter { !it.isLikelyPreRelease })
+        val latestPreEntry = pickLatestPreReleaseEntry(
+            feed.entries.filter { entry ->
+                entry.isLikelyPreRelease &&
+                    GitHubVersionUtils.hasMeaningfulPreReleaseVersionCandidates(
+                        entry.versionCandidates,
+                        GitHubVersionCandidateSource.Link.priority
+                    )
+            }
+        )
         val latestStableTrace = fetchLatestStableSignalTrace(
             owner = owner,
             repo = repo,
@@ -89,22 +99,17 @@ object GitHubAtomReleaseStrategy : GitHubReleaseLookupStrategy {
                 elapsedMs = System.currentTimeMillis() - startedAt
             )
         }
-        val latestPre = pickPreferredEntry(
-            feed.entries.filter { entry ->
-                entry.isLikelyPreRelease &&
-                    GitHubVersionUtils.hasComparableVersionCandidates(
-                        entry.versionCandidates,
-                        GitHubVersionCandidateSource.Link.priority
-                    )
-            }
-        )
+        val latestPre = latestPreEntry
             ?.toReleaseSignal(GitHubReleaseSignalSource.AtomEntry)
             ?.takeUnless { preReleaseSignal ->
-                GitHubVersionUtils.compareCandidateSetsWithSources(
-                    preReleaseSignal.candidates,
-                    latestStable.versionCandidates
-                ) == 0
+                (fallbackStableEntry != null || latestStable.source == GitHubReleaseSignalSource.LatestRedirect) &&
+                    GitHubVersionUtils.referToSameReleaseVersion(
+                        preReleaseSignal.versionCandidates,
+                        latestStable.versionCandidates
+                    )
             }
+        val hasStableRelease = fallbackStableEntry != null ||
+            latestStable.source == GitHubReleaseSignalSource.LatestRedirect
 
         return GitHubStrategyLoadTrace(
             result = Result.success(
@@ -112,6 +117,7 @@ object GitHubAtomReleaseStrategy : GitHubReleaseLookupStrategy {
                     strategyId = id,
                     feed = feed,
                     latestStable = latestStable,
+                    hasStableRelease = hasStableRelease,
                     latestPreRelease = latestPre
                 )
             ),
@@ -218,7 +224,19 @@ object GitHubAtomReleaseStrategy : GitHubReleaseLookupStrategy {
                         authorName = ""
                     )
                 } else {
-                    selectEffectiveLatestSignal(feed.entries)
+                    val fallbackStableEntry = pickLatestStableEntry(feed.entries.filter { !it.isLikelyPreRelease })
+                    val fallbackPreEntry = pickLatestPreReleaseEntry(
+                        feed.entries.filter { entry ->
+                            entry.isLikelyPreRelease &&
+                                GitHubVersionUtils.hasMeaningfulPreReleaseVersionCandidates(
+                                    entry.versionCandidates,
+                                    GitHubVersionCandidateSource.Link.priority
+                                )
+                        }
+                    )
+                    fallbackStableEntry?.toReleaseSignal(GitHubReleaseSignalSource.AtomFallback)
+                        ?: fallbackPreEntry?.toReleaseSignal(GitHubReleaseSignalSource.AtomFallback)
+                        ?: error("no release entries")
                 }
             }
         }
@@ -229,18 +247,6 @@ object GitHubAtomReleaseStrategy : GitHubReleaseLookupStrategy {
             fromCache = false,
             elapsedMs = System.currentTimeMillis() - startedAt
         )
-    }
-
-    private fun selectEffectiveLatestSignal(
-        entries: List<GitHubAtomReleaseEntry>
-    ): GitHubReleaseVersionSignals {
-        // Some young projects only publish prereleases for a long time. In that case we still need
-        // a usable "latest" signal instead of treating the repository as invalid.
-        return pickPreferredEntry(entries.filter { !it.isLikelyPreRelease })
-            ?.toReleaseSignal(GitHubReleaseSignalSource.AtomFallback)
-            ?: pickPreferredEntry(entries)
-                ?.toReleaseSignal(GitHubReleaseSignalSource.AtomFallback)
-            ?: error("no release entries")
     }
 
     override fun clearCaches() {
@@ -418,18 +424,30 @@ object GitHubAtomReleaseStrategy : GitHubReleaseLookupStrategy {
         )
     }
 
-    private fun pickPreferredEntry(entries: List<GitHubAtomReleaseEntry>): GitHubAtomReleaseEntry? {
+    private fun pickLatestStableEntry(entries: List<GitHubAtomReleaseEntry>): GitHubAtomReleaseEntry? {
+        return entries.maxWithOrNull(
+            compareBy<GitHubAtomReleaseEntry> { it.updatedAtMillis ?: Long.MIN_VALUE }
+                .thenComparator { left, right ->
+                    GitHubVersionUtils.compareStructuredCandidateSets(
+                        left.versionCandidates,
+                        right.versionCandidates
+                    ) ?: 0
+                }
+        )
+    }
+
+    private fun pickLatestPreReleaseEntry(entries: List<GitHubAtomReleaseEntry>): GitHubAtomReleaseEntry? {
         return entries.maxWithOrNull { left, right ->
-            val byVersion = GitHubVersionUtils.compareStructuredCandidateSets(
-                left.versionCandidates,
-                right.versionCandidates
+            val byPublishedAt = compareValues(
+                left.updatedAtMillis ?: Long.MIN_VALUE,
+                right.updatedAtMillis ?: Long.MIN_VALUE
             )
             when {
-                byVersion != null && byVersion != 0 -> byVersion
-                else -> compareValues(
-                    left.updatedAtMillis ?: Long.MIN_VALUE,
-                    right.updatedAtMillis ?: Long.MIN_VALUE
-                )
+                byPublishedAt != 0 -> byPublishedAt
+                else -> GitHubVersionUtils.compareStructuredCandidateSets(
+                    left.versionCandidates,
+                    right.versionCandidates
+                ) ?: 0
             }
         }
     }

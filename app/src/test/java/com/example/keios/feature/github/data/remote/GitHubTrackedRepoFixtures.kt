@@ -7,8 +7,10 @@ internal data class GitHubTrackedRepoFixture(
     val preferPreRelease: Boolean,
     val atomStableRawTag: String,
     val atomPreRawTag: String? = null,
+    val atomHasStableRelease: Boolean = true,
     val tokenStableRawTag: String = atomStableRawTag,
     val tokenPreRawTag: String? = atomPreRawTag,
+    val tokenHasStableRelease: Boolean = atomHasStableRelease,
     val notes: String = ""
 ) {
     val id: String = "$owner/$repo"
@@ -255,10 +257,12 @@ internal object GitHubTrackedRepoFixtures {
             localVersion = "unknown",
             preferPreRelease = true,
             atomStableRawTag = "0.0.8",
-            atomPreRawTag = null,
+            atomPreRawTag = "0.0.8",
+            atomHasStableRelease = false,
             tokenStableRawTag = "0.0.8",
-            tokenPreRawTag = null,
-            notes = "Repository currently ships prerelease-only tags; both strategies should surface the newest prerelease as the effective stable signal fallback"
+            tokenPreRawTag = "0.0.8",
+            tokenHasStableRelease = false,
+            notes = "Repository currently ships prerelease-only tags; strategies should keep the effective latest signal internally while exposing the newest build as prerelease-only"
         )
     )
 }

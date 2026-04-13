@@ -100,4 +100,34 @@ class GitHubVersionUtilsTest {
         assertNotNull(compare)
         assertEquals(0, compare)
     }
+
+    @Test
+    fun `meaningful prerelease candidates keep date based rc tags but reject branch names`() {
+        val dateRcCandidates = GitHubVersionUtils.buildVersionCandidates(
+            GitHubVersionCandidateSource.Tag to "v20260410-rc1"
+        )
+        val branchCandidates = GitHubVersionUtils.buildVersionCandidates(
+            GitHubVersionCandidateSource.Tag to "dev-fix-access-denied-error-1"
+        )
+
+        assertTrue(GitHubVersionUtils.hasMeaningfulPreReleaseVersionCandidates(dateRcCandidates))
+        assertEquals(false, GitHubVersionUtils.hasMeaningfulPreReleaseVersionCandidates(branchCandidates))
+    }
+
+    @Test
+    fun `same release detection uses candidate overlap instead of loose semantic equality`() {
+        val stableCandidates = GitHubVersionUtils.buildVersionCandidates(
+            GitHubVersionCandidateSource.Tag to "Version.1.3.Fix2_C359"
+        )
+        val preCandidates = GitHubVersionUtils.buildVersionCandidates(
+            GitHubVersionCandidateSource.Tag to "Version.26.4.Alpha2_C384"
+        )
+        val duplicateCandidates = GitHubVersionUtils.buildVersionCandidates(
+            GitHubVersionCandidateSource.Tag to "v0.0.8",
+            GitHubVersionCandidateSource.Title to "0.0.8"
+        )
+
+        assertEquals(false, GitHubVersionUtils.referToSameReleaseVersion(preCandidates, stableCandidates))
+        assertTrue(GitHubVersionUtils.referToSameReleaseVersion(duplicateCandidates, duplicateCandidates))
+    }
 }

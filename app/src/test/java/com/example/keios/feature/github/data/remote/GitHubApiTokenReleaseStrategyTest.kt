@@ -212,7 +212,7 @@ class GitHubApiTokenReleaseStrategyTest {
                                 "tag_name": "3.8.0",
                                 "name": "3.8.0",
                                 "html_url": "https://github.com/demo/app/releases/tag/3.8.0",
-                                "body": "stable",
+                                "body": "Stable build for everyone, thanks rc testers",
                                 "draft": false,
                                 "prerelease": false,
                                 "published_at": "2026-04-09T19:28:15Z"
@@ -238,15 +238,15 @@ class GitHubApiTokenReleaseStrategyTest {
                     .setBody(
                         """
                             {
-                              "id": 1,
-                              "node_id": "R_1",
-                              "tag_name": "3.8.0",
-                              "name": "3.8.0",
-                              "html_url": "https://github.com/demo/app/releases/tag/3.8.0",
-                              "body": "stable",
-                              "draft": false,
-                              "prerelease": false,
-                              "published_at": "2026-04-09T19:28:15Z"
+                                "id": 1,
+                                "node_id": "R_1",
+                                "tag_name": "3.8.0",
+                                "name": "3.8.0",
+                                "html_url": "https://github.com/demo/app/releases/tag/3.8.0",
+                                "body": "Stable build for everyone, thanks rc testers",
+                                "draft": false,
+                                "prerelease": false,
+                                "published_at": "2026-04-09T19:28:15Z"
                             }
                         """.trimIndent()
                     )
@@ -260,6 +260,73 @@ class GitHubApiTokenReleaseStrategyTest {
 
             assertEquals("3.8.0", snapshot.latestStable.rawTag)
             assertEquals("3.8.0-rc04", snapshot.latestPreRelease?.rawTag)
+        }
+    }
+
+    @Test
+    fun `stable latest release is not downgraded by rc words in changelog`() {
+        MockWebServer().use { server ->
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody(
+                        """
+                            [
+                              {
+                                "id": 1,
+                                "node_id": "R_1",
+                                "tag_name": "1.4.3",
+                                "name": "1.4.3",
+                                "html_url": "https://github.com/demo/app/releases/tag/1.4.3",
+                                "body": "Fix pre-translation flow and rc migration leftovers",
+                                "draft": false,
+                                "prerelease": false,
+                                "published_at": "2026-04-13T10:28:20Z"
+                              },
+                              {
+                                "id": 2,
+                                "node_id": "R_2",
+                                "tag_name": "1.4.2",
+                                "name": "1.4.2",
+                                "html_url": "https://github.com/demo/app/releases/tag/1.4.2",
+                                "body": "Stable build",
+                                "draft": false,
+                                "prerelease": false,
+                                "published_at": "2026-04-11T11:03:39Z"
+                              }
+                            ]
+                        """.trimIndent()
+                    )
+            )
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody(
+                        """
+                            {
+                              "id": 1,
+                              "node_id": "R_1",
+                              "tag_name": "1.4.3",
+                              "name": "1.4.3",
+                              "html_url": "https://github.com/demo/app/releases/tag/1.4.3",
+                              "body": "Fix pre-translation flow and rc migration leftovers",
+                              "draft": false,
+                              "prerelease": false,
+                              "published_at": "2026-04-13T10:28:20Z"
+                            }
+                        """.trimIndent()
+                    )
+            )
+            val tokenStrategy = GitHubApiTokenReleaseStrategy(
+                apiToken = "ghp_testtoken123",
+                apiBaseUrl = server.url("/").toString()
+            )
+
+            val snapshot = tokenStrategy.loadSnapshot(owner = "demo", repo = "app").getOrThrow()
+
+            assertTrue(snapshot.hasStableRelease)
+            assertEquals("1.4.3", snapshot.latestStable.rawTag)
+            assertNull(snapshot.latestPreRelease)
         }
     }
 
@@ -330,7 +397,7 @@ class GitHubApiTokenReleaseStrategyTest {
     }
 
     @Test
-    fun `latest api failure falls back to stable selection from releases list`() {
+    fun `latest api failure falls back to stable selection from releases list while keeping newest prerelease visible`() {
         MockWebServer().use { server ->
             server.enqueue(
                 MockResponse()
@@ -348,6 +415,17 @@ class GitHubApiTokenReleaseStrategyTest {
                                 "draft": false,
                                 "prerelease": true,
                                 "published_at": "2026-04-08T18:17:14Z"
+                              },
+                              {
+                                "id": 3,
+                                "node_id": "R_3",
+                                "tag_name": "Canary.Version_C384",
+                                "name": "Canary Build Version.26.4.Canary_C384",
+                                "html_url": "https://github.com/demo/app/releases/tag/Canary.Version_C384",
+                                "body": "preview",
+                                "draft": false,
+                                "prerelease": true,
+                                "published_at": "2026-04-08T18:16:59Z"
                               },
                               {
                                 "id": 2,
@@ -377,7 +455,7 @@ class GitHubApiTokenReleaseStrategyTest {
             val snapshot = tokenStrategy.loadSnapshot(owner = "demo", repo = "app").getOrThrow()
 
             assertEquals("Version.1.3.Fix2_C359", snapshot.latestStable.rawTag)
-            assertNull(snapshot.latestPreRelease)
+            assertEquals("Version.26.4.Alpha2_C384", snapshot.latestPreRelease?.rawTag)
         }
     }
 
@@ -444,6 +522,72 @@ class GitHubApiTokenReleaseStrategyTest {
 
             assertEquals("v1.4.4-release", snapshot.latestStable.rawTag)
             assertEquals("v1.4.7-prerelease3", snapshot.latestPreRelease?.rawTag)
+        }
+    }
+
+    @Test
+    fun `branch like historical prerelease does not surface as latest prerelease`() {
+        MockWebServer().use { server ->
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody(
+                        """
+                            [
+                              {
+                                "id": 1,
+                                "node_id": "R_1",
+                                "tag_name": "v1.8.7",
+                                "name": "v1.8.7",
+                                "html_url": "https://github.com/demo/app/releases/tag/v1.8.7",
+                                "body": "stable",
+                                "draft": false,
+                                "prerelease": false,
+                                "published_at": "2026-04-12T02:42:30Z"
+                              },
+                              {
+                                "id": 2,
+                                "node_id": "R_2",
+                                "tag_name": "dev-fix-access-denied-error-1",
+                                "name": "dev-fix-access-denied-error-1",
+                                "html_url": "https://github.com/demo/app/releases/tag/dev-fix-access-denied-error-1",
+                                "body": "preview",
+                                "draft": false,
+                                "prerelease": true,
+                                "published_at": "2025-09-13T07:25:53Z"
+                              }
+                            ]
+                        """.trimIndent()
+                    )
+            )
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody(
+                        """
+                            {
+                              "id": 1,
+                              "node_id": "R_1",
+                              "tag_name": "v1.8.7",
+                              "name": "v1.8.7",
+                              "html_url": "https://github.com/demo/app/releases/tag/v1.8.7",
+                              "body": "stable",
+                              "draft": false,
+                              "prerelease": false,
+                              "published_at": "2026-04-12T02:42:30Z"
+                            }
+                        """.trimIndent()
+                    )
+            )
+            val tokenStrategy = GitHubApiTokenReleaseStrategy(
+                apiToken = "ghp_testtoken123",
+                apiBaseUrl = server.url("/").toString()
+            )
+
+            val snapshot = tokenStrategy.loadSnapshot(owner = "demo", repo = "app").getOrThrow()
+
+            assertEquals("v1.8.7", snapshot.latestStable.rawTag)
+            assertNull(snapshot.latestPreRelease)
         }
     }
 
@@ -525,7 +669,7 @@ class GitHubApiTokenReleaseStrategyTest {
     }
 
     @Test
-    fun `prerelease only repository still exposes newest build as effective latest signal`() {
+    fun `prerelease only repository exposes newest build as prerelease without faking a stable channel`() {
         MockWebServer().use { server ->
             server.enqueue(
                 MockResponse()
@@ -571,9 +715,10 @@ class GitHubApiTokenReleaseStrategyTest {
 
             val snapshot = tokenStrategy.loadSnapshot(owner = "demo", repo = "app").getOrThrow()
 
+            assertFalse(snapshot.hasStableRelease)
             assertEquals("0.0.8", snapshot.latestStable.rawTag)
             assertEquals("v0.0.8", snapshot.latestStable.rawName)
-            assertNull(snapshot.latestPreRelease)
+            assertEquals("0.0.8", snapshot.latestPreRelease?.rawTag)
         }
     }
 

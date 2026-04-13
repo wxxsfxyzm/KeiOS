@@ -9,7 +9,7 @@ class GitHubTrackedRepoFixtureGroupsTest {
 
     @Test
     fun `tracked repos can be sliced into human review friendly groups`() {
-        val prereleaseOnly = fixtures.filter { it.atomStableRawTag == "0.0.8" && it.id == "monogram-android/monogram" }
+        val prereleaseOnly = fixtures.filter { !it.atomHasStableRelease && !it.tokenHasStableRelease }
         val prereleaseAhead = fixtures.filter { it.atomPreRawTag != null }
         val placeholderSensitive = fixtures.filter { it.id == "YumeLira/YumeBox" }
         val nonAppArtifactSensitive = fixtures.filter { it.id == "CeuiLiSA/Pixiv-Shaft" }

@@ -22,10 +22,13 @@ data class GitHubCheckCacheEntry(
     val localVersion: String = "",
     val localVersionCode: Long = -1L,
     val latestTag: String = "",
+    val latestStableName: String = "",
     val latestStableRawTag: String = "",
     val latestStableUrl: String = "",
+    val latestPreName: String = "",
     val latestPreRawTag: String = "",
     val latestPreUrl: String = "",
+    val hasStableRelease: Boolean = true,
     val hasUpdate: Boolean? = null,
     val message: String = "",
     val isPreRelease: Boolean = false,
@@ -33,5 +36,6 @@ data class GitHubCheckCacheEntry(
     val showPreReleaseInfo: Boolean = false,
     val hasPreReleaseUpdate: Boolean = false,
     val recommendsPreRelease: Boolean = false,
+    val releaseHint: String = "",
     val sourceStrategyId: String = ""
 )

@@ -9,10 +9,13 @@ internal data class VersionCheckUi(
     val localVersion: String = "",
     val localVersionCode: Long = -1L,
     val latestTag: String = "",
+    val latestStableName: String = "",
     val latestStableRawTag: String = "",
     val latestStableUrl: String = "",
+    val latestPreName: String = "",
     val latestPreRawTag: String = "",
     val latestPreUrl: String = "",
+    val hasStableRelease: Boolean = true,
     val hasUpdate: Boolean? = null,
     val message: String = "",
     val isPreRelease: Boolean = false,
@@ -20,6 +23,7 @@ internal data class VersionCheckUi(
     val showPreReleaseInfo: Boolean = false,
     val hasPreReleaseUpdate: Boolean = false,
     val recommendsPreRelease: Boolean = false,
+    val releaseHint: String = "",
     val sourceStrategyId: String = ""
 )
 
@@ -108,6 +112,20 @@ internal fun GitHubLookupConfig.overviewApiLabel(): String {
         selectedStrategy != GitHubLookupStrategyOption.GitHubApiToken -> "未使用"
         apiToken.isBlank() -> "游客"
         else -> apiToken.maskedApiPreview()
+    }
+}
+
+internal fun formatReleaseValue(
+    releaseName: String,
+    rawTag: String
+): String {
+    val name = releaseName.trim()
+    val tag = rawTag.trim()
+    return when {
+        name.isBlank() -> tag
+        tag.isBlank() -> name
+        name.equals(tag, ignoreCase = true) -> name
+        else -> "$name · $tag"
     }
 }
 

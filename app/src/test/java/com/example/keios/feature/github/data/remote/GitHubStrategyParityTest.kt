@@ -51,6 +51,14 @@ class GitHubStrategyParityTest {
                     assertEquals("v4.5.3", fixture.atomStableRawTag)
                     assertEquals("v4.5.3", fixture.tokenStableRawTag)
                 }
+                "monogram-android/monogram" -> {
+                    assertEquals("0.0.8", fixture.atomStableRawTag)
+                    assertEquals("0.0.8", fixture.atomPreRawTag)
+                    assertEquals("0.0.8", fixture.tokenStableRawTag)
+                    assertEquals("0.0.8", fixture.tokenPreRawTag)
+                    assertEquals(false, fixture.atomHasStableRelease)
+                    assertEquals(false, fixture.tokenHasStableRelease)
+                }
             }
         }
     }

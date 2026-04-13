@@ -98,7 +98,7 @@ class GitHubAtomReleaseStrategyTest {
 
 
     @Test
-    fun `atom snapshot falls back to newest prerelease when repo has no stable release yet`() {
+    fun `atom snapshot keeps prerelease only repos explicit instead of faking stable channel`() {
         MockWebServer().use { server ->
             server.enqueue(
                 MockResponse()
@@ -143,9 +143,10 @@ class GitHubAtomReleaseStrategyTest {
             val snapshot = trace.result.getOrThrow()
 
             assertFalse(trace.fromCache)
+            assertFalse(snapshot.hasStableRelease)
             assertEquals("0.0.8", snapshot.latestStable.rawTag)
             assertEquals("v0.0.8", snapshot.latestStable.rawName)
-            assertNull(snapshot.latestPreRelease)
+            assertEquals("0.0.8", snapshot.latestPreRelease?.rawTag)
         }
     }
 

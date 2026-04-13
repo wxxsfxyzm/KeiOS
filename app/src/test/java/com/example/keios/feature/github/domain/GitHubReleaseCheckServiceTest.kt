@@ -185,6 +185,55 @@ class GitHubReleaseCheckServiceTest {
         assertEquals("v26.4.9.C01-Dev", result.preRelease?.rawTag)
     }
 
+    @Test
+    fun `prerelease only repository keeps prerelease visible through hint when prerelease checking is off`() {
+        val item = trackedApp(preferPreRelease = false)
+        val snapshot = snapshot(
+            stable = signal("0.0.8", title = "v0.0.8"),
+            preRelease = signal("0.0.8", title = "v0.0.8"),
+            entries = listOf(entry("0.0.8", title = "v0.0.8")),
+            hasStableRelease = false
+        )
+
+        val result = GitHubReleaseCheckService.evaluateSnapshot(
+            item = item,
+            localVersion = "unknown",
+            localVersionCode = -1L,
+            snapshot = snapshot
+        )
+
+        assertFalse(result.hasStableRelease)
+        assertEquals("该项目暂时可能只有预发行版", result.releaseHint)
+        assertFalse(result.showPreReleaseInfo)
+        assertEquals("0.0.8", result.preRelease?.rawTag)
+        assertEquals(null, result.stableRelease)
+    }
+
+    @Test
+    fun `current stable signal overrides historical prerelease tagging for matched local build`() {
+        val item = trackedApp(preferPreRelease = true)
+        val promotedStableEntry = entry("v1.0.0-rc1").copy(
+            channel = GitHubReleaseChannel.RC,
+            isLikelyPreRelease = true
+        )
+        val snapshot = snapshot(
+            stable = signal("v1.0.0-rc1"),
+            preRelease = null,
+            entries = listOf(promotedStableEntry),
+            hasStableRelease = true
+        )
+
+        val result = GitHubReleaseCheckService.evaluateSnapshot(
+            item = item,
+            localVersion = "1.0.0-rc1",
+            localVersionCode = 10001L,
+            snapshot = snapshot
+        )
+
+        assertFalse(result.isPreReleaseInstalled)
+        assertEquals(GitHubTrackedReleaseStatus.UpToDate, result.status)
+    }
+
     private fun trackedApp(preferPreRelease: Boolean): GitHubTrackedApp {
         return GitHubTrackedApp(
             repoUrl = "https://github.com/demo/app",
@@ -199,7 +248,8 @@ class GitHubReleaseCheckServiceTest {
     private fun snapshot(
         stable: GitHubReleaseVersionSignals,
         preRelease: GitHubReleaseVersionSignals? = null,
-        entries: List<GitHubAtomReleaseEntry>
+        entries: List<GitHubAtomReleaseEntry>,
+        hasStableRelease: Boolean = true
     ): GitHubRepositoryReleaseSnapshot {
         return GitHubRepositoryReleaseSnapshot(
             strategyId = "github_api_token",
@@ -209,6 +259,7 @@ class GitHubReleaseCheckServiceTest {
                 entries = entries
             ),
             latestStable = stable,
+            hasStableRelease = hasStableRelease,
             latestPreRelease = preRelease
         )
     }

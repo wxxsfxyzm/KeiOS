@@ -97,7 +97,7 @@ object GitHubStrategyBenchmarkService {
                 fromCache = fromCache,
                 elapsedMs = elapsedMs,
                 message = errorMessage,
-                stableTag = snapshot?.latestStable?.rawTag.orEmpty(),
+                stableTag = snapshot?.takeIf { it.hasStableRelease }?.latestStable?.rawTag.orEmpty(),
                 preReleaseTag = snapshot?.latestPreRelease?.rawTag.orEmpty()
             ),
             authMode = authMode

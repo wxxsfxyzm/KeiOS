@@ -88,6 +88,7 @@ data class GitHubRepositoryReleaseSnapshot(
     val strategyId: String,
     val feed: GitHubAtomFeed,
     val latestStable: GitHubReleaseVersionSignals,
+    val hasStableRelease: Boolean = true,
     val latestPreRelease: GitHubReleaseVersionSignals? = null,
     val fetchedAtMillis: Long = System.currentTimeMillis()
 )
@@ -99,12 +100,14 @@ data class GitHubTrackedReleaseCheck(
     val matchedRelease: GitHubAtomReleaseEntry? = null,
     val stableRelease: GitHubReleaseVersionSignals? = null,
     val preRelease: GitHubReleaseVersionSignals? = null,
+    val hasStableRelease: Boolean = true,
     val hasUpdate: Boolean? = null,
     val hasPreReleaseUpdate: Boolean = false,
     val recommendsPreRelease: Boolean = false,
     val isPreReleaseInstalled: Boolean = false,
     val preReleaseInfo: String = "",
     val showPreReleaseInfo: Boolean = false,
+    val releaseHint: String = "",
     val status: GitHubTrackedReleaseStatus = GitHubTrackedReleaseStatus.ComparisonUncertain,
     val message: String = status.defaultMessage
 )

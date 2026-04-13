@@ -3,12 +3,13 @@ package com.example.keios.feature.github.data.remote
 import com.example.keios.feature.github.model.GitHubReleaseChannel
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class GitHubTrackedRepoCorpusTest {
     @Test
-    fun `tracked corpus keeps prerelease visibility only for forward moving tracks`() {
+    fun `tracked corpus keeps prerelease visibility only for forward moving tracks and prerelease only repos`() {
         val fixtures = GitHubTrackedRepoFixtures.parityCorpus.associateBy { it.id }
 
         assertEquals("v1.4.7-prerelease3", fixtures.getValue("Itosang/BatteryRecorder").tokenPreRawTag)
@@ -17,6 +18,7 @@ class GitHubTrackedRepoCorpusTest {
         assertEquals("v26.4.9.C01-Dev", fixtures.getValue("badnng/Hyper-pick-up-code").tokenPreRawTag)
         assertEquals("3.8.0-rc04", fixtures.getValue("T8RIN/ImageToolbox").tokenPreRawTag)
         assertEquals("v5.4.0-beta05", fixtures.getValue("open-ani/animeko").tokenPreRawTag)
+        assertEquals("0.0.8", fixtures.getValue("monogram-android/monogram").tokenPreRawTag)
 
         assertNull(fixtures.getValue("anilbeesetti/nextplayer").tokenPreRawTag)
         assertNull(fixtures.getValue("Moriafly/SaltPlayerSource").tokenPreRawTag)
@@ -62,18 +64,18 @@ class GitHubTrackedRepoCorpusTest {
             ) == 0
         )
     }
-}
-
 
     @Test
-    fun `prerelease only tracked repo still has usable effective latest signal`() {
+    fun `prerelease only tracked repo keeps stable fallback internal but marks stable channel unavailable`() {
         val fixtures = GitHubTrackedRepoFixtures.parityCorpus.associateBy { it.id }
         val monogram = fixtures.getValue("monogram-android/monogram")
 
         assertEquals("0.0.8", monogram.atomStableRawTag)
+        assertEquals("0.0.8", monogram.atomPreRawTag)
         assertEquals("0.0.8", monogram.tokenStableRawTag)
-        assertNull(monogram.atomPreRawTag)
-        assertNull(monogram.tokenPreRawTag)
+        assertEquals("0.0.8", monogram.tokenPreRawTag)
+        assertFalse(monogram.atomHasStableRelease)
+        assertFalse(monogram.tokenHasStableRelease)
     }
 
     @Test
@@ -97,3 +99,4 @@ class GitHubTrackedRepoCorpusTest {
         assertNull(bilipai.atomPreRawTag)
         assertNull(bilipai.tokenPreRawTag)
     }
+}

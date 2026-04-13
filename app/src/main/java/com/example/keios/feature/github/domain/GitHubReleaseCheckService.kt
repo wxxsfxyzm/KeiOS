@@ -64,21 +64,38 @@ object GitHubReleaseCheckService {
         val matchedEntry = snapshot.feed.entries.firstOrNull { entry ->
             GitHubVersionUtils.compareVersionToStructuredCandidates(localVersion, entry.versionCandidates) == 0
         }
-        val latestStable = snapshot.latestStable
+        val matchedCurrentStable = snapshot.hasStableRelease &&
+            matchedEntry != null &&
+            GitHubVersionUtils.compareCandidateSetsWithSources(
+                matchedEntry.versionCandidates.map { it.value },
+                snapshot.latestStable.versionCandidates
+            ) == 0
+        val latestStable = snapshot.latestStable.takeIf { snapshot.hasStableRelease }
         val latestPre = snapshot.latestPreRelease
-        val localChannel = matchedEntry?.channel
+        val hasOnlyPreReleases = !snapshot.hasStableRelease && latestPre != null
+        val localChannel = when {
+            matchedCurrentStable -> GitHubReleaseChannel.STABLE
+            else -> matchedEntry?.channel
+        }
             ?: GitHubVersionUtils.classifyVersionChannel(localVersion)
             ?: GitHubReleaseChannel.UNKNOWN
-        val isLocalPreReleaseInstalled = matchedEntry?.isLikelyPreRelease == true || localChannel.isPreRelease
+        val isLocalPreReleaseInstalled =
+            (matchedEntry?.isLikelyPreRelease == true && !matchedCurrentStable) || localChannel.isPreRelease
         val inspectPreRelease = checkAllTrackedPreReleases || item.preferPreRelease || isLocalPreReleaseInstalled
 
-        val stableCmp = GitHubVersionUtils.compareVersionToStructuredCandidates(localVersion, latestStable.versionCandidates)
-        val latestPreIsRelevant = latestPre != null && GitHubVersionUtils.isRelevantPreRelease(
-            preReleaseCandidates = latestPre.versionCandidates,
-            stableCandidates = latestStable.versionCandidates,
-            preReleaseUpdatedAtMillis = latestPre.updatedAtMillis,
-            stableUpdatedAtMillis = latestStable.updatedAtMillis
-        )
+        val stableCmp = latestStable?.let {
+            GitHubVersionUtils.compareVersionToStructuredCandidates(localVersion, it.versionCandidates)
+        }
+        val latestPreIsRelevant = when {
+            latestPre == null -> false
+            latestStable == null -> true
+            else -> GitHubVersionUtils.isRelevantPreRelease(
+                preReleaseCandidates = latestPre.versionCandidates,
+                stableCandidates = latestStable.versionCandidates,
+                preReleaseUpdatedAtMillis = latestPre.updatedAtMillis,
+                stableUpdatedAtMillis = latestStable.updatedAtMillis
+            )
+        }
         val latestPreCmp = if (latestPre != null) {
             GitHubVersionUtils.compareVersionToStructuredCandidates(localVersion, latestPre.versionCandidates)
         } else {
@@ -99,6 +116,10 @@ object GitHubReleaseCheckService {
             else -> ""
         }
         val showPreReleaseInfo = inspectPreRelease && preReleaseInfo.isNotBlank()
+        val releaseHint = when {
+            hasOnlyPreReleases && !inspectPreRelease -> "该项目暂时可能只有预发行版"
+            else -> ""
+        }
 
         val status = when {
             recommendsPreRelease -> GitHubTrackedReleaseStatus.PreReleaseUpdateAvailable
@@ -117,12 +138,14 @@ object GitHubReleaseCheckService {
             matchedRelease = matchedEntry,
             stableRelease = latestStable,
             preRelease = latestPre,
+            hasStableRelease = snapshot.hasStableRelease,
             hasUpdate = hasUpdate,
             hasPreReleaseUpdate = hasPreReleaseUpdate,
             recommendsPreRelease = recommendsPreRelease,
             isPreReleaseInstalled = isLocalPreReleaseInstalled,
             preReleaseInfo = preReleaseInfo,
             showPreReleaseInfo = showPreReleaseInfo,
+            releaseHint = releaseHint,
             status = status,
             message = status.defaultMessage
         )
@@ -134,10 +157,13 @@ object GitHubReleaseCheckService {
             localVersion = localVersion,
             localVersionCode = localVersionCode,
             latestTag = stableRelease?.displayVersion.orEmpty(),
+            latestStableName = stableRelease?.rawName.orEmpty(),
             latestStableRawTag = stableRelease?.rawTag.orEmpty(),
             latestStableUrl = stableRelease?.link.orEmpty(),
+            latestPreName = preRelease?.rawName.orEmpty(),
             latestPreRawTag = preRelease?.rawTag.orEmpty(),
             latestPreUrl = preRelease?.link.orEmpty(),
+            hasStableRelease = hasStableRelease,
             hasUpdate = hasUpdate,
             message = message,
             isPreRelease = isPreReleaseInstalled,
@@ -145,6 +171,7 @@ object GitHubReleaseCheckService {
             showPreReleaseInfo = showPreReleaseInfo,
             hasPreReleaseUpdate = hasPreReleaseUpdate,
             recommendsPreRelease = recommendsPreRelease,
+            releaseHint = releaseHint,
             sourceStrategyId = strategyId
         )
     }
@@ -154,22 +181,30 @@ object GitHubReleaseCheckService {
             strategyId = entry.sourceStrategyId.ifBlank { GitHubAtomReleaseStrategy.id },
             localVersion = entry.localVersion,
             localVersionCode = entry.localVersionCode,
-            stableRelease = entry.latestTag.takeIf { it.isNotBlank() }?.let {
+            stableRelease = entry
+                .takeIf {
+                    it.hasStableRelease &&
+                        (it.latestStableRawTag.isNotBlank() || it.latestStableName.isNotBlank() || it.latestTag.isNotBlank())
+                }
+                ?.let {
                 com.example.keios.feature.github.model.GitHubReleaseVersionSignals(
-                    displayVersion = entry.latestTag,
-                    rawTag = entry.latestStableRawTag,
-                    rawName = entry.latestTag,
+                    displayVersion = it.latestStableName.ifBlank { it.latestTag.ifBlank { it.latestStableRawTag } },
+                    rawTag = it.latestStableRawTag.ifBlank { it.latestTag },
+                    rawName = it.latestStableName.ifBlank { it.latestTag.ifBlank { it.latestStableRawTag } },
                     link = entry.latestStableUrl
                 )
             },
-            preRelease = entry.latestPreRawTag.takeIf { it.isNotBlank() || entry.preReleaseInfo.isNotBlank() }?.let {
+            preRelease = entry
+                .takeIf { it.latestPreRawTag.isNotBlank() || it.latestPreName.isNotBlank() || it.preReleaseInfo.isNotBlank() }
+                ?.let {
                 com.example.keios.feature.github.model.GitHubReleaseVersionSignals(
-                    displayVersion = entry.preReleaseInfo.ifBlank { entry.latestPreRawTag },
-                    rawTag = entry.latestPreRawTag,
-                    rawName = entry.preReleaseInfo.ifBlank { entry.latestPreRawTag },
+                    displayVersion = it.latestPreName.ifBlank { it.preReleaseInfo.ifBlank { it.latestPreRawTag } },
+                    rawTag = it.latestPreRawTag.ifBlank { it.preReleaseInfo },
+                    rawName = it.latestPreName.ifBlank { it.preReleaseInfo.ifBlank { it.latestPreRawTag } },
                     link = entry.latestPreUrl
                 )
             },
+            hasStableRelease = entry.hasStableRelease,
             hasUpdate = entry.hasUpdate,
             hasPreReleaseUpdate = entry.hasPreReleaseUpdate,
             recommendsPreRelease = entry.recommendsPreRelease ||
@@ -177,6 +212,7 @@ object GitHubReleaseCheckService {
             isPreReleaseInstalled = entry.isPreRelease,
             preReleaseInfo = entry.preReleaseInfo,
             showPreReleaseInfo = entry.showPreReleaseInfo,
+            releaseHint = entry.releaseHint,
             status = GitHubTrackedReleaseStatus.entries.firstOrNull { it.defaultMessage == entry.message }
                 ?: if (entry.message.startsWith("检查失败")) {
                     GitHubTrackedReleaseStatus.Failed
