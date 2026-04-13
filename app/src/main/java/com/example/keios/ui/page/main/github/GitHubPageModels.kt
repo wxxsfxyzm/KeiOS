@@ -1,5 +1,6 @@
 package com.example.keios.ui.page.main
 
+import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.model.GitHubLookupConfig
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import kotlin.math.max
@@ -126,6 +127,24 @@ internal fun formatReleaseValue(
         tag.isBlank() -> name
         name.equals(tag, ignoreCase = true) -> name
         else -> "$name · $tag"
+    }
+}
+
+internal fun VersionCheckUi.statusActionUrl(
+    owner: String,
+    repo: String
+): String {
+    return when {
+        recommendsPreRelease && latestPreUrl.isNotBlank() -> latestPreUrl
+        recommendsPreRelease && latestPreRawTag.isNotBlank() ->
+            GitHubVersionUtils.buildReleaseTagUrl(owner, repo, latestPreRawTag)
+        hasUpdate == true && latestStableUrl.isNotBlank() -> latestStableUrl
+        hasUpdate == true && latestStableRawTag.isNotBlank() ->
+            GitHubVersionUtils.buildReleaseTagUrl(owner, repo, latestStableRawTag)
+        hasPreReleaseUpdate && latestPreUrl.isNotBlank() -> latestPreUrl
+        hasPreReleaseUpdate && latestPreRawTag.isNotBlank() ->
+            GitHubVersionUtils.buildReleaseTagUrl(owner, repo, latestPreRawTag)
+        else -> ""
     }
 }
 

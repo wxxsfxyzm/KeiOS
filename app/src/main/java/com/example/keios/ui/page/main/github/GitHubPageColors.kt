@@ -60,8 +60,8 @@ internal fun VersionCheckUi.statusIcon(): ImageVector {
         recommendsPreRelease -> MiuixIcons.Regular.Update
         hasPreReleaseUpdate -> MiuixIcons.Regular.Report
         hasUpdate == true -> MiuixIcons.Regular.Update
-        isPreRelease -> MiuixIcons.Regular.Report
         hasUpdate == false -> MiuixIcons.Regular.Ok
+        isPreRelease -> MiuixIcons.Regular.Report
         else -> MiuixIcons.Regular.More
     }
 }
@@ -73,8 +73,9 @@ internal fun VersionCheckUi.statusColor(neutralColor: Color): Color {
         recommendsPreRelease -> GitHubStatusPalette.PreRelease
         hasPreReleaseUpdate -> GitHubStatusPalette.PreRelease
         hasUpdate == true -> GitHubStatusPalette.Update
-        isPreRelease -> GitHubStatusPalette.PreRelease
+        hasUpdate == false && isPreRelease -> GitHubStatusPalette.PreRelease
         hasUpdate == false -> GitHubStatusPalette.Stable
+        isPreRelease -> GitHubStatusPalette.PreRelease
         else -> neutralColor
     }
 }

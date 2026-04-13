@@ -234,6 +234,32 @@ class GitHubReleaseCheckServiceTest {
         assertEquals(GitHubTrackedReleaseStatus.UpToDate, result.status)
     }
 
+    @Test
+    fun `local prerelease newer than both stable and stale prerelease does not surface remote update`() {
+        val item = trackedApp(preferPreRelease = false)
+        val snapshot = snapshot(
+            stable = signal("11.1.0-release-2026031101"),
+            preRelease = signal("10.9.0-alpha03-2025070901"),
+            entries = listOf(
+                entry("11.1.0-release-2026031101"),
+                entry("10.9.0-alpha03-2025070901")
+            )
+        )
+
+        val result = GitHubReleaseCheckService.evaluateSnapshot(
+            item = item,
+            localVersion = "11.2.0-alpha01",
+            localVersionCode = 11020001L,
+            snapshot = snapshot
+        )
+
+        assertTrue(result.isPreReleaseInstalled)
+        assertEquals(false, result.hasUpdate)
+        assertFalse(result.hasPreReleaseUpdate)
+        assertFalse(result.recommendsPreRelease)
+        assertEquals("10.9.0-alpha03-2025070901", result.preReleaseInfo)
+    }
+
     private fun trackedApp(preferPreRelease: Boolean): GitHubTrackedApp {
         return GitHubTrackedApp(
             repoUrl = "https://github.com/demo/app",

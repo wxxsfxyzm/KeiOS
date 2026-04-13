@@ -956,31 +956,14 @@ fun GitHubPage(
                             val statusColor = state.statusColor(
                                 neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
                             )
-                            val clickableModifier = if (
-                                state.hasUpdate == true || state.hasPreReleaseUpdate || state.isPreRelease
-                            ) {
+                            val statusReleaseUrl = state.statusActionUrl(
+                                owner = item.owner,
+                                repo = item.repo
+                            )
+                            val clickableModifier = if (statusReleaseUrl.isNotBlank()) {
                                 Modifier.clickable {
-                                    val releaseUrl = when {
-                                        state.recommendsPreRelease && state.latestPreUrl.isNotBlank() ->
-                                            state.latestPreUrl
-                                        state.recommendsPreRelease && state.latestPreRawTag.isNotBlank() ->
-                                            GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestPreRawTag)
-                                        state.hasUpdate == true && state.latestStableUrl.isNotBlank() ->
-                                            state.latestStableUrl
-                                        state.hasUpdate == true && state.latestStableRawTag.isNotBlank() ->
-                                            GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestStableRawTag)
-                                        state.hasPreReleaseUpdate && state.latestPreUrl.isNotBlank() ->
-                                            state.latestPreUrl
-                                        state.hasPreReleaseUpdate && state.latestPreRawTag.isNotBlank() ->
-                                            GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestPreRawTag)
-                                        state.isPreRelease && state.latestPreUrl.isNotBlank() ->
-                                            state.latestPreUrl
-                                        state.isPreRelease && state.latestPreRawTag.isNotBlank() ->
-                                            GitHubVersionUtils.buildReleaseTagUrl(item.owner, item.repo, state.latestPreRawTag)
-                                        else -> GitHubVersionUtils.buildReleaseUrl(item.owner, item.repo)
-                                    }
                                     runCatching {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl)))
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(statusReleaseUrl)))
                                     }.onFailure {
                                         Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
                                     }
