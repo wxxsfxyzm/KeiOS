@@ -8,6 +8,14 @@ import com.tencent.mmkv.MMKV
 import org.json.JSONArray
 import org.json.JSONObject
 
+data class GitHubTrackSnapshot(
+    val items: List<GitHubTrackedApp> = emptyList(),
+    val checkCache: Map<String, GitHubCheckCacheEntry> = emptyMap(),
+    val lastRefreshMs: Long = 0L,
+    val refreshIntervalHours: Int = 3,
+    val lookupConfig: GitHubLookupConfig = GitHubLookupConfig()
+)
+
 object GitHubTrackStore {
     private const val KV_ID = "github_track_store"
     private const val KEY_ITEMS = "tracked_items"
@@ -20,8 +28,9 @@ object GitHubTrackStore {
 
     @Volatile
     private var didAutoRefreshInSession: Boolean = false
+    private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
 
-    private fun kv(): MMKV = MMKV.mmkvWithID(KV_ID)
+    private fun kv(): MMKV = store
 
     fun load(): List<GitHubTrackedApp> {
         val raw = kv().decodeString(KEY_ITEMS).orEmpty()
@@ -123,6 +132,18 @@ object GitHubTrackStore {
         return map to ts
     }
 
+    fun loadSnapshot(): GitHubTrackSnapshot {
+        val lookupConfig = loadLookupConfig()
+        val (checkCache, lastRefreshMs) = loadCheckCache()
+        return GitHubTrackSnapshot(
+            items = load(),
+            checkCache = checkCache,
+            lastRefreshMs = lastRefreshMs,
+            refreshIntervalHours = loadRefreshIntervalHours(),
+            lookupConfig = lookupConfig
+        )
+    }
+
     fun saveCheckCache(states: Map<String, GitHubCheckCacheEntry>, lastRefreshMs: Long) {
         val obj = JSONObject()
         states.forEach { (id, state) ->
@@ -158,6 +179,8 @@ object GitHubTrackStore {
         kv().removeValueForKey(KEY_CHECK_CACHE)
         kv().removeValueForKey(KEY_LAST_REFRESH_MS)
     }
+
+    fun cachedCheckCount(): Int = loadCheckCache().first.size
 
     fun shouldAutoRefreshOnceInSession(): Boolean = !didAutoRefreshInSession
 

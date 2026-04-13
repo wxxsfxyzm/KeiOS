@@ -57,12 +57,30 @@ data class McpServerUiState(
         get() = addresses.map { "http://$it:$port$endpointPath" }
 }
 
+private data class McpPrefsSnapshot(
+    val authToken: String = "",
+    val serverName: String = "KeiOS MCP",
+    val port: Int = 38888,
+    val allowExternal: Boolean = false
+)
+
 class McpServerManager(
     private val appContext: Context,
     private val localMcpService: LocalMcpService
 ) {
     companion object {
         private const val TAG = "McpServerManager"
+
+        fun loadSavedCacheSummary(): String {
+            val snapshot = Prefs.loadSnapshot()
+            val tokenState = if (snapshot.authToken.isBlank()) "无 token" else "已保存 token"
+            val network = if (snapshot.allowExternal) "局域网" else "本机"
+            return "端口 ${snapshot.port} · $network · $tokenState"
+        }
+
+        fun clearSavedCacheOnly() {
+            Prefs.clear()
+        }
     }
 
     private object Prefs {
@@ -73,28 +91,28 @@ class McpServerManager(
         private const val KEY_ALLOW_EXTERNAL = "allow_external"
         private const val DEFAULT_PORT = 38888
         private val random = SecureRandom()
+        private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
 
-        private fun kv() = MMKV.mmkvWithID(KV_ID)
+        private fun kv() = store
 
-        fun authToken(): String {
-            val cached = kv().decodeString(KEY_AUTH_TOKEN).orEmpty()
-            if (cached.isNotBlank()) return cached
+        fun loadSnapshot(): McpPrefsSnapshot {
+            val store = kv()
+            val port = store.decodeInt(KEY_PORT, DEFAULT_PORT).let { value ->
+                if (value in 1..65535) value else DEFAULT_PORT
+            }
+            return McpPrefsSnapshot(
+                authToken = store.decodeString(KEY_AUTH_TOKEN).orEmpty(),
+                serverName = store.decodeString(KEY_SERVER_NAME, "KeiOS MCP").orEmpty().ifBlank { "KeiOS MCP" },
+                port = port,
+                allowExternal = store.decodeBool(KEY_ALLOW_EXTERNAL, false)
+            )
+        }
+
+        fun ensureAuthToken(current: String): String {
+            if (current.isNotBlank()) return current
             val generated = generateToken()
-            kv().encode(KEY_AUTH_TOKEN, generated)
+            saveAuthToken(generated)
             return generated
-        }
-
-        fun serverName(): String {
-            return kv().decodeString(KEY_SERVER_NAME, "KeiOS MCP").orEmpty().ifBlank { "KeiOS MCP" }
-        }
-
-        fun port(): Int {
-            val value = kv().decodeInt(KEY_PORT, DEFAULT_PORT)
-            return if (value in 1..65535) value else DEFAULT_PORT
-        }
-
-        fun allowExternal(): Boolean {
-            return kv().decodeBool(KEY_ALLOW_EXTERNAL, false)
         }
 
         fun saveAuthToken(token: String) {
@@ -121,6 +139,14 @@ class McpServerManager(
             return token
         }
 
+        fun clear() {
+            val store = kv()
+            store.removeValueForKey(KEY_AUTH_TOKEN)
+            store.removeValueForKey(KEY_SERVER_NAME)
+            store.removeValueForKey(KEY_PORT)
+            store.removeValueForKey(KEY_ALLOW_EXTERNAL)
+        }
+
         private fun generateToken(): String {
             val bytes = ByteArray(32)
             random.nextBytes(bytes)
@@ -132,13 +158,14 @@ class McpServerManager(
     private var monitorJob: Job? = null
     private var lastConnectedCount: Int = 0
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val initialPrefsSnapshot = Prefs.loadSnapshot()
     private val _uiState = MutableStateFlow(
         McpServerUiState(
-            port = Prefs.port(),
-            allowExternal = Prefs.allowExternal(),
+            port = initialPrefsSnapshot.port,
+            allowExternal = initialPrefsSnapshot.allowExternal,
             tools = localMcpService.listLocalTools(),
-            authToken = Prefs.authToken(),
-            serverName = Prefs.serverName()
+            authToken = initialPrefsSnapshot.authToken,
+            serverName = initialPrefsSnapshot.serverName
         )
     )
     val uiState: StateFlow<McpServerUiState> = _uiState.asStateFlow()
@@ -155,6 +182,7 @@ class McpServerManager(
             return Result.failure(IllegalArgumentException(message))
         }
         return runCatching {
+            ensureAuthToken()
             val host = if (allowExternal) "0.0.0.0" else "127.0.0.1"
             val current = _uiState.value
             if (current.running && current.port == port && current.allowExternal == allowExternal) {
@@ -268,6 +296,7 @@ class McpServerManager(
     }
 
     fun buildConfigJson(url: String? = null): String {
+        val authToken = ensureAuthToken()
         val state = _uiState.value
         val endpoint = url ?: state.localEndpoint
         val escapedName = state.serverName.replace("\"", "\\\"")
@@ -278,7 +307,7 @@ class McpServerManager(
       "type": "streamablehttp",
       "url": "$endpoint",
       "headers": {
-        "Authorization": "Bearer ${state.authToken}"
+        "Authorization": "Bearer $authToken"
       }
     }
   }
@@ -442,5 +471,15 @@ class McpServerManager(
         }.onFailure {
             appendLog("WARN", "KeepAlive notification update failed: ${it.message ?: it.javaClass.simpleName}")
         }
+    }
+
+    @Synchronized
+    private fun ensureAuthToken(): String {
+        val current = _uiState.value.authToken
+        val token = Prefs.ensureAuthToken(current)
+        if (token != current) {
+            _uiState.value = _uiState.value.copy(authToken = token)
+        }
+        return token
     }
 }

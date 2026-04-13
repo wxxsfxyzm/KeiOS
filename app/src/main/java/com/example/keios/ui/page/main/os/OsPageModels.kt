@@ -122,6 +122,22 @@ internal enum class SystemOverviewState {
     Completed
 }
 
+internal data class OsUiSnapshot(
+    val topInfoExpanded: Boolean = true,
+    val systemTableExpanded: Boolean = false,
+    val secureTableExpanded: Boolean = false,
+    val globalTableExpanded: Boolean = false,
+    val androidPropsExpanded: Boolean = false,
+    val javaPropsExpanded: Boolean = false,
+    val linuxEnvExpanded: Boolean = false,
+    val visibleCards: Set<OsSectionCard> = OsSectionCard.entries.toSet()
+)
+
+internal data class CachedSectionsSnapshot(
+    val cached: CachedSections = CachedSections(),
+    val hasPersistedCache: Boolean = false
+)
+
 internal data class SectionState(
     val rows: List<InfoRow> = emptyList(),
     val loading: Boolean = false,

@@ -9,7 +9,9 @@ private const val BA_GUIDE_KEY_CURRENT_URL = "current_url"
 private const val BA_GUIDE_KEY_CACHE_PREFIX = "cache_"
 
 object BaStudentGuideStore {
-    private fun kv(): MMKV = MMKV.mmkvWithID(BA_GUIDE_KV_ID)
+    private val store: MMKV by lazy { MMKV.mmkvWithID(BA_GUIDE_KV_ID) }
+
+    private fun kv(): MMKV = store
 
     private fun encodeGuideRows(rows: List<BaGuideRow>): JSONArray {
         return JSONArray().apply {
@@ -197,6 +199,19 @@ object BaStudentGuideStore {
             put("tabSimulateIconUrl", info.tabSimulateIconUrl)
         }.toString()
         kv().encode(cacheKey(info.sourceUrl), raw)
+    }
+
+    fun cachedEntryCount(): Int {
+        val store = kv()
+        return store.allKeys().orEmpty().count { it.startsWith(BA_GUIDE_KEY_CACHE_PREFIX) }
+    }
+
+    fun clearAllCachedInfo() {
+        val store = kv()
+        store.allKeys()
+            .orEmpty()
+            .filter { it.startsWith(BA_GUIDE_KEY_CACHE_PREFIX) }
+            .forEach(store::removeValueForKey)
     }
 
     fun loadInfo(url: String): BaStudentGuideInfo? {

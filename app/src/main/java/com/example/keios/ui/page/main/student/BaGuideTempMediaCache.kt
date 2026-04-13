@@ -18,6 +18,8 @@ object BaGuideTempMediaCache {
     private const val ROOT_DIR = "ba_student_guide_temp_media"
     private const val MAX_PARALLEL_DOWNLOADS = 3
 
+    private fun rootDir(context: Context): File = File(context.cacheDir, ROOT_DIR)
+
     private fun sessionDir(context: Context, sourceUrl: String): File {
         val key = sha1(sourceUrl).take(16)
         return File(context.cacheDir, "$ROOT_DIR/$key")
@@ -89,6 +91,16 @@ object BaGuideTempMediaCache {
 
     fun clearGuideCache(context: Context, sourceUrl: String) {
         runCatching { sessionDir(context, sourceUrl).deleteRecursively() }
+    }
+
+    fun clearAll(context: Context) {
+        runCatching { rootDir(context).deleteRecursively() }
+    }
+
+    fun cacheFileCount(context: Context): Int {
+        val dir = rootDir(context)
+        if (!dir.exists()) return 0
+        return dir.walkTopDown().count { it.isFile }
     }
 
     private fun sha1(raw: String): String {

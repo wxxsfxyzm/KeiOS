@@ -31,6 +31,12 @@ object AppIconCache {
         }
     }
 
+    fun size(): Int = synchronized(cache) { cache.size() }
+
+    fun clear() {
+        synchronized(cache) { cache.evictAll() }
+    }
+
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
         if (drawable is BitmapDrawable && drawable.bitmap != null) return drawable.bitmap
         val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 96

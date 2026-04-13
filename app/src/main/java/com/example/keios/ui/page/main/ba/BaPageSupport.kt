@@ -111,6 +111,34 @@ internal enum class BAInitState {
     Draft
 }
 
+internal data class BaPageSnapshot(
+    val serverIndex: Int = 2,
+    val cafeLevel: Int = 10,
+    val cafeStoredAp: Double = 0.0,
+    val cafeLastHourMs: Long = 0L,
+    val idNickname: String = BA_DEFAULT_NICKNAME,
+    val idFriendCode: String = BA_DEFAULT_FRIEND_CODE,
+    val apLimit: Int = BA_AP_LIMIT_MAX,
+    val apCurrent: Double = 0.0,
+    val apRegenBaseMs: Long = 0L,
+    val apSyncMs: Long = 0L,
+    val apNotifyEnabled: Boolean = false,
+    val apNotifyThreshold: Int = 120,
+    val coffeeHeadpatMs: Long = 0L,
+    val coffeeInvite1UsedMs: Long = 0L,
+    val coffeeInvite2UsedMs: Long = 0L,
+    val showEndedPools: Boolean = false,
+    val showEndedActivities: Boolean = false,
+    val showCalendarPoolImages: Boolean = true,
+    val calendarRefreshIntervalHours: Int = 12
+)
+
+internal data class BaCacheSnapshot(
+    val raw: String = "",
+    val syncMs: Long = 0L,
+    val version: Int = 0
+)
+
 internal object BASessionState {
     var didResetScrollOnThisProcess: Boolean = false
 }
@@ -997,7 +1025,77 @@ internal object BASettingsStore {
         )
     }
 
-    private fun kv(): MMKV = MMKV.mmkvWithID(KV_ID)
+    private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
+
+    private fun kv(): MMKV = store
+
+    fun loadSnapshot(): BaPageSnapshot {
+        val store = kv()
+        val serverIndex = store.decodeInt(KEY_SERVER_INDEX, DEFAULT_SERVER_INDEX).coerceIn(0, 2)
+        val cafeLevel = store.decodeInt(KEY_CAFE_LEVEL, DEFAULT_CAFE_LEVEL).coerceIn(1, 10)
+        val cafeStoredAp = normalizeAp(
+            store.decodeString(KEY_CAFE_STORED_AP, DEFAULT_CAFE_STORED_AP.toString())?.toDoubleOrNull()
+                ?: DEFAULT_CAFE_STORED_AP
+        )
+        val idNickname = store.decodeString(KEY_ID_NICKNAME, DEFAULT_ID_NICKNAME).orEmpty().take(10)
+            .ifEmpty { DEFAULT_ID_NICKNAME }
+        val idFriendCode = store.decodeString(KEY_ID_FRIEND_CODE, DEFAULT_ID_FRIEND_CODE)
+            .orEmpty()
+            .uppercase(Locale.ROOT)
+            .filter { it in 'A'..'Z' }
+            .take(8)
+            .let { if (it.length == 8) it else DEFAULT_ID_FRIEND_CODE }
+        val apCurrent = if (store.containsKey(KEY_AP_CURRENT_EXACT)) {
+            store.decodeString(KEY_AP_CURRENT_EXACT, DEFAULT_AP_CURRENT.toString())?.toDoubleOrNull() ?: DEFAULT_AP_CURRENT
+        } else {
+            store.decodeInt(KEY_AP_CURRENT, DEFAULT_AP_CURRENT.toInt()).toDouble()
+        }
+        val refreshHours = BaCalendarRefreshIntervalOption.fromHours(
+            store.decodeInt(
+                KEY_CALENDAR_REFRESH_INTERVAL_HOURS,
+                DEFAULT_CALENDAR_REFRESH_INTERVAL_HOURS
+            )
+        ).hours
+        return BaPageSnapshot(
+            serverIndex = serverIndex,
+            cafeLevel = cafeLevel,
+            cafeStoredAp = normalizeAp(cafeStoredAp),
+            cafeLastHourMs = store.decodeLong(KEY_CAFE_LAST_HOUR_MS, 0L),
+            idNickname = idNickname,
+            idFriendCode = idFriendCode,
+            apLimit = store.decodeInt(KEY_AP_LIMIT, DEFAULT_AP_LIMIT).coerceIn(0, BA_AP_LIMIT_MAX),
+            apCurrent = normalizeAp(apCurrent.coerceIn(0.0, BA_AP_MAX.toDouble())),
+            apRegenBaseMs = store.decodeLong(KEY_AP_REGEN_BASE_MS, 0L),
+            apSyncMs = store.decodeLong(KEY_AP_SYNC_MS, 0L),
+            apNotifyEnabled = store.decodeBool(KEY_AP_NOTIFY_ENABLED, false),
+            apNotifyThreshold = store.decodeInt(KEY_AP_NOTIFY_THRESHOLD, DEFAULT_AP_NOTIFY_THRESHOLD).coerceIn(0, BA_AP_MAX),
+            coffeeHeadpatMs = store.decodeLong(KEY_COFFEE_HEADPAT_MS, 0L),
+            coffeeInvite1UsedMs = store.decodeLong(KEY_COFFEE_INVITE1_USED_MS, 0L),
+            coffeeInvite2UsedMs = store.decodeLong(KEY_COFFEE_INVITE2_USED_MS, 0L),
+            showEndedPools = store.decodeBool(KEY_POOL_SHOW_ENDED, false),
+            showEndedActivities = store.decodeBool(KEY_ACTIVITY_SHOW_ENDED, false),
+            showCalendarPoolImages = store.decodeBool(KEY_SHOW_CALENDAR_POOL_IMAGES, true),
+            calendarRefreshIntervalHours = refreshHours
+        )
+    }
+
+    fun loadCalendarCacheSnapshot(serverIndex: Int): BaCacheSnapshot {
+        val store = kv()
+        return BaCacheSnapshot(
+            raw = store.decodeString(calendarCacheKey(serverIndex), "").orEmpty(),
+            syncMs = store.decodeLong(calendarSyncKey(serverIndex), 0L),
+            version = store.decodeInt(calendarCacheVersionKey(serverIndex), 0)
+        )
+    }
+
+    fun loadPoolCacheSnapshot(serverIndex: Int): BaCacheSnapshot {
+        val store = kv()
+        return BaCacheSnapshot(
+            raw = store.decodeString(poolCacheKey(serverIndex), "").orEmpty(),
+            syncMs = store.decodeLong(poolSyncKey(serverIndex), 0L),
+            version = store.decodeInt(poolCacheVersionKey(serverIndex), 0)
+        )
+    }
 
     fun loadServerIndex(): Int = kv().decodeInt(KEY_SERVER_INDEX, DEFAULT_SERVER_INDEX).coerceIn(0, 2)
 
@@ -1116,6 +1214,18 @@ internal object BASettingsStore {
 
     fun saveCoffeeInvite2UsedMs(epochMs: Long) {
         kv().encode(KEY_COFFEE_INVITE2_USED_MS, epochMs.coerceAtLeast(0L))
+    }
+
+    fun clearCalendarAndPoolCaches() {
+        val store = kv()
+        for (serverIndex in 0..2) {
+            store.removeValueForKey(calendarCacheKey(serverIndex))
+            store.removeValueForKey(calendarSyncKey(serverIndex))
+            store.removeValueForKey(calendarCacheVersionKey(serverIndex))
+            store.removeValueForKey(poolCacheKey(serverIndex))
+            store.removeValueForKey(poolSyncKey(serverIndex))
+            store.removeValueForKey(poolCacheVersionKey(serverIndex))
+        }
     }
 
     fun clearListScrollState() {

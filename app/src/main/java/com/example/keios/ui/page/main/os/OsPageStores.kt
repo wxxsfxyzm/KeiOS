@@ -108,6 +108,8 @@ internal object OsInfoCache {
     private const val LEGACY_KEY_ANDROID = "section_android_properties"
     private const val LEGACY_KEY_JAVA = "section_java_properties"
     private const val LEGACY_KEY_LINUX = "section_linux_environment"
+    private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
+    private val legacyStore: MMKV by lazy { MMKV.mmkvWithID(LEGACY_KV_ID) }
 
     private fun encodeRows(rows: List<InfoRow>): String {
         return rows.joinToString("\n") { row ->
@@ -137,8 +139,8 @@ internal object OsInfoCache {
     }
 
     fun read(visibleSections: Set<SectionKind> = SectionKind.entries.toSet()): CachedSections {
-        val kv = MMKV.mmkvWithID(KV_ID)
-        val legacyKv = MMKV.mmkvWithID(LEGACY_KV_ID)
+        val kv = store
+        val legacyKv = legacyStore
         return CachedSections(
             system = if (visibleSections.contains(SectionKind.SYSTEM)) decodeRows(readRaw(kv, legacyKv, KEY_OS_SYSTEM, LEGACY_KEY_SYSTEM)) else emptyList(),
             secure = if (visibleSections.contains(SectionKind.SECURE)) decodeRows(readRaw(kv, legacyKv, KEY_OS_SECURE, LEGACY_KEY_SECURE)) else emptyList(),
@@ -150,7 +152,7 @@ internal object OsInfoCache {
     }
 
     fun write(section: SectionKind, rows: List<InfoRow>) {
-        val kv = MMKV.mmkvWithID(KV_ID)
+        val kv = store
         when (section) {
             SectionKind.SYSTEM -> kv.encode(KEY_OS_SYSTEM, encodeRows(rows))
             SectionKind.SECURE -> kv.encode(KEY_OS_SECURE, encodeRows(rows))
@@ -162,8 +164,8 @@ internal object OsInfoCache {
     }
 
     fun clear(section: SectionKind) {
-        val kv = MMKV.mmkvWithID(KV_ID)
-        val legacyKv = MMKV.mmkvWithID(LEGACY_KV_ID)
+        val kv = store
+        val legacyKv = legacyStore
         when (section) {
             SectionKind.SYSTEM -> {
                 kv.removeValueForKey(KEY_OS_SYSTEM)
@@ -192,10 +194,10 @@ internal object OsInfoCache {
         }
     }
 
-    fun hasPersistedCache(visibleSections: Set<SectionKind>): Boolean {
-        if (visibleSections.isEmpty()) return false
+    fun readSnapshot(visibleSections: Set<SectionKind> = SectionKind.entries.toSet()): CachedSectionsSnapshot {
+        if (visibleSections.isEmpty()) return CachedSectionsSnapshot()
         val cached = read(visibleSections)
-        return visibleSections.any { section ->
+        val hasPersistedCache = visibleSections.any { section ->
             when (section) {
                 SectionKind.SYSTEM -> cached.system.isNotEmpty()
                 SectionKind.SECURE -> cached.secure.isNotEmpty()
@@ -205,11 +207,43 @@ internal object OsInfoCache {
                 SectionKind.LINUX -> cached.linux.isNotEmpty()
             }
         }
+        return CachedSectionsSnapshot(
+            cached = cached,
+            hasPersistedCache = hasPersistedCache
+        )
+    }
+
+    fun hasPersistedCache(visibleSections: Set<SectionKind>): Boolean {
+        return readSnapshot(visibleSections).hasPersistedCache
+    }
+
+    fun clearAll() {
+        SectionKind.entries.forEach(::clear)
+    }
+
+    fun cachedSectionCount(visibleCards: Set<OsSectionCard>): Int {
+        val visibleSections = buildSet {
+            if (visibleCards.contains(OsSectionCard.SYSTEM)) add(SectionKind.SYSTEM)
+            if (visibleCards.contains(OsSectionCard.SECURE)) add(SectionKind.SECURE)
+            if (visibleCards.contains(OsSectionCard.GLOBAL)) add(SectionKind.GLOBAL)
+            if (visibleCards.contains(OsSectionCard.ANDROID)) add(SectionKind.ANDROID)
+            if (visibleCards.contains(OsSectionCard.JAVA)) add(SectionKind.JAVA)
+            if (visibleCards.contains(OsSectionCard.LINUX)) add(SectionKind.LINUX)
+        }
+        val cached = read(visibleSections)
+        var count = 0
+        if (cached.system.isNotEmpty()) count++
+        if (cached.secure.isNotEmpty()) count++
+        if (cached.global.isNotEmpty()) count++
+        if (cached.android.isNotEmpty()) count++
+        if (cached.java.isNotEmpty()) count++
+        if (cached.linux.isNotEmpty()) count++
+        return count
     }
 
     fun hasPersistedCache(): Boolean {
-        val kv = MMKV.mmkvWithID(KV_ID)
-        val legacyKv = MMKV.mmkvWithID(LEGACY_KV_ID)
+        val kv = store
+        val legacyKv = legacyStore
         val hasNew = hasAllKeys(
             kv,
             listOf(KEY_OS_SYSTEM, KEY_OS_SECURE, KEY_OS_GLOBAL, KEY_OS_ANDROID, KEY_OS_JAVA, KEY_OS_LINUX)
@@ -233,19 +267,22 @@ internal object OsCardVisibilityStore {
     private const val KV_ID = "os_ui_state"
     private const val KEY_VISIBLE_CARDS = "visible_os_cards"
     private val DEFAULT_VISIBLE = OsSectionCard.entries.map { it.name }.toSet()
+    private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
 
-    fun loadVisibleCards(): Set<OsSectionCard> {
-        val kv = MMKV.mmkvWithID(KV_ID)
-        if (!kv.containsKey(KEY_VISIBLE_CARDS)) return OsSectionCard.entries.toSet()
-        val raw = kv.decodeString(KEY_VISIBLE_CARDS, "").orEmpty()
+    private fun resolveVisibleCards(raw: String): Set<OsSectionCard> {
         if (raw.isBlank()) return emptySet()
         val names = raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
         val resolved = OsSectionCard.entries.filter { names.contains(it.name) }.toSet()
         return if (resolved.isEmpty() && names == DEFAULT_VISIBLE) OsSectionCard.entries.toSet() else resolved
     }
 
+    fun loadVisibleCards(kv: MMKV = store): Set<OsSectionCard> {
+        if (!kv.containsKey(KEY_VISIBLE_CARDS)) return OsSectionCard.entries.toSet()
+        return resolveVisibleCards(kv.decodeString(KEY_VISIBLE_CARDS, "").orEmpty())
+    }
+
     fun saveVisibleCards(cards: Set<OsSectionCard>) {
-        MMKV.mmkvWithID(KV_ID).encode(
+        store.encode(
             KEY_VISIBLE_CARDS,
             cards.map { it.name }.sorted().joinToString(",")
         )
@@ -273,12 +310,33 @@ internal object OsUiStateStore {
     private const val LEGACY_KEY_ANDROID_PROPS = "expanded_android_props"
     private const val LEGACY_KEY_JAVA_PROPS = "expanded_java_props"
     private const val LEGACY_KEY_LINUX_ENV = "expanded_linux_env"
+    private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
+    private val legacyStore: MMKV by lazy { MMKV.mmkvWithID(LEGACY_KV_ID) }
+
+    private fun readBool(kv: MMKV, legacyKv: MMKV, key: String, legacyKey: String, defaultValue: Boolean): Boolean {
+        if (kv.containsKey(key)) return kv.decodeBool(key, defaultValue)
+        return legacyKv.decodeBool(legacyKey, defaultValue)
+    }
 
     private fun readBool(key: String, legacyKey: String, defaultValue: Boolean): Boolean {
-        val kv = MMKV.mmkvWithID(KV_ID)
-        if (kv.containsKey(key)) return kv.decodeBool(key, defaultValue)
-        val legacyKv = MMKV.mmkvWithID(LEGACY_KV_ID)
-        return legacyKv.decodeBool(legacyKey, defaultValue)
+        val kv = store
+        val legacyKv = legacyStore
+        return readBool(kv, legacyKv, key, legacyKey, defaultValue)
+    }
+
+    fun loadSnapshot(): OsUiSnapshot {
+        val kv = store
+        val legacyKv = legacyStore
+        return OsUiSnapshot(
+            topInfoExpanded = readBool(kv, legacyKv, KEY_TOP_INFO, LEGACY_KEY_TOP_INFO, true),
+            systemTableExpanded = readBool(kv, legacyKv, KEY_SYSTEM_TABLE, LEGACY_KEY_SYSTEM_TABLE, false),
+            secureTableExpanded = readBool(kv, legacyKv, KEY_SECURE_TABLE, LEGACY_KEY_SECURE_TABLE, false),
+            globalTableExpanded = readBool(kv, legacyKv, KEY_GLOBAL_TABLE, LEGACY_KEY_GLOBAL_TABLE, false),
+            androidPropsExpanded = readBool(kv, legacyKv, KEY_ANDROID_PROPS, LEGACY_KEY_ANDROID_PROPS, false),
+            javaPropsExpanded = readBool(kv, legacyKv, KEY_JAVA_PROPS, LEGACY_KEY_JAVA_PROPS, false),
+            linuxEnvExpanded = readBool(kv, legacyKv, KEY_LINUX_ENV, LEGACY_KEY_LINUX_ENV, false),
+            visibleCards = OsCardVisibilityStore.loadVisibleCards(kv)
+        )
     }
 
     fun topInfoExpanded(defaultValue: Boolean = true): Boolean =
@@ -306,35 +364,34 @@ internal object OsUiStateStore {
         readBool(KEY_LINUX_ENV, LEGACY_KEY_LINUX_ENV, defaultValue)
 
     fun setTopInfoExpanded(value: Boolean) {
-        MMKV.mmkvWithID(KV_ID).encode(KEY_TOP_INFO, value)
+        store.encode(KEY_TOP_INFO, value)
     }
 
     fun setOverviewExpanded(value: Boolean) {
-        MMKV.mmkvWithID(KV_ID).encode(KEY_OVERVIEW, value)
+        store.encode(KEY_OVERVIEW, value)
     }
 
     fun setOsSystemTableExpanded(value: Boolean) {
-        MMKV.mmkvWithID(KV_ID).encode(KEY_SYSTEM_TABLE, value)
+        store.encode(KEY_SYSTEM_TABLE, value)
     }
 
     fun setSecureTableExpanded(value: Boolean) {
-        MMKV.mmkvWithID(KV_ID).encode(KEY_SECURE_TABLE, value)
+        store.encode(KEY_SECURE_TABLE, value)
     }
 
     fun setGlobalTableExpanded(value: Boolean) {
-        MMKV.mmkvWithID(KV_ID).encode(KEY_GLOBAL_TABLE, value)
+        store.encode(KEY_GLOBAL_TABLE, value)
     }
 
     fun setAndroidPropsExpanded(value: Boolean) {
-        MMKV.mmkvWithID(KV_ID).encode(KEY_ANDROID_PROPS, value)
+        store.encode(KEY_ANDROID_PROPS, value)
     }
 
     fun setJavaPropsExpanded(value: Boolean) {
-        MMKV.mmkvWithID(KV_ID).encode(KEY_JAVA_PROPS, value)
+        store.encode(KEY_JAVA_PROPS, value)
     }
 
     fun setLinuxEnvExpanded(value: Boolean) {
-        MMKV.mmkvWithID(KV_ID).encode(KEY_LINUX_ENV, value)
+        store.encode(KEY_LINUX_ENV, value)
     }
 }
-

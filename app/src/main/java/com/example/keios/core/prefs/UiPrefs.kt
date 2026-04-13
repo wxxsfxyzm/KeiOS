@@ -8,6 +8,14 @@ enum class AppThemeMode {
     DARK
 }
 
+data class UiPrefsSnapshot(
+    val liquidBottomBarEnabled: Boolean,
+    val cardPressFeedbackEnabled: Boolean,
+    val homeIconHdrEnabled: Boolean,
+    val appThemeMode: AppThemeMode,
+    val visibleBottomPageNames: Set<String>
+)
+
 object UiPrefs {
     private const val KV_ID = "ui_prefs"
     private const val KEY_LIQUID_BOTTOM_BAR = "liquid_bottom_bar"
@@ -16,8 +24,9 @@ object UiPrefs {
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_VISIBLE_BOTTOM_PAGES = "visible_bottom_pages"
     private val DEFAULT_VISIBLE_BOTTOM_PAGE_NAMES = setOf("Os", "Mcp", "GitHub", "Ba")
+    private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
 
-    private fun kv(): MMKV = MMKV.mmkvWithID(KV_ID)
+    private fun kv(): MMKV = store
 
     fun isLiquidBottomBarEnabled(defaultValue: Boolean = true): Boolean {
         return kv().decodeBool(KEY_LIQUID_BOTTOM_BAR, defaultValue)
@@ -69,5 +78,26 @@ object UiPrefs {
             .filter { it.isNotBlank() && it != "Home" }
             .joinToString(separator = ",")
         kv().encode(KEY_VISIBLE_BOTTOM_PAGES, normalized)
+    }
+
+    fun defaultSnapshot(appThemeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM): UiPrefsSnapshot {
+        return UiPrefsSnapshot(
+            liquidBottomBarEnabled = true,
+            cardPressFeedbackEnabled = true,
+            homeIconHdrEnabled = true,
+            appThemeMode = appThemeMode,
+            visibleBottomPageNames = DEFAULT_VISIBLE_BOTTOM_PAGE_NAMES
+        )
+    }
+
+    fun loadSnapshot(): UiPrefsSnapshot {
+        val store = kv()
+        return UiPrefsSnapshot(
+            liquidBottomBarEnabled = store.decodeBool(KEY_LIQUID_BOTTOM_BAR, true),
+            cardPressFeedbackEnabled = store.decodeBool(KEY_CARD_PRESS_FEEDBACK, true),
+            homeIconHdrEnabled = store.decodeBool(KEY_HOME_ICON_HDR, true),
+            appThemeMode = getAppThemeMode(),
+            visibleBottomPageNames = loadVisibleBottomPageNames()
+        )
     }
 }
