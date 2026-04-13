@@ -29,12 +29,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -149,6 +151,7 @@ import top.yukonga.miuix.kmp.window.WindowDialog
 import kotlin.math.max
 
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GitHubPage(
     contentBottomPadding: Dp = 72.dp,
@@ -1668,10 +1671,10 @@ fun GitHubPage(
                                                                 )
                                                             }
                                                         }
-                                                        Row(
+                                                        FlowRow(
                                                             modifier = Modifier.fillMaxWidth(),
-                                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                            verticalArrangement = Arrangement.spacedBy(8.dp)
                                                         ) {
                                                             extensionLabel?.let { label ->
                                                                 StatusPill(
@@ -1689,7 +1692,6 @@ fun GitHubPage(
                                                                 label = sizeLabel,
                                                                 color = MiuixTheme.colorScheme.onBackgroundVariant
                                                             )
-                                                            Spacer(modifier = Modifier.weight(1f))
                                                             GlassIconButton(
                                                                 backdrop = backdrop,
                                                                 icon = MiuixIcons.Regular.Download,
