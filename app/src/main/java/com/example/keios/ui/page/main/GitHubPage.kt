@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.LiquidActionBar
@@ -534,7 +535,7 @@ fun GitHubPage(
                     onValueChange = { trackedSearch = it },
                     label = "搜索已跟踪项目（仓库/应用/包名）",
                     backdrop = backdrop,
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Bar,
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -823,7 +824,7 @@ fun GitHubPage(
         startAction = {
             GlassIconButton(
                 backdrop = backdrop,
-                bottomBarStyle = true,
+                variant = GlassVariant.Bar,
                 icon = MiuixIcons.Regular.Close,
                 contentDescription = "关闭",
                 onClick = {
@@ -837,7 +838,7 @@ fun GitHubPage(
         endAction = {
             GlassIconButton(
                 backdrop = backdrop,
-                bottomBarStyle = true,
+                variant = GlassVariant.Bar,
                 icon = MiuixIcons.Regular.Ok,
                 contentDescription = if (editingTrackedItem == null) "确认新增" else "确认保存",
                 onClick = { applyTrackSheet() }
@@ -850,7 +851,7 @@ fun GitHubPage(
                 onValueChange = { repoUrlInput = it },
                 label = "GitHub 项目地址",
                 backdrop = backdrop,
-                bottomBarStyle = true,
+                variant = GlassVariant.Sheet,
                 singleLine = true
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -859,7 +860,7 @@ fun GitHubPage(
                 onValueChange = { appSearch = it },
                 label = "筛选本机 App（名称或包名）",
                 backdrop = backdrop,
-                bottomBarStyle = true,
+                variant = GlassVariant.Sheet,
                 singleLine = true
             )
             SheetRow {
@@ -869,7 +870,7 @@ fun GitHubPage(
                 )
                 GlassTextButton(
                     backdrop = backdrop,
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Sheet,
                     text = if (pickerExpanded) "收起列表" else "选择应用",
                     onClick = { pickerExpanded = !pickerExpanded }
                 )
@@ -920,7 +921,7 @@ fun GitHubPage(
             if (editingTrackedItem != null) {
                 GlassTextButton(
                     backdrop = backdrop,
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Sheet,
                     text = "删除跟踪",
                     textColor = MiuixTheme.colorScheme.error,
                     onClick = {

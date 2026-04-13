@@ -1,5 +1,6 @@
 package com.example.keios.ui.page.main.student
 
+import com.example.keios.ui.page.main.widget.GlassVariant
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -453,7 +454,7 @@ fun GuideGalleryCardItem(
                         text = mediaTypeLabel,
                         enabled = false,
                         textColor = Color(0xFF3B82F6),
-                        bottomBarStyle = true,
+                        variant = GlassVariant.Compact,
                         onClick = {}
                     )
                 }
@@ -474,7 +475,7 @@ fun GuideGalleryCardItem(
                         text = "",
                         leadingIcon = if (audioIsPlaying) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
                         textColor = Color(0xFF3B82F6),
-                        bottomBarStyle = true,
+                        variant = GlassVariant.Compact,
                         onClick = {
                             val player = audioPlayer ?: run {
                                 Toast.makeText(context, "音频地址无效", Toast.LENGTH_SHORT).show()
@@ -545,7 +546,7 @@ fun GuideGalleryCardItem(
                             text = "打开",
                             leadingIcon = MiuixIcons.Regular.Play,
                             textColor = Color(0xFF3B82F6),
-                            bottomBarStyle = true,
+                            variant = GlassVariant.Compact,
                             onClick = { onOpenMedia(item.mediaUrl) }
                         )
                     }
@@ -646,7 +647,7 @@ fun GuideGalleryExpressionCardItem(
                         backdrop = backdrop,
                         text = optionLabels.getOrElse(selectedIndex) { "角色表情1" },
                         textColor = Color(0xFF3B82F6),
-                        bottomBarStyle = true,
+                        variant = GlassVariant.Compact,
                         onClick = { showPicker = !showPicker }
                     )
                     if (showPicker) {
@@ -705,7 +706,7 @@ fun GuideGalleryExpressionCardItem(
                         text = "打开",
                         leadingIcon = MiuixIcons.Regular.Play,
                         textColor = Color(0xFF3B82F6),
-                        bottomBarStyle = true,
+                        variant = GlassVariant.Compact,
                         onClick = { onOpenMedia(selectedItem.mediaUrl) }
                     )
                 }
@@ -786,7 +787,7 @@ fun GuideGalleryVideoGroupCardItem(
                             backdrop = backdrop,
                             text = optionLabels.getOrElse(selectedIndex) { "视频 1" },
                             textColor = Color(0xFF3B82F6),
-                            bottomBarStyle = true,
+                            variant = GlassVariant.Compact,
                             onClick = { showPicker = !showPicker }
                         )
                         if (showPicker) {
@@ -819,7 +820,7 @@ fun GuideGalleryVideoGroupCardItem(
                     text = "视频",
                     enabled = false,
                     textColor = Color(0xFF3B82F6),
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Compact,
                     onClick = {}
                 )
             }
@@ -883,7 +884,7 @@ fun GuideGalleryUnlockLevelCardItem(
                 text = level,
                 enabled = false,
                 textColor = Color(0xFF3B82F6),
-                bottomBarStyle = true,
+                variant = GlassVariant.Compact,
                 onClick = {}
             )
         }
@@ -940,7 +941,7 @@ private fun GuideInlineVideoPlayer(
                 text = "播放",
                 leadingIcon = MiuixIcons.Regular.Play,
                 textColor = Color(0xFF3B82F6),
-                bottomBarStyle = true,
+                variant = GlassVariant.Compact,
                 onClick = {
                     if (normalizedUrl.isBlank()) {
                         Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
@@ -954,7 +955,7 @@ private fun GuideInlineVideoPlayer(
                 backdrop = backdrop,
                 text = "全屏",
                 textColor = Color(0xFF3B82F6),
-                bottomBarStyle = true,
+                variant = GlassVariant.Compact,
                 onClick = {
                     if (normalizedUrl.isBlank()) {
                         Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
@@ -1017,7 +1018,7 @@ private fun GuideInlineVideoPlayer(
             backdrop = backdrop,
             text = "外部打开",
             textColor = Color(0xFF3B82F6),
-            bottomBarStyle = true,
+            variant = GlassVariant.Compact,
             onClick = { onOpenExternal(mediaUrl) }
         )
         return
@@ -1055,7 +1056,7 @@ private fun GuideInlineVideoPlayer(
             text = if (isPlaying) "暂停" else "继续",
             leadingIcon = if (isPlaying) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
             textColor = Color(0xFF3B82F6),
-            bottomBarStyle = true,
+            variant = GlassVariant.Compact,
             onClick = {
                 if (isPlaying) {
                     activePlayer.pause()
@@ -1068,21 +1069,21 @@ private fun GuideInlineVideoPlayer(
             backdrop = backdrop,
             text = "全屏",
             textColor = Color(0xFF3B82F6),
-            bottomBarStyle = true,
+            variant = GlassVariant.Compact,
             onClick = { showFullscreen = true }
         )
         GlassTextButton(
             backdrop = backdrop,
             text = "外部打开",
             textColor = Color(0xFF3B82F6),
-            bottomBarStyle = true,
+            variant = GlassVariant.Compact,
             onClick = { onOpenExternal(mediaUrl) }
         )
         GlassTextButton(
             backdrop = backdrop,
             text = "收起",
             textColor = Color(0xFF3B82F6),
-            bottomBarStyle = true,
+            variant = GlassVariant.Compact,
             onClick = { expanded = false }
         )
     }
@@ -1207,7 +1208,7 @@ private fun GuideImageFullscreenDialog(
                 backdrop = null,
                 text = "关闭",
                 textColor = Color(0xFFBFDBFE),
-                bottomBarStyle = true,
+                variant = GlassVariant.Compact,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 20.dp, end = 16.dp),
@@ -1297,7 +1298,7 @@ private fun GuideVideoFullscreenDialog(
                 backdrop = null,
                 text = "关闭",
                 textColor = Color(0xFFBFDBFE),
-                bottomBarStyle = true,
+                variant = GlassVariant.Compact,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 20.dp, end = 16.dp),
@@ -1581,7 +1582,7 @@ fun GuideSkillCardItem(
                             text = card.type,
                             enabled = false,
                             textColor = Color(0xFF3B82F6),
-                            bottomBarStyle = true,
+                            variant = GlassVariant.Compact,
                             onClick = {}
                         )
                     }
@@ -1591,7 +1592,7 @@ fun GuideSkillCardItem(
                             text = "COST: $skillCost",
                             enabled = false,
                             textColor = Color(0xFF3B82F6),
-                            bottomBarStyle = true,
+                            variant = GlassVariant.Compact,
                             onClick = {}
                         )
                     }
@@ -1614,7 +1615,7 @@ fun GuideSkillCardItem(
                         GlassTextButton(
                             backdrop = backdrop,
                             text = displayLevel,
-                            bottomBarStyle = true,
+                            variant = GlassVariant.Compact,
                             onClick = { showLevelPopup = !showLevelPopup }
                         )
                         if (showLevelPopup) {
@@ -1685,7 +1686,7 @@ fun GuideVoiceLanguageCard(
                     text = header,
                     enabled = false,
                     textColor = Color(0xFF3B82F6),
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Compact,
                     onClick = {}
                 )
             }
@@ -1737,7 +1738,7 @@ fun GuideVoiceEntryCard(
                         text = entry.section,
                         enabled = false,
                         textColor = Color(0xFF3B82F6),
-                        bottomBarStyle = true,
+                        variant = GlassVariant.Compact,
                         onClick = {}
                     )
                 }
@@ -1767,7 +1768,7 @@ fun GuideVoiceEntryCard(
                             text = "",
                             leadingIcon = if (isPlaying) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
                             textColor = Color(0xFF3B82F6),
-                            bottomBarStyle = true,
+                            variant = GlassVariant.Compact,
                             onClick = { onTogglePlay(entry.audioUrl) }
                         )
                     }
@@ -1865,7 +1866,7 @@ fun GuideWeaponCardItem(
                     text = "专武",
                     enabled = false,
                     textColor = Color(0xFF3B82F6),
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Compact,
                     onClick = {}
                 )
             }
@@ -1903,7 +1904,7 @@ fun GuideWeaponCardItem(
                                 GlassTextButton(
                                     backdrop = backdrop,
                                     text = selectedLevel,
-                                    bottomBarStyle = true,
+                                    variant = GlassVariant.Compact,
                                     onClick = { showLevelPopup = !showLevelPopup }
                                 )
                                 if (showLevelPopup) {
@@ -2040,7 +2041,7 @@ private fun GuideWeaponStarEffectItem(
                     text = effect.roleTag,
                     enabled = false,
                     textColor = Color(0xFF3B82F6),
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Compact,
                     onClick = {}
                 )
             }
@@ -2129,7 +2130,7 @@ private fun GuideWeaponTwoStarEffectItem(
                     text = effect.roleTag,
                     enabled = false,
                     textColor = Color(0xFF3B82F6),
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Compact,
                     onClick = {}
                 )
             }
@@ -2173,7 +2174,7 @@ private fun GuideEffectLevelPicker(
         GlassTextButton(
             backdrop = backdrop,
             text = selectedLevel,
-            bottomBarStyle = true,
+            variant = GlassVariant.Compact,
             onClick = onTogglePopup
         )
         if (showLevelPopup) {

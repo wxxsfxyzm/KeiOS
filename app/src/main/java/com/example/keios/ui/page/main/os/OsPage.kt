@@ -49,9 +49,11 @@ import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
+import com.example.keios.ui.page.main.widget.SheetDescriptionText
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.core.system.ShizukuApiUtils
@@ -68,8 +70,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Switch
@@ -399,6 +403,40 @@ fun OsPage(
     val groupedTopInfoRows = remember(displayedTopInfoRows, topInfoExpanded, q) {
         if (q.isBlank() && !topInfoExpanded) emptyList() else groupTopInfoRows(displayedTopInfoRows)
     }
+    val totalRowsCount = remember(
+        topInfoRows.size,
+        prunedSystemRows.size,
+        prunedSecureRows.size,
+        prunedGlobalRows.size,
+        prunedAndroidRows.size,
+        prunedJavaRows.size,
+        prunedLinuxRows.size
+    ) {
+        topInfoRows.size +
+            prunedSystemRows.size +
+            prunedSecureRows.size +
+            prunedGlobalRows.size +
+            prunedAndroidRows.size +
+            prunedJavaRows.size +
+            prunedLinuxRows.size
+    }
+    val visibleRowsCount = remember(
+        displayedTopInfoRows.size,
+        displayedSystemRows.size,
+        displayedSecureRows.size,
+        displayedGlobalRows.size,
+        displayedAndroidRows.size,
+        displayedJavaRows.size,
+        displayedLinuxRows.size
+    ) {
+        displayedTopInfoRows.size +
+            displayedSystemRows.size +
+            displayedSecureRows.size +
+            displayedGlobalRows.size +
+            displayedAndroidRows.size +
+            displayedJavaRows.size +
+            displayedLinuxRows.size
+    }
 
     fun sectionSubtitle(section: SectionKind, size: Int): String {
         val state = sectionStates[section] ?: SectionState()
@@ -442,48 +480,30 @@ fun OsPage(
     } else {
         statusColor.copy(alpha = if (isDark) 0.20f else 0.12f)
     }
+    val indicatorProgress = when (overviewState) {
+        SystemOverviewState.Refreshing -> refreshProgress.coerceIn(0f, 1f)
+        SystemOverviewState.Completed,
+        SystemOverviewState.Cached -> 1f
+        SystemOverviewState.Idle -> 0f
+    }
+    val indicatorBg = when (overviewState) {
+        SystemOverviewState.Refreshing -> Color(0x553B82F6)
+        SystemOverviewState.Completed -> Color(0x5522C55E)
+        SystemOverviewState.Cached -> Color(0x55F59E0B)
+        SystemOverviewState.Idle -> MiuixTheme.colorScheme.surface
+    }
     val overviewMetrics = remember(
-        statusLabel,
-        statusColor,
-        shizukuReady,
         topInfoRows.size,
-        q,
+        totalRowsCount,
+        visibleRowsCount,
         sectionCount,
-        loadedFreshCount,
-        cachedSectionCount,
-        cacheLoaded,
-        cachePersisted,
-        refreshProgress,
-        overviewState,
-        syncedColor,
-        inactive
+        loadedFreshCount
     ) {
-        val queryLabel = if (q.isBlank()) "（空）" else q
-        val cacheStateLabel = when {
-            !cacheLoaded -> "读取中"
-            cachePersisted || cachedSectionCount > 0 -> "可用"
-            else -> "无缓存"
-        }
-        val progressLabel = when (overviewState) {
-            SystemOverviewState.Refreshing -> "${(refreshProgress.coerceIn(0f, 1f) * 100f).toInt()}%"
-            SystemOverviewState.Completed -> "100%"
-            SystemOverviewState.Cached -> "缓存态"
-            SystemOverviewState.Idle -> "0%"
-        }
         listOf(
-            OsOverviewMetric(label = "状态", value = statusLabel, valueColor = statusColor),
-            OsOverviewMetric(
-                label = "Shizuku",
-                value = if (shizukuReady) "Ready" else "Not Ready",
-                valueColor = if (shizukuReady) syncedColor else inactive
-            ),
+            OsOverviewMetric(label = "条目视图", value = "$visibleRowsCount/$totalRowsCount"),
             OsOverviewMetric(label = "TopInfo", value = "${topInfoRows.size} 条"),
-            OsOverviewMetric(label = "当前查询", value = queryLabel),
-            OsOverviewMetric(label = "可见分区", value = "$sectionCount 个"),
-            OsOverviewMetric(label = "Fresh 分区", value = "$loadedFreshCount / $sectionCount"),
-            OsOverviewMetric(label = "缓存分区", value = "$cachedSectionCount 个"),
-            OsOverviewMetric(label = "刷新进度", value = progressLabel),
-            OsOverviewMetric(label = "缓存状态", value = cacheStateLabel)
+            OsOverviewMetric(label = "Fresh 覆盖", value = "$loadedFreshCount/$sectionCount"),
+            OsOverviewMetric(label = "可见分区", value = "$sectionCount 个")
         )
     }
 
@@ -544,7 +564,7 @@ fun OsPage(
                     onValueChange = { queryInput = it },
                     label = "搜索OS参数",
                     backdrop = backdrop,
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Bar,
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -558,7 +578,7 @@ fun OsPage(
             startAction = {
                 GlassIconButton(
                     backdrop = backdrop,
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Bar,
                     icon = MiuixIcons.Regular.Close,
                     contentDescription = "关闭",
                     onClick = { showCardManager = false }
@@ -620,9 +640,8 @@ fun OsPage(
                     }
                 }
 
-                Text(
-                    text = "隐藏卡片后会清空对应缓存；重新显示时会立即重新获取并缓存。",
-                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                SheetDescriptionText(
+                    text = "隐藏卡片后会清空对应缓存；重新显示时会立即重新获取并缓存。"
                 )
             }
         }
@@ -665,8 +684,18 @@ fun OsPage(
                         ) {
                             Text("系统参数与属性", color = titleColor)
                             Spacer(modifier = Modifier.weight(1f))
+                            if (overviewState != SystemOverviewState.Idle) {
+                                CircularProgressIndicator(
+                                    progress = indicatorProgress,
+                                    size = 16.dp,
+                                    strokeWidth = 2.dp,
+                                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                        foregroundColor = statusColor,
+                                        backgroundColor = indicatorBg
+                                    )
+                                )
+                            }
                             StatusPill(label = statusLabel, color = statusColor)
-                            StatusPill(label = "Shizuku", color = if (shizukuReady) syncedColor else inactive)
                         }
                         overviewMetrics.chunked(2).forEach { pair ->
                             Row(

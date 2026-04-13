@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.keios.mcp.McpNotificationHelper
 import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.LiquidActionBar
@@ -127,9 +128,7 @@ fun BAPage(
     }
     val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     val baGlassBlur = 4.dp
-    val baLightGlass = true
-    val baBottomBarGlass = true
-    val baSmallTitleMargin = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+            val baSmallTitleMargin = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
     val serverOptions = remember { listOf("国服", "国际服", "日服") }
     val cafeLevelOptions = remember { (1..10).toList() }
 
@@ -994,8 +993,7 @@ fun BAPage(
                                     backdrop = backdrop,
                                     text = serverOptions[serverIndex],
                                     blurRadius = baGlassBlur,
-                                    lightMaterial = baLightGlass,
-                                    bottomBarStyle = baBottomBarGlass,
+                                                                        variant = GlassVariant.Compact,
                                     onClick = { showOverviewServerPopup = !showOverviewServerPopup }
                                 )
                                 if (showOverviewServerPopup) {
@@ -1058,8 +1056,7 @@ fun BAPage(
                                     label = "0",
                                     backdrop = backdrop,
                                     blurRadius = baGlassBlur,
-                                    lightMaterial = baLightGlass,
-                                    bottomBarStyle = baBottomBarGlass,
+                                                                        variant = GlassVariant.Compact,
                                     singleLine = true,
                                     textAlign = TextAlign.Center,
                                     fontSize = 18.sp,
@@ -1089,8 +1086,7 @@ fun BAPage(
                                     label = "240",
                                     backdrop = backdrop,
                                     blurRadius = baGlassBlur,
-                                    lightMaterial = baLightGlass,
-                                    bottomBarStyle = baBottomBarGlass,
+                                                                        variant = GlassVariant.Compact,
                                     singleLine = true,
                                     textAlign = TextAlign.Center,
                                     fontSize = 18.sp,
@@ -1121,8 +1117,7 @@ fun BAPage(
                                     text = "领取",
                                     textColor = Color(0xFF22C55E),
                                     blurRadius = baGlassBlur,
-                                    lightMaterial = baLightGlass,
-                                    bottomBarStyle = baBottomBarGlass,
+                                                                        variant = GlassVariant.Compact,
                                     onClick = { claimCafeStoredAp() }
                                 )
                                 GlassTextButton(
@@ -1130,8 +1125,7 @@ fun BAPage(
                                     text = "${displayAp(cafeStoredAp)}/${cafeDailyCapacity(cafeLevel)}",
                                     textColor = accentGreen,
                                     blurRadius = baGlassBlur,
-                                    lightMaterial = baLightGlass,
-                                    bottomBarStyle = baBottomBarGlass,
+                                                                        variant = GlassVariant.Compact,
                                     onClick = {}
                                 )
                             }
@@ -1285,8 +1279,7 @@ fun BAPage(
                                 textColor = accentPink,
                                 enabled = coffeeHeadpatMs <= 0L || nextHeadpatAt <= nowMs,
                                 blurRadius = baGlassBlur,
-                                lightMaterial = baLightGlass,
-                                bottomBarStyle = baBottomBarGlass,
+                                                                variant = GlassVariant.Compact,
                                 onClick = { touchHead() },
                                 onLongClick = { forceResetHeadpatCooldown() },
                                 onPressedChange = onGlassButtonPressedChange
@@ -1315,8 +1308,7 @@ fun BAPage(
                                 textColor = invite1Color,
                                 enabled = invite1Ready,
                                 blurRadius = baGlassBlur,
-                                lightMaterial = baLightGlass,
-                                bottomBarStyle = baBottomBarGlass,
+                                                                variant = GlassVariant.Compact,
                                 onClick = { useInviteTicket1() },
                                 onLongClick = { forceResetInviteTicket1Cooldown() },
                                 onPressedChange = onGlassButtonPressedChange
@@ -1345,8 +1337,7 @@ fun BAPage(
                                 textColor = invite2Color,
                                 enabled = invite2Ready,
                                 blurRadius = baGlassBlur,
-                                lightMaterial = baLightGlass,
-                                bottomBarStyle = baBottomBarGlass,
+                                                                variant = GlassVariant.Compact,
                                 onClick = { useInviteTicket2() },
                                 onLongClick = { forceResetInviteTicket2Cooldown() },
                                 onPressedChange = onGlassButtonPressedChange
@@ -1422,8 +1413,7 @@ fun BAPage(
                                     icon = MiuixIcons.Regular.Refresh,
                                     contentDescription = "刷新活动日历",
                                     blurRadius = baGlassBlur,
-                                    lightMaterial = baLightGlass,
-                                    bottomBarStyle = baBottomBarGlass,
+                                                                        variant = GlassVariant.Compact,
                                     onClick = { refreshCalendar(force = true) }
                                 )
                             }
@@ -1577,8 +1567,7 @@ fun BAPage(
                                     icon = MiuixIcons.Regular.Refresh,
                                     contentDescription = "刷新卡池",
                                     blurRadius = baGlassBlur,
-                                    lightMaterial = baLightGlass,
-                                    bottomBarStyle = baBottomBarGlass,
+                                                                        variant = GlassVariant.Compact,
                                     onClick = { refreshPool(force = true) }
                                 )
                             }
@@ -1726,8 +1715,7 @@ fun BAPage(
                                     label = "Kei",
                                     backdrop = backdrop,
                                     blurRadius = baGlassBlur,
-                                    lightMaterial = baLightGlass,
-                                    bottomBarStyle = baBottomBarGlass,
+                                                                        variant = GlassVariant.Compact,
                                     singleLine = true,
                                     textAlign = TextAlign.Center
                                 )
@@ -1758,8 +1746,7 @@ fun BAPage(
                                 label = "ARISUKEI",
                                 backdrop = backdrop,
                                 blurRadius = baGlassBlur,
-                                lightMaterial = baLightGlass,
-                                bottomBarStyle = baBottomBarGlass,
+                                                                variant = GlassVariant.Compact,
                                 singleLine = true,
                                 textAlign = TextAlign.Center
                             )
@@ -1797,8 +1784,7 @@ fun BAPage(
                                 backdrop = backdrop,
                                 text = "AP通知",
                                 blurRadius = baGlassBlur,
-                                lightMaterial = baLightGlass,
-                                bottomBarStyle = baBottomBarGlass,
+                                                                variant = GlassVariant.Compact,
                                 onClick = { sendApTestNotification(showToast = true) },
                                 onPressedChange = onGlassButtonPressedChange
                             )
@@ -1806,8 +1792,7 @@ fun BAPage(
                                 backdrop = backdrop,
                                 text = "咖啡厅3h AP",
                                 blurRadius = baGlassBlur,
-                                lightMaterial = baLightGlass,
-                                bottomBarStyle = baBottomBarGlass,
+                                                                variant = GlassVariant.Compact,
                                 onClick = { testCafePlus3Hours() },
                                 onPressedChange = onGlassButtonPressedChange
                             )
@@ -1828,8 +1813,7 @@ fun BAPage(
                 icon = MiuixIcons.Regular.Close,
                 contentDescription = "关闭",
                 blurRadius = baGlassBlur,
-                lightMaterial = baLightGlass,
-                bottomBarStyle = baBottomBarGlass,
+                                variant = GlassVariant.Bar,
                 onClick = { closeSettingsSheet() }
             )
         },
@@ -1839,8 +1823,7 @@ fun BAPage(
                 icon = MiuixIcons.Regular.Ok,
                 contentDescription = "保存",
                 blurRadius = baGlassBlur,
-                lightMaterial = baLightGlass,
-                bottomBarStyle = baBottomBarGlass,
+                                variant = GlassVariant.Bar,
                 onClick = { saveSettings() }
             )
         }
@@ -1869,8 +1852,7 @@ fun BAPage(
                         backdrop = backdrop,
                         text = "${sheetCafeLevel}级",
                         blurRadius = baGlassBlur,
-                        lightMaterial = baLightGlass,
-                        bottomBarStyle = baBottomBarGlass,
+                                                variant = GlassVariant.Sheet,
                         onClick = { showCafeLevelPopup = !showCafeLevelPopup }
                     )
                     if (showCafeLevelPopup) {
@@ -1952,8 +1934,7 @@ fun BAPage(
                         label = "120",
                         backdrop = backdrop,
                         blurRadius = baGlassBlur,
-                        lightMaterial = baLightGlass,
-                        bottomBarStyle = baBottomBarGlass,
+                                                variant = GlassVariant.Sheet,
                         singleLine = true,
                         textAlign = TextAlign.Center,
                         fontSize = 18.sp,

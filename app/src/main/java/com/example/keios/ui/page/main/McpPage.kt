@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.LiquidActionBar
@@ -355,7 +356,7 @@ fun McpPage(
                 Row(modifier = Modifier.fillMaxWidth()) {
                     GlassTextButton(
                         backdrop = backdrop,
-                        bottomBarStyle = true,
+                        variant = GlassVariant.Content,
                         text = "发送测试通知",
                         modifier = Modifier.weight(1f),
                         onClick = {
@@ -367,7 +368,7 @@ fun McpPage(
                     Spacer(modifier = Modifier.width(8.dp))
                     GlassTextButton(
                         backdrop = backdrop,
-                        bottomBarStyle = true,
+                        variant = GlassVariant.Content,
                         text = "查看 SKILL.md",
                         modifier = Modifier.weight(1f),
                         onClick = onOpenSkill
@@ -412,7 +413,7 @@ fun McpPage(
                 Spacer(modifier = Modifier.height(8.dp))
                 GlassTextButton(
                     backdrop = backdrop,
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Content,
                     text = "清空日志",
                     onClick = { mcpServerManager.clearLogs() }
                 )
@@ -428,7 +429,7 @@ fun McpPage(
         startAction = {
             GlassIconButton(
                 backdrop = backdrop,
-                bottomBarStyle = true,
+                variant = GlassVariant.Bar,
                 icon = MiuixIcons.Regular.Close,
                 contentDescription = "关闭",
                 onClick = { showEditSheet = false }
@@ -437,7 +438,7 @@ fun McpPage(
         endAction = {
             GlassIconButton(
                 backdrop = backdrop,
-                bottomBarStyle = true,
+                variant = GlassVariant.Bar,
                 icon = MiuixIcons.Regular.Ok,
                 contentDescription = "保存",
                 onClick = {
@@ -480,7 +481,7 @@ fun McpPage(
                     onValueChange = { serverName = it },
                     label = "输入服务名称",
                     backdrop = backdrop,
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Sheet,
                     singleLine = true,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.width(serverNameFieldWidth)
@@ -504,7 +505,7 @@ fun McpPage(
                     onValueChange = { portText = it.filter(Char::isDigit).take(5) },
                     label = "输入端口",
                     backdrop = backdrop,
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Sheet,
                     singleLine = true,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.width(portFieldWidth)
@@ -533,7 +534,7 @@ fun McpPage(
             )
             GlassTextButton(
                 backdrop = backdrop,
-                bottomBarStyle = true,
+                variant = GlassVariant.Sheet,
                 text = "重置 Token",
                 textColor = MiuixTheme.colorScheme.error,
                 modifier = Modifier.fillMaxWidth(),

@@ -49,38 +49,23 @@ fun GlassSearchField(
     textColor: Color = MiuixTheme.colorScheme.onBackground,
     onImeActionDone: (() -> Unit)? = null,
     blurRadius: Dp? = null,
-    lightMaterial: Boolean = false,
-    bottomBarStyle: Boolean = false
+    variant: GlassVariant = GlassVariant.Content
 ) {
     val focusManager = LocalFocusManager.current
     val isDark = isSystemInDarkTheme()
     val placeholderColor = MiuixTheme.colorScheme.onBackgroundVariant
-    val blurDp = if (bottomBarStyle) 8.dp else (blurRadius ?: 12.dp)
-    val glassBaseColor = if (bottomBarStyle) {
-        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
-    } else if (isDark) {
-        Color(0xFF111111).copy(alpha = if (lightMaterial) 0.12f else 0.60f)
-    } else {
-        Color.White.copy(alpha = if (lightMaterial) 0.28f else 0.58f)
-    }
-    val glassOverlayColor = if (bottomBarStyle) {
-        Color.Transparent
-    } else if (isDark) {
-        Color.White.copy(alpha = if (lightMaterial) 0.03f else 0.08f)
-    } else {
-        Color.Black.copy(alpha = if (lightMaterial) 0.03f else 0.06f)
-    }
+    val glass = glassStyle(
+        isDark = isDark,
+        variant = variant,
+        blurRadius = blurRadius
+    )
     val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
-    val borderModifier = if (bottomBarStyle) {
+    val borderModifier = if (!glass.showBorder) {
         Modifier
     } else {
         Modifier.border(
             width = 1.dp,
-            color = if (isDark) {
-                Color.White.copy(alpha = if (lightMaterial) 0.10f else 0.28f)
-            } else {
-                Color.Black.copy(alpha = if (lightMaterial) 0.10f else 0.20f)
-            },
+            color = glass.borderColor,
             shape = ContinuousCapsule
         )
     }
@@ -102,44 +87,32 @@ fun GlassSearchField(
                         shape = { ContinuousCapsule },
                         effects = {
                             vibrancy()
-                            blur(blurDp.toPx())
+                            blur(glass.blur.toPx())
                             lens(
-                                if (bottomBarStyle || lightMaterial) 24.dp.toPx() else 26.dp.toPx(),
-                                if (bottomBarStyle || lightMaterial) 24.dp.toPx() else 28.dp.toPx()
+                                glass.lensStart.toPx(),
+                                glass.lensEnd.toPx()
                             )
                         },
                         highlight = {
-                            Highlight.Default.copy(
-                                alpha = if (bottomBarStyle) {
-                                    1f
-                                } else if (lightMaterial) {
-                                    if (isDark) 0.52f else 0.58f
-                                } else {
-                                    if (isDark) 0.98f else 1f
-                                }
-                            )
+                            Highlight.Default.copy(alpha = glass.highlightAlpha)
                         },
                         shadow = {
                             Shadow.Default.copy(
-                                color = Color.Black.copy(
-                                    alpha = if (bottomBarStyle) {
-                                        if (isDark) 0.2f else 0.1f
-                                    } else if (lightMaterial) {
-                                        if (isDark) 0.08f else 0.10f
-                                    } else {
-                                        if (isDark) 0.24f else 0.14f
-                                    }
-                                )
+                                color = Color.Black.copy(alpha = glass.shadowAlpha)
                             )
                         },
                         onDrawSurface = {
-                            drawRect(glassBaseColor)
-                            if (glassOverlayColor != Color.Transparent) drawRect(glassOverlayColor)
+                            if (variant == GlassVariant.Bar) {
+                                drawRect(fallbackSurface.copy(alpha = glass.fallbackAlpha))
+                            } else {
+                                drawRect(glass.baseColor)
+                                if (glass.overlayColor != Color.Transparent) drawRect(glass.overlayColor)
+                            }
                         }
                     )
                 } else {
                     Modifier.background(
-                        fallbackSurface.copy(alpha = if (lightMaterial) 0.68f else 0.95f),
+                        fallbackSurface.copy(alpha = glass.fallbackAlpha),
                         ContinuousCapsule
                     )
                 }

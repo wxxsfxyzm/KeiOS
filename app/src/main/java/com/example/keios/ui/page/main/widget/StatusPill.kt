@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,15 +23,19 @@ fun StatusPill(
     contentPadding: PaddingValues = PaddingValues(horizontal = 10.dp, vertical = 5.dp)
 ) {
     val shape = RoundedCornerShape(999.dp)
+    val isDark = isSystemInDarkTheme()
+    val backgroundAlpha = if (isDark) 0.18f else 0.24f
+    val borderAlpha = if (isDark) 0.35f else 0.42f
+    val textColor = if (isDark) color else color.copy(alpha = 0.96f)
     Box(
         modifier = Modifier
             .then(modifier)
             .clip(shape)
-            .background(color.copy(alpha = 0.18f))
-            .border(width = 0.6.dp, color = color.copy(alpha = 0.35f), shape = shape)
+            .background(color.copy(alpha = backgroundAlpha))
+            .border(width = 0.8.dp, color = color.copy(alpha = borderAlpha), shape = shape)
             .padding(contentPadding),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = label, color = color)
+        Text(text = label, color = textColor)
     }
 }

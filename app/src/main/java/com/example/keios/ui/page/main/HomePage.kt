@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import com.example.keios.R
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.SheetContentColumn
@@ -556,7 +557,7 @@ fun HomePage(
             startAction = {
                 GlassIconButton(
                     backdrop = actionBarBackdrop,
-                    bottomBarStyle = true,
+                    variant = GlassVariant.Bar,
                     icon = MiuixIcons.Regular.Close,
                     contentDescription = "关闭",
                     onClick = { showBottomPageEditor = false }
@@ -595,7 +596,6 @@ fun HomePage(
                         }
                     }
 
-                Spacer(modifier = Modifier.height(2.dp))
                 SheetDescriptionText(
                     text = "Home 固定显示，其他板块可按需隐藏或重新显示。",
                 )

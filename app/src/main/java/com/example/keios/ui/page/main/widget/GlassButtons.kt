@@ -47,38 +47,17 @@ fun GlassIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     blurRadius: Dp? = null,
-    lightMaterial: Boolean = false,
-    bottomBarStyle: Boolean = false
+    variant: GlassVariant = GlassVariant.Content
 ) {
     val isDark = isSystemInDarkTheme()
     val iconTint = MiuixTheme.colorScheme.primary
     val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
-    val blurDp = if (bottomBarStyle) 8.dp else (blurRadius ?: if (isDark) 7.dp else 11.dp)
-    val surfaceAlpha = if (bottomBarStyle) 0f else if (lightMaterial) {
-        if (isDark) 0.12f else 0.28f
-    } else {
-        if (isDark) 0.20f else 0.46f
-    }
-    val overlayAlpha = if (bottomBarStyle) 0f else if (lightMaterial) {
-        if (isDark) 0.03f else 0.03f
-    } else {
-        if (isDark) 0.0f else 0.06f
-    }
-    val highlightAlpha = if (bottomBarStyle) 1f else if (lightMaterial) {
-        if (isDark) 0.52f else 0.58f
-    } else {
-        if (isDark) 0.9f else 1.0f
-    }
-    val shadowAlpha = if (bottomBarStyle) {
-        if (isDark) 0.2f else 0.1f
-    } else if (lightMaterial) {
-        if (isDark) 0.08f else 0.10f
-    } else {
-        if (isDark) 0.12f else 0.20f
-    }
-    val borderAlpha = if (bottomBarStyle) 0f else if (lightMaterial) 0.10f else 0.16f
-    val bottomBarSurface = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
-    val showBorder = !bottomBarStyle
+    val glass = glassStyle(
+        isDark = isDark,
+        variant = variant,
+        blurRadius = blurRadius
+    )
+    val showBorder = glass.showBorder
     Box(
         modifier = modifier
             .width(40.dp)
@@ -92,30 +71,30 @@ fun GlassIconButton(
                         shape = { ContinuousCapsule },
                         effects = {
                             vibrancy()
-                            blur(blurDp.toPx())
-                            lens(24.dp.toPx(), 24.dp.toPx())
+                            blur(glass.blur.toPx())
+                            lens(glass.lensStart.toPx(), glass.lensEnd.toPx())
                         },
                         highlight = {
-                            Highlight.Default.copy(alpha = highlightAlpha)
+                            Highlight.Default.copy(alpha = glass.highlightAlpha)
                         },
                         shadow = {
                             Shadow.Default.copy(
-                                color = Color.Black.copy(alpha = shadowAlpha)
+                                color = Color.Black.copy(alpha = glass.shadowAlpha)
                             )
                         },
                         onDrawSurface = {
-                            if (bottomBarStyle) {
-                                drawRect(bottomBarSurface)
+                            if (variant == GlassVariant.Bar) {
+                                drawRect(fallbackSurface.copy(alpha = glass.fallbackAlpha))
                             } else {
-                                drawRect(Color.White.copy(alpha = surfaceAlpha))
-                                if (overlayAlpha > 0f) {
-                                    drawRect(Color.Black.copy(alpha = overlayAlpha))
+                                drawRect(glass.baseColor)
+                                if (glass.overlayColor != Color.Transparent) {
+                                    drawRect(glass.overlayColor)
                                 }
                             }
                         }
                     )
                 } else {
-                    Modifier.background(fallbackSurface.copy(alpha = if (lightMaterial) 0.68f else 0.9f))
+                    Modifier.background(fallbackSurface.copy(alpha = glass.fallbackAlpha))
                 }
             ),
         contentAlignment = Alignment.Center
@@ -127,7 +106,7 @@ fun GlassIconButton(
                     .clip(ContinuousCapsule)
                     .border(
                         width = 1.dp,
-                        color = if (isDark) Color.White.copy(alpha = borderAlpha) else Color.Black.copy(alpha = borderAlpha),
+                        color = glass.borderColor,
                         shape = ContinuousCapsule
                     )
             )
@@ -154,44 +133,28 @@ fun GlassTextButton(
     onLongClick: (() -> Unit)? = null,
     onPressedChange: ((Boolean) -> Unit)? = null,
     blurRadius: Dp? = null,
-    lightMaterial: Boolean = false,
-    bottomBarStyle: Boolean = false
+    variant: GlassVariant = GlassVariant.Content
 ) {
     val isDark = isSystemInDarkTheme()
     val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
     val longClick = onLongClick
-    val blurDp = if (bottomBarStyle) 8.dp else (blurRadius ?: if (isDark) 7.dp else 11.dp)
-    val surfaceAlpha = if (bottomBarStyle) 0f else if (lightMaterial) {
-        if (isDark) 0.12f else 0.28f
-    } else {
-        if (isDark) 0.20f else 0.46f
-    }
-    val overlayAlpha = if (bottomBarStyle) 0f else if (lightMaterial) {
-        if (isDark) 0.03f else 0.03f
-    } else {
-        if (isDark) 0.0f else 0.06f
-    }
-    val highlightAlpha = if (bottomBarStyle) 1f else if (lightMaterial) {
-        if (isDark) 0.52f else 0.58f
-    } else {
-        if (isDark) 0.9f else 1.0f
-    }
-    val shadowAlpha = if (bottomBarStyle) {
-        if (isDark) 0.2f else 0.1f
-    } else if (lightMaterial) {
-        if (isDark) 0.08f else 0.10f
-    } else {
-        if (isDark) 0.12f else 0.20f
-    }
-    val borderAlpha = if (bottomBarStyle) 0f else if (lightMaterial) 0.10f else 0.16f
-    val bottomBarSurface = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
-    val containerOverlay = containerColor?.copy(
-        alpha = if (bottomBarStyle) 0.34f else if (lightMaterial) 0.22f else 0.26f
+    val glass = glassStyle(
+        isDark = isDark,
+        variant = variant,
+        blurRadius = blurRadius
     )
-    val borderModifier = if (!bottomBarStyle) {
+    val containerOverlay = containerColor?.copy(
+        alpha = when (variant) {
+            GlassVariant.Bar -> 0.34f
+            GlassVariant.Sheet -> if (isDark) 0.24f else 0.30f
+            GlassVariant.Compact -> if (isDark) 0.22f else 0.28f
+            GlassVariant.Content -> if (isDark) 0.26f else 0.32f
+        }
+    )
+    val borderModifier = if (glass.showBorder) {
         Modifier.border(
             width = 1.dp,
-            color = if (isDark) Color.White.copy(alpha = borderAlpha) else Color.Black.copy(alpha = borderAlpha),
+            color = glass.borderColor,
             shape = ContinuousCapsule
         )
     } else {
@@ -236,31 +199,31 @@ fun GlassTextButton(
                         shape = { ContinuousCapsule },
                         effects = {
                             vibrancy()
-                            blur(blurDp.toPx())
-                            lens(24.dp.toPx(), 24.dp.toPx())
+                            blur(glass.blur.toPx())
+                            lens(glass.lensStart.toPx(), glass.lensEnd.toPx())
                         },
                         highlight = {
-                            Highlight.Default.copy(alpha = highlightAlpha)
+                            Highlight.Default.copy(alpha = glass.highlightAlpha)
                         },
                         shadow = {
                             Shadow.Default.copy(
-                                color = Color.Black.copy(alpha = shadowAlpha)
+                                color = Color.Black.copy(alpha = glass.shadowAlpha)
                             )
                         },
                         onDrawSurface = {
-                            if (bottomBarStyle) {
-                                drawRect(bottomBarSurface)
+                            if (variant == GlassVariant.Bar) {
+                                drawRect(fallbackSurface.copy(alpha = glass.fallbackAlpha))
                             } else {
-                                drawRect(Color.White.copy(alpha = surfaceAlpha))
-                                if (overlayAlpha > 0f) {
-                                    drawRect(Color.Black.copy(alpha = overlayAlpha))
+                                drawRect(glass.baseColor)
+                                if (glass.overlayColor != Color.Transparent) {
+                                    drawRect(glass.overlayColor)
                                 }
                             }
                             containerOverlay?.let { drawRect(it) }
                         }
                     )
                 } else {
-                    val fallbackColor = containerOverlay ?: fallbackSurface.copy(alpha = if (lightMaterial) 0.68f else 0.9f)
+                    val fallbackColor = containerOverlay ?: fallbackSurface.copy(alpha = glass.fallbackAlpha)
                     Modifier.background(fallbackColor)
                 }
             )
