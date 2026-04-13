@@ -14,16 +14,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import com.example.keios.core.prefs.AppThemeMode
+import com.example.keios.core.prefs.CacheEntrySummary
+import com.example.keios.core.prefs.CacheStores
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
@@ -46,6 +52,9 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SettingsPage(
@@ -59,6 +68,8 @@ fun SettingsPage(
     onAppThemeModeChanged: (AppThemeMode) -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val titleColor = MiuixTheme.colorScheme.onBackground
     val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
     val enabledCardColor = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.46f)
@@ -66,6 +77,8 @@ fun SettingsPage(
 
     var showThemeModePopup by remember { mutableStateOf(false) }
     var themePopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+    var cacheReloadSignal by remember { mutableIntStateOf(0) }
+    var clearingCacheId by remember { mutableStateOf<String?>(null) }
     val themeModeOptions = remember {
         listOf(
             AppThemeMode.FOLLOW_SYSTEM to "跟随系统",
@@ -74,6 +87,9 @@ fun SettingsPage(
         )
     }
     val currentThemeLabel = themeModeOptions.firstOrNull { it.first == appThemeMode }?.second ?: "跟随系统"
+    val cacheEntries by produceState<List<CacheEntrySummary>?>(initialValue = null, cacheReloadSignal) {
+        value = withContext(Dispatchers.IO) { CacheStores.list(context) }
+    }
 
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -253,6 +269,72 @@ fun SettingsPage(
                     )
                 }
             }
+
+            item { Spacer(modifier = Modifier.height(10.dp)) }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
+                        color = enabledCardColor,
+                        contentColor = titleColor
+                    ),
+                    onClick = {}
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "缓存",
+                            color = titleColor
+                        )
+                        when {
+                            cacheEntries == null -> {
+                                Text(
+                                    text = "正在读取各页面缓存摘要",
+                                    color = subtitleColor
+                                )
+                            }
+
+                            cacheEntries!!.isEmpty() -> {
+                                Text(
+                                    text = "暂无可管理缓存",
+                                    color = subtitleColor
+                                )
+                            }
+
+                            else -> {
+                                cacheEntries!!.forEachIndexed { index, entry ->
+                                    SettingsCacheRow(
+                                        entry = entry,
+                                        clearing = clearingCacheId == entry.id,
+                                        onClear = {
+                                            if (clearingCacheId != null) return@SettingsCacheRow
+                                            scope.launch {
+                                                clearingCacheId = entry.id
+                                                try {
+                                                    withContext(Dispatchers.IO) {
+                                                        CacheStores.clear(context, entry.id)
+                                                    }
+                                                    cacheReloadSignal++
+                                                } finally {
+                                                    clearingCacheId = null
+                                                }
+                                            }
+                                        }
+                                    )
+                                    if (index < cacheEntries!!.lastIndex) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -284,7 +366,7 @@ private fun SettingsSectionCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -305,6 +387,55 @@ private fun SettingsSectionCard(
                 value = infoValue
             )
         }
+    }
+}
+
+@Composable
+private fun SettingsCacheRow(
+    entry: CacheEntrySummary,
+    clearing: Boolean,
+    onClear: () -> Unit
+) {
+    val titleColor = MiuixTheme.colorScheme.onBackground
+    val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
+    val actionColor = if (entry.clearLabel == "重置") {
+        MiuixTheme.colorScheme.error
+    } else {
+        MiuixTheme.colorScheme.primary
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = entry.title,
+                color = titleColor,
+                modifier = Modifier.weight(1f)
+            )
+            GlassTextButton(
+                backdrop = null,
+                variant = GlassVariant.Compact,
+                text = if (clearing) "处理中" else entry.clearLabel,
+                textColor = actionColor,
+                containerColor = actionColor,
+                enabled = !clearing,
+                onClick = onClear
+            )
+        }
+        Text(
+            text = entry.summary,
+            color = subtitleColor
+        )
+        Text(
+            text = entry.detail,
+            color = subtitleColor
+        )
     }
 }
 
