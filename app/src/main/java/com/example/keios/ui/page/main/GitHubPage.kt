@@ -149,6 +149,7 @@ import top.yukonga.miuix.kmp.icon.extended.Update
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 import kotlin.math.max
+import java.util.concurrent.TimeUnit
 
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -746,6 +747,23 @@ fun GitHubPage(
         val trimmedName = fileName.trim()
         val extension = assetFileExtensionLabel(trimmedName) ?: return trimmedName
         return trimmedName.removeSuffix(".$extension")
+    }
+
+    fun assetRelativeTimeLabel(updatedAtMillis: Long?): String? {
+        val updatedAt = updatedAtMillis ?: return null
+        val diffMillis = (System.currentTimeMillis() - updatedAt).coerceAtLeast(0L)
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(diffMillis)
+        val hours = TimeUnit.MILLISECONDS.toHours(diffMillis)
+        val days = TimeUnit.MILLISECONDS.toDays(diffMillis)
+        return when {
+            minutes < 1L -> "just now"
+            minutes < 60L -> "$minutes min ago"
+            hours < 24L -> "$hours hr ago"
+            days < 7L -> "$days day${if (days == 1L) "" else "s"} ago"
+            days < 30L -> "last week"
+            days < 60L -> "last month"
+            else -> "${days / 30L} mo ago"
+        }
     }
 
     fun shareApkLink(asset: GitHubReleaseAssetFile) {
@@ -1629,6 +1647,7 @@ fun GitHubPage(
                                                 val extensionLabel = assetFileExtensionLabel(asset.name)
                                                 val displayName = assetDisplayName(asset.name)
                                                 val sizeLabel = formatAssetSize(asset.sizeBytes)
+                                                val relativeTimeLabel = assetRelativeTimeLabel(asset.updatedAtMillis)
                                                 Card(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     colors = CardDefaults.defaultColors(
@@ -1682,16 +1701,28 @@ fun GitHubPage(
                                                                     color = MiuixTheme.colorScheme.primary
                                                                 )
                                                             }
+                                                            StatusPill(
+                                                                label = sizeLabel,
+                                                                color = MiuixTheme.colorScheme.onBackgroundVariant
+                                                            )
+                                                            relativeTimeLabel?.let { label ->
+                                                                StatusPill(
+                                                                    label = label,
+                                                                    color = MiuixTheme.colorScheme.secondary
+                                                                )
+                                                            }
+                                                        }
+                                                        FlowRow(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                        ) {
                                                             abiLabel?.let { label ->
                                                                 StatusPill(
                                                                     label = label,
                                                                     color = actionAccent
                                                                 )
                                                             }
-                                                            StatusPill(
-                                                                label = sizeLabel,
-                                                                color = MiuixTheme.colorScheme.onBackgroundVariant
-                                                            )
                                                             GlassIconButton(
                                                                 backdrop = backdrop,
                                                                 icon = MiuixIcons.Regular.Download,

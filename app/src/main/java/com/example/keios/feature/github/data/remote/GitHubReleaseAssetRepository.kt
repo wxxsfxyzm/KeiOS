@@ -9,6 +9,7 @@ import java.io.IOException
 import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder
+import java.time.Instant
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -18,7 +19,8 @@ data class GitHubReleaseAssetFile(
     val apiAssetUrl: String = "",
     val sizeBytes: Long,
     val downloadCount: Int,
-    val contentType: String = ""
+    val contentType: String = "",
+    val updatedAtMillis: Long? = null
 )
 
 data class GitHubReleaseAssetBundle(
@@ -380,7 +382,8 @@ object GitHubReleaseAssetRepository {
                     downloadUrl = normalizedUrl,
                     sizeBytes = 0L,
                     downloadCount = 0,
-                    contentType = "application/vnd.android.package-archive"
+                    contentType = "application/vnd.android.package-archive",
+                    updatedAtMillis = null
                 )
             )
         }
@@ -426,6 +429,7 @@ object GitHubReleaseAssetRepository {
                                 .put("size", asset.sizeBytes)
                                 .put("download_count", asset.downloadCount)
                                 .put("content_type", asset.contentType)
+                                .put("updated_at", asset.updatedAtMillis?.let { Instant.ofEpochMilli(it).toString() } ?: JSONObject.NULL)
                         )
                     }
                 }
@@ -454,7 +458,9 @@ object GitHubReleaseAssetRepository {
                             is String -> count.toIntOrNull() ?: 0
                             else -> 0
                         },
-                        contentType = asset.optString("content_type").trim()
+                        contentType = asset.optString("content_type").trim(),
+                        updatedAtMillis = asset.optString("updated_at").parseIsoInstantOrNull()
+                            ?: asset.optString("created_at").parseIsoInstantOrNull()
                     )
                 )
             }
@@ -465,6 +471,10 @@ object GitHubReleaseAssetRepository {
             htmlUrl = htmlUrl,
             assets = assets
         )
+    }
+
+    private fun String.parseIsoInstantOrNull(): Long? {
+        return runCatching { if (isBlank()) null else Instant.parse(this).toEpochMilli() }.getOrNull()
     }
 
     private fun assetDisplayPriority(fileName: String): Int {
