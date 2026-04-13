@@ -1,6 +1,8 @@
 package com.example.keios.feature.github.data.local
 
 import com.example.keios.feature.github.model.GitHubCheckCacheEntry
+import com.example.keios.feature.github.model.GitHubLookupConfig
+import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.tencent.mmkv.MMKV
 import org.json.JSONArray
@@ -12,6 +14,8 @@ object GitHubTrackStore {
     private const val KEY_CHECK_CACHE = "tracked_check_cache"
     private const val KEY_LAST_REFRESH_MS = "last_full_refresh_ms"
     private const val KEY_REFRESH_INTERVAL_HOURS = "refresh_interval_hours"
+    private const val KEY_LOOKUP_STRATEGY = "lookup_strategy"
+    private const val KEY_GITHUB_API_TOKEN = "github_api_token"
 
     @Volatile
     private var didAutoRefreshInSession: Boolean = false
@@ -150,5 +154,19 @@ object GitHubTrackStore {
         if (hours in setOf(1, 3, 6, 12)) {
             kv().encode(KEY_REFRESH_INTERVAL_HOURS, hours)
         }
+    }
+
+    fun loadLookupConfig(): GitHubLookupConfig {
+        return GitHubLookupConfig(
+            selectedStrategy = GitHubLookupStrategyOption.fromStorageId(
+                kv().decodeString(KEY_LOOKUP_STRATEGY).orEmpty()
+            ),
+            apiToken = kv().decodeString(KEY_GITHUB_API_TOKEN).orEmpty().trim()
+        )
+    }
+
+    fun saveLookupConfig(config: GitHubLookupConfig) {
+        kv().encode(KEY_LOOKUP_STRATEGY, config.selectedStrategy.storageId)
+        kv().encode(KEY_GITHUB_API_TOKEN, config.apiToken.trim())
     }
 }

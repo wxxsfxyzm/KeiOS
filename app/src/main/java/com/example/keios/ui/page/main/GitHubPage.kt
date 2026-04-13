@@ -44,6 +44,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -65,9 +67,12 @@ import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.page.main.widget.StatusLabelText
 import com.example.keios.feature.github.data.local.AppIconCache
 import com.example.keios.feature.github.data.local.GitHubTrackStore
+import com.example.keios.feature.github.data.remote.GitHubReleaseStrategyRegistry
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.domain.GitHubReleaseCheckService
 import com.example.keios.feature.github.model.GitHubCheckCacheEntry
+import com.example.keios.feature.github.model.GitHubLookupConfig
+import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.feature.github.model.GitHubTrackedReleaseCheck
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.feature.github.model.InstalledAppItem
@@ -99,6 +104,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Refresh
@@ -134,6 +140,7 @@ fun GitHubPage(
     var appSearch by remember { mutableStateOf("") }
     var pickerExpanded by remember { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
+    var showStrategySheet by remember { mutableStateOf(false) }
     var editingTrackedItem by remember { mutableStateOf<GitHubTrackedApp?>(null) }
     var checkPreReleaseInput by remember { mutableStateOf(false) }
     var selectedApp by remember { mutableStateOf<InstalledAppItem?>(null) }
@@ -148,6 +155,10 @@ fun GitHubPage(
     var lastRefreshMs by remember { mutableStateOf(0L) }
     var refreshIntervalHours by remember { mutableStateOf(GitHubTrackStore.loadRefreshIntervalHours()) }
     var refreshProgress by remember { mutableStateOf(0f) }
+    var lookupConfig by remember { mutableStateOf(GitHubTrackStore.loadLookupConfig()) }
+    var selectedStrategyInput by remember { mutableStateOf(lookupConfig.selectedStrategy) }
+    var githubApiTokenInput by remember { mutableStateOf(lookupConfig.apiToken) }
+    var showApiTokenPlainText by remember { mutableStateOf(false) }
 
     val trackedItems = remember { mutableStateListOf<GitHubTrackedApp>() }
     val checkStates = remember { mutableStateMapOf<String, VersionCheckUi>() }
@@ -218,6 +229,27 @@ fun GitHubPage(
         GitHubTrackStore.saveCheckCache(states, refreshTimestamp)
     }
 
+    fun activeStrategyId(): String = lookupConfig.selectedStrategy.storageId
+
+    fun cacheMatchesCurrentStrategy(state: GitHubCheckCacheEntry): Boolean {
+        val sourceId = state.sourceStrategyId.ifBlank { GitHubLookupStrategyOption.AtomFeed.storageId }
+        return sourceId == activeStrategyId()
+    }
+
+    fun openStrategySheet() {
+        val config = GitHubTrackStore.loadLookupConfig()
+        lookupConfig = config
+        selectedStrategyInput = config.selectedStrategy
+        githubApiTokenInput = config.apiToken
+        showApiTokenPlainText = false
+        showStrategySheet = true
+    }
+
+    fun closeStrategySheet() {
+        showStrategySheet = false
+        showApiTokenPlainText = false
+    }
+
     suspend fun reloadApps() {
         appList = withContext(Dispatchers.IO) {
             GitHubVersionUtils.queryInstalledLaunchableApps(context)
@@ -275,6 +307,56 @@ fun GitHubPage(
             refreshProgress = 1f
             persistCheckCache(lastRefreshMs)
             if (showToast) Toast.makeText(context, "检查完成", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun applyLookupConfig() {
+        val previousConfig = GitHubTrackStore.loadLookupConfig()
+        val sanitizedToken = githubApiTokenInput.trim()
+        if (selectedStrategyInput.requiresToken && sanitizedToken.isBlank()) {
+            Toast.makeText(context, "选择 GitHub API Token 时需要填写 GitHub API token", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val newConfig = GitHubLookupConfig(
+            selectedStrategy = selectedStrategyInput,
+            apiToken = sanitizedToken
+        )
+        GitHubTrackStore.saveLookupConfig(newConfig)
+        lookupConfig = newConfig
+        closeStrategySheet()
+
+        val strategyChanged = previousConfig.selectedStrategy != newConfig.selectedStrategy
+        val activeTokenChanged = newConfig.selectedStrategy.requiresToken &&
+            previousConfig.apiToken != newConfig.apiToken
+        when {
+            strategyChanged || activeTokenChanged -> {
+                GitHubReleaseStrategyRegistry.clearAllCaches()
+                GitHubTrackStore.clearCheckCache()
+                checkStates.clear()
+                lastRefreshMs = 0L
+                refreshProgress = 0f
+                overviewRefreshState = OverviewRefreshState.Idle
+                if (trackedItems.isNotEmpty()) {
+                    Toast.makeText(
+                        context,
+                        "已切换为 ${newConfig.selectedStrategy.label}，正在重新检查",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    refreshAllTracked(showToast = true)
+                } else {
+                    Toast.makeText(
+                        context,
+                        "已切换为 ${newConfig.selectedStrategy.label}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            previousConfig.apiToken != newConfig.apiToken -> {
+                Toast.makeText(context, "已保存 GitHub API token", Toast.LENGTH_SHORT).show()
+            }
+            else -> {
+                Toast.makeText(context, "抓取方案未变化", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -362,18 +444,25 @@ fun GitHubPage(
         }
 
     LaunchedEffect(Unit) {
+        lookupConfig = GitHubTrackStore.loadLookupConfig()
+        selectedStrategyInput = lookupConfig.selectedStrategy
+        githubApiTokenInput = lookupConfig.apiToken
         trackedItems.clear()
         trackedItems.addAll(GitHubTrackStore.load())
         reloadApps()
         val (cachedStates, cachedRefreshMs) = GitHubTrackStore.loadCheckCache()
         checkStates.clear()
         trackedItems.forEach { item ->
-            cachedStates[item.id]?.let { cached -> checkStates[item.id] = cached.toUi() }
+            cachedStates[item.id]
+                ?.takeIf(::cacheMatchesCurrentStrategy)
+                ?.let { cached -> checkStates[item.id] = cached.toUi() }
         }
         lastRefreshMs = cachedRefreshMs
         refreshIntervalHours = GitHubTrackStore.loadRefreshIntervalHours()
         val hasTracked = trackedItems.isNotEmpty()
-        val hasCachedForTracked = trackedItems.any { cachedStates.containsKey(it.id) }
+        val hasCachedForTracked = trackedItems.any { item ->
+            cachedStates[item.id]?.let(::cacheMatchesCurrentStrategy) == true
+        }
         val stale = hasTracked && lastRefreshMs > 0L &&
             (System.currentTimeMillis() - lastRefreshMs) >= refreshIntervalHours * 60L * 60L * 1000L
         if (!hasCachedForTracked && hasTracked) {
@@ -447,6 +536,11 @@ fun GitHubPage(
                                 backdrop = backdrop,
                                 items = listOf(
                                     LiquidActionItem(
+                                        icon = MiuixIcons.Regular.Edit,
+                                        contentDescription = "编辑抓取方案",
+                                        onClick = { openStrategySheet() }
+                                    ),
+                                    LiquidActionItem(
                                         icon = MiuixIcons.Regular.Sort,
                                         contentDescription = "排序",
                                         onClick = { showSortPopup = !showSortPopup }
@@ -470,9 +564,9 @@ fun GitHubPage(
                                 onInteractionChanged = onActionBarInteractingChanged
                             )
 
-                            LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex, popupAnchorBounds ->
+                            LiquidActionBarPopupAnchors(itemCount = 5) { slotIndex, popupAnchorBounds ->
                                 when (slotIndex) {
-                                    0 -> if (showSortPopup) {
+                                    1 -> if (showSortPopup) {
                                         SnapshotWindowListPopup(
                                             show = showSortPopup,
                                             alignment = PopupPositionProvider.Align.BottomStart,
@@ -499,7 +593,7 @@ fun GitHubPage(
                                         }
                                     }
 
-                                    1 -> if (showIntervalPopup) {
+                                    2 -> if (showIntervalPopup) {
                                         SnapshotWindowListPopup(
                                             show = showIntervalPopup,
                                             alignment = PopupPositionProvider.Align.BottomStart,
@@ -635,6 +729,31 @@ fun GitHubPage(
                             neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
                         )
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        GitHubOverviewMetricItem(
+                            label = "当前方案",
+                            value = lookupConfig.selectedStrategy.label,
+                            valueColor = MiuixTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        GitHubOverviewMetricItem(
+                            label = "Token 状态",
+                            value = lookupConfig.tokenStatusLabel(),
+                            valueColor = if (lookupConfig.selectedStrategy.requiresToken) {
+                                if (lookupConfig.apiToken.isBlank()) {
+                                    GitHubStatusPalette.Error
+                                } else {
+                                    GitHubStatusPalette.Active
+                                }
+                            } else {
+                                MiuixTheme.colorScheme.onBackgroundVariant
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -776,6 +895,13 @@ fun GitHubPage(
                                     }
                                 }
                             )
+                            VersionValueRow(
+                                label = "检查方案",
+                                value = strategyLabelForId(
+                                    state.sourceStrategyId.ifBlank { lookupConfig.selectedStrategy.storageId }
+                                ),
+                                valueColor = MiuixTheme.colorScheme.primary
+                            )
                             if (state.localVersion.isNotBlank()) {
                                 val localText = if (state.localVersionCode >= 0L) {
                                     "${state.localVersion} (${state.localVersionCode})"
@@ -814,6 +940,81 @@ fun GitHubPage(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
+            }
+        }
+    }
+
+    SnapshotWindowBottomSheet(
+        show = showStrategySheet,
+        title = "GitHub 抓取方案",
+        onDismissRequest = { closeStrategySheet() },
+        startAction = {
+            GlassIconButton(
+                backdrop = backdrop,
+                variant = GlassVariant.Bar,
+                icon = MiuixIcons.Regular.Close,
+                contentDescription = "关闭",
+                onClick = { closeStrategySheet() }
+            )
+        },
+        endAction = {
+            GlassIconButton(
+                backdrop = backdrop,
+                variant = GlassVariant.Bar,
+                icon = MiuixIcons.Regular.Ok,
+                contentDescription = "保存方案",
+                onClick = { applyLookupConfig() }
+            )
+        }
+    ) {
+        SheetContentColumn {
+            githubStrategyGuides.forEach { guide ->
+                GitHubStrategyGuideCard(
+                    guide = guide,
+                    selected = selectedStrategyInput == guide.option,
+                    onSelect = { selectedStrategyInput = guide.option }
+                )
+            }
+            if (selectedStrategyInput == GitHubLookupStrategyOption.GitHubApiToken) {
+                GlassSearchField(
+                    value = githubApiTokenInput,
+                    onValueChange = { githubApiTokenInput = it },
+                    label = "GitHub API token（必填）",
+                    backdrop = backdrop,
+                    variant = GlassVariant.SheetInput,
+                    singleLine = true,
+                    visualTransformation = if (showApiTokenPlainText) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    }
+                )
+                SheetRow {
+                    Text(
+                        text = if (githubApiTokenInput.isBlank()) {
+                            "当前未填写 token"
+                        } else {
+                            "当前已填写 token，可在此替换"
+                        },
+                        color = MiuixTheme.colorScheme.onBackgroundVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        variant = GlassVariant.SheetAction,
+                        text = if (showApiTokenPlainText) "隐藏 Token" else "显示 Token",
+                        onClick = { showApiTokenPlainText = !showApiTokenPlainText }
+                    )
+                }
+                Text(
+                    text = "选择 GitHub API Token 方案时，用户必须提供 GitHub API token。token 只保存在当前设备本地，用于发起 GitHub API 请求。",
+                    color = MiuixTheme.colorScheme.primary
+                )
+            } else {
+                Text(
+                    text = "当前选择 Atom Feed 方案，无需填写 token。",
+                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                )
             }
         }
     }

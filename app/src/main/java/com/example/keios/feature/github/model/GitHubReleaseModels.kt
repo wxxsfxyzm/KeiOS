@@ -13,7 +13,8 @@ enum class GitHubReleaseChannel(val isPreRelease: Boolean) {
 enum class GitHubReleaseSignalSource {
     LatestRedirect,
     AtomEntry,
-    AtomFallback
+    AtomFallback,
+    GitHubApi
 }
 
 enum class GitHubVersionCandidateSource(val priority: Int) {

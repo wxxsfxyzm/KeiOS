@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -48,6 +49,7 @@ fun GlassSearchField(
     fontSize: TextUnit = 15.sp,
     textColor: Color = MiuixTheme.colorScheme.onBackground,
     onImeActionDone: (() -> Unit)? = null,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
     blurRadius: Dp? = null,
     variant: GlassVariant = GlassVariant.Content
 ) {
@@ -126,6 +128,7 @@ fun GlassSearchField(
             singleLine = singleLine,
             textStyle = TextStyle(color = textColor, fontSize = fontSize, textAlign = textAlign),
             cursorBrush = SolidColor(MiuixTheme.colorScheme.primary),
+            visualTransformation = visualTransformation,
             keyboardOptions = if (singleLine) KeyboardOptions(imeAction = ImeAction.Done) else KeyboardOptions.Default,
             keyboardActions = KeyboardActions(
                 onDone = {

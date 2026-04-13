@@ -3,6 +3,7 @@ package com.example.keios.feature.github.domain
 import android.content.Context
 import com.example.keios.feature.github.data.remote.GitHubAtomReleaseStrategy
 import com.example.keios.feature.github.data.remote.GitHubReleaseLookupStrategy
+import com.example.keios.feature.github.data.remote.GitHubReleaseStrategyRegistry
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.model.GitHubCheckCacheEntry
 import com.example.keios.feature.github.model.GitHubTrackedApp
@@ -13,7 +14,7 @@ object GitHubReleaseCheckService {
     fun evaluateTrackedApp(
         context: Context,
         item: GitHubTrackedApp,
-        strategy: GitHubReleaseLookupStrategy = GitHubAtomReleaseStrategy
+        strategy: GitHubReleaseLookupStrategy? = null
     ): GitHubTrackedReleaseCheck {
         val localVersion = runCatching {
             GitHubVersionUtils.localVersionName(context, item.packageName)
@@ -21,10 +22,19 @@ object GitHubReleaseCheckService {
         val localVersionCode = runCatching {
             GitHubVersionUtils.localVersionCode(context, item.packageName)
         }.getOrDefault(-1L)
-
-        val snapshot = strategy.loadSnapshot(item.owner, item.repo).getOrElse { error ->
+        val effectiveStrategy = strategy ?: GitHubReleaseStrategyRegistry.resolveConfiguredStrategy().getOrElse { error ->
             return GitHubTrackedReleaseCheck(
-                strategyId = strategy.id,
+                strategyId = GitHubReleaseStrategyRegistry.loadLookupConfig().selectedStrategy.storageId,
+                localVersion = localVersion,
+                localVersionCode = localVersionCode,
+                status = GitHubTrackedReleaseStatus.Failed,
+                message = "检查失败: ${error.message ?: "unknown"}"
+            )
+        }
+
+        val snapshot = effectiveStrategy.loadSnapshot(item.owner, item.repo).getOrElse { error ->
+            return GitHubTrackedReleaseCheck(
+                strategyId = effectiveStrategy.id,
                 localVersion = localVersion,
                 localVersionCode = localVersionCode,
                 status = GitHubTrackedReleaseStatus.Failed,
@@ -59,12 +69,14 @@ object GitHubReleaseCheckService {
             (latestPreCmp?.let { it < 0 } == true)
         val stableHasUpdate = stableCmp?.let { it < 0 } == true
         val hasUpdate = stableHasUpdate || hasPreReleaseUpdate
+        val relevantPreRelease = latestPre.takeIf { latestPreIsRelevant }
+        val matchedPreReleaseEntry = matchedEntry.takeIf { isLocalPreReleaseInstalled }
 
         val preReleaseInfo = when {
-            preReleaseCheckEnabled && isLocalPreReleaseInstalled && latestPreIsRelevant ->
-                matchedEntry!!.displayVersion.ifBlank { latestPre!!.displayVersion }
-            preReleaseCheckEnabled && latestPreIsRelevant ->
-                latestPre!!.displayVersion
+            preReleaseCheckEnabled && matchedPreReleaseEntry != null && relevantPreRelease != null ->
+                matchedPreReleaseEntry.displayVersion.ifBlank { relevantPreRelease.displayVersion }
+            preReleaseCheckEnabled && relevantPreRelease != null ->
+                relevantPreRelease.displayVersion
             else -> ""
         }
         val showPreReleaseInfo = preReleaseCheckEnabled && preReleaseInfo.isNotBlank()

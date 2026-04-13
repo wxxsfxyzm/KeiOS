@@ -3,12 +3,14 @@ package com.example.keios.ui.page.main
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
@@ -28,6 +30,8 @@ import com.example.keios.feature.github.data.local.AppIconCache
 import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -120,6 +124,61 @@ internal fun GitHubOverviewMetricItem(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End
         )
+    }
+}
+
+@Composable
+internal fun GitHubStrategyGuideCard(
+    guide: GitHubStrategyGuide,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    val accent = if (selected) {
+        MiuixTheme.colorScheme.primary
+    } else {
+        MiuixTheme.colorScheme.onBackground
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = if (selected) 0.88f else 0.7f),
+            contentColor = MiuixTheme.colorScheme.onBackground
+        ),
+        onClick = onSelect
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = guide.option.label,
+                color = accent,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (selected) "当前使用中" else "点击切换到此方案",
+                color = accent
+            )
+            Text(
+                text = guide.summary,
+                color = MiuixTheme.colorScheme.onBackgroundVariant
+            )
+            Text(
+                text = "优点：${guide.pros.joinToString("；")}",
+                color = MiuixTheme.colorScheme.onBackground
+            )
+            Text(
+                text = "缺点：${guide.cons.joinToString("；")}",
+                color = MiuixTheme.colorScheme.onBackground
+            )
+            Text(
+                text = "要求：${guide.requirement}",
+                color = accent,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
