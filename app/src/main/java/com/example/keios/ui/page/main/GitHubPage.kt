@@ -1115,6 +1115,7 @@ fun GitHubPage(
                                 label = "仓库地址",
                                 value = "${item.owner}/${item.repo}",
                                 valueColor = MiuixTheme.colorScheme.primary,
+                                titleColor = MiuixTheme.colorScheme.primary,
                                 onClick = {
                                     val releaseUrl = GitHubVersionUtils.buildReleaseUrl(item.owner, item.repo)
                                     runCatching {
