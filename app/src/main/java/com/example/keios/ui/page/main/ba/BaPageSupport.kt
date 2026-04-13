@@ -1226,6 +1226,27 @@ internal object BASettingsStore {
             store.removeValueForKey(poolSyncKey(serverIndex))
             store.removeValueForKey(poolCacheVersionKey(serverIndex))
         }
+        store.trim()
+    }
+
+    fun storageFootprintBytes(): Long = kv().totalSize()
+
+    fun actualDataBytes(): Long = kv().actualSize()
+
+    fun cacheBytesEstimated(): Long {
+        var total = 0L
+        for (serverIndex in 0..2) {
+            val calendar = loadCalendarCacheSnapshot(serverIndex)
+            val pool = loadPoolCacheSnapshot(serverIndex)
+            total += calendar.raw.length.toLong() * 2 + 16L
+            total += pool.raw.length.toLong() * 2 + 16L
+        }
+        return total
+    }
+
+    fun configBytesEstimated(): Long {
+        val snapshot = loadSnapshot()
+        return listOf(snapshot.idNickname, snapshot.idFriendCode).sumOf { it.length.toLong() * 2 } + 160L
     }
 
     fun clearListScrollState() {

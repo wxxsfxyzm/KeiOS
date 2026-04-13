@@ -212,6 +212,35 @@ object BaStudentGuideStore {
             .orEmpty()
             .filter { it.startsWith(BA_GUIDE_KEY_CACHE_PREFIX) }
             .forEach(store::removeValueForKey)
+        store.trim()
+    }
+
+    fun storageFootprintBytes(): Long = kv().totalSize()
+
+    fun actualDataBytes(): Long = kv().actualSize()
+
+    fun cacheBytesEstimated(): Long {
+        val store = kv()
+        return store.allKeys()
+            .orEmpty()
+            .filter { it.startsWith(BA_GUIDE_KEY_CACHE_PREFIX) }
+            .sumOf { key -> store.decodeString(key, "").orEmpty().length.toLong() * 2 + 16L }
+    }
+
+    fun configBytesEstimated(): Long = loadCurrentUrl().length.toLong() * 2 + 16L
+
+    fun latestSyncedAtMs(): Long {
+        val store = kv()
+        return store.allKeys()
+            .orEmpty()
+            .filter { it.startsWith(BA_GUIDE_KEY_CACHE_PREFIX) }
+            .mapNotNull { key ->
+                runCatching {
+                    JSONObject(store.decodeString(key, "").orEmpty()).optLong("syncedAtMs", 0L)
+                }.getOrNull()
+            }
+            .maxOrNull()
+            ?: 0L
     }
 
     fun loadInfo(url: String): BaStudentGuideInfo? {

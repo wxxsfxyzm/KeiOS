@@ -176,11 +176,48 @@ object GitHubTrackStore {
     }
 
     fun clearCheckCache() {
-        kv().removeValueForKey(KEY_CHECK_CACHE)
-        kv().removeValueForKey(KEY_LAST_REFRESH_MS)
+        val store = kv()
+        store.removeValueForKey(KEY_CHECK_CACHE)
+        store.removeValueForKey(KEY_LAST_REFRESH_MS)
+        store.trim()
     }
 
     fun cachedCheckCount(): Int = loadCheckCache().first.size
+
+    fun storageFootprintBytes(): Long = kv().totalSize()
+
+    fun actualDataBytes(): Long = kv().actualSize()
+
+    fun cacheBytesEstimated(): Long {
+        val snapshot = loadSnapshot()
+        val cacheJsonBytes = snapshot.checkCache.values.sumOf { state ->
+            listOf(
+                state.localVersion,
+                state.latestTag,
+                state.latestStableName,
+                state.latestStableRawTag,
+                state.latestStableUrl,
+                state.latestPreName,
+                state.latestPreRawTag,
+                state.latestPreUrl,
+                state.message,
+                state.preReleaseInfo,
+                state.releaseHint,
+                state.sourceStrategyId
+            ).sumOf { it.length.toLong() * 2 } + 64L
+        }
+        return cacheJsonBytes + 16L
+    }
+
+    fun configBytesEstimated(): Long {
+        val snapshot = loadSnapshot()
+        val trackedBytes = snapshot.items.sumOf { item ->
+            (item.repoUrl.length + item.owner.length + item.repo.length + item.packageName.length + item.appLabel.length)
+                .toLong() * 2 + 32L
+        }
+        val prefsBytes = snapshot.lookupConfig.apiToken.length.toLong() * 2 + 96L
+        return trackedBytes + prefsBytes
+    }
 
     fun shouldAutoRefreshOnceInSession(): Boolean = !didAutoRefreshInSession
 

@@ -81,6 +81,12 @@ class McpServerManager(
         fun clearSavedCacheOnly() {
             Prefs.clear()
         }
+
+        fun storageFootprintBytes(): Long = Prefs.storageFootprintBytes()
+
+        fun actualDataBytes(): Long = Prefs.actualDataBytes()
+
+        fun configBytesEstimated(): Long = Prefs.configBytesEstimated()
     }
 
     private object Prefs {
@@ -145,6 +151,16 @@ class McpServerManager(
             store.removeValueForKey(KEY_SERVER_NAME)
             store.removeValueForKey(KEY_PORT)
             store.removeValueForKey(KEY_ALLOW_EXTERNAL)
+            store.trim()
+        }
+
+        fun storageFootprintBytes(): Long = kv().totalSize()
+
+        fun actualDataBytes(): Long = kv().actualSize()
+
+        fun configBytesEstimated(): Long {
+            val snapshot = loadSnapshot()
+            return (snapshot.authToken.length + snapshot.serverName.length).toLong() * 2 + 32L
         }
 
         private fun generateToken(): String {

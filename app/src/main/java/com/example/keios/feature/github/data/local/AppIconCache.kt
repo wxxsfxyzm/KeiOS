@@ -10,6 +10,8 @@ import android.util.LruCache
 
 object AppIconCache {
     private val cache = object : LruCache<String, Bitmap>(120) {}
+    @Volatile
+    private var lastUpdatedAtMs: Long = 0L
 
     fun get(packageName: String): Bitmap? = synchronized(cache) { cache.get(packageName) }
 
@@ -20,6 +22,7 @@ object AppIconCache {
             drawableToBitmap(drawable)
         }.getOrNull() ?: return null
         synchronized(cache) { cache.put(packageName, bitmap) }
+        lastUpdatedAtMs = System.currentTimeMillis()
         return bitmap
     }
 
@@ -32,6 +35,12 @@ object AppIconCache {
     }
 
     fun size(): Int = synchronized(cache) { cache.size() }
+
+    fun estimatedMemoryBytes(): Long = synchronized(cache) {
+        cache.snapshot().values.fold(0L) { acc, bitmap -> acc + bitmap.byteCount.toLong() }
+    }
+
+    fun lastUpdatedAtMs(): Long = lastUpdatedAtMs
 
     fun clear() {
         synchronized(cache) { cache.evictAll() }
@@ -48,4 +57,3 @@ object AppIconCache {
         return bitmap
     }
 }
-

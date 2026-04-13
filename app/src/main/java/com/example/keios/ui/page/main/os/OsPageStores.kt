@@ -219,6 +219,22 @@ internal object OsInfoCache {
 
     fun clearAll() {
         SectionKind.entries.forEach(::clear)
+        store.trim()
+        legacyStore.trim()
+    }
+
+    fun storageFootprintBytes(): Long = store.totalSize() + legacyStore.totalSize()
+
+    fun actualDataBytes(): Long = store.actualSize() + legacyStore.actualSize()
+
+    fun cacheBytesEstimated(): Long {
+        val snapshot = read()
+        return snapshot.system.sumOf { (it.key.length + it.value.length).toLong() * 2 + 8L } +
+            snapshot.secure.sumOf { (it.key.length + it.value.length).toLong() * 2 + 8L } +
+            snapshot.global.sumOf { (it.key.length + it.value.length).toLong() * 2 + 8L } +
+            snapshot.android.sumOf { (it.key.length + it.value.length).toLong() * 2 + 8L } +
+            snapshot.java.sumOf { (it.key.length + it.value.length).toLong() * 2 + 8L } +
+            snapshot.linux.sumOf { (it.key.length + it.value.length).toLong() * 2 + 8L }
     }
 
     fun cachedSectionCount(visibleCards: Set<OsSectionCard>): Int {
@@ -393,5 +409,16 @@ internal object OsUiStateStore {
 
     fun setLinuxEnvExpanded(value: Boolean) {
         store.encode(KEY_LINUX_ENV, value)
+    }
+
+    fun storageFootprintBytes(): Long = store.totalSize() + legacyStore.totalSize()
+
+    fun actualDataBytes(): Long = store.actualSize() + legacyStore.actualSize()
+
+    fun configBytesEstimated(): Long {
+        val snapshot = loadSnapshot()
+        val boolBytes = 8L
+        val cardBytes = snapshot.visibleCards.sumOf { it.name.length.toLong() * 2 + 4L }
+        return boolBytes * 7 + cardBytes
     }
 }

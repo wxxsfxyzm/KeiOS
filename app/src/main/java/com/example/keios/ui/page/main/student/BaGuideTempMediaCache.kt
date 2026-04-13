@@ -103,6 +103,23 @@ object BaGuideTempMediaCache {
         return dir.walkTopDown().count { it.isFile }
     }
 
+    fun cacheTotalBytes(context: Context): Long {
+        val dir = rootDir(context)
+        if (!dir.exists()) return 0L
+        return dir.walkTopDown()
+            .filter { it.isFile }
+            .sumOf(File::length)
+    }
+
+    fun latestModifiedAtMs(context: Context): Long {
+        val dir = rootDir(context)
+        if (!dir.exists()) return 0L
+        return dir.walkTopDown()
+            .filter { it.isFile }
+            .maxOfOrNull(File::lastModified)
+            ?: 0L
+    }
+
     private fun sha1(raw: String): String {
         val md = MessageDigest.getInstance("SHA-1")
         val bytes = md.digest(raw.toByteArray())

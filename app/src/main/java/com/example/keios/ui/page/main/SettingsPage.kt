@@ -418,15 +418,17 @@ private fun SettingsCacheRow(
                 color = titleColor,
                 modifier = Modifier.weight(1f)
             )
-            GlassTextButton(
-                backdrop = null,
-                variant = GlassVariant.Compact,
-                text = if (clearing) "处理中" else entry.clearLabel,
-                textColor = actionColor,
-                containerColor = actionColor,
-                enabled = !clearing,
-                onClick = onClear
-            )
+            if (entry.clearLabel.isNotBlank()) {
+                GlassTextButton(
+                    backdrop = null,
+                    variant = GlassVariant.Compact,
+                    text = if (clearing) "处理中" else entry.clearLabel,
+                    textColor = actionColor,
+                    containerColor = actionColor,
+                    enabled = !clearing,
+                    onClick = onClear
+                )
+            }
         }
         Text(
             text = entry.summary,
@@ -434,6 +436,14 @@ private fun SettingsCacheRow(
         )
         Text(
             text = entry.detail,
+            color = subtitleColor
+        )
+        Text(
+            text = entry.activity,
+            color = subtitleColor
+        )
+        Text(
+            text = entry.storage,
             color = subtitleColor
         )
     }
