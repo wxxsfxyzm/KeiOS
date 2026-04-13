@@ -61,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -85,8 +86,8 @@ import com.github.panpf.zoomimage.CoilZoomAsyncImage
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.DropdownImpl
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
+import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -95,6 +96,8 @@ import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
+import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
+import com.example.keios.ui.page.main.widget.capturePopupAnchor
 
 private fun normalizeGuideMediaSource(raw: String): String {
     val value = raw.trim()
@@ -642,7 +645,10 @@ fun GuideGalleryExpressionCardItem(
                         )
                     )
                 }
-                Box {
+                var pickerPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+                Box(
+                    modifier = Modifier.capturePopupAnchor { pickerPopupAnchorBounds = it }
+                ) {
                     GlassTextButton(
                         backdrop = backdrop,
                         text = optionLabels.getOrElse(selectedIndex) { "角色表情1" },
@@ -654,12 +660,14 @@ fun GuideGalleryExpressionCardItem(
                         SnapshotWindowListPopup(
                             show = showPicker,
                             alignment = PopupPositionProvider.Align.BottomEnd,
+                            anchorBounds = pickerPopupAnchorBounds,
+                            placement = SnapshotPopupPlacement.ButtonEnd,
                             onDismissRequest = { showPicker = false },
                             enableWindowDim = false
                         ) {
-                            ListPopupColumn {
+                            LiquidDropdownColumn {
                                 optionLabels.forEachIndexed { idx, option ->
-                                    DropdownImpl(
+                                    LiquidDropdownImpl(
                                         text = option,
                                         optionSize = optionLabels.size,
                                         isSelected = selectedIndex == idx,
@@ -782,7 +790,10 @@ fun GuideGalleryVideoGroupCardItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 if (items.size > 1) {
-                    Box {
+                    var pickerPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+                    Box(
+                        modifier = Modifier.capturePopupAnchor { pickerPopupAnchorBounds = it }
+                    ) {
                         GlassTextButton(
                             backdrop = backdrop,
                             text = optionLabels.getOrElse(selectedIndex) { "视频 1" },
@@ -794,12 +805,14 @@ fun GuideGalleryVideoGroupCardItem(
                             SnapshotWindowListPopup(
                                 show = showPicker,
                                 alignment = PopupPositionProvider.Align.BottomEnd,
+                                anchorBounds = pickerPopupAnchorBounds,
+                                placement = SnapshotPopupPlacement.ButtonEnd,
                                 onDismissRequest = { showPicker = false },
                                 enableWindowDim = false
                             ) {
-                                ListPopupColumn {
+                                LiquidDropdownColumn {
                                     optionLabels.forEachIndexed { idx, option ->
-                                        DropdownImpl(
+                                        LiquidDropdownImpl(
                                             text = option,
                                             optionSize = optionLabels.size,
                                             isSelected = selectedIndex == idx,
@@ -1611,7 +1624,10 @@ fun GuideSkillCardItem(
                     modifier = Modifier.weight(1f)
                 )
                 if (levelOptions.isNotEmpty()) {
-                    Box {
+                    var levelPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+                    Box(
+                        modifier = Modifier.capturePopupAnchor { levelPopupAnchorBounds = it }
+                    ) {
                         GlassTextButton(
                             backdrop = backdrop,
                             text = displayLevel,
@@ -1622,12 +1638,14 @@ fun GuideSkillCardItem(
                             SnapshotWindowListPopup(
                                 show = showLevelPopup,
                                 alignment = PopupPositionProvider.Align.BottomEnd,
+                                anchorBounds = levelPopupAnchorBounds,
+                                placement = SnapshotPopupPlacement.ButtonEnd,
                                 onDismissRequest = { showLevelPopup = false },
                                 enableWindowDim = false
                             ) {
-                                ListPopupColumn {
+                                LiquidDropdownColumn {
                                     levelOptions.forEachIndexed { index, option ->
-                                        DropdownImpl(
+                                        LiquidDropdownImpl(
                                             text = option,
                                             optionSize = levelOptions.size,
                                             isSelected = selectedLevel == option,
@@ -1900,7 +1918,10 @@ fun GuideWeaponCardItem(
                             modifier = Modifier.weight(1f)
                         )
                         if (levelOptions.isNotEmpty()) {
-                            Box {
+                            var levelPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+                            Box(
+                                modifier = Modifier.capturePopupAnchor { levelPopupAnchorBounds = it }
+                            ) {
                                 GlassTextButton(
                                     backdrop = backdrop,
                                     text = selectedLevel,
@@ -1911,12 +1932,14 @@ fun GuideWeaponCardItem(
                                     SnapshotWindowListPopup(
                                         show = showLevelPopup,
                                         alignment = PopupPositionProvider.Align.BottomEnd,
+                                        anchorBounds = levelPopupAnchorBounds,
+                                        placement = SnapshotPopupPlacement.ButtonEnd,
                                         onDismissRequest = { showLevelPopup = false },
                                         enableWindowDim = false
                                     ) {
-                                        ListPopupColumn {
+                                        LiquidDropdownColumn {
                                             levelOptions.forEachIndexed { idx, option ->
-                                                DropdownImpl(
+                                                LiquidDropdownImpl(
                                                     text = option,
                                                     optionSize = levelOptions.size,
                                                     isSelected = selectedLevel == option,
@@ -2170,7 +2193,10 @@ private fun GuideEffectLevelPicker(
     onLevelSelected: (Int) -> Unit
 ) {
     if (levelOptions.isEmpty()) return
-    Box {
+    var levelPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+    Box(
+        modifier = Modifier.capturePopupAnchor { levelPopupAnchorBounds = it }
+    ) {
         GlassTextButton(
             backdrop = backdrop,
             text = selectedLevel,
@@ -2181,12 +2207,14 @@ private fun GuideEffectLevelPicker(
             SnapshotWindowListPopup(
                 show = showLevelPopup,
                 alignment = PopupPositionProvider.Align.BottomEnd,
+                anchorBounds = levelPopupAnchorBounds,
+                placement = SnapshotPopupPlacement.ButtonEnd,
                 onDismissRequest = onDismissPopup,
                 enableWindowDim = false
             ) {
-                ListPopupColumn {
+                LiquidDropdownColumn {
                     levelOptions.forEachIndexed { idx, option ->
-                        DropdownImpl(
+                        LiquidDropdownImpl(
                             text = option,
                             optionSize = levelOptions.size,
                             isSelected = selectedLevel == option,

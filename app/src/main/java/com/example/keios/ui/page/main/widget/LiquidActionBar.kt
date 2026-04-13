@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,6 +40,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
@@ -60,6 +63,7 @@ import com.kyant.capsule.ContinuousCapsule
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.math.sign
 import kotlinx.coroutines.launch
 
@@ -74,9 +78,14 @@ fun LiquidActionBarPopupAnchors(
     itemCount: Int,
     modifier: Modifier = Modifier,
     compactSingleItem: Boolean = false,
-    content: @Composable (Int) -> Unit
+    content: @Composable (Int, IntRect?) -> Unit
 ) {
     if (itemCount <= 0) return
+    val anchorBounds = remember(itemCount) {
+        mutableStateListOf<IntRect?>().apply {
+            repeat(itemCount) { add(null) }
+        }
+    }
     val minimumWidth = if (compactSingleItem && itemCount == 1) 50.dp else 156.dp
     val barWidth = maxOf(minimumWidth, (itemCount * 38).dp)
     Row(
@@ -99,7 +108,20 @@ fun LiquidActionBarPopupAnchors(
                         .height(42.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    content(index)
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .onGloballyPositioned { coordinates ->
+                                val position = coordinates.positionInWindow()
+                                anchorBounds[index] = IntRect(
+                                    left = position.x.roundToInt(),
+                                    top = position.y.roundToInt(),
+                                    right = (position.x + coordinates.size.width).roundToInt(),
+                                    bottom = (position.y + coordinates.size.height).roundToInt()
+                                )
+                            }
+                    )
+                    content(index, anchorBounds.getOrNull(index))
                 }
             }
         }

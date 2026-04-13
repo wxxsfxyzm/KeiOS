@@ -60,6 +60,7 @@ import com.example.keios.ui.page.main.widget.SheetContentColumn
 import com.example.keios.ui.page.main.widget.SheetRow
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
+import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.page.main.widget.StatusLabelText
 import com.example.keios.feature.github.data.local.AppIconCache
@@ -79,9 +80,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.basic.DropdownImpl
+import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Card
@@ -469,19 +470,21 @@ fun GitHubPage(
                                 onInteractionChanged = onActionBarInteractingChanged
                             )
 
-                            LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex ->
+                            LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex, popupAnchorBounds ->
                                 when (slotIndex) {
                                     0 -> if (showSortPopup) {
                                         SnapshotWindowListPopup(
                                             show = showSortPopup,
                                             alignment = PopupPositionProvider.Align.BottomStart,
+                                            anchorBounds = popupAnchorBounds,
+                                            placement = SnapshotPopupPlacement.ActionBarCenter,
                                             onDismissRequest = { showSortPopup = false },
                                             enableWindowDim = false
                                         ) {
-                                            ListPopupColumn {
+                                            LiquidDropdownColumn {
                                                 val modes = GitHubSortMode.entries
                                                 modes.forEachIndexed { index, mode ->
-                                                    DropdownImpl(
+                                                    LiquidDropdownImpl(
                                                         text = mode.label,
                                                         optionSize = modes.size,
                                                         isSelected = sortMode == mode,
@@ -500,14 +503,16 @@ fun GitHubPage(
                                         SnapshotWindowListPopup(
                                             show = showIntervalPopup,
                                             alignment = PopupPositionProvider.Align.BottomStart,
+                                            anchorBounds = popupAnchorBounds,
+                                            placement = SnapshotPopupPlacement.ActionBarCenter,
                                             onDismissRequest = { showIntervalPopup = false },
                                             enableWindowDim = false
                                         ) {
-                                            ListPopupColumn {
+                                            LiquidDropdownColumn {
                                                 val options = RefreshIntervalOption.entries
                                                 val selected = RefreshIntervalOption.fromHours(refreshIntervalHours)
                                                 options.forEachIndexed { index, option ->
-                                                    DropdownImpl(
+                                                    LiquidDropdownImpl(
                                                         text = option.label,
                                                         optionSize = options.size,
                                                         isSelected = selected == option,

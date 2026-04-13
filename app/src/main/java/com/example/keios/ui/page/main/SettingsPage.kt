@@ -21,18 +21,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import com.example.keios.core.prefs.AppThemeMode
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
+import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
+import com.example.keios.ui.page.main.widget.capturePopupAnchor
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.DropdownImpl
+import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -62,6 +65,7 @@ fun SettingsPage(
     val disabledCardColor = Color(0x2264748B)
 
     var showThemeModePopup by remember { mutableStateOf(false) }
+    var themePopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
     val themeModeOptions = remember {
         listOf(
             AppThemeMode.FOLLOW_SYSTEM to "跟随系统",
@@ -120,7 +124,9 @@ fun SettingsPage(
                         title = "应用主题",
                         summary = themeModeSummary(appThemeMode)
                     ) {
-                        Box {
+                        Box(
+                            modifier = Modifier.capturePopupAnchor { themePopupAnchorBounds = it }
+                        ) {
                             GlassTextButton(
                                 backdrop = null,
                                 variant = GlassVariant.SheetAction,
@@ -131,13 +137,15 @@ fun SettingsPage(
                                 SnapshotWindowListPopup(
                                     show = showThemeModePopup,
                                     alignment = PopupPositionProvider.Align.BottomEnd,
+                                    anchorBounds = themePopupAnchorBounds,
+                                    placement = SnapshotPopupPlacement.ButtonEnd,
                                     onDismissRequest = { showThemeModePopup = false },
                                     enableWindowDim = false
                                 ) {
-                                    ListPopupColumn {
+                                    LiquidDropdownColumn {
                                         themeModeOptions.forEachIndexed { index, option ->
                                             val (mode, label) = option
-                                            DropdownImpl(
+                                            LiquidDropdownImpl(
                                                 text = label,
                                                 optionSize = themeModeOptions.size,
                                                 isSelected = appThemeMode == mode,

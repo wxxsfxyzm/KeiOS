@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.keios.mcp.McpNotificationHelper
@@ -65,6 +66,8 @@ import com.example.keios.ui.page.main.widget.SheetContentColumn
 import com.example.keios.ui.page.main.widget.SheetDescriptionText
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
+import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
+import com.example.keios.ui.page.main.widget.capturePopupAnchor
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
@@ -78,9 +81,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.DropdownImpl
+import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
@@ -136,6 +139,8 @@ fun BAPage(
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showOverviewServerPopup by remember { mutableStateOf(false) }
     var showCafeLevelPopup by remember { mutableStateOf(false) }
+    var overviewServerPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+    var cafeLevelPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
     var showCalendarIntervalPopup by remember { mutableStateOf(false) }
 
     // Reset once per cold process start so app relaunch always lands at BA top.
@@ -873,21 +878,23 @@ fun BAPage(
                                 onInteractionChanged = onActionBarInteractingChanged
                             )
 
-                            LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex ->
+                            LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex, popupAnchorBounds ->
                                 if (slotIndex == 1 && showCalendarIntervalPopup) {
                                     SnapshotWindowListPopup(
                                         show = showCalendarIntervalPopup,
                                         alignment = PopupPositionProvider.Align.BottomStart,
+                                        anchorBounds = popupAnchorBounds,
+                                        placement = SnapshotPopupPlacement.ActionBarCenter,
                                         onDismissRequest = { showCalendarIntervalPopup = false },
                                         enableWindowDim = false
                                     ) {
-                                        ListPopupColumn {
+                                        LiquidDropdownColumn {
                                             val options = BaCalendarRefreshIntervalOption.entries
                                             val selected = BaCalendarRefreshIntervalOption.fromHours(
                                                 calendarRefreshIntervalHours
                                             )
                                             options.forEachIndexed { index, option ->
-                                                DropdownImpl(
+                                                LiquidDropdownImpl(
                                                     text = option.label,
                                                     optionSize = options.size,
                                                     isSelected = selected == option,
@@ -988,10 +995,12 @@ fun BAPage(
                             ) {
                                 Text("服务器", color = MiuixTheme.colorScheme.onBackground)
                             }
-                            Box {
-                                GlassTextButton(
-                                    backdrop = backdrop,
-                                    text = serverOptions[serverIndex],
+                                Box(
+                                    modifier = Modifier.capturePopupAnchor { overviewServerPopupAnchorBounds = it }
+                                ) {
+                                    GlassTextButton(
+                                        backdrop = backdrop,
+                                        text = serverOptions[serverIndex],
                                     blurRadius = baGlassBlur,
                                                                         variant = GlassVariant.Compact,
                                     onClick = { showOverviewServerPopup = !showOverviewServerPopup }
@@ -1000,12 +1009,14 @@ fun BAPage(
                                     SnapshotWindowListPopup(
                                         show = showOverviewServerPopup,
                                         alignment = PopupPositionProvider.Align.BottomEnd,
+                                        anchorBounds = overviewServerPopupAnchorBounds,
+                                        placement = SnapshotPopupPlacement.ButtonEnd,
                                         onDismissRequest = { showOverviewServerPopup = false },
                                         enableWindowDim = false
                                     ) {
-                                        ListPopupColumn {
+                                        LiquidDropdownColumn {
                                             serverOptions.forEachIndexed { index, server ->
-                                                DropdownImpl(
+                                                LiquidDropdownImpl(
                                                     text = server,
                                                     optionSize = serverOptions.size,
                                                     isSelected = serverIndex == index,
@@ -1847,7 +1858,9 @@ fun BAPage(
                         color = MiuixTheme.colorScheme.onBackground
                     )
                 }
-                Box {
+                Box(
+                    modifier = Modifier.capturePopupAnchor { cafeLevelPopupAnchorBounds = it }
+                ) {
                     GlassTextButton(
                         backdrop = backdrop,
                         text = "${sheetCafeLevel}级",
@@ -1859,12 +1872,14 @@ fun BAPage(
                         SnapshotWindowListPopup(
                             show = showCafeLevelPopup,
                             alignment = PopupPositionProvider.Align.BottomEnd,
+                            anchorBounds = cafeLevelPopupAnchorBounds,
+                            placement = SnapshotPopupPlacement.ButtonEnd,
                             onDismissRequest = { showCafeLevelPopup = false },
                             enableWindowDim = false
                         ) {
-                            ListPopupColumn {
+                            LiquidDropdownColumn {
                                 cafeLevelOptions.forEachIndexed { index, level ->
-                                    DropdownImpl(
+                                    LiquidDropdownImpl(
                                         text = "${level}级",
                                         optionSize = cafeLevelOptions.size,
                                         isSelected = sheetCafeLevel == level,
