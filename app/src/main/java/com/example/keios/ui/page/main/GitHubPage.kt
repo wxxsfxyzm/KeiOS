@@ -730,12 +730,19 @@ fun GitHubPage(
         }
     }
 
-    fun assetActionLabels(asset: GitHubReleaseAssetFile): Pair<String, String> {
-        return if (prefersApiAssetTransport(asset)) {
-            "API 下载" to "API 分享"
-        } else {
-            "直链下载" to "直链分享"
-        }
+    fun assetFileExtensionLabel(fileName: String): String? {
+        val trimmedName = fileName.trim()
+        val extension = trimmedName.substringAfterLast('.', "")
+            .takeIf { '.' in trimmedName && it.isNotBlank() }
+            ?.lowercase()
+            ?: return null
+        return extension
+    }
+
+    fun assetDisplayName(fileName: String): String {
+        val trimmedName = fileName.trim()
+        val extension = assetFileExtensionLabel(trimmedName) ?: return trimmedName
+        return trimmedName.removeSuffix(".$extension")
     }
 
     fun shareApkLink(asset: GitHubReleaseAssetFile) {
@@ -767,6 +774,13 @@ fun GitHubPage(
                 Toast.makeText(context, "无法打开下载器", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    fun clearApkAssetUiState(itemId: String) {
+        apkAssetExpanded.remove(itemId)
+        apkAssetLoading.remove(itemId)
+        apkAssetErrors.remove(itemId)
+        apkAssetBundles.remove(itemId)
     }
 
     fun loadApkAssets(
@@ -1281,7 +1295,12 @@ fun GitHubPage(
                         title = item.appLabel,
                         subtitle = item.packageName,
                         expanded = expanded,
-                        onExpandedChange = { expanded = it },
+                        onExpandedChange = {
+                            expanded = it
+                            if (!it) {
+                                clearApkAssetUiState(item.id)
+                            }
+                        },
                         headerStartAction = {
                             AppIcon(packageName = item.packageName, size = 24.dp)
                         },
@@ -1308,7 +1327,11 @@ fun GitHubPage(
                             val clickableModifier = if (statusReleaseUrl.isNotBlank()) {
                                 Modifier.clickable {
                                     if (canLoadApkAssets) {
-                                        loadApkAssets(item, state)
+                                        if (isAssetPanelExpanded) {
+                                            apkAssetExpanded[item.id] = false
+                                        } else {
+                                            loadApkAssets(item, state)
+                                        }
                                     } else {
                                         runCatching {
                                             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(statusReleaseUrl)))
@@ -1473,13 +1496,43 @@ fun GitHubPage(
                                             }
                                             Column(
                                                 modifier = Modifier.weight(1f),
-                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                Text(
-                                                    text = target?.label ?: "更新资源",
-                                                    color = targetAccent,
-                                                    fontWeight = FontWeight.Bold
-                                                )
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = target?.label ?: "更新资源",
+                                                        color = targetAccent,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.weight(1f),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    val transportLabel = bundleTransportLabel(assetBundle)
+                                                    if (transportLabel != null && !assetLoading && assetError.isBlank()) {
+                                                        StatusPill(
+                                                            label = transportLabel,
+                                                            color = GitHubStatusPalette.Active
+                                                        )
+                                                    }
+                                                    StatusPill(
+                                                        label = when {
+                                                            assetLoading -> "加载中"
+                                                            assetBundle?.showingAllAssets == true -> "全资源"
+                                                            assetBundle != null -> "${assetBundle.assets.size} 项"
+                                                            assetError.isNotBlank() -> "异常"
+                                                            else -> "待展开"
+                                                        },
+                                                        color = when {
+                                                            assetLoading -> GitHubStatusPalette.Active
+                                                            assetError.isNotBlank() -> GitHubStatusPalette.Error
+                                                            else -> targetAccent
+                                                        }
+                                                    )
+                                                }
                                                 Text(
                                                     text = when {
                                                         assetLoading -> "正在准备可下载文件"
@@ -1488,34 +1541,8 @@ fun GitHubPage(
                                                         else -> "进 Release / 长按全载"
                                                     },
                                                     color = MiuixTheme.colorScheme.onBackgroundVariant,
-                                                    maxLines = 2,
+                                                    maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                            Column(
-                                                horizontalAlignment = androidx.compose.ui.Alignment.End,
-                                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                val transportLabel = bundleTransportLabel(assetBundle)
-                                                if (transportLabel != null && !assetLoading && assetError.isBlank()) {
-                                                    StatusPill(
-                                                        label = transportLabel,
-                                                        color = GitHubStatusPalette.Active
-                                                    )
-                                                }
-                                                StatusPill(
-                                                    label = when {
-                                                        assetLoading -> "加载中"
-                                                        assetBundle?.showingAllAssets == true -> "全资源"
-                                                        assetBundle != null -> "${assetBundle.assets.size} 项"
-                                                        assetError.isNotBlank() -> "异常"
-                                                        else -> "待展开"
-                                                    },
-                                                    color = when {
-                                                        assetLoading -> GitHubStatusPalette.Active
-                                                        assetError.isNotBlank() -> GitHubStatusPalette.Error
-                                                        else -> targetAccent
-                                                    }
                                                 )
                                             }
                                         }
@@ -1591,12 +1618,14 @@ fun GitHubPage(
                                         }
                                         assetBundle != null -> {
                                             assetBundle.assets.forEach { asset ->
-                                                val actionLabels = assetActionLabels(asset)
                                                 val actionAccent = when {
                                                     assetTransportLabel(asset) == "API" -> GitHubStatusPalette.Active
                                                     else -> GitHubStatusPalette.Update
                                                 }
                                                 val abiLabel = assetAbiLabel(asset.name)
+                                                val extensionLabel = assetFileExtensionLabel(asset.name)
+                                                val displayName = assetDisplayName(asset.name)
+                                                val sizeLabel = formatAssetSize(asset.sizeBytes)
                                                 Card(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     colors = CardDefaults.defaultColors(
@@ -1633,47 +1662,51 @@ fun GitHubPage(
                                                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                                                             ) {
                                                                 Text(
-                                                                    text = asset.name,
+                                                                    text = displayName,
                                                                     color = MiuixTheme.colorScheme.onBackground,
                                                                     fontWeight = FontWeight.Bold
                                                                 )
-                                                                Text(
-                                                                    text = "${formatAssetSize(asset.sizeBytes)} · ${asset.downloadCount} 次下载",
-                                                                    color = MiuixTheme.colorScheme.onBackgroundVariant
-                                                                )
-                                                                if (abiLabel != null) {
-                                                                    StatusPill(
-                                                                        label = abiLabel,
-                                                                        color = actionAccent
-                                                                    )
-                                                                }
                                                             }
                                                         }
                                                         Row(
                                                             modifier = Modifier.fillMaxWidth(),
-                                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                                                         ) {
-                                                            GlassTextButton(
-                                                                backdrop = backdrop,
-                                                                variant = GlassVariant.SheetAction,
-                                                                modifier = Modifier.weight(1f),
-                                                                text = actionLabels.first,
-                                                                leadingIcon = MiuixIcons.Regular.Download,
-                                                                containerColor = actionAccent,
-                                                                textColor = actionAccent,
-                                                                iconTint = actionAccent,
-                                                                onClick = { openApkInDownloader(asset) }
+                                                            extensionLabel?.let { label ->
+                                                                StatusPill(
+                                                                    label = label,
+                                                                    color = MiuixTheme.colorScheme.primary
+                                                                )
+                                                            }
+                                                            abiLabel?.let { label ->
+                                                                StatusPill(
+                                                                    label = label,
+                                                                    color = actionAccent
+                                                                )
+                                                            }
+                                                            StatusPill(
+                                                                label = sizeLabel,
+                                                                color = MiuixTheme.colorScheme.onBackgroundVariant
                                                             )
-                                                            GlassTextButton(
+                                                            Spacer(modifier = Modifier.weight(1f))
+                                                            GlassIconButton(
                                                                 backdrop = backdrop,
-                                                                variant = GlassVariant.SheetAction,
-                                                                modifier = Modifier.weight(1f),
-                                                                text = actionLabels.second,
-                                                                leadingIcon = MiuixIcons.Regular.Share,
-                                                                containerColor = MiuixTheme.colorScheme.primary,
-                                                                textColor = MiuixTheme.colorScheme.primary,
-                                                                iconTint = MiuixTheme.colorScheme.primary,
-                                                                onClick = { shareApkLink(asset) }
+                                                                icon = MiuixIcons.Regular.Download,
+                                                                contentDescription = "下载 ${asset.name}",
+                                                                onClick = { openApkInDownloader(asset) },
+                                                                width = 40.dp,
+                                                                height = 40.dp,
+                                                                variant = GlassVariant.SheetAction
+                                                            )
+                                                            GlassIconButton(
+                                                                backdrop = backdrop,
+                                                                icon = MiuixIcons.Regular.Share,
+                                                                contentDescription = "分享 ${asset.name}",
+                                                                onClick = { shareApkLink(asset) },
+                                                                width = 40.dp,
+                                                                height = 40.dp,
+                                                                variant = GlassVariant.SheetAction
                                                             )
                                                         }
                                                     }
