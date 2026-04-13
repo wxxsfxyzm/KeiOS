@@ -119,7 +119,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.More
@@ -786,17 +785,12 @@ fun GitHubPage(
                                         contentDescription = "检查",
                                         onClick = { refreshAllTracked(showToast = true) },
                                         enabled = !deleteInProgress
-                                    ),
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.AddCircle,
-                                        contentDescription = "新增跟踪",
-                                        onClick = { openTrackSheetForAdd() }
                                     )
                                 ),
                                 onInteractionChanged = onActionBarInteractingChanged
                             )
 
-                            LiquidActionBarPopupAnchors(itemCount = 5) { slotIndex, popupAnchorBounds ->
+                            LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex, popupAnchorBounds ->
                                 when (slotIndex) {
                                     2 -> if (showSortPopup) {
                                         SnapshotWindowListPopup(
@@ -844,18 +838,19 @@ fun GitHubPage(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            state = listState,
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
-                bottom = innerPadding.calculateBottomPadding() + 16.dp,
-                start = 12.dp,
-                end = 12.dp
-            )
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                state = listState,
+                contentPadding = PaddingValues(
+                    top = innerPadding.calculateTopPadding(),
+                    bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 64.dp,
+                    start = 12.dp,
+                    end = 12.dp
+                )
+            ) {
             item { Spacer(modifier = Modifier.height(8.dp)) }
             item { Spacer(modifier = Modifier.height(2.dp)) }
             item {
@@ -1181,6 +1176,18 @@ fun GitHubPage(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
+            }
+
+            GlassIconButton(
+                backdrop = backdrop,
+                icon = MiuixIcons.Regular.Edit,
+                contentDescription = "新增跟踪",
+                onClick = { openTrackSheetForAdd() },
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = contentBottomPadding - 16.dp),
+                variant = GlassVariant.Bar
+            )
         }
     }
 
