@@ -29,7 +29,6 @@ object GitHubStrategyBenchmarkService {
     ): GitHubStrategyBenchmarkReport {
         val distinctTargets = targets
             .distinctBy { it.id }
-            .take(DEFAULT_TARGET_LIMIT)
         if (distinctTargets.isEmpty()) {
             return GitHubStrategyBenchmarkReport(
                 targets = emptyList(),
@@ -89,6 +88,7 @@ object GitHubStrategyBenchmarkService {
     private fun GitHubStrategyLoadTrace<GitHubRepositoryReleaseSnapshot>.toSample(
         target: GitHubRepoTarget
     ): SampleEnvelope {
+        val snapshot = result.getOrNull()
         val errorMessage = result.exceptionOrNull()?.message.orEmpty()
         return SampleEnvelope(
             sample = GitHubStrategyBenchmarkSample(
@@ -96,7 +96,9 @@ object GitHubStrategyBenchmarkService {
                 success = result.isSuccess,
                 fromCache = fromCache,
                 elapsedMs = elapsedMs,
-                message = errorMessage
+                message = errorMessage,
+                stableTag = snapshot?.latestStable?.rawTag.orEmpty(),
+                preReleaseTag = snapshot?.latestPreRelease?.rawTag.orEmpty()
             ),
             authMode = authMode
         )

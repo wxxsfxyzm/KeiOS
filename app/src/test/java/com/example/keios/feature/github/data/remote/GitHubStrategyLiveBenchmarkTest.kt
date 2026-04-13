@@ -50,7 +50,9 @@ class GitHubStrategyLiveBenchmarkTest {
 
     private fun isLiveBenchmarkEnabled(): Boolean {
         return readSystemOrGlobalGradleProperty("keios.github.liveBenchmark")
-            ?.equals("true", ignoreCase = true) == true
+            ?.let { value ->
+                value.equals("true", ignoreCase = true) || value == "1"
+            } == true
     }
 
     private fun liveApiToken(): String {
@@ -98,6 +100,11 @@ class GitHubStrategyLiveBenchmarkTest {
                         "cache=${result.cacheHitCount}/${result.warmSamples.size} " +
                         "success=${result.coldSuccessCount}/${result.totalTargets}"
                 )
+                result.coldSamples.forEach { sample ->
+                    appendLine(
+                        "  ${sample.target.id}: stable=${sample.stableTag.ifBlank { "-" }} pre=${sample.preReleaseTag.ifBlank { "-" }} success=${sample.success} cache=${sample.fromCache}"
+                    )
+                }
                 if (result.failures.isNotEmpty()) {
                     appendLine("  failures=${result.failures.joinToString(" | ")}")
                 }

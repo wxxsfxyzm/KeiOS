@@ -39,7 +39,9 @@ data class GitHubStrategyBenchmarkSample(
     val success: Boolean,
     val fromCache: Boolean,
     val elapsedMs: Long,
-    val message: String = ""
+    val message: String = "",
+    val stableTag: String = "",
+    val preReleaseTag: String = ""
 )
 
 data class GitHubStrategyBenchmarkResult(
