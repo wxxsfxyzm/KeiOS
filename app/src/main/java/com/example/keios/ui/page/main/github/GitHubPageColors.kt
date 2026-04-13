@@ -44,6 +44,23 @@ internal fun OverviewRefreshState.surfaceColor(
     }
 }
 
+internal fun OverviewRefreshState.borderColor(
+    isDark: Boolean,
+    neutralColor: Color
+): Color {
+    val accent = when (this) {
+        OverviewRefreshState.Refreshing -> GitHubStatusPalette.Active
+        OverviewRefreshState.Completed -> GitHubStatusPalette.Update
+        OverviewRefreshState.Cached -> GitHubStatusPalette.PreRelease
+        OverviewRefreshState.Idle -> neutralColor
+    }
+    return if (isDark) {
+        accent.copy(alpha = if (this == OverviewRefreshState.Idle) 0.22f else 0.40f)
+    } else {
+        accent.copy(alpha = if (this == OverviewRefreshState.Idle) 0.16f else 0.34f)
+    }
+}
+
 internal fun OverviewRefreshState.indicatorBackground(neutralSurface: Color): Color {
     return when (this) {
         OverviewRefreshState.Refreshing -> GitHubStatusPalette.Active.copy(alpha = 0.33f)

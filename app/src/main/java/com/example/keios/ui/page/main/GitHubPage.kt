@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -50,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.GlassSearchField
@@ -807,9 +810,26 @@ fun GitHubPage(
             item { Spacer(modifier = Modifier.height(8.dp)) }
             item { Spacer(modifier = Modifier.height(2.dp)) }
             item {
+                val overviewShape = RoundedCornerShape(16.dp)
                 Card(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .clip(overviewShape)
+                    .background(
+                        overviewRefreshState.surfaceColor(
+                            isDark = isDark,
+                            neutralSurface = MiuixTheme.colorScheme.surface
+                        ),
+                        overviewShape
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = overviewRefreshState.borderColor(
+                            isDark = isDark,
+                            neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
+                        ),
+                        shape = overviewShape
+                    ),
                 colors = CardDefaults.defaultColors(
                     color = overviewRefreshState.surfaceColor(
                         isDark = isDark,
