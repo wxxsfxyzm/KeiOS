@@ -1,13 +1,18 @@
 package com.example.keios.ui.page.main.widget
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
@@ -27,7 +32,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.RadioButton
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.ExpandLess
+import top.yukonga.miuix.kmp.icon.extended.ExpandMore
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -127,25 +139,52 @@ fun SheetDescriptionText(
 }
 
 @Composable
+fun SheetSurfaceCard(
+    modifier: Modifier = Modifier,
+    containerColor: Color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.56f),
+    borderColor: Color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.14f),
+    contentColor: Color = MiuixTheme.colorScheme.onBackground,
+    verticalSpacing: Dp = 8.dp,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = shape
+            ),
+        colors = CardDefaults.defaultColors(
+            color = containerColor,
+            contentColor = contentColor
+        ),
+        showIndication = onClick != null,
+        onClick = onClick ?: {}
+    ) {
+        Column(
+            modifier = Modifier.padding(contentPadding),
+            verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+            content = content
+        )
+    }
+}
+
+@Composable
 fun SheetSectionCard(
     modifier: Modifier = Modifier,
     verticalSpacing: Dp = 8.dp,
     contentPadding: PaddingValues = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(16.dp)
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.56f))
-            .border(
-                width = 1.dp,
-                color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.14f),
-                shape = shape
-            )
-            .padding(contentPadding),
-        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+    SheetSurfaceCard(
+        modifier = modifier,
+        verticalSpacing = verticalSpacing,
+        contentPadding = contentPadding,
         content = content
     )
 }
@@ -210,5 +249,243 @@ fun SheetControlRow(
             verticalAlignment = Alignment.CenterVertically,
             content = trailing
         )
+    }
+}
+
+@Composable
+fun SheetActionGroup(
+    modifier: Modifier = Modifier,
+    verticalSpacing: Dp = 8.dp,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+        content = content
+    )
+}
+
+@Composable
+fun SheetFieldBlock(
+    title: String,
+    modifier: Modifier = Modifier,
+    summary: String? = null,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (trailing != null || !summary.isNullOrBlank()) {
+            SheetControlRow(
+                label = title,
+                summary = summary,
+                trailing = { trailing?.invoke(this) }
+            )
+        } else {
+            SheetInputTitle(title)
+        }
+        content()
+    }
+}
+
+@Composable
+fun SheetSummaryCard(
+    title: String,
+    modifier: Modifier = Modifier,
+    accentColor: Color = MiuixTheme.colorScheme.primary,
+    badgeLabel: String? = null,
+    badgeColor: Color = accentColor,
+    containerColor: Color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.7f),
+    borderColor: Color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.16f),
+    headerTrailing: (@Composable RowScope.() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    SheetSurfaceCard(
+        modifier = modifier,
+        containerColor = containerColor,
+        borderColor = borderColor,
+        content = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    color = accentColor,
+                    fontWeight = FontWeight.Bold
+                )
+                badgeLabel?.let { label ->
+                    StatusPill(
+                        label = label,
+                        color = badgeColor
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                headerTrailing?.invoke(this)
+            }
+            content()
+        }
+    )
+}
+
+@Composable
+fun SheetChoiceCard(
+    title: String,
+    summary: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier,
+    accentColor: Color = MiuixTheme.colorScheme.primary,
+    selectedLabel: String = "已选择",
+    details: (@Composable ColumnScope.() -> Unit)? = null,
+) {
+    SheetSurfaceCard(
+        modifier = modifier,
+        containerColor = if (selected) {
+            accentColor.copy(alpha = 0.12f)
+        } else {
+            MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.68f)
+        },
+        borderColor = if (selected) {
+            accentColor.copy(alpha = 0.32f)
+        } else {
+            MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.14f)
+        },
+        onClick = onSelect
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        color = if (selected) accentColor else MiuixTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (selected) {
+                        StatusPill(
+                            label = selectedLabel,
+                            color = accentColor
+                        )
+                    }
+                }
+                Text(
+                    text = summary,
+                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                )
+                details?.invoke(this)
+            }
+            RadioButton(
+                selected = selected,
+                onClick = onSelect
+            )
+        }
+    }
+}
+
+@Composable
+fun SheetExpandableCard(
+    title: String,
+    collapsedSummary: String,
+    expandedSummary: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    accentColor: Color = MiuixTheme.colorScheme.primary,
+    badgeLabel: String? = null,
+    collapsedHint: String = "点按展开详细说明",
+    expandedHint: String = "点按收起详细说明",
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    SheetSurfaceCard(
+        modifier = modifier,
+        containerColor = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = if (expanded) 0.78f else 0.68f),
+        borderColor = if (expanded) {
+            accentColor.copy(alpha = 0.5f)
+        } else {
+            MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.22f)
+        },
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onExpandedChange(!expanded) }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        color = accentColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                    badgeLabel?.let { label ->
+                        StatusPill(
+                            label = label,
+                            color = accentColor
+                        )
+                    }
+                }
+                Text(
+                    text = if (expanded) expandedSummary else collapsedSummary,
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    maxLines = if (expanded) 3 else 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (expanded) expandedHint else collapsedHint,
+                    color = accentColor,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatusPill(
+                    label = if (expanded) "收起" else "展开",
+                    color = accentColor
+                )
+                Icon(
+                    imageVector = if (expanded) MiuixIcons.Regular.ExpandLess else MiuixIcons.Regular.ExpandMore,
+                    contentDescription = if (expanded) "收起" else "展开",
+                    tint = accentColor
+                )
+            }
+        }
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                content = content
+            )
+        }
     }
 }
