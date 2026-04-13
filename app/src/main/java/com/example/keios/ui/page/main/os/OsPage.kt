@@ -522,7 +522,8 @@ fun OsPage(
         topBar = {
             Column {
                 TopAppBar(
-                    title = "OS",
+                    title = "",
+                    largeTitle = "OS",
                     scrollBehavior = scrollBehavior,
                     color = topBarMaterialBackdrop.getMiuixAppBarColor(),
                     actions = {

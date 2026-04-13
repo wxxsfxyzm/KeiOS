@@ -238,7 +238,8 @@ fun McpPage(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "MCP",
+                title = "",
+                largeTitle = "MCP",
                 scrollBehavior = scrollBehavior,
                 color = topBarMaterialBackdrop.getMiuixAppBarColor(),
                 actions = {

@@ -513,7 +513,7 @@ fun HomePage(
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = "KeiOS",
+                title = "",
                 scrollBehavior = topAppBarScrollBehavior,
                 color = MiuixTheme.colorScheme.surface.copy(alpha = if (scrollProgress == 1f) 1f else 0f),
                 titleColor = MiuixTheme.colorScheme.onSurface.copy(alpha = topBarProgress),

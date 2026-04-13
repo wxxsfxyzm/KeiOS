@@ -777,7 +777,8 @@ fun GitHubPage(
         topBar = {
             Column {
                 TopAppBar(
-                    title = "GitHub",
+                    title = "",
+                    largeTitle = "GitHub",
                     scrollBehavior = scrollBehavior,
                     color = topBarMaterialBackdrop.getMiuixAppBarColor(),
                     actions = {

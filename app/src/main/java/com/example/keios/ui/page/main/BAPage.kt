@@ -844,7 +844,8 @@ fun BAPage(
         topBar = {
             Column {
                 TopAppBar(
-                    title = "BlueArchive",
+                    title = "",
+                    largeTitle = "BlueArchive",
                     scrollBehavior = scrollBehavior,
                     color = topBarMaterialBackdrop.getMiuixAppBarColor(),
                     actions = {
