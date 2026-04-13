@@ -1069,7 +1069,7 @@ fun GitHubPage(
                     MiuixAccordionCard(
                         backdrop = backdrop,
                         title = item.appLabel,
-                        subtitle = "${item.owner}/${item.repo}",
+                        subtitle = item.packageName,
                         expanded = expanded,
                         onExpandedChange = { expanded = it },
                         headerStartAction = {
@@ -1111,17 +1111,8 @@ fun GitHubPage(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             GitHubCompactInfoRow(
-                                label = "应用包名",
-                                value = item.packageName,
-                                valueColor = MiuixTheme.colorScheme.primary,
-                                onClick = {
-                                    refreshItem(item, showToastOnError = true)
-                                    Toast.makeText(context, "已检查 ${item.appLabel}", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                            GitHubCompactInfoRow(
                                 label = "仓库地址",
-                                value = item.repoUrl,
+                                value = "${item.owner}/${item.repo}",
                                 valueColor = MiuixTheme.colorScheme.primary,
                                 onClick = {
                                     val releaseUrl = GitHubVersionUtils.buildReleaseUrl(item.owner, item.repo)
@@ -1131,13 +1122,6 @@ fun GitHubPage(
                                         Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                            )
-                            VersionValueRow(
-                                label = "检查方案",
-                                value = strategyLabelForId(
-                                    state.sourceStrategyId.ifBlank { lookupConfig.selectedStrategy.storageId }
-                                ),
-                                valueColor = MiuixTheme.colorScheme.primary
                             )
                             if (state.localVersion.isNotBlank()) {
                                 val localText = if (state.localVersionCode >= 0L) {
