@@ -134,6 +134,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Ok
@@ -141,6 +142,7 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Report
 import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.icon.extended.Tune
+import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.icon.extended.Update
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
@@ -700,11 +702,36 @@ fun GitHubPage(
         }
     }
 
-    fun assetActionLabels(asset: GitHubReleaseAssetFile): Pair<String, String> {
-        val useApiAsset = lookupConfig.selectedStrategy == GitHubLookupStrategyOption.GitHubApiToken &&
+    fun prefersApiAssetTransport(asset: GitHubReleaseAssetFile): Boolean {
+        return lookupConfig.selectedStrategy == GitHubLookupStrategyOption.GitHubApiToken &&
             lookupConfig.apiToken.trim().isNotBlank() &&
             asset.apiAssetUrl.isNotBlank()
-        return if (useApiAsset) {
+    }
+
+    fun assetTransportLabel(asset: GitHubReleaseAssetFile): String {
+        return if (prefersApiAssetTransport(asset)) "API" else "直链"
+    }
+
+    fun bundleTransportLabel(bundle: GitHubReleaseAssetBundle?): String? {
+        if (bundle == null) return null
+        return if (bundle.assets.any { prefersApiAssetTransport(it) }) "API" else "直链"
+    }
+
+    fun assetAbiLabel(fileName: String): String? {
+        val lowerName = fileName.lowercase()
+        return when {
+            "arm64-v8a" in lowerName || "aarch64" in lowerName || Regex("(^|[^a-z0-9])arm64([^a-z0-9]|$)").containsMatchIn(lowerName) -> "arm64"
+            "universal" in lowerName || "fat" in lowerName -> "universal"
+            "armeabi-v7a" in lowerName || "armv7" in lowerName -> "armeabi-v7a"
+            Regex("(^|[^a-z0-9])armeabi([^a-z0-9]|$)").containsMatchIn(lowerName) -> "armeabi"
+            "x86_64" in lowerName -> "x86_64"
+            Regex("(^|[^a-z0-9])x86([^a-z0-9]|$)").containsMatchIn(lowerName) -> "x86"
+            else -> null
+        }
+    }
+
+    fun assetActionLabels(asset: GitHubReleaseAssetFile): Pair<String, String> {
+        return if (prefersApiAssetTransport(asset)) {
             "API 下载" to "API 分享"
         } else {
             "直链下载" to "直链分享"
@@ -1456,29 +1483,41 @@ fun GitHubPage(
                                                 Text(
                                                     text = when {
                                                         assetLoading -> "正在准备可下载文件"
-                                                        assetBundle?.showingAllAssets == true -> "未找到 APK 或已手动全加载；单击进 Release、长按全加载"
-                                                        assetError.isNotBlank() -> "资源读取失败；单击进 Release、长按全加载"
-                                                        else -> "单击进 Release、长按全加载"
+                                                        assetBundle?.showingAllAssets == true -> "未找到 APK 或已手动全加载"
+                                                        assetError.isNotBlank() -> "资源读取失败"
+                                                        else -> "进 Release / 长按全载"
                                                     },
                                                     color = MiuixTheme.colorScheme.onBackgroundVariant,
                                                     maxLines = 2,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                             }
-                                            StatusPill(
-                                                label = when {
-                                                    assetLoading -> "加载中"
-                                                    assetBundle?.showingAllAssets == true -> "全资源"
-                                                    assetBundle != null -> "${assetBundle.assets.size} 项"
-                                                    assetError.isNotBlank() -> "异常"
-                                                    else -> "待展开"
-                                                },
-                                                color = when {
-                                                    assetLoading -> GitHubStatusPalette.Active
-                                                    assetError.isNotBlank() -> GitHubStatusPalette.Error
-                                                    else -> targetAccent
+                                            Column(
+                                                horizontalAlignment = androidx.compose.ui.Alignment.End,
+                                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                val transportLabel = bundleTransportLabel(assetBundle)
+                                                if (transportLabel != null && !assetLoading && assetError.isBlank()) {
+                                                    StatusPill(
+                                                        label = transportLabel,
+                                                        color = GitHubStatusPalette.Active
+                                                    )
                                                 }
-                                            )
+                                                StatusPill(
+                                                    label = when {
+                                                        assetLoading -> "加载中"
+                                                        assetBundle?.showingAllAssets == true -> "全资源"
+                                                        assetBundle != null -> "${assetBundle.assets.size} 项"
+                                                        assetError.isNotBlank() -> "异常"
+                                                        else -> "待展开"
+                                                    },
+                                                    color = when {
+                                                        assetLoading -> GitHubStatusPalette.Active
+                                                        assetError.isNotBlank() -> GitHubStatusPalette.Error
+                                                        else -> targetAccent
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                     when {
@@ -1554,9 +1593,10 @@ fun GitHubPage(
                                             assetBundle.assets.forEach { asset ->
                                                 val actionLabels = assetActionLabels(asset)
                                                 val actionAccent = when {
-                                                    actionLabels.first.startsWith("API") -> GitHubStatusPalette.Active
+                                                    assetTransportLabel(asset) == "API" -> GitHubStatusPalette.Active
                                                     else -> GitHubStatusPalette.Update
                                                 }
+                                                val abiLabel = assetAbiLabel(asset.name)
                                                 Card(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     colors = CardDefaults.defaultColors(
@@ -1572,7 +1612,7 @@ fun GitHubPage(
                                                         Row(
                                                             modifier = Modifier.fillMaxWidth(),
                                                             horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                                            verticalAlignment = androidx.compose.ui.Alignment.Top
                                                         ) {
                                                             Box(
                                                                 modifier = Modifier
@@ -1590,24 +1630,24 @@ fun GitHubPage(
                                                             }
                                                             Column(
                                                                 modifier = Modifier.weight(1f),
-                                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                                                verticalArrangement = Arrangement.spacedBy(6.dp)
                                                             ) {
                                                                 Text(
                                                                     text = asset.name,
                                                                     color = MiuixTheme.colorScheme.onBackground,
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    maxLines = 2,
-                                                                    overflow = TextOverflow.Ellipsis
+                                                                    fontWeight = FontWeight.Bold
                                                                 )
                                                                 Text(
                                                                     text = "${formatAssetSize(asset.sizeBytes)} · ${asset.downloadCount} 次下载",
                                                                     color = MiuixTheme.colorScheme.onBackgroundVariant
                                                                 )
+                                                                if (abiLabel != null) {
+                                                                    StatusPill(
+                                                                        label = abiLabel,
+                                                                        color = actionAccent
+                                                                    )
+                                                                }
                                                             }
-                                                            StatusPill(
-                                                                label = actionLabels.first.substringBefore(' '),
-                                                                color = actionAccent
-                                                            )
                                                         }
                                                         Row(
                                                             modifier = Modifier.fillMaxWidth(),
@@ -1618,8 +1658,10 @@ fun GitHubPage(
                                                                 variant = GlassVariant.SheetAction,
                                                                 modifier = Modifier.weight(1f),
                                                                 text = actionLabels.first,
+                                                                leadingIcon = MiuixIcons.Regular.Download,
                                                                 containerColor = actionAccent,
                                                                 textColor = actionAccent,
+                                                                iconTint = actionAccent,
                                                                 onClick = { openApkInDownloader(asset) }
                                                             )
                                                             GlassTextButton(
@@ -1627,8 +1669,10 @@ fun GitHubPage(
                                                                 variant = GlassVariant.SheetAction,
                                                                 modifier = Modifier.weight(1f),
                                                                 text = actionLabels.second,
+                                                                leadingIcon = MiuixIcons.Regular.Share,
                                                                 containerColor = MiuixTheme.colorScheme.primary,
                                                                 textColor = MiuixTheme.colorScheme.primary,
+                                                                iconTint = MiuixTheme.colorScheme.primary,
                                                                 onClick = { shareApkLink(asset) }
                                                             )
                                                         }
