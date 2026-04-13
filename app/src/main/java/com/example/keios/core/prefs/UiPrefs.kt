@@ -2,11 +2,18 @@ package com.example.keios.core.prefs
 
 import com.tencent.mmkv.MMKV
 
+enum class AppThemeMode {
+    FOLLOW_SYSTEM,
+    LIGHT,
+    DARK
+}
+
 object UiPrefs {
     private const val KV_ID = "ui_prefs"
     private const val KEY_LIQUID_BOTTOM_BAR = "liquid_bottom_bar"
     private const val KEY_CARD_PRESS_FEEDBACK = "card_press_feedback"
     private const val KEY_HOME_ICON_HDR = "home_icon_hdr"
+    private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_VISIBLE_BOTTOM_PAGES = "visible_bottom_pages"
     private val DEFAULT_VISIBLE_BOTTOM_PAGE_NAMES = setOf("Os", "Mcp", "GitHub", "Ba")
 
@@ -34,6 +41,15 @@ object UiPrefs {
 
     fun setHomeIconHdrEnabled(value: Boolean) {
         kv().encode(KEY_HOME_ICON_HDR, value)
+    }
+
+    fun getAppThemeMode(defaultValue: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM): AppThemeMode {
+        val raw = kv().decodeString(KEY_THEME_MODE, null) ?: return defaultValue
+        return AppThemeMode.values().firstOrNull { it.name == raw } ?: defaultValue
+    }
+
+    fun setAppThemeMode(mode: AppThemeMode) {
+        kv().encode(KEY_THEME_MODE, mode.name)
     }
 
     fun loadVisibleBottomPageNames(): Set<String> {

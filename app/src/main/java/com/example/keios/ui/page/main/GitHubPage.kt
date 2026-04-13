@@ -921,7 +921,7 @@ fun GitHubPage(
             if (editingTrackedItem != null) {
                 GlassTextButton(
                     backdrop = backdrop,
-                    variant = GlassVariant.SheetAction,
+                    variant = GlassVariant.SheetDangerAction,
                     text = "删除跟踪",
                     textColor = MiuixTheme.colorScheme.error,
                     onClick = {

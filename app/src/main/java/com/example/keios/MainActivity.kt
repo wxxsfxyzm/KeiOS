@@ -6,26 +6,27 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import androidx.compose.runtime.mutableStateOf
+import com.example.keios.core.prefs.AppThemeMode
+import com.example.keios.core.prefs.UiPrefs
+import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.mcp.LocalMcpService
 import com.example.keios.mcp.McpNotificationHelper
 import com.example.keios.mcp.McpServerManager
-import com.example.keios.core.prefs.UiPrefs
 import com.example.keios.ui.page.main.MainScreen
-import com.example.keios.core.system.ShizukuApiUtils
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
@@ -33,6 +34,7 @@ import top.yukonga.miuix.kmp.theme.ThemeController
 class MainActivity : ComponentActivity() {
 
     private var shizukuStatus = mutableStateOf("Shizuku status: initializing...")
+    private var appThemeModeState = mutableStateOf(UiPrefs.getAppThemeMode())
     private var notificationPermissionGranted by mutableStateOf(true)
     private val shizukuApiUtils = ShizukuApiUtils()
     private lateinit var localMcpService: LocalMcpService
@@ -70,10 +72,7 @@ class MainActivity : ComponentActivity() {
             appContext = applicationContext,
             localMcpService = localMcpService
         )
-        // Heal potential stale connectivity deny rules left by Xiaomi magic path
-        // so regular in-app networking (e.g. BA data sync) is not impacted.
         McpNotificationHelper.restoreXiaomiNetworkIfNeeded(this)
-        val controller = ThemeController(ColorSchemeMode.System)
 
         shizukuApiUtils.attach { status ->
             shizukuStatus.value = status
@@ -81,8 +80,16 @@ class MainActivity : ComponentActivity() {
         runCatching { localMcpService.getOrCreateServer() }
 
         setContent {
+            val appThemeMode = appThemeModeState.value
+            val colorSchemeMode = when (appThemeMode) {
+                AppThemeMode.FOLLOW_SYSTEM -> ColorSchemeMode.System
+                AppThemeMode.LIGHT -> ColorSchemeMode.Light
+                AppThemeMode.DARK -> ColorSchemeMode.Dark
+            }
+            val controller = ThemeController(colorSchemeMode)
+
             MiuixTheme(controller = controller) {
-                SystemBarAutoStyle()
+                SystemBarAutoStyle(appThemeMode)
                 MainScreen(
                     appLabel = appLabel,
                     packageInfo = packageInfo,
@@ -91,7 +98,12 @@ class MainActivity : ComponentActivity() {
                     notificationPermissionGranted = notificationPermissionGranted,
                     onRequestNotificationPermission = { requestNotificationPermissionIfNeeded() },
                     shizukuApiUtils = shizukuApiUtils,
-                    mcpServerManager = mcpServerManager
+                    mcpServerManager = mcpServerManager,
+                    appThemeMode = appThemeMode,
+                    onAppThemeModeChanged = { mode ->
+                        appThemeModeState.value = mode
+                        UiPrefs.setAppThemeMode(mode)
+                    }
                 )
             }
         }
@@ -110,8 +122,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun hasNotificationPermission()=
-         ContextCompat.checkSelfPermission(
+    private fun hasNotificationPermission() =
+        ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
@@ -133,9 +145,13 @@ private fun PackageManager.getPackageInfoCompat(packageName: String): PackageInf
 }
 
 @Composable
-private fun SystemBarAutoStyle() {
+private fun SystemBarAutoStyle(appThemeMode: AppThemeMode) {
     val view = LocalView.current
-    val darkTheme = isSystemInDarkTheme()
+    val darkTheme = when (appThemeMode) {
+        AppThemeMode.FOLLOW_SYSTEM -> isSystemInDarkTheme()
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK -> true
+    }
     val backgroundColor = MiuixTheme.colorScheme.background
     if (!view.isInEditMode) {
         SideEffect {

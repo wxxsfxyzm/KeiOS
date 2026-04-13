@@ -534,7 +534,7 @@ fun McpPage(
             )
             GlassTextButton(
                 backdrop = backdrop,
-                variant = GlassVariant.SheetAction,
+                variant = GlassVariant.SheetDangerAction,
                 text = "重置 Token",
                 textColor = MiuixTheme.colorScheme.error,
                 modifier = Modifier.fillMaxWidth(),

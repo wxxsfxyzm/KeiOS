@@ -104,7 +104,7 @@ fun SheetDescriptionText(
         color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.96f),
         fontSize = 14.sp,
         lineHeight = 20.sp,
-        textAlign = TextAlign.Justify,
+        textAlign = TextAlign.Start,
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))

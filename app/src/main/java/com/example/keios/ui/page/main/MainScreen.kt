@@ -68,6 +68,7 @@ import com.example.keios.ui.page.main.student.BaStudentGuideStore
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.core.system.ShizukuApiUtils
+import com.example.keios.core.prefs.AppThemeMode
 import com.example.keios.core.prefs.UiPrefs
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -88,6 +89,8 @@ fun MainScreen(
     onRequestNotificationPermission: () -> Unit,
     shizukuApiUtils: ShizukuApiUtils,
     mcpServerManager: McpServerManager,
+    appThemeMode: AppThemeMode,
+    onAppThemeModeChanged: (AppThemeMode) -> Unit,
 ) {
     val backStack = remember { mutableStateListOf<NavKey>().apply { add(KeiosRoute.Main) } }
     val navigator = remember { Navigator(backStack) }
@@ -111,7 +114,17 @@ fun MainScreen(
         }
     }
 
-    val entryProvider = remember(backStack) {
+    val entryProvider = remember(
+        backStack,
+        appLabel,
+        packageInfo,
+        shizukuStatus,
+        notificationPermissionGranted,
+        appThemeMode,
+        onCheckOrRequestShizuku,
+        onRequestNotificationPermission,
+        onAppThemeModeChanged
+    ) {
         entryProvider<NavKey> {
             entry<KeiosRoute.Main> {
                 // Removed the dangerous isTopRoute check. The route should manage its own state naturally.
@@ -146,6 +159,8 @@ fun MainScreen(
                         homeIconHdrEnabled = it
                         UiPrefs.setHomeIconHdrEnabled(it)
                     },
+                    appThemeMode = appThemeMode,
+                    onAppThemeModeChanged = onAppThemeModeChanged,
                     onBack = { navigator.pop() }
                 )
             }

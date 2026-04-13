@@ -2,6 +2,7 @@ package com.example.keios.ui.page.main
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,17 +13,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
+import com.example.keios.core.prefs.AppThemeMode
+import com.example.keios.ui.page.main.widget.GlassTextButton
+import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
+import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Switch
@@ -40,12 +52,24 @@ fun SettingsPage(
     onCardPressFeedbackChanged: (Boolean) -> Unit,
     homeIconHdrEnabled: Boolean,
     onHomeIconHdrChanged: (Boolean) -> Unit,
+    appThemeMode: AppThemeMode,
+    onAppThemeModeChanged: (AppThemeMode) -> Unit,
     onBack: () -> Unit
 ) {
     val titleColor = MiuixTheme.colorScheme.onBackground
     val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
     val enabledCardColor = Color(0x2234C759)
     val disabledCardColor = Color(0x2264748B)
+
+    var showThemeModePopup by remember { mutableStateOf(false) }
+    val themeModeOptions = remember {
+        listOf(
+            AppThemeMode.FOLLOW_SYSTEM to "跟随系统",
+            AppThemeMode.LIGHT to "浅色模式",
+            AppThemeMode.DARK to "深色模式"
+        )
+    }
+    val currentThemeLabel = themeModeOptions.firstOrNull { it.first == appThemeMode }?.second ?: "跟随系统"
 
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -86,6 +110,83 @@ fun SettingsPage(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.46f),
+                        contentColor = MiuixTheme.colorScheme.onBackground
+                    ),
+                    onClick = {}
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Theme Mode", color = titleColor)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "应用主题",
+                                    color = titleColor
+                                )
+                                Text(
+                                    text = themeModeSummary(appThemeMode),
+                                    color = subtitleColor
+                                )
+                            }
+                            Box {
+                                GlassTextButton(
+                                    backdrop = null,
+                                    variant = GlassVariant.SheetAction,
+                                    text = currentThemeLabel,
+                                    onClick = { showThemeModePopup = !showThemeModePopup }
+                                )
+                                if (showThemeModePopup) {
+                                    SnapshotWindowListPopup(
+                                        show = showThemeModePopup,
+                                        alignment = PopupPositionProvider.Align.BottomEnd,
+                                        onDismissRequest = { showThemeModePopup = false },
+                                        enableWindowDim = false
+                                    ) {
+                                        ListPopupColumn {
+                                            themeModeOptions.forEachIndexed { index, option ->
+                                                val (mode, label) = option
+                                                DropdownImpl(
+                                                    text = label,
+                                                    optionSize = themeModeOptions.size,
+                                                    isSelected = appThemeMode == mode,
+                                                    index = index,
+                                                    onSelectedIndexChange = { selectedIndex ->
+                                                        onAppThemeModeChanged(themeModeOptions[selectedIndex].first)
+                                                        showThemeModePopup = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        MiuixInfoItem(
+                            key = "当前模式",
+                            value = currentThemeLabel
+                        )
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(10.dp)) }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
                         color = if (liquidBottomBarEnabled) enabledCardColor else disabledCardColor,
                         contentColor = MiuixTheme.colorScheme.onBackground
                     ),
@@ -120,10 +221,6 @@ fun SettingsPage(
                                     onCheckedChange = { checked -> onLiquidBottomBarChanged(checked) }
                                 )
                             }
-                            Text(
-                                text = if (liquidBottomBarEnabled) "已启用玻璃模糊与高光" else "使用纯色底栏",
-                                color = subtitleColor
-                            )
                         }
 
                         MiuixInfoItem(
@@ -251,4 +348,10 @@ fun SettingsPage(
             }
         }
     }
+}
+
+private fun themeModeSummary(mode: AppThemeMode): String = when (mode) {
+    AppThemeMode.FOLLOW_SYSTEM -> "使用系统当前深浅色"
+    AppThemeMode.LIGHT -> "始终使用浅色主题"
+    AppThemeMode.DARK -> "始终使用深色主题"
 }
