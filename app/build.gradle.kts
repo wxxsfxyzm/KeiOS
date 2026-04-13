@@ -63,6 +63,8 @@ val mmkvVersion = "2.4.0"
 val mcpKotlinSdkVersion = "0.11.0"
 val ktorVersion = "3.4.2"
 val okhttpVersion = "5.3.2"
+val xmlPullVersion = "1.1.3.4d_b4_min"
+val kxml2Version = "2.3.0"
 val media3Version = "1.10.0"
 val zoomImageVersion = "1.4.0"
 val focusApiVersion = "1.4"
@@ -172,6 +174,6 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
     testImplementation("com.squareup.okhttp3:mockwebserver:$okhttpVersion")
-    testImplementation("xmlpull:xmlpull:1.1.3.1")
-    testImplementation("net.sf.kxml:kxml2:2.3.0")
+    testImplementation("xmlpull:xmlpull:$xmlPullVersion")
+    testImplementation("net.sf.kxml:kxml2:$kxml2Version")
 }
