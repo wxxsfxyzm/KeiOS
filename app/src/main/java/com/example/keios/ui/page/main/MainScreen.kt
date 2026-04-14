@@ -62,6 +62,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.example.keios.mcp.McpNotificationHelper
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.navigation.KeiosRoute
 import com.example.keios.ui.navigation.Navigator
@@ -115,6 +116,10 @@ fun MainScreen(
     var liquidBottomBarEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.liquidBottomBarEnabled) }
     var cardPressFeedbackEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.cardPressFeedbackEnabled) }
     var homeIconHdrEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.homeIconHdrEnabled) }
+    var superIslandNotificationEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.superIslandNotificationEnabled) }
+    var superIslandBypassRestrictionEnabled by remember(uiPrefsSnapshot) {
+        mutableStateOf(uiPrefsSnapshot.superIslandBypassRestrictionEnabled)
+    }
     var cacheDiagnosticsEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.cacheDiagnosticsEnabled) }
     var visibleBottomPageNames by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.visibleBottomPageNames) }
     val view = LocalView.current
@@ -171,6 +176,20 @@ fun MainScreen(
                     onHomeIconHdrChanged = {
                         homeIconHdrEnabled = it
                         UiPrefs.setHomeIconHdrEnabled(it)
+                    },
+                    superIslandNotificationEnabled = superIslandNotificationEnabled,
+                    onSuperIslandNotificationChanged = {
+                        superIslandNotificationEnabled = it
+                        UiPrefs.setSuperIslandNotificationEnabled(it)
+                        mcpServerManager.refreshNotificationNow()
+                        McpNotificationHelper.refreshCurrentNotificationStyle(view.context.applicationContext)
+                    },
+                    superIslandBypassRestrictionEnabled = superIslandBypassRestrictionEnabled,
+                    onSuperIslandBypassRestrictionChanged = {
+                        superIslandBypassRestrictionEnabled = it
+                        UiPrefs.setSuperIslandBypassRestrictionEnabled(it)
+                        mcpServerManager.refreshNotificationNow()
+                        McpNotificationHelper.refreshCurrentNotificationStyle(view.context.applicationContext)
                     },
                     cacheDiagnosticsEnabled = cacheDiagnosticsEnabled,
                     onCacheDiagnosticsChanged = {

@@ -11,6 +11,10 @@ import androidx.core.app.NotificationManagerCompat
 import com.example.keios.MainActivity
 import com.example.keios.R
 import com.example.keios.core.system.ShizukuApiUtils
+import com.example.keios.mcp.domain.notification.SessionNotifier
+import com.example.keios.mcp.framework.notification.NotificationHelper
+import com.example.keios.mcp.framework.notification.SessionNotifierImpl
+import com.example.keios.mcp.framework.notification.builder.NotificationRenderStyle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,6 +27,7 @@ object McpNotificationHelper {
     private const val TAG = "McpNotifyHelper"
 
     const val CHANNEL_ID = "mcp_keepalive_channel_v2"
+    const val LIVE_CHANNEL_ID = "mcp_live_update_channel_v1"
     private const val LEGACY_CHANNEL_ID = "mcp_keepalive_channel"
     const val KEEPALIVE_NOTIFICATION_ID = 38888
     private const val BA_AP_NOTIFICATION_ID = 38889
@@ -50,6 +55,22 @@ object McpNotificationHelper {
     private var isPackageChainEnabled = false
     @Volatile
     private var isUidFirewallChainEnabled = false
+    @Volatile
+    private var keepAliveSnapshot: CachedNotificationSnapshot? = null
+    @Volatile
+    private var baApSnapshot: CachedNotificationSnapshot? = null
+
+    private data class CachedNotificationSnapshot(
+        val serverName: String,
+        val running: Boolean,
+        val port: Int,
+        val path: String,
+        val clients: Int,
+        val ongoing: Boolean,
+        val onlyAlertOnce: Boolean,
+        val style: NotificationRenderStyle,
+        val useXiaomiMagic: Boolean
+    )
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -72,6 +93,35 @@ object McpNotificationHelper {
             }
             manager.createNotificationChannel(keepalive)
         }
+        if (manager.getNotificationChannel(LIVE_CHANNEL_ID) == null) {
+            val liveUpdate = NotificationChannel(
+                LIVE_CHANNEL_ID,
+                context.getString(R.string.mcp_live_update_channel_name),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = context.getString(R.string.mcp_live_update_channel_desc)
+                setShowBadge(false)
+                enableVibration(false)
+            }
+            manager.createNotificationChannel(liveUpdate)
+        }
+    }
+
+    fun refreshCurrentNotificationStyle(context: Context) {
+        ensureChannel(context)
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        refreshCachedNotificationIfActive(
+            context = context,
+            manager = manager,
+            notificationId = KEEPALIVE_NOTIFICATION_ID,
+            snapshot = keepAliveSnapshot
+        )
+        refreshCachedNotificationIfActive(
+            context = context,
+            manager = manager,
+            notificationId = BA_AP_NOTIFICATION_ID,
+            snapshot = baApSnapshot
+        )
     }
 
     fun buildForegroundNotification(
@@ -84,6 +134,28 @@ object McpNotificationHelper {
         ongoing: Boolean,
         onlyAlertOnce: Boolean = true
     ): android.app.Notification {
+        return buildForegroundNotificationResult(
+            context = context,
+            serverName = serverName,
+            running = running,
+            port = port,
+            path = path,
+            clients = clients,
+            ongoing = ongoing,
+            onlyAlertOnce = onlyAlertOnce
+        ).notification
+    }
+
+    private fun buildForegroundNotificationResult(
+        context: Context,
+        serverName: String,
+        running: Boolean,
+        port: Int,
+        path: String,
+        clients: Int,
+        ongoing: Boolean,
+        onlyAlertOnce: Boolean
+    ): SessionNotifier.NotificationBuildResult {
         val openIntent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
@@ -119,7 +191,8 @@ object McpNotificationHelper {
             openPendingIntent = openPendingIntent,
             stopPendingIntent = stopPendingIntent
         )
-        return McpIslandNotificationBuilder.build(context, payload)
+        val notifier = SessionNotifierImpl(NotificationHelper(context))
+        return notifier.build(payload)
     }
 
     fun notifyTest(
@@ -131,7 +204,7 @@ object McpNotificationHelper {
         clients: Int
     ) {
         ensureChannel(context)
-        val notification = buildForegroundNotification(
+        val buildResult = buildForegroundNotificationResult(
             context = context,
             serverName = serverName,
             running = running,
@@ -141,15 +214,28 @@ object McpNotificationHelper {
             ongoing = running,
             onlyAlertOnce = false
         )
+        val snapshot = CachedNotificationSnapshot(
+            serverName = serverName,
+            running = running,
+            port = port,
+            path = path,
+            clients = clients,
+            ongoing = running,
+            onlyAlertOnce = false,
+            style = buildResult.style,
+            useXiaomiMagic = buildResult.useXiaomiMagic
+        )
         val notificationId = if (serverName.trim() == "BlueArchive AP") {
             BA_AP_NOTIFICATION_ID
         } else {
             TEST_NOTIFICATION_ID
         }
-        notifyWithXiaomiMagic(
+        cacheNotificationSnapshot(notificationId, snapshot)
+        notifyWithResolvedDispatcher(
             context = context,
             notificationId = notificationId,
-            notification = notification
+            notification = buildResult.notification,
+            useXiaomiMagic = buildResult.useXiaomiMagic
         )
     }
 
@@ -162,7 +248,7 @@ object McpNotificationHelper {
         clients: Int
     ) {
         ensureChannel(context)
-        val notification = buildForegroundNotification(
+        val buildResult = buildForegroundNotificationResult(
             context = context,
             serverName = serverName,
             running = running,
@@ -172,10 +258,23 @@ object McpNotificationHelper {
             ongoing = true,
             onlyAlertOnce = false
         )
-        notifyWithXiaomiMagic(
+        val snapshot = CachedNotificationSnapshot(
+            serverName = serverName,
+            running = running,
+            port = port,
+            path = path,
+            clients = clients,
+            ongoing = true,
+            onlyAlertOnce = false,
+            style = buildResult.style,
+            useXiaomiMagic = buildResult.useXiaomiMagic
+        )
+        cacheNotificationSnapshot(KEEPALIVE_NOTIFICATION_ID, snapshot)
+        notifyWithResolvedDispatcher(
             context = context,
             notificationId = KEEPALIVE_NOTIFICATION_ID,
-            notification = notification
+            notification = buildResult.notification,
+            useXiaomiMagic = buildResult.useXiaomiMagic
         )
     }
 
@@ -188,7 +287,7 @@ object McpNotificationHelper {
         clients: Int
     ) {
         ensureChannel(context)
-        val notification = buildForegroundNotification(
+        val buildResult = buildForegroundNotificationResult(
             context = context,
             serverName = serverName,
             running = running,
@@ -198,10 +297,23 @@ object McpNotificationHelper {
             ongoing = true,
             onlyAlertOnce = true
         )
-        notifyWithXiaomiMagic(
+        val snapshot = CachedNotificationSnapshot(
+            serverName = serverName,
+            running = running,
+            port = port,
+            path = path,
+            clients = clients,
+            ongoing = true,
+            onlyAlertOnce = true,
+            style = buildResult.style,
+            useXiaomiMagic = buildResult.useXiaomiMagic
+        )
+        cacheNotificationSnapshot(KEEPALIVE_NOTIFICATION_ID, snapshot)
+        notifyWithResolvedDispatcher(
             context = context,
             notificationId = KEEPALIVE_NOTIFICATION_ID,
-            notification = notification
+            notification = buildResult.notification,
+            useXiaomiMagic = buildResult.useXiaomiMagic
         )
     }
 
@@ -218,6 +330,82 @@ object McpNotificationHelper {
             }
         }
     }
+
+    private fun refreshCachedNotificationIfActive(
+        context: Context,
+        manager: NotificationManager,
+        notificationId: Int,
+        snapshot: CachedNotificationSnapshot?
+    ) {
+        if (snapshot == null || !isNotificationActive(manager, notificationId)) return
+        val buildResult = buildForegroundNotificationResult(
+            context = context,
+            serverName = snapshot.serverName,
+            running = snapshot.running,
+            port = snapshot.port,
+            path = snapshot.path,
+            clients = snapshot.clients,
+            ongoing = snapshot.ongoing,
+            onlyAlertOnce = snapshot.onlyAlertOnce
+        )
+        cacheNotificationSnapshot(
+            notificationId = notificationId,
+            snapshot = snapshot.copy(
+                style = buildResult.style,
+                useXiaomiMagic = buildResult.useXiaomiMagic
+            )
+        )
+        notifyWithResolvedDispatcher(
+            context = context,
+            notificationId = notificationId,
+            notification = buildResult.notification,
+            useXiaomiMagic = buildResult.useXiaomiMagic
+        )
+    }
+
+    private fun isNotificationActive(manager: NotificationManager, notificationId: Int): Boolean {
+        return runCatching {
+            manager.activeNotifications.any { it.id == notificationId }
+        }.getOrDefault(false)
+    }
+
+    private fun cacheNotificationSnapshot(
+        notificationId: Int,
+        snapshot: CachedNotificationSnapshot
+    ) {
+        when (notificationId) {
+            KEEPALIVE_NOTIFICATION_ID -> keepAliveSnapshot = snapshot
+            BA_AP_NOTIFICATION_ID -> baApSnapshot = snapshot
+        }
+    }
+
+    private fun notifyWithResolvedDispatcher(
+        context: Context,
+        notificationId: Int,
+        notification: android.app.Notification,
+        useXiaomiMagic: Boolean
+    ) {
+        if (useXiaomiMagic) {
+            notifyWithXiaomiMagic(
+                context = context,
+                notificationId = notificationId,
+                notification = notification
+            )
+            return
+        }
+        val notificationManager = NotificationManagerCompat.from(context)
+        if (shizukuApiUtils.canUseCommand()) {
+            val selfPackage = context.packageName
+            val targetUid = resolveXmsfUid(context)
+            magicScope.launch {
+                networkMutex.withLock {
+                    healConnectivityStateLocked(selfPackage, targetUid)
+                }
+            }
+        }
+        notificationManager.notify(notificationId, notification)
+    }
+
     private fun notifyWithXiaomiMagic(
         context: Context,
         notificationId: Int,
@@ -289,14 +477,13 @@ object McpNotificationHelper {
     private fun blockXmsfNetworkingLocked(uid: Int, selfPackage: String) {
         when (resolveMagicCommandSet()) {
             XiaomiMagicCommandSet.PACKAGE_NETWORKING -> {
-                val chainEnabled = execMagicCommand("cmd connectivity set-chain3-enabled true")
                 val blocked = execMagicCommand("cmd connectivity set-package-networking-enabled false $XMSF_PACKAGE_NAME")
                 execMagicCommand("cmd connectivity set-package-networking-enabled true $selfPackage")
                 isXmsfNetworkBlocked = blocked
-                isPackageChainEnabled = chainEnabled
+                isPackageChainEnabled = false
                 Log.i(
                     TAG,
-                    "blockXmsfNetworkingLocked(package): uid=$uid chainEnabled=$chainEnabled blocked=$blocked"
+                    "blockXmsfNetworkingLocked(package): uid=$uid blocked=$blocked"
                 )
             }
 
@@ -330,12 +517,7 @@ object McpNotificationHelper {
                     true
                 }
                 val selfRestored = execMagicCommand("cmd connectivity set-package-networking-enabled true $selfPackage")
-                val chainDisabled = if (isPackageChainEnabled) {
-                    execMagicCommand("cmd connectivity set-chain3-enabled false")
-                } else {
-                    true
-                }
-                packageRestored && selfRestored && chainDisabled
+                packageRestored && selfRestored
             }
 
             XiaomiMagicCommandSet.UID_FIREWALL -> {
@@ -365,7 +547,6 @@ object McpNotificationHelper {
             XiaomiMagicCommandSet.PACKAGE_NETWORKING -> {
                 execMagicCommand("cmd connectivity set-package-networking-enabled true $selfPackage")
                 execMagicCommand("cmd connectivity set-package-networking-enabled true $XMSF_PACKAGE_NAME")
-                execMagicCommand("cmd connectivity set-chain3-enabled false")
             }
 
             XiaomiMagicCommandSet.UID_FIREWALL -> {
@@ -386,7 +567,6 @@ object McpNotificationHelper {
         val helpText = shizukuApiUtils.execCommand("cmd connectivity help").orEmpty()
         val resolved = when {
             helpText.contains("set-package-networking-enabled") -> XiaomiMagicCommandSet.PACKAGE_NETWORKING
-            helpText.contains("set-uid-firewall-rule") || helpText.contains("set-firewall-chain-enabled") -> XiaomiMagicCommandSet.UID_FIREWALL
             else -> XiaomiMagicCommandSet.NONE
         }
         commandSet = resolved

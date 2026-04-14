@@ -372,6 +372,12 @@ class McpServerManager(
     }
 
     @Synchronized
+    fun refreshNotificationNow() {
+        if (!_uiState.value.running) return
+        syncKeepAliveNotification(forceStart = false)
+    }
+
+    @Synchronized
     fun sendTestNotification(): Result<Unit> {
         val state = _uiState.value
         return runCatching {

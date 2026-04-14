@@ -1,4 +1,4 @@
-package com.example.keios.mcp
+package com.example.keios.mcp.framework.notification.builder
 
 import android.app.Notification
 import android.app.PendingIntent
@@ -10,9 +10,9 @@ import androidx.core.app.NotificationCompat
 import com.example.keios.R
 import com.xzakota.hyper.notification.focus.FocusNotification
 
-object McpIslandNotificationBuilder : McpNotificationBuilder {
-
-    private const val TAG = "McpIslandBuilder"
+class MiIslandNotificationBuilder(
+    private val context: Context
+) : InstallerNotificationBuilder {
 
     private data class IslandAction(
         val key: String,
@@ -21,47 +21,48 @@ object McpIslandNotificationBuilder : McpNotificationBuilder {
         val isHighlighted: Boolean = false
     )
 
-    private const val HIGHLIGHT_BG_COLOR = "#006EFF"
-    private const val HIGHLIGHT_TITLE_COLOR = "#FFFFFF"
+    private companion object {
+        private const val TAG = "McpMiIslandBuilder"
+        private const val HIGHLIGHT_BG_COLOR = "#006EFF"
+        private const val HIGHLIGHT_TITLE_COLOR = "#FFFFFF"
+    }
 
-    override fun build(context: Context, payload: McpNotificationPayload): Notification {
-        val builder = NotificationCompat.Builder(context, McpNotificationHelper.CHANNEL_ID)
+    override fun build(payload: NotificationPayload): Notification {
+        val state = payload.state
+        val builder = NotificationCompat.Builder(context, payload.environment.channelId)
             .setSmallIcon(R.drawable.ic_notification_logo)
-            .setContentTitle(payload.title)
-            .setContentText(payload.content.ifBlank { " " })
-            .setContentIntent(payload.openPendingIntent)
+            .setContentTitle(state.title)
+            .setContentText(state.content.ifBlank { " " })
+            .setContentIntent(state.openPendingIntent)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setOngoing(payload.ongoing)
-            .setOnlyAlertOnce(payload.onlyAlertOnce)
+            .setOngoing(state.ongoing)
+            .setOnlyAlertOnce(state.onlyAlertOnce)
             .setAutoCancel(false)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
 
-        buildFocusExtras(context, payload)?.let(builder::addExtras)
+        buildFocusExtras(payload)?.let(builder::addExtras)
         return builder.build()
     }
 
-    private fun buildFocusExtras(
-        context: Context,
-        payload: McpNotificationPayload
-    ) = runCatching {
+    private fun buildFocusExtras(payload: NotificationPayload) = runCatching {
+        val state = payload.state
         val lightLogoIcon = Icon.createWithResource(context, R.drawable.ic_notification_logo).setTint(Color.BLACK)
         val darkLogoIcon = Icon.createWithResource(context, R.drawable.ic_notification_logo).setTint(Color.WHITE)
-
         val actions = mutableListOf(
             IslandAction(
                 key = "mcp_action_open",
                 title = "打开",
-                pendingIntent = payload.openPendingIntent,
+                pendingIntent = state.openPendingIntent,
                 isHighlighted = true
             )
         ).apply {
-            if (payload.running) {
+            if (state.running) {
                 add(
                     IslandAction(
                         key = "mcp_action_stop",
-                        title = payload.stopActionTitle,
-                        pendingIntent = payload.stopPendingIntent
+                        title = state.stopActionTitle,
+                        pendingIntent = state.stopPendingIntent
                     )
                 )
             }
@@ -74,11 +75,11 @@ object McpIslandNotificationBuilder : McpNotificationBuilder {
             val displayIconKey = if (showAppIcon) lightLogoKey else darkLogoKey
 
             islandFirstFloat = true
-            enableFloat = !payload.ongoing
+            enableFloat = !state.ongoing
             updatable = true
-            ticker = payload.title
+            ticker = state.title
             tickerPic = lightLogoKey
-            if (payload.outerGlow) {
+            if (payload.settings.miIslandOuterGlow) {
                 outEffectSrc = "outer_glow"
             }
 
@@ -95,7 +96,7 @@ object McpIslandNotificationBuilder : McpNotificationBuilder {
                     imageTextInfoRight {
                         type = 3
                         textInfo {
-                            this.title = payload.shortText.ifEmpty { payload.title }
+                            title = state.shortText.ifEmpty { state.title }
                         }
                     }
                 }
@@ -110,13 +111,13 @@ object McpIslandNotificationBuilder : McpNotificationBuilder {
             if (!showAppIcon) {
                 baseInfo {
                     type = 2
-                    this.title = payload.title
-                    this.content = payload.content.ifBlank { " " }
+                    title = state.title
+                    content = state.content.ifBlank { " " }
                 }
             } else {
                 iconTextInfo {
-                    this.title = payload.title
-                    this.content = payload.content.ifBlank { " " }
+                    title = state.title
+                    content = state.content.ifBlank { " " }
                     animIconInfo {
                         type = 0
                         src = displayIconKey
@@ -141,7 +142,6 @@ object McpIslandNotificationBuilder : McpNotificationBuilder {
                             ).build()
                             action = createAction(actionItem.key, nativeAction)
                             actionTitle = actionItem.title
-
                             if (actionItem.isHighlighted) {
                                 actionBgColor = HIGHLIGHT_BG_COLOR
                                 actionBgColorDark = HIGHLIGHT_BG_COLOR
@@ -157,3 +157,4 @@ object McpIslandNotificationBuilder : McpNotificationBuilder {
         Log.e(TAG, "Build FocusNotification extras failed", it)
     }.getOrNull()
 }
+

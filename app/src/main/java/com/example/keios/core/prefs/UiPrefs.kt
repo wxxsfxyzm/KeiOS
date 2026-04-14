@@ -12,6 +12,8 @@ data class UiPrefsSnapshot(
     val liquidBottomBarEnabled: Boolean,
     val cardPressFeedbackEnabled: Boolean,
     val homeIconHdrEnabled: Boolean,
+    val superIslandNotificationEnabled: Boolean,
+    val superIslandBypassRestrictionEnabled: Boolean,
     val cacheDiagnosticsEnabled: Boolean,
     val appThemeMode: AppThemeMode,
     val visibleBottomPageNames: Set<String>
@@ -22,6 +24,8 @@ object UiPrefs {
     private const val KEY_LIQUID_BOTTOM_BAR = "liquid_bottom_bar"
     private const val KEY_CARD_PRESS_FEEDBACK = "card_press_feedback"
     private const val KEY_HOME_ICON_HDR = "home_icon_hdr"
+    private const val KEY_SUPER_ISLAND_NOTIFICATION = "super_island_notification"
+    private const val KEY_SUPER_ISLAND_BYPASS_RESTRICTION = "super_island_bypass_restriction"
     private const val KEY_CACHE_DIAGNOSTICS = "cache_diagnostics"
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_VISIBLE_BOTTOM_PAGES = "visible_bottom_pages"
@@ -52,6 +56,22 @@ object UiPrefs {
 
     fun setHomeIconHdrEnabled(value: Boolean) {
         kv().encode(KEY_HOME_ICON_HDR, value)
+    }
+
+    fun isSuperIslandNotificationEnabled(defaultValue: Boolean = true): Boolean {
+        return kv().decodeBool(KEY_SUPER_ISLAND_NOTIFICATION, defaultValue)
+    }
+
+    fun setSuperIslandNotificationEnabled(value: Boolean) {
+        kv().encode(KEY_SUPER_ISLAND_NOTIFICATION, value)
+    }
+
+    fun isSuperIslandBypassRestrictionEnabled(defaultValue: Boolean = false): Boolean {
+        return kv().decodeBool(KEY_SUPER_ISLAND_BYPASS_RESTRICTION, defaultValue)
+    }
+
+    fun setSuperIslandBypassRestrictionEnabled(value: Boolean) {
+        kv().encode(KEY_SUPER_ISLAND_BYPASS_RESTRICTION, value)
     }
 
     fun isCacheDiagnosticsEnabled(defaultValue: Boolean = true): Boolean {
@@ -95,6 +115,8 @@ object UiPrefs {
             liquidBottomBarEnabled = true,
             cardPressFeedbackEnabled = true,
             homeIconHdrEnabled = true,
+            superIslandNotificationEnabled = true,
+            superIslandBypassRestrictionEnabled = false,
             cacheDiagnosticsEnabled = true,
             appThemeMode = appThemeMode,
             visibleBottomPageNames = DEFAULT_VISIBLE_BOTTOM_PAGE_NAMES
@@ -107,6 +129,8 @@ object UiPrefs {
             liquidBottomBarEnabled = store.decodeBool(KEY_LIQUID_BOTTOM_BAR, true),
             cardPressFeedbackEnabled = store.decodeBool(KEY_CARD_PRESS_FEEDBACK, true),
             homeIconHdrEnabled = store.decodeBool(KEY_HOME_ICON_HDR, true),
+            superIslandNotificationEnabled = store.decodeBool(KEY_SUPER_ISLAND_NOTIFICATION, true),
+            superIslandBypassRestrictionEnabled = store.decodeBool(KEY_SUPER_ISLAND_BYPASS_RESTRICTION, false),
             cacheDiagnosticsEnabled = store.decodeBool(KEY_CACHE_DIAGNOSTICS, true),
             appThemeMode = getAppThemeMode(),
             visibleBottomPageNames = loadVisibleBottomPageNames()

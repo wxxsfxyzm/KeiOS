@@ -64,6 +64,10 @@ fun SettingsPage(
     onCardPressFeedbackChanged: (Boolean) -> Unit,
     homeIconHdrEnabled: Boolean,
     onHomeIconHdrChanged: (Boolean) -> Unit,
+    superIslandNotificationEnabled: Boolean,
+    onSuperIslandNotificationChanged: (Boolean) -> Unit,
+    superIslandBypassRestrictionEnabled: Boolean,
+    onSuperIslandBypassRestrictionChanged: (Boolean) -> Unit,
     cacheDiagnosticsEnabled: Boolean,
     onCacheDiagnosticsChanged: (Boolean) -> Unit,
     appThemeMode: AppThemeMode,
@@ -223,6 +227,38 @@ fun SettingsPage(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.defaultColors(
+                        color = if (superIslandBypassRestrictionEnabled) enabledCardColor else disabledCardColor,
+                        contentColor = titleColor
+                    ),
+                    onClick = {}
+                ) {
+                    SettingsSectionCard(
+                        header = "MCP Notify",
+                        title = "超级岛兼容绕过",
+                        summary = if (superIslandBypassRestrictionEnabled) {
+                            "已启用兼容绕过（高风险）：会临时改动系统网络规则以强触发超级岛。"
+                        } else {
+                            "默认关闭（推荐）：降低 HyperOS 状态栏/系统界面异常风险。"
+                        },
+                        infoKey = "说明",
+                        infoValue = "仅超级岛样式生效；Live Update 不会使用该绕过。",
+                        trailing = {
+                            Switch(
+                                checked = superIslandBypassRestrictionEnabled,
+                                onCheckedChange = { checked -> onSuperIslandBypassRestrictionChanged(checked) }
+                            )
+                        },
+                        onClick = { onSuperIslandBypassRestrictionChanged(!superIslandBypassRestrictionEnabled) }
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(10.dp)) }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
                         color = if (cardPressFeedbackEnabled) enabledCardColor else disabledCardColor,
                         contentColor = titleColor
                     ),
@@ -277,6 +313,38 @@ fun SettingsPage(
                             )
                         },
                         onClick = { onHomeIconHdrChanged(!homeIconHdrEnabled) }
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(10.dp)) }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
+                        color = if (superIslandNotificationEnabled) enabledCardColor else disabledCardColor,
+                        contentColor = titleColor
+                    ),
+                    onClick = {}
+                ) {
+                    SettingsSectionCard(
+                        header = "MCP Notify",
+                        title = "超级岛通知样式",
+                        summary = if (superIslandNotificationEnabled) {
+                            "启用超级岛模板（Hyper Focus）。关闭后改用 AOSP Live Update 实时通知。"
+                        } else {
+                            "当前使用 AOSP Live Update 实时通知样式。开启后恢复超级岛模板。"
+                        },
+                        infoKey = "作用范围",
+                        infoValue = "影响 MCP 常驻通知与 BA AP 通知的样式呈现",
+                        trailing = {
+                            Switch(
+                                checked = superIslandNotificationEnabled,
+                                onCheckedChange = { checked -> onSuperIslandNotificationChanged(checked) }
+                            )
+                        },
+                        onClick = { onSuperIslandNotificationChanged(!superIslandNotificationEnabled) }
                     )
                 }
             }
