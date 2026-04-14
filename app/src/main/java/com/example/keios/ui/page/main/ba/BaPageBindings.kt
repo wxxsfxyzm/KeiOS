@@ -1,0 +1,178 @@
+package com.example.keios.ui.page.main.ba
+
+import android.content.Context
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import com.example.keios.ui.page.main.BASettingsStore
+import com.example.keios.ui.page.main.BaCalendarEntry
+import com.example.keios.ui.page.main.BaPoolEntry
+
+internal fun buildBaSettingsSheetState(
+    ui: BaPageUiController,
+): BaSettingsSheetState {
+    return BaSettingsSheetState(
+        cafeLevel = ui.sheetCafeLevel,
+        apNotifyEnabled = ui.sheetApNotifyEnabled,
+        apNotifyThresholdText = ui.sheetApNotifyThresholdText,
+        showEndedActivities = ui.sheetShowEndedActivities,
+        showEndedPools = ui.sheetShowEndedPools,
+        showCalendarPoolImages = ui.sheetShowCalendarPoolImages,
+    )
+}
+
+internal fun buildBaPageContentState(
+    isDark: Boolean,
+    officeSmallTitle: String,
+    baSmallTitleMargin: PaddingValues,
+    baCardShape: RoundedCornerShape,
+    baCardBaseColor: Color,
+    baCardBorderColor: Color,
+    office: BaOfficeController,
+    ui: BaPageUiController,
+    serverOptions: List<String>,
+    disableCardFeedback: Boolean,
+    baCalendarEntries: List<BaCalendarEntry>,
+    baPoolEntries: List<BaPoolEntry>,
+): BaPageContentState {
+    return BaPageContentState(
+        isDark = isDark,
+        officeSmallTitle = officeSmallTitle,
+        baSmallTitleMargin = baSmallTitleMargin,
+        baCardShape = baCardShape,
+        baCardBaseColor = baCardBaseColor,
+        baCardBorderColor = baCardBorderColor,
+        officeState = office.state(),
+        uiNowMs = ui.uiNowMs,
+        serverOptions = serverOptions,
+        serverIndex = ui.serverIndex,
+        showOverviewServerPopup = ui.showOverviewServerPopup,
+        overviewServerPopupAnchorBounds = ui.overviewServerPopupAnchorBounds,
+        initState = ui.initState,
+        disableCardFeedback = disableCardFeedback,
+        baCalendarEntries = baCalendarEntries,
+        baCalendarLoading = ui.baCalendarLoading,
+        baCalendarError = ui.baCalendarError,
+        baCalendarLastSyncMs = ui.baCalendarLastSyncMs,
+        showEndedActivities = ui.showEndedActivities,
+        showCalendarPoolImages = ui.showCalendarPoolImages,
+        baPoolEntries = baPoolEntries,
+        baPoolLoading = ui.baPoolLoading,
+        baPoolError = ui.baPoolError,
+        baPoolLastSyncMs = ui.baPoolLastSyncMs,
+        showEndedPools = ui.showEndedPools,
+    )
+}
+
+internal fun saveBaPageSettings(
+    office: BaOfficeController,
+    ui: BaPageUiController,
+    settingsSheetState: BaSettingsSheetState,
+    onRefreshCalendar: (Boolean) -> Unit,
+    onRefreshPool: (Boolean) -> Unit,
+) {
+    office.applyCafeStorage()
+
+    val persisted = persistBaSettingsDraft(
+        sheetState = settingsSheetState,
+        currentCafeLevel = office.cafeLevel,
+        currentShowEndedActivities = ui.showEndedActivities,
+        currentShowCalendarPoolImages = ui.showCalendarPoolImages,
+    )
+
+    office.cafeLevel = persisted.savedCafeLevel
+    office.clampCafeStoredToCap()
+    office.apNotifyEnabled = settingsSheetState.apNotifyEnabled
+    office.apNotifyThreshold = persisted.savedThreshold
+    ui.showEndedPools = persisted.showEndedPools
+    ui.showEndedActivities = persisted.showEndedActivities
+    ui.showCalendarPoolImages = persisted.showCalendarPoolImages
+
+    if (persisted.turningEndedActivitiesOn) {
+        val (calendarCacheRaw, _) = BASettingsStore.loadCalendarCache(ui.serverIndex)
+        if (calendarCacheRaw.isBlank()) onRefreshCalendar(true)
+    }
+
+    if (persisted.turningImagesOn) {
+        val calendarHasImage = hasAnyImageInBaCalendarCache(ui.serverIndex)
+        val poolHasImage = hasAnyImageInBaPoolCache(ui.serverIndex)
+        if (!calendarHasImage) onRefreshCalendar(true)
+        if (!poolHasImage) onRefreshPool(true)
+    }
+
+    office.applyApRegen()
+    ui.closeSettingsSheet(office)
+}
+
+internal fun buildBaPageContentActions(
+    context: Context,
+    office: BaOfficeController,
+    ui: BaPageUiController,
+    onGlassButtonPressedChange: (Boolean) -> Unit,
+    onRefreshCalendar: () -> Unit,
+    onRefreshPool: () -> Unit,
+    onOpenCalendarLink: (String) -> Unit,
+    onOpenPoolStudentGuide: (String) -> Unit,
+): BaPageContentActions {
+    return BaPageContentActions(
+        onApCurrentInputChange = { office.apCurrentInput = it },
+        onApCurrentDone = {
+            val finalValue = office.apCurrentInput.toIntOrNull()?.coerceIn(0, com.example.keios.ui.page.main.BA_AP_MAX) ?: 0
+            office.updateCurrentAp(finalValue, markSync = true)
+            office.apCurrentInput = finalValue.toString()
+        },
+        onApLimitInputChange = { office.apLimitInput = it },
+        onApLimitDone = {
+            val finalValue = office.apLimitInput.toIntOrNull()?.coerceIn(0, com.example.keios.ui.page.main.BA_AP_LIMIT_MAX)
+                ?: com.example.keios.ui.page.main.BA_AP_LIMIT_MAX
+            office.updateApLimit(finalValue)
+            office.applyApRegen()
+            office.apLimitInput = finalValue.toString()
+        },
+        onOverviewServerPopupAnchorBoundsChange = { ui.overviewServerPopupAnchorBounds = it },
+        onOverviewServerPopupChange = { ui.showOverviewServerPopup = it },
+        onServerSelected = { selected ->
+            ui.serverIndex = selected
+            BASettingsStore.saveServerIndex(selected)
+            onRefreshCalendar()
+            onRefreshPool()
+            ui.showOverviewServerPopup = false
+        },
+        onClaimCafeStoredAp = { office.claimCafeStoredAp(context) },
+        onInitStateChange = { ui.initState = it },
+        onTouchHead = { office.touchHead(ui.serverIndex) },
+        onForceResetHeadpatCooldown = { office.forceResetHeadpatCooldown() },
+        onUseInviteTicket1 = { office.useInviteTicket1() },
+        onForceResetInviteTicket1Cooldown = { office.forceResetInviteTicket1Cooldown() },
+        onUseInviteTicket2 = { office.useInviteTicket2() },
+        onForceResetInviteTicket2Cooldown = { office.forceResetInviteTicket2Cooldown() },
+        onGlassButtonPressedChange = onGlassButtonPressedChange,
+        onRefreshCalendar = onRefreshCalendar,
+        onOpenCalendarLink = onOpenCalendarLink,
+        onRefreshPool = onRefreshPool,
+        onOpenPoolStudentGuide = onOpenPoolStudentGuide,
+        onIdNicknameInputChange = { office.idNicknameInput = it },
+        onSaveIdNickname = { office.saveIdNicknameFromInput() },
+        onIdFriendCodeInputChange = { office.idFriendCodeInput = it },
+        onSaveIdFriendCode = { office.saveIdFriendCodeFromInput(context) },
+        onSendApTestNotification = {
+            office.sendApTestNotification(context = context, showToast = true)
+        },
+        onTestCafePlus3Hours = { office.testCafePlus3Hours(context) },
+    )
+}
+
+internal fun applyBaCalendarRefreshInterval(
+    ui: BaPageUiController,
+    hours: Int,
+    onRefreshCalendar: () -> Unit,
+    onRefreshPool: () -> Unit,
+) {
+    ui.calendarRefreshIntervalHours = hours
+    BASettingsStore.saveCalendarRefreshIntervalHours(hours)
+    val elapsed = (System.currentTimeMillis() - ui.baCalendarLastSyncMs).coerceAtLeast(0L)
+    if (ui.baCalendarLastSyncMs <= 0L || elapsed >= hours * 60L * 60L * 1000L) {
+        onRefreshCalendar()
+        onRefreshPool()
+    }
+}
