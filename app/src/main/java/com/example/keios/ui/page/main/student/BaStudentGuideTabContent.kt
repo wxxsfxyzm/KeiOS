@@ -300,8 +300,15 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                             val hasTopDataHeader = profileRowsBase.any { row ->
                                 normalizeProfileFieldKey(row.key) == normalizeProfileFieldKey("顶级数据")
                             }
+                            val hasInitialDataHeader = profileRowsBase.any { row ->
+                                normalizeProfileFieldKey(row.key) == normalizeProfileFieldKey("初始数据")
+                            }
                             val allProfileRows = profileRowsBase.filterNot { row ->
-                                isSkillMigratedProfileRow(row, hasTopDataHeader) || isSameNameRoleRow(row)
+                                isSkillMigratedProfileRow(
+                                    row = row,
+                                    hasTopDataHeader = hasTopDataHeader,
+                                    hasInitialDataHeader = hasInitialDataHeader
+                                ) || isSameNameRoleRow(row)
                             }
                             val nicknameRows = buildProfileCardRows(
                                 rows = allProfileRows,
@@ -3108,12 +3115,17 @@ private fun splitGuideCompositeValues(raw: String): List<String> {
         .filter { it.isNotBlank() && it != "-" && it != "—" }
 }
 
-private fun isSkillMigratedProfileRow(row: BaGuideRow, hasTopDataHeader: Boolean): Boolean {
+private fun isSkillMigratedProfileRow(
+    row: BaGuideRow,
+    hasTopDataHeader: Boolean,
+    hasInitialDataHeader: Boolean
+): Boolean {
     val key = normalizeProfileFieldKey(row.key)
     if (Regex("""^附加属性\d+$""").matches(key)) return true
+    if (key == normalizeProfileFieldKey("初始数据")) return true
     if (key == normalizeProfileFieldKey("顶级数据")) return true
     if (key == normalizeProfileFieldKey("25级")) return true
-    if (hasTopDataHeader && key in normalizedTopDataStatKeys) return true
+    if ((hasTopDataHeader || hasInitialDataHeader) && key in normalizedTopDataStatKeys) return true
     return false
 }
 

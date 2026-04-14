@@ -1885,6 +1885,8 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
             if (key.isBlank()) return false
             if (isGrowthBlockStartKey(key)) return false
             return key == "礼物偏好" ||
+                key == "相关同名角色" ||
+                key == "同名角色名称" ||
                 key == "技能类型" ||
                 key == "技能名词" ||
                 key == "学生信息" ||
