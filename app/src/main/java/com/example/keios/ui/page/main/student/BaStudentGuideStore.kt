@@ -88,12 +88,25 @@ object BaStudentGuideStore {
                             "ls",
                             JSONArray().apply {
                                 item.lines.forEach { line ->
-                                    if (line.isNotBlank()) put(line)
+                                    // 保留空字符串占位，避免多语言列在缓存后发生错位。
+                                    put(line.trim())
                                 }
                             }
                         )
                     }
                 )
+            }
+        }
+    }
+
+    private fun encodeStringMap(map: Map<String, String>): JSONObject {
+        return JSONObject().apply {
+            map.forEach { (key, value) ->
+                val normalizedKey = key.trim()
+                val normalizedValue = value.trim()
+                if (normalizedKey.isNotBlank() && normalizedValue.isNotBlank()) {
+                    put(normalizedKey, normalizedValue)
+                }
             }
         }
     }
@@ -137,7 +150,7 @@ object BaStudentGuideStore {
                     if (lineArray != null) {
                         for (j in 0 until lineArray.length()) {
                             val line = lineArray.optString(j).trim()
-                            if (line.isNotBlank()) add(line)
+                            add(line)
                         }
                     }
                 }
@@ -152,6 +165,31 @@ object BaStudentGuideStore {
                 )
             }
         }
+    }
+
+    private fun decodeVoiceCvByLanguage(
+        obj: JSONObject,
+        fallbackJp: String,
+        fallbackCn: String
+    ): Map<String, String> {
+        val map = linkedMapOf<String, String>()
+        val mapObj = obj.optJSONObject("voiceCvByLanguage")
+        if (mapObj != null) {
+            val keys = mapObj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next().trim()
+                if (key.isBlank()) continue
+                val value = mapObj.optString(key).trim()
+                if (value.isNotBlank()) {
+                    map[key] = value
+                }
+            }
+        }
+        if (map.isEmpty()) {
+            if (fallbackJp.isNotBlank()) map["日配"] = fallbackJp
+            if (fallbackCn.isNotBlank()) map["中配"] = fallbackCn
+        }
+        return map
     }
 
     fun setCurrentUrl(url: String) {
@@ -192,6 +230,7 @@ object BaStudentGuideStore {
             put("voiceRows", encodeGuideRows(info.voiceRows))
             put("voiceCvJp", info.voiceCvJp)
             put("voiceCvCn", info.voiceCvCn)
+            put("voiceCvByLanguage", encodeStringMap(info.voiceCvByLanguage))
             put("voiceLanguageHeaders", JSONArray().apply { info.voiceLanguageHeaders.forEach { put(it) } })
             put("voiceEntries", encodeVoiceEntries(info.voiceEntries))
             put("tabSkillIconUrl", info.tabSkillIconUrl)
@@ -260,6 +299,13 @@ object BaStudentGuideStore {
                 val v = row.optString("v").trim()
                 if (k.isNotBlank() && v.isNotBlank()) stats += k to v
             }
+            val voiceCvJp = obj.optString("voiceCvJp").trim()
+            val voiceCvCn = obj.optString("voiceCvCn").trim()
+            val voiceCvByLanguage = decodeVoiceCvByLanguage(
+                obj = obj,
+                fallbackJp = voiceCvJp,
+                fallbackCn = voiceCvCn
+            )
             BaStudentGuideInfo(
                 sourceUrl = obj.optString("sourceUrl").ifBlank { source },
                 title = obj.optString("title"),
@@ -273,8 +319,9 @@ object BaStudentGuideStore {
                 galleryItems = decodeGalleryItems(obj, "galleryItems"),
                 growthRows = decodeGuideRows(obj, "growthRows"),
                 voiceRows = decodeGuideRows(obj, "voiceRows"),
-                voiceCvJp = obj.optString("voiceCvJp").trim(),
-                voiceCvCn = obj.optString("voiceCvCn").trim(),
+                voiceCvJp = voiceCvJp,
+                voiceCvCn = voiceCvCn,
+                voiceCvByLanguage = voiceCvByLanguage,
                 voiceLanguageHeaders = buildList {
                     val headers = obj.optJSONArray("voiceLanguageHeaders")
                     if (headers != null) {

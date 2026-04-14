@@ -67,6 +67,7 @@ val jsonVersion = "20251224"
 val xmlPullVersion = "1.1.3.4d_b4_min"
 val kxml2Version = "2.3.0"
 val media3Version = "1.10.0"
+val coil3Version = "3.4.0"
 val zoomImageVersion = "1.4.0"
 val focusApiVersion = "1.4"
 val projectJavaVersion = JavaVersion.VERSION_21
@@ -186,7 +187,8 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-ui:$media3Version")
     implementation("io.github.panpf.zoomimage:zoomimage-compose-coil3:$zoomImageVersion")
-    implementation("io.coil-kt.coil3:coil-gif:3.2.0")
+    implementation("io.coil-kt.coil3:coil-compose:$coil3Version")
+    implementation("io.coil-kt.coil3:coil-gif:$coil3Version")
     implementation("com.xzakota.hyper.notification:focus-api:$focusApiVersion")
 
     // Keep kotlin-test aligned with the applied Kotlin plugin version to avoid version skew.

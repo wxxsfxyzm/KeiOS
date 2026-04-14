@@ -151,6 +151,7 @@ fun BaStudentGuidePage(
     var error by remember { mutableStateOf<String?>(null) }
     var refreshSignal by remember { mutableStateOf(0) }
     var selectedBottomTabIndex by rememberSaveable(sourceUrl) { mutableIntStateOf(0) }
+    var selectedVoiceLanguage by rememberSaveable(sourceUrl) { mutableStateOf("") }
     var playingVoiceUrl by rememberSaveable(sourceUrl) { mutableStateOf("") }
     var isVoicePlaying by remember(sourceUrl) { mutableStateOf(false) }
     var voicePlayProgress by remember(sourceUrl) { mutableFloatStateOf(0f) }
@@ -564,9 +565,11 @@ fun BaStudentGuidePage(
                     playingVoiceUrl = playingVoiceUrl,
                     isVoicePlaying = isVoicePlaying,
                     voicePlayProgress = voicePlayProgress,
+                    selectedVoiceLanguage = selectedVoiceLanguage,
                     onOpenExternal = ::openExternal,
                     onOpenGuide = ::openGuideInPage,
-                    onToggleVoicePlayback = ::toggleVoicePlayback
+                    onToggleVoicePlayback = ::toggleVoicePlayback,
+                    onSelectedVoiceLanguageChange = { selectedVoiceLanguage = it }
                 )
             }
         }

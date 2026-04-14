@@ -24,6 +24,7 @@ data class BaStudentGuideInfo(
     val voiceRows: List<BaGuideRow> = emptyList(),
     val voiceCvJp: String = "",
     val voiceCvCn: String = "",
+    val voiceCvByLanguage: Map<String, String> = emptyMap(),
     val voiceLanguageHeaders: List<String> = emptyList(),
     val voiceEntries: List<BaGuideVoiceEntry> = emptyList(),
     val tabSkillIconUrl: String = "",

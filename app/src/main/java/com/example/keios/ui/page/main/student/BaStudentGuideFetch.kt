@@ -103,6 +103,7 @@ private data class GuideDetailExtract(
     val voiceRows: List<BaGuideRow> = emptyList(),
     val voiceCvJp: String = "",
     val voiceCvCn: String = "",
+    val voiceCvByLanguage: Map<String, String> = emptyMap(),
     val voiceLanguageHeaders: List<String> = emptyList(),
     val voiceEntries: List<BaGuideVoiceEntry> = emptyList(),
     val tabSkillIconUrl: String = "",
@@ -778,25 +779,52 @@ private fun extractAudioUrlsFromRaw(sourceUrl: String, raw: String): List<String
         .toList()
 }
 
+private fun normalizeVoiceLanguageLabelRaw(raw: String): String {
+    return stripHtml(raw)
+        .replace(" ", "")
+        .replace("　", "")
+        .lowercase()
+        .trim()
+}
+
+private fun canonicalVoiceLanguageLabel(raw: String): String {
+    val normalized = normalizeVoiceLanguageLabelRaw(raw)
+    if (normalized.isBlank()) return ""
+    return when {
+        normalized.contains("官翻") || normalized.contains("官方翻译") || normalized.contains("官方中文") || normalized.contains("官中") -> "官翻"
+        normalized.contains("韩") || normalized.contains("kr") || normalized.contains("kor") || normalized.contains("korean") -> "韩配"
+        normalized.contains("中") || normalized.contains("cn") || normalized.contains("国语") || normalized.contains("国配") || normalized.contains("中文") -> "中配"
+        normalized.contains("日") || normalized.contains("jp") || normalized.contains("jpn") || normalized.contains("日本") -> "日配"
+        else -> stripHtml(raw).trim()
+    }
+}
+
+private fun defaultVoiceLanguageLabelForIndex(index: Int): String {
+    return when (index) {
+        0 -> "日配"
+        1 -> "中配"
+        2 -> "韩配"
+        3 -> "官翻"
+        else -> "语言${index + 1}"
+    }
+}
+
+private fun looksLikeVoiceLanguageLabel(raw: String): Boolean {
+    val canonical = canonicalVoiceLanguageLabel(raw)
+    if (canonical.isBlank()) return false
+    if (canonical in setOf("日配", "中配", "韩配", "官翻")) return true
+    val normalized = normalizeVoiceLanguageLabelRaw(canonical)
+    return normalized.contains("配") || normalized.contains("翻")
+}
+
 private fun parseVoiceDataFromBaseData(
     baseData: JSONArray,
     sourceUrl: String
 ): Pair<List<String>, List<BaGuideVoiceEntry>> {
     val languageHeaders = mutableListOf<String>()
-    val rawLanguageHeaders = mutableListOf<String>()
     val entries = mutableListOf<BaGuideVoiceEntry>()
     var inVoiceBlock = false
     var currentVoiceSection = ""
-
-    fun isJapaneseHeader(value: String): Boolean {
-        val text = value.trim().lowercase()
-        return text.contains("日") || text.contains("jp") || text.contains("jpn")
-    }
-
-    fun isChineseHeader(value: String): Boolean {
-        val text = value.trim().lowercase()
-        return text.contains("中") || text.contains("cn")
-    }
 
     for (i in 0 until baseData.length()) {
         val row = baseData.optJSONArray(i) ?: continue
@@ -805,19 +833,14 @@ private fun parseVoiceDataFromBaseData(
         if (key == "配音语言") {
             inVoiceBlock = true
             currentVoiceSection = ""
-            rawLanguageHeaders.clear()
             languageHeaders.clear()
             for (j in 1 until row.length()) {
                 val cell = row.optJSONObject(j) ?: continue
-                val text = stripHtml(cell.optString("value"))
-                if (text.isNotBlank()) {
-                    rawLanguageHeaders += text
+                val label = canonicalVoiceLanguageLabel(cell.optString("value"))
+                if (label.isNotBlank() && label !in languageHeaders) {
+                    languageHeaders += label
                 }
             }
-            val jpHeader = rawLanguageHeaders.firstOrNull(::isJapaneseHeader) ?: "日配"
-            val cnHeader = rawLanguageHeaders.firstOrNull(::isChineseHeader) ?: "中配"
-            languageHeaders += jpHeader
-            languageHeaders += cnHeader
             continue
         }
         if (!inVoiceBlock) continue
@@ -843,11 +866,9 @@ private fun parseVoiceDataFromBaseData(
             continue
         }
 
-        val languageSlotSize = maxOf(rawLanguageHeaders.size, 2)
-        val languageTexts = MutableList(languageSlotSize) { "" }
+        val languageTexts = mutableListOf<String>()
         var title = ""
         var titleAssigned = false
-        var languageCursor = 0
         var audioUrl = ""
         for (j in 1 until row.length()) {
             val cell = row.optJSONObject(j) ?: continue
@@ -866,50 +887,59 @@ private fun parseVoiceDataFromBaseData(
             }
             val text = stripHtml(rawValue)
             if (!titleAssigned) {
+                if (text.isBlank()) continue
                 title = text
                 titleAssigned = true
             } else {
-                if (languageCursor < languageTexts.size) {
-                    languageTexts[languageCursor] = text
-                }
-                languageCursor += 1
+                languageTexts += text
             }
         }
-
-        val jpIndex = rawLanguageHeaders.indexOfFirst(::isJapaneseHeader).takeIf { it >= 0 } ?: 0
-        val cnIndex = rawLanguageHeaders.indexOfFirst(::isChineseHeader).takeIf { it >= 0 }
-            ?: if (languageTexts.size > 1) 1 else 0
-        val jpText = languageTexts.getOrNull(jpIndex).orEmpty().trim()
-        val cnText = languageTexts.getOrNull(cnIndex).orEmpty().trim()
-
-        // 过滤网站预留但没有实际台词文本的占位条目。
-        if (jpText.isBlank() && cnText.isBlank()) continue
+        if (!titleAssigned) {
+            title = key
+        }
+        val lineSize = maxOf(languageHeaders.size, languageTexts.size)
+        if (lineSize <= 0) continue
+        val lines = MutableList(lineSize) { index ->
+            languageTexts.getOrNull(index).orElse("")
+        }.map { it.trim() }
+        if (lines.all { it.isBlank() }) continue
 
         entries += BaGuideVoiceEntry(
             section = section,
             title = title,
-            lines = listOf(jpText, cnText),
+            lines = lines,
             audioUrl = audioUrl
         )
     }
 
-    return languageHeaders to entries
+    val maxLineCount = entries.maxOfOrNull { entry -> entry.lines.size } ?: 0
+    val headerCount = maxOf(languageHeaders.size, maxLineCount)
+    val normalizedHeaders = languageHeaders.toMutableList()
+    while (normalizedHeaders.size < headerCount) {
+        val fallback = defaultVoiceLanguageLabelForIndex(normalizedHeaders.size)
+        if (fallback in normalizedHeaders) {
+            normalizedHeaders += "语言${normalizedHeaders.size + 1}"
+        } else {
+            normalizedHeaders += fallback
+        }
+    }
+    val normalizedEntries = if (headerCount <= 0) {
+        entries
+    } else {
+        entries.map { entry ->
+            if (entry.lines.size >= headerCount) {
+                entry.copy(lines = entry.lines.take(headerCount))
+            } else {
+                entry.copy(lines = entry.lines + List(headerCount - entry.lines.size) { "" })
+            }
+        }
+    }
+
+    return normalizedHeaders to normalizedEntries
 }
 
-private fun parseVoiceCvFromBaseData(baseData: JSONArray): Pair<String, String> {
-    fun isJapaneseLabel(label: String): Boolean {
-        val text = label.replace(" ", "").lowercase()
-        return text.contains("日") || text.contains("jp") || text.contains("jpn")
-    }
-
-    fun isChineseLabel(label: String): Boolean {
-        val text = label.replace(" ", "").lowercase()
-        return text.contains("中") || text.contains("cn") || text.contains("国语") || text.contains("国配")
-    }
-
-    var jpCv = ""
-    var cnCv = ""
-    val candidateBlocks = mutableListOf<String>()
+private fun parseVoiceCvByLanguageFromBaseData(baseData: JSONArray): Map<String, String> {
+    val cvByLanguage = linkedMapOf<String, String>()
 
     fun cleanCvRawText(raw: String): String {
         if (raw.isBlank()) return ""
@@ -927,6 +957,29 @@ private fun parseVoiceCvFromBaseData(baseData: JSONArray): Pair<String, String> 
             .trim()
     }
 
+    fun cleanCvValue(raw: String): String {
+        return raw.trim()
+            .trim(',', '，', ';', '；', '|', '/', '／')
+            .trim()
+    }
+
+    fun assignByLabel(rawLabel: String, rawValue: String) {
+        val label = canonicalVoiceLanguageLabel(rawLabel)
+        if (label.isBlank()) return
+        val value = cleanCvValue(rawValue)
+        if (value.isBlank()) return
+        if (cvByLanguage[label].isNullOrBlank()) {
+            cvByLanguage[label] = value
+        }
+    }
+
+    val labelPattern = "日配|日语|日|jp|jpn|中配|中|cn|国语|国配|中文|韩配|韩|kr|kor|korean|官翻|官中|官方翻译|官方中文"
+    val pairRegex = Regex(
+        """(?i)($labelPattern)\s*(?:[\|:：\-－—])\s*([\s\S]*?)(?=(?:\s*[,，;；/／\n]\s*|\s+)(?:$labelPattern)\s*(?:[\|:：\-－—])|$)"""
+    )
+    val compactPairRegex = Regex("""(?i)^($labelPattern)\s*(?:[\|:：\-－—])\s*(.+)$""")
+    val spacedPairRegex = Regex("""(?i)^($labelPattern)\s+(.+)$""")
+
     for (i in 0 until baseData.length()) {
         val row = baseData.optJSONArray(i) ?: continue
         if (row.length() == 0) continue
@@ -934,72 +987,145 @@ private fun parseVoiceCvFromBaseData(baseData: JSONArray): Pair<String, String> 
         if (!(key.contains("声优") || key.equals("cv", ignoreCase = true) || key.contains("CV", ignoreCase = true))) {
             continue
         }
+        val blocks = mutableListOf<String>()
         for (j in 1 until row.length()) {
             val text = cleanCvRawText(row.optJSONObject(j)?.optString("value").orEmpty())
             if (text.isNotBlank()) {
-                candidateBlocks += text
+                blocks += text
             }
         }
-    }
+        if (blocks.isEmpty()) continue
 
-    fun assignByLabel(rawLabel: String, rawValue: String) {
-        val value = rawValue.trim()
-        if (value.isBlank()) return
-        when {
-            jpCv.isBlank() && isJapaneseLabel(rawLabel) -> jpCv = value
-            cnCv.isBlank() && isChineseLabel(rawLabel) -> cnCv = value
+        var cursor = 0
+        while (cursor + 1 < blocks.size) {
+            val left = blocks[cursor]
+            val right = blocks[cursor + 1]
+            if (looksLikeVoiceLanguageLabel(left) && !looksLikeVoiceLanguageLabel(right)) {
+                assignByLabel(left, right)
+                cursor += 2
+            } else {
+                cursor += 1
+            }
         }
-    }
 
-    val pairRegex = Regex(
-        """(?i)(日配|日|jp|jpn|中配|中|cn|国语|国配)\s*[\|:：]\s*([\s\S]*?)(?=(?:\s*(?:日配|日|jp|jpn|中配|中|cn|国语|国配)\s*[\|:：])|$)"""
-    )
-
-    candidateBlocks.forEach { block ->
-        val normalizedBlock = block
-            .replace('｜', '|')
-            .replace('：', ':')
-            .replace('，', ',')
-            .replace('；', ';')
-            .replace('\u3000', ' ')
-            .trim()
-
-        var matchedByRegex = false
-        pairRegex.findAll(normalizedBlock).forEach { match ->
-            matchedByRegex = true
-            val label = match.groupValues.getOrNull(1).orEmpty().trim()
-            val value = match.groupValues.getOrNull(2).orEmpty()
+        blocks.forEach { block ->
+            val normalizedBlock = block
+                .replace('｜', '|')
+                .replace('：', ':')
+                .replace('，', ',')
+                .replace('；', ';')
+                .replace('\u3000', ' ')
                 .trim()
-                .trim(',', '，', '、', ';', '；')
-            if (label.isNotBlank() && value.isNotBlank()) {
+
+            var matchedByRegex = false
+            pairRegex.findAll(normalizedBlock).forEach { match ->
+                matchedByRegex = true
+                val label = match.groupValues.getOrNull(1).orEmpty().trim()
+                val value = match.groupValues.getOrNull(2).orEmpty()
                 assignByLabel(label, value)
             }
-        }
 
-        if (!matchedByRegex) {
-            normalizedBlock
-                .split('\n')
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-                .forEach { line ->
-                    val delimiter = when {
-                        line.contains('|') -> '|'
-                        line.contains(':') -> ':'
-                        else -> null
-                    }
-                    if (delimiter != null) {
-                        val parts = line.split(delimiter, limit = 2)
-                        val label = parts.getOrNull(0).orEmpty().trim()
-                        val value = parts.getOrNull(1).orEmpty().trim()
-                        if (label.isNotBlank() && value.isNotBlank()) {
+            if (!matchedByRegex) {
+                normalizedBlock
+                    .split('\n')
+                    .flatMap { line -> line.split(Regex("""\s*[,，;；]\s*""")) }
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                    .forEach { line ->
+                        compactPairRegex.find(line)?.let { match ->
+                            val label = match.groupValues.getOrNull(1).orEmpty().trim()
+                            val value = match.groupValues.getOrNull(2).orEmpty()
+                            assignByLabel(label, value)
+                            return@forEach
+                        }
+                        spacedPairRegex.find(line)?.let { match ->
+                            val label = match.groupValues.getOrNull(1).orEmpty().trim()
+                            val value = match.groupValues.getOrNull(2).orEmpty()
                             assignByLabel(label, value)
                         }
                     }
-                }
+            }
         }
     }
 
-    return jpCv to cnCv
+    if (cvByLanguage.isEmpty()) return emptyMap()
+    val ordered = linkedMapOf<String, String>()
+    listOf("日配", "中配", "韩配", "官翻").forEach { label ->
+        cvByLanguage[label]?.takeIf { it.isNotBlank() }?.let { value ->
+            ordered[label] = value
+        }
+    }
+    cvByLanguage.forEach { (label, value) ->
+        if (label !in ordered && value.isNotBlank()) {
+            ordered[label] = value
+        }
+    }
+    return ordered
+}
+
+private fun String?.orElse(fallback: String): String {
+    val value = this.orEmpty()
+    return if (value.isBlank()) fallback else value
+}
+
+private fun deriveVoiceCvLegacyFields(cvByLanguage: Map<String, String>): Pair<String, String> {
+    val jp = cvByLanguage.entries.firstOrNull { (key, _) ->
+        canonicalVoiceLanguageLabel(key) == "日配"
+    }?.value.orEmpty()
+    val cn = cvByLanguage.entries.firstOrNull { (key, _) ->
+        canonicalVoiceLanguageLabel(key) == "中配"
+    }?.value.orEmpty()
+    return jp to cn
+}
+
+private fun mergeVoiceLanguageHeaders(
+    rawHeaders: List<String>,
+    voiceEntries: List<BaGuideVoiceEntry>,
+    cvByLanguage: Map<String, String>
+): List<String> {
+    val merged = mutableListOf<String>()
+    rawHeaders.forEach { header ->
+        val normalized = canonicalVoiceLanguageLabel(header)
+        if (normalized.isNotBlank() && normalized !in merged) {
+            merged += normalized
+        }
+    }
+    cvByLanguage.keys.forEach { label ->
+        val normalized = canonicalVoiceLanguageLabel(label)
+        if (normalized.isNotBlank() && normalized !in merged) {
+            merged += normalized
+        }
+    }
+    val maxLineCount = voiceEntries.maxOfOrNull { it.lines.size } ?: 0
+    while (merged.size < maxLineCount) {
+        val fallback = defaultVoiceLanguageLabelForIndex(merged.size)
+        if (fallback in merged) {
+            merged += "语言${merged.size + 1}"
+        } else {
+            merged += fallback
+        }
+    }
+    if (merged.isEmpty() && maxLineCount > 0) {
+        repeat(maxLineCount) { index ->
+            merged += defaultVoiceLanguageLabelForIndex(index)
+        }
+    }
+    return merged
+}
+
+private fun normalizeVoiceEntriesWithHeaderCount(
+    entries: List<BaGuideVoiceEntry>,
+    headerCount: Int
+): List<BaGuideVoiceEntry> {
+    if (headerCount <= 0) return entries
+    return entries.map { entry ->
+        val normalizedLines = if (entry.lines.size >= headerCount) {
+            entry.lines.take(headerCount)
+        } else {
+            entry.lines + List(headerCount - entry.lines.size) { "" }
+        }
+        entry.copy(lines = normalizedLines)
+    }
 }
 
 private fun firstImageFromAny(any: Any?, sourceUrl: String, depth: Int = 0): String {
@@ -1162,8 +1288,18 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
                 tabGalleryIconUrl = tabIcons[GuideTab.Gallery].orEmpty(),
                 tabSimulateIconUrl = tabIcons[GuideTab.Simulate].orEmpty()
             )
-        val (voiceLanguageHeaders, voiceEntries) = parseVoiceDataFromBaseData(baseData, sourceUrl)
-        val (voiceCvJp, voiceCvCn) = parseVoiceCvFromBaseData(baseData)
+        val (rawVoiceLanguageHeaders, rawVoiceEntries) = parseVoiceDataFromBaseData(baseData, sourceUrl)
+        val voiceCvByLanguage = parseVoiceCvByLanguageFromBaseData(baseData)
+        val voiceLanguageHeaders = mergeVoiceLanguageHeaders(
+            rawHeaders = rawVoiceLanguageHeaders,
+            voiceEntries = rawVoiceEntries,
+            cvByLanguage = voiceCvByLanguage
+        )
+        val voiceEntries = normalizeVoiceEntriesWithHeaderCount(
+            entries = rawVoiceEntries,
+            headerCount = voiceLanguageHeaders.size
+        )
+        val (voiceCvJp, voiceCvCn) = deriveVoiceCvLegacyFields(voiceCvByLanguage)
         val galleryFromMediaTypes = parseGalleryItemsFromBaseData(baseData, sourceUrl)
         val giftPreferenceRows = parseGiftPreferenceRowsFromBaseData(baseData, sourceUrl)
         val baseRows = mutableListOf<GuideBaseRow>()
@@ -1594,6 +1730,7 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
             voiceRows = voiceRows.take(160),
             voiceCvJp = voiceCvJp,
             voiceCvCn = voiceCvCn,
+            voiceCvByLanguage = voiceCvByLanguage,
             voiceLanguageHeaders = voiceLanguageHeaders,
             voiceEntries = voiceEntries,
             tabSkillIconUrl = tabIcons[GuideTab.Skills].orEmpty(),
@@ -1694,6 +1831,7 @@ private fun fetchGuideInfoByApi(sourceUrl: String): BaStudentGuideInfo {
         voiceRows = detail.voiceRows,
         voiceCvJp = detail.voiceCvJp,
         voiceCvCn = detail.voiceCvCn,
+        voiceCvByLanguage = detail.voiceCvByLanguage,
         voiceLanguageHeaders = detail.voiceLanguageHeaders,
         voiceEntries = detail.voiceEntries,
         tabSkillIconUrl = detail.tabSkillIconUrl,

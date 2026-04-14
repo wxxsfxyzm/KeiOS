@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -1715,19 +1717,22 @@ fun GuideSkillCardItem(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GuideVoiceLanguageCard(
     headers: List<String>,
+    selectedHeader: String,
     backdrop: Backdrop?,
+    onSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val visibleHeaders = headers
-        .filterNot { header ->
-            val value = header.lowercase()
-            value.contains("韩") || value.contains("kr") || value.contains("korean")
-        }
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .distinct()
         .ifEmpty { listOf("日配", "中配") }
-        .take(2)
+    val activeHeader = visibleHeaders.firstOrNull { it.equals(selectedHeader.trim(), ignoreCase = true) }
+        ?: visibleHeaders.firstOrNull().orEmpty()
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.defaultColors(
@@ -1740,22 +1745,30 @@ fun GuideVoiceLanguageCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
         ) {
             Text(
                 text = "配音",
-                color = MiuixTheme.colorScheme.onBackgroundVariant
+                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                modifier = Modifier.padding(top = 6.dp)
             )
-            visibleHeaders.forEach { header ->
-                GlassTextButton(
-                    backdrop = backdrop,
-                    text = header,
-                    enabled = false,
-                    textColor = Color(0xFF3B82F6),
-                    variant = GlassVariant.Compact,
-                    onClick = {}
-                )
+            FlowRow(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                visibleHeaders.forEach { header ->
+                    val selected = header.equals(activeHeader, ignoreCase = true)
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = header,
+                        textColor = if (selected) Color(0xFF2563EB) else MiuixTheme.colorScheme.onBackgroundVariant,
+                        containerColor = if (selected) Color(0x443B82F6) else null,
+                        variant = GlassVariant.Compact,
+                        onClick = { onSelected(header) }
+                    )
+                }
             }
         }
     }
@@ -1765,6 +1778,8 @@ fun GuideVoiceLanguageCard(
 fun GuideVoiceEntryCard(
     entry: BaGuideVoiceEntry,
     languageHeaders: List<String>,
+    selectedLanguage: String,
+    selectedLanguageIndex: Int,
     backdrop: Backdrop?,
     isPlaying: Boolean,
     playProgress: Float,
@@ -1776,10 +1791,14 @@ fun GuideVoiceEntryCard(
     } else {
         listOf("日配", "中配")
     }
-    val jpLabel = labels.getOrNull(0) ?: "日配"
-    val cnLabel = labels.getOrNull(1) ?: "中配"
-    val jpText = entry.lines.getOrNull(0).orEmpty().trim()
-    val cnText = entry.lines.getOrNull(1).orEmpty().trim()
+    val activeIndex = selectedLanguageIndex.takeIf { index -> index in labels.indices }
+        ?: labels.indexOfFirst { label ->
+            label.equals(selectedLanguage.trim(), ignoreCase = true)
+        }.takeIf { index -> index >= 0 }
+        ?: 0
+    val activeLabel = labels.getOrNull(activeIndex).orEmpty().ifBlank { "台词" }
+    val activeText = entry.lines.getOrNull(activeIndex).orEmpty().trim()
+        .ifBlank { "暂无台词文本" }
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.defaultColors(
@@ -1842,34 +1861,30 @@ fun GuideVoiceEntryCard(
                 }
             }
 
-            val compareLines = listOf(jpLabel to jpText, cnLabel to cnText)
-            compareLines.forEach { (label, line) ->
-                val text = line.ifBlank { "暂无台词文本" }
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val labelMaxWidth = (maxWidth * 0.28f).coerceIn(52.dp, 92.dp)
-                    val lineCharBudget = ((maxWidth - labelMaxWidth).value / 7f).toInt().coerceAtLeast(10)
-                    val valueMaxLines = adaptiveValueMaxLines(text, lineCharBudget)
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val labelMaxWidth = (maxWidth * 0.28f).coerceIn(52.dp, 92.dp)
+                val lineCharBudget = ((maxWidth - labelMaxWidth).value / 7f).toInt().coerceAtLeast(10)
+                val valueMaxLines = adaptiveValueMaxLines(activeText, lineCharBudget)
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Text(
-                            text = label,
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
-                            modifier = Modifier.widthIn(max = labelMaxWidth),
-                            maxLines = 2,
-                            overflow = TextOverflow.Clip
-                        )
-                        Text(
-                            text = text,
-                            color = MiuixTheme.colorScheme.onBackground,
-                            modifier = Modifier.weight(1f),
-                            maxLines = valueMaxLines,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = activeLabel,
+                        color = MiuixTheme.colorScheme.onBackgroundVariant,
+                        modifier = Modifier.widthIn(max = labelMaxWidth),
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip
+                    )
+                    Text(
+                        text = activeText,
+                        color = MiuixTheme.colorScheme.onBackground,
+                        modifier = Modifier.weight(1f),
+                        maxLines = valueMaxLines,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
