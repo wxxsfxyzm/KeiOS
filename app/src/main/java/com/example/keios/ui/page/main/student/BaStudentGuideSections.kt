@@ -1579,6 +1579,7 @@ fun GuideCombatMetaTile(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GuideSkillCardItem(
     card: GuideSkillCardModel,
@@ -1617,48 +1618,50 @@ fun GuideSkillCardItem(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                Row(
+                if (card.iconUrl.isNotBlank()) {
+                    GuideRemoteIcon(
+                        imageUrl = card.iconUrl,
+                        iconWidth = 34.dp,
+                        iconHeight = 34.dp
+                    )
+                }
+                Column(
                     modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    if (card.iconUrl.isNotBlank()) {
-                        GuideRemoteIcon(
-                            imageUrl = card.iconUrl,
-                            iconWidth = 34.dp,
-                            iconHeight = 34.dp
-                        )
-                    }
                     Text(
                         text = card.name,
-                        modifier = Modifier.weight(1f),
-                        color = MiuixTheme.colorScheme.onBackground,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = MiuixTheme.colorScheme.onBackground
                     )
-
-                    if (card.type.isNotBlank()) {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            text = card.type,
-                            enabled = false,
-                            textColor = Color(0xFF3B82F6),
-                            variant = GlassVariant.Compact,
-                            onClick = {}
-                        )
-                    }
-                    if (skillCost.isNotBlank()) {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            text = "COST: $skillCost",
-                            enabled = false,
-                            textColor = Color(0xFF3B82F6),
-                            variant = GlassVariant.Compact,
-                            onClick = {}
-                        )
+                    if (card.type.isNotBlank() || skillCost.isNotBlank()) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (card.type.isNotBlank()) {
+                                GlassTextButton(
+                                    backdrop = backdrop,
+                                    text = card.type,
+                                    enabled = false,
+                                    textColor = Color(0xFF3B82F6),
+                                    variant = GlassVariant.Compact,
+                                    onClick = {}
+                                )
+                            }
+                            if (skillCost.isNotBlank()) {
+                                GlassTextButton(
+                                    backdrop = backdrop,
+                                    text = "COST: $skillCost",
+                                    enabled = false,
+                                    textColor = Color(0xFF3B82F6),
+                                    variant = GlassVariant.Compact,
+                                    onClick = {}
+                                )
+                            }
+                        }
                     }
                 }
             }
