@@ -2,7 +2,6 @@ package com.example.keios.ui.page.main.ba
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,26 +17,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.keios.ui.page.main.BA_DEFAULT_FRIEND_CODE
-import com.example.keios.ui.page.main.BA_DEFAULT_NICKNAME
-import com.example.keios.ui.page.main.BAInitState
-import com.example.keios.ui.page.main.BaCalendarEntry
-import com.example.keios.ui.page.main.BaPoolEntry
-import com.example.keios.ui.page.main.activityProgress
-import com.example.keios.ui.page.main.cafeDailyCapacity
-import com.example.keios.ui.page.main.calculateApFullAtMs
-import com.example.keios.ui.page.main.calculateApNextPointAtMs
-import com.example.keios.ui.page.main.calculateInviteTicketAvailableMs
-import com.example.keios.ui.page.main.calculateNextHeadpatAvailableMs
-import com.example.keios.ui.page.main.displayAp
-import com.example.keios.ui.page.main.formatBaDateTime
-import com.example.keios.ui.page.main.formatBaDateTimeNoSeconds
-import com.example.keios.ui.page.main.formatBaDateTimeNoYearInTimeZone
-import com.example.keios.ui.page.main.formatBaRemainingTime
-import com.example.keios.ui.page.main.nextArenaRefreshMs
-import com.example.keios.ui.page.main.nextCafeStudentRefreshMs
-import com.example.keios.ui.page.main.poolProgress
-import com.example.keios.ui.page.main.serverRefreshTimeZone
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
@@ -578,7 +557,7 @@ internal fun BaCalendarCard(
                             overflow = TextOverflow.Ellipsis,
                         )
                         if (showCalendarPoolImages) {
-                            com.example.keios.ui.page.main.GameKeeCoverImage(
+                            GameKeeCoverImage(
                                 imageUrl = activity.imageUrl,
                                 modifier = Modifier.fillMaxWidth(),
                             )
@@ -713,7 +692,7 @@ internal fun BaPoolCard(
                             overflow = TextOverflow.Ellipsis,
                         )
                         if (showCalendarPoolImages) {
-                            com.example.keios.ui.page.main.GameKeeCoverImage(
+                            GameKeeCoverImage(
                                 imageUrl = pool.imageUrl,
                                 modifier = Modifier.fillMaxWidth(),
                             )

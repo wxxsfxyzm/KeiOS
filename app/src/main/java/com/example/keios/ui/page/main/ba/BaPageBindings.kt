@@ -2,9 +2,6 @@ package com.example.keios.ui.page.main.ba
 
 import android.content.Context
 import androidx.compose.foundation.layout.PaddingValues
-import com.example.keios.ui.page.main.BASettingsStore
-import com.example.keios.ui.page.main.BaCalendarEntry
-import com.example.keios.ui.page.main.BaPoolEntry
 
 internal fun buildBaSettingsSheetState(
     ui: BaPageUiController,
@@ -104,14 +101,14 @@ internal fun buildBaPageContentActions(
     return BaPageContentActions(
         onApCurrentInputChange = { office.apCurrentInput = it },
         onApCurrentDone = {
-            val finalValue = office.apCurrentInput.toIntOrNull()?.coerceIn(0, com.example.keios.ui.page.main.BA_AP_MAX) ?: 0
+            val finalValue = office.apCurrentInput.toIntOrNull()?.coerceIn(0, BA_AP_MAX) ?: 0
             office.updateCurrentAp(finalValue, markSync = true)
             office.apCurrentInput = finalValue.toString()
         },
         onApLimitInputChange = { office.apLimitInput = it },
         onApLimitDone = {
-            val finalValue = office.apLimitInput.toIntOrNull()?.coerceIn(0, com.example.keios.ui.page.main.BA_AP_LIMIT_MAX)
-                ?: com.example.keios.ui.page.main.BA_AP_LIMIT_MAX
+            val finalValue = office.apLimitInput.toIntOrNull()?.coerceIn(0, BA_AP_LIMIT_MAX)
+                ?: BA_AP_LIMIT_MAX
             office.updateApLimit(finalValue)
             office.applyApRegen()
             office.apLimitInput = finalValue.toString()

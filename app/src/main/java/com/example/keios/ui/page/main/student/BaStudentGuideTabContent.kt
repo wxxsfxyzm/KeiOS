@@ -1458,6 +1458,13 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                 backdrop = backdrop
                                             )
 
+                                            "能力解放" -> GuideSimulateUnlockCard(
+                                                title = title,
+                                                rows = rows,
+                                                hint = hint,
+                                                backdrop = backdrop
+                                            )
+
                                             "羁绊等级奖励" -> GuideSimulateBondCard(
                                                 title = title,
                                                 rows = rows,
@@ -1656,6 +1663,11 @@ private fun GuideSimulateSectionCard(
     } else {
         rows
     }
+    val displayCapsule = if (title == "爱用品" && displayRows.isEmpty()) {
+        ""
+    } else {
+        levelCapsule
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1673,7 +1685,7 @@ private fun GuideSimulateSectionCard(
         ) {
             GuideSimulateCardTitleRow(
                 title = title,
-                capsule = levelCapsule,
+                capsule = displayCapsule,
                 backdrop = backdrop
             )
             if (displayRows.isNotEmpty()) {
@@ -1808,20 +1820,6 @@ private fun GuideSimulateEquipmentCard(
                                     iconHeight = 24.dp
                                 )
                             }
-                            GlassTextButton(
-                                backdrop = backdrop,
-                                text = group.slotLabel,
-                                enabled = false,
-                                textColor = Color(0xFF3B82F6),
-                                variant = GlassVariant.Compact,
-                                onClick = {}
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.weight(0.48f),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
                             group.itemName.takeIf { it.isNotBlank() }?.let { name ->
                                 Text(
                                     text = name,
@@ -1830,6 +1828,16 @@ private fun GuideSimulateEquipmentCard(
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
+                        }
+                        Row(
+                            modifier = Modifier.weight(0.48f),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            GuideSimulateInlineCapsule(
+                                text = group.slotLabel,
+                                backdrop = backdrop
+                            )
                             group.tierText.takeIf { it.isNotBlank() }?.let { tier ->
                                 GuideSimulateInlineCapsule(
                                     text = tier,
@@ -1868,6 +1876,105 @@ private data class SimulateBondGroup(
     val iconUrl: String,
     val statRows: List<BaGuideRow>
 )
+
+private data class SimulateUnlockViewData(
+    val levelCapsule: String,
+    val rows: List<BaGuideRow>
+)
+
+private fun buildSimulateUnlockViewData(
+    rows: List<BaGuideRow>,
+    hint: String
+): SimulateUnlockViewData {
+    if (rows.isEmpty()) {
+        return SimulateUnlockViewData(
+            levelCapsule = extractSimulateLevelCapsule(hint),
+            rows = emptyList()
+        )
+    }
+
+    val levelRowIndex = rows.indexOfFirst { row ->
+        Regex("""^\d+级$""").matches(normalizeProfileFieldKey(row.key))
+    }
+    val capsule = when {
+        levelRowIndex >= 0 -> rows[levelRowIndex].key.trim()
+        else -> extractSimulateLevelCapsule(hint)
+    }
+    val contentRows = if (levelRowIndex >= 0) {
+        rows.filterIndexed { index, _ -> index != levelRowIndex }
+    } else {
+        rows
+    }
+    return SimulateUnlockViewData(
+        levelCapsule = capsule,
+        rows = contentRows
+    )
+}
+
+@Composable
+private fun GuideSimulateUnlockCard(
+    title: String,
+    rows: List<BaGuideRow>,
+    hint: String,
+    backdrop: LayerBackdrop
+) {
+    val viewData = buildSimulateUnlockViewData(rows, hint)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = Color(0x223B82F6),
+            contentColor = MiuixTheme.colorScheme.onBackground
+        ),
+        onClick = {}
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            GuideSimulateCardTitleRow(
+                title = title,
+                capsule = viewData.levelCapsule,
+                backdrop = backdrop
+            )
+
+            if (viewData.rows.isNotEmpty()) {
+                viewData.rows.forEach { row ->
+                    val iconUrl = row.imageUrl.trim().ifBlank { row.imageUrls.firstOrNull().orEmpty() }
+                    if (iconUrl.isNotBlank()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            GuideRemoteIcon(
+                                imageUrl = iconUrl,
+                                iconWidth = 78.dp,
+                                iconHeight = 62.dp
+                            )
+                            GuideSimulateRowItem(
+                                row = row.copy(imageUrl = "", imageUrls = emptyList()),
+                                backdrop = backdrop
+                            )
+                        }
+                    } else {
+                        GuideSimulateRowItem(
+                            row = row,
+                            backdrop = backdrop
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "暂无能力解放数据。",
+                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                )
+            }
+        }
+    }
+}
 
 private fun buildSimulateBondGroups(rows: List<BaGuideRow>): List<SimulateBondGroup> {
     if (rows.isEmpty()) return emptyList()

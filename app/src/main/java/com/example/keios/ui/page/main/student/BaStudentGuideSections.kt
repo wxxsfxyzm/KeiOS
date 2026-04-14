@@ -167,7 +167,7 @@ private fun normalizeGalleryDisplayTitle(title: String, mediaType: String): Stri
     val raw = title.trim().ifBlank { "影画条目" }
     if (mediaType.lowercase() != "audio") return raw
     return if (raw.startsWith("BGM", ignoreCase = true)) {
-        raw.replaceFirst(Regex("^BGM", RegexOption.IGNORE_CASE), "Live2d BGM")
+        raw.replaceFirst(Regex("^BGM", RegexOption.IGNORE_CASE), "回忆大厅BGM")
     } else {
         raw
     }

@@ -12,16 +12,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.keios.mcp.McpNotificationHelper
-import com.example.keios.ui.page.main.BASettingsStore
-import com.example.keios.ui.page.main.BA_AP_LIMIT_MAX
-import com.example.keios.ui.page.main.BA_AP_MAX
-import com.example.keios.ui.page.main.BA_DEFAULT_FRIEND_CODE
-import com.example.keios.ui.page.main.BA_DEFAULT_NICKNAME
-import com.example.keios.ui.page.main.BaPageSnapshot
-import com.example.keios.ui.page.main.cafeStorageCap
-import com.example.keios.ui.page.main.displayAp
-import com.example.keios.ui.page.main.floorToHourMs
-import com.example.keios.ui.page.main.normalizeAp
 import kotlin.math.roundToInt
 
 @Stable

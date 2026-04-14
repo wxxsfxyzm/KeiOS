@@ -9,7 +9,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.IntRect
-import com.example.keios.ui.page.main.BaPageSnapshot
 
 @Stable
 internal data class BaPageUiState(
@@ -19,7 +18,7 @@ internal data class BaPageUiState(
     val overviewServerPopupAnchorBounds: IntRect?,
     val cafeLevelPopupAnchorBounds: IntRect?,
     val showCalendarIntervalPopup: Boolean,
-    val initState: com.example.keios.ui.page.main.BAInitState,
+    val initState: BAInitState,
     val serverIndex: Int,
     val uiNowMs: Long,
     val baCalendarLoading: Boolean,
@@ -53,7 +52,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
     var overviewServerPopupAnchorBounds by mutableStateOf<IntRect?>(null)
     var cafeLevelPopupAnchorBounds by mutableStateOf<IntRect?>(null)
     var showCalendarIntervalPopup by mutableStateOf(false)
-    var initState by mutableStateOf(com.example.keios.ui.page.main.BAInitState.Empty)
+    var initState by mutableStateOf(BAInitState.Empty)
     var serverIndex by mutableIntStateOf(snapshot.serverIndex)
     var uiNowMs by mutableLongStateOf(System.currentTimeMillis())
     var baCalendarLoading by mutableStateOf(true)

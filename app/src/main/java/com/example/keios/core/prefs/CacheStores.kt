@@ -5,7 +5,7 @@ import com.example.keios.feature.github.data.local.AppIconCache
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.remote.GitHubReleaseStrategyRegistry
 import com.example.keios.mcp.McpServerManager
-import com.example.keios.ui.page.main.BASettingsStore
+import com.example.keios.ui.page.main.ba.BASettingsStore
 import com.example.keios.ui.page.main.OsCardVisibilityStore
 import com.example.keios.ui.page.main.OsInfoCache
 import com.example.keios.ui.page.main.OsSectionCard
