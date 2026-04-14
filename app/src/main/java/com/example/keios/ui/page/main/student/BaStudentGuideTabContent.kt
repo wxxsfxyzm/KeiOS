@@ -253,6 +253,18 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                 .filterNot(::shouldHideMovedHeaderRow)
                                 .filterNot(::isGrowthTitleVoiceRow)
                                 .filterNot(::isVoicePlaceholderRow)
+                            val nicknameRows = buildProfileCardRows(
+                                rows = allProfileRows,
+                                specs = profileNicknameFieldSpecs
+                            )
+                            val studentInfoRows = buildProfileCardRows(
+                                rows = allProfileRows,
+                                specs = profileStudentInfoFieldSpecs
+                            )
+                            val hobbyRows = buildProfileCardRows(
+                                rows = allProfileRows,
+                                specs = profileHobbyFieldSpecs
+                            )
                             val chocolateInfoRows = allProfileRows.filter { row ->
                                 val key = row.key.trim()
                                 key.contains("巧克力", ignoreCase = true)
@@ -264,7 +276,8 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                             val normalProfileRows = allProfileRows.filterNot { row ->
                                 val key = row.key.trim()
                                 key.contains("巧克力", ignoreCase = true) ||
-                                    key.contains("互动家具", ignoreCase = true)
+                                    key.contains("互动家具", ignoreCase = true) ||
+                                    isStructuredProfileCardRow(row)
                             }
                             val chocolateGalleryItems = guide.galleryItems
                                 .filter(::isChocolateGalleryItem)
@@ -313,6 +326,102 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                 item { Spacer(modifier = Modifier.height(10.dp)) }
                             }
 
+                            if (nicknameRows.isNotEmpty()) {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.defaultColors(
+                                            color = Color(0x223B82F6),
+                                            contentColor = MiuixTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {}
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "学生昵称",
+                                                color = MiuixTheme.colorScheme.onBackground
+                                            )
+                                            nicknameRows.forEach { row ->
+                                                MiuixInfoItem(
+                                                    key = row.key.ifBlank { "信息" },
+                                                    value = row.value.ifBlank { "-" }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                item { Spacer(modifier = Modifier.height(10.dp)) }
+                            }
+
+                            if (studentInfoRows.isNotEmpty()) {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.defaultColors(
+                                            color = Color(0x223B82F6),
+                                            contentColor = MiuixTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {}
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "学生信息",
+                                                color = MiuixTheme.colorScheme.onBackground
+                                            )
+                                            studentInfoRows.forEach { row ->
+                                                MiuixInfoItem(
+                                                    key = row.key.ifBlank { "信息" },
+                                                    value = row.value.ifBlank { "-" }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                item { Spacer(modifier = Modifier.height(10.dp)) }
+                            }
+
+                            if (hobbyRows.isNotEmpty()) {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.defaultColors(
+                                            color = Color(0x223B82F6),
+                                            contentColor = MiuixTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {}
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "学生爱好",
+                                                color = MiuixTheme.colorScheme.onBackground
+                                            )
+                                            hobbyRows.forEach { row ->
+                                                MiuixInfoItem(
+                                                    key = row.key.ifBlank { "信息" },
+                                                    value = row.value.ifBlank { "-" }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                item { Spacer(modifier = Modifier.height(10.dp)) }
+                            }
+
                             if (normalProfileRows.isNotEmpty()) {
                                 item {
                                     Card(
@@ -336,7 +445,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                         }
                                     }
                                 }
-                            } else {
+                            } else if (nicknameRows.isEmpty() && studentInfoRows.isEmpty() && hobbyRows.isEmpty()) {
                                 item {
                                     Card(
                                         modifier = Modifier.fillMaxWidth(),
@@ -1065,6 +1174,85 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                         }
                     }
                 }
+}
+
+private data class ProfileFieldSpec(
+    val title: String,
+    val aliases: List<String>,
+    val hideWhenEmpty: Boolean = false
+)
+
+private val profileNicknameFieldSpecs = listOf(
+    ProfileFieldSpec("全名", listOf("全名")),
+    ProfileFieldSpec("假名注音", listOf("假名注音", "假名注明")),
+    ProfileFieldSpec("繁中译名", listOf("繁中译名")),
+    ProfileFieldSpec("简中译名", listOf("简中译名"))
+)
+
+private val profileStudentInfoFieldSpecs = listOf(
+    ProfileFieldSpec("年龄", listOf("年龄")),
+    ProfileFieldSpec("生日", listOf("生日")),
+    ProfileFieldSpec("身高", listOf("身高")),
+    ProfileFieldSpec("画师", listOf("画师", "原画师")),
+    ProfileFieldSpec("实装日期", listOf("实装日期")),
+    ProfileFieldSpec("设计", listOf("设计", "设计师"), hideWhenEmpty = true)
+)
+
+private val profileHobbyFieldSpecs = listOf(
+    ProfileFieldSpec("兴趣爱好", listOf("兴趣爱好")),
+    ProfileFieldSpec("个人简介", listOf("个人简介")),
+    ProfileFieldSpec("MomoTalk状态消息", listOf("MomoTalk状态消息", "Momotalk状态消息")),
+    ProfileFieldSpec("MomoTalk解锁等级", listOf("MomoTalk解锁等级", "Momotalk解锁等级"))
+)
+
+private val profileStructuredFieldSpecs = profileNicknameFieldSpecs + profileStudentInfoFieldSpecs + profileHobbyFieldSpecs
+
+private fun normalizeProfileFieldKey(raw: String): String {
+    return raw
+        .replace(" ", "")
+        .replace("　", "")
+        .replace("（", "(")
+        .replace("）", ")")
+        .trim()
+        .lowercase()
+}
+
+private fun isProfileValuePlaceholder(value: String): Boolean {
+    val normalized = value.trim()
+    if (normalized.isBlank()) return true
+    return normalized == "-" ||
+        normalized == "—" ||
+        normalized == "--" ||
+        normalized == "暂无" ||
+        normalized == "无"
+}
+
+private fun isProfileRowAliasMatch(row: BaGuideRow, aliases: List<String>): Boolean {
+    val key = normalizeProfileFieldKey(row.key)
+    if (key.isBlank()) return false
+    return aliases.any { alias ->
+        key == normalizeProfileFieldKey(alias)
+    }
+}
+
+private fun buildProfileCardRows(rows: List<BaGuideRow>, specs: List<ProfileFieldSpec>): List<BaGuideRow> {
+    return buildList {
+        specs.forEach { spec ->
+            val matched = rows.firstOrNull { row ->
+                isProfileRowAliasMatch(row, spec.aliases)
+            } ?: return@forEach
+            if (spec.hideWhenEmpty && isProfileValuePlaceholder(matched.value)) {
+                return@forEach
+            }
+            add(matched.copy(key = spec.title))
+        }
+    }
+}
+
+private fun isStructuredProfileCardRow(row: BaGuideRow): Boolean {
+    return profileStructuredFieldSpecs.any { spec ->
+        isProfileRowAliasMatch(row, spec.aliases)
+    }
 }
 
 private fun isGrowthTitleVoiceRow(row: BaGuideRow): Boolean {
