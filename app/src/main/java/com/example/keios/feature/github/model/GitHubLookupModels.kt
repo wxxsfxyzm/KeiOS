@@ -25,5 +25,6 @@ data class GitHubLookupConfig(
     val apiToken: String = "",
     val checkAllTrackedPreReleases: Boolean = false,
     val aggressiveApkFiltering: Boolean = false,
-    val installerXRevivedOnlineLinking: Boolean = false
+    val onlineShareTargetPackage: String = "",
+    val preferredDownloaderPackage: String = ""
 )

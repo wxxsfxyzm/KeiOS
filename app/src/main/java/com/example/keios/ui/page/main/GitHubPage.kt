@@ -1,10 +1,15 @@
 package com.example.keios.ui.page.main
 
+import android.app.DownloadManager
+import android.content.Context
 import android.content.Intent
+import android.os.Environment
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.graphics.Bitmap
 import android.widget.Toast
+import androidx.core.net.toUri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -183,6 +188,7 @@ fun GitHubPage(
     var showAddSheet by remember { mutableStateOf(false) }
     var showStrategySheet by remember { mutableStateOf(false) }
     var showCheckLogicSheet by remember { mutableStateOf(false) }
+    var showDownloaderPopup by remember { mutableStateOf(false) }
     var editingTrackedItem by remember { mutableStateOf<GitHubTrackedApp?>(null) }
     var preferPreReleaseInput by remember { mutableStateOf(false) }
     var selectedApp by remember { mutableStateOf<InstalledAppItem?>(null) }
@@ -191,7 +197,10 @@ fun GitHubPage(
     var hasAutoRequestedPermission by remember { mutableStateOf(false) }
     var showSortPopup by remember { mutableStateOf(false) }
     var showCheckLogicIntervalPopup by remember { mutableStateOf(false) }
+    var showOnlineShareTargetPopup by remember { mutableStateOf(false) }
     var checkLogicIntervalPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+    var downloaderPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+    var onlineShareTargetPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
     var sortMode by remember { mutableStateOf(GitHubSortMode.UpdateFirst) }
     var pendingDeleteItem by remember { mutableStateOf<GitHubTrackedApp?>(null) }
     var overviewRefreshState by remember { mutableStateOf(OverviewRefreshState.Idle) }
@@ -203,7 +212,8 @@ fun GitHubPage(
     var githubApiTokenInput by remember { mutableStateOf("") }
     var checkAllTrackedPreReleasesInput by remember { mutableStateOf(false) }
     var aggressiveApkFilteringInput by remember { mutableStateOf(false) }
-    var installerXRevivedOnlineLinkingInput by remember { mutableStateOf(false) }
+    var onlineShareTargetPackageInput by remember { mutableStateOf("") }
+    var preferredDownloaderPackageInput by remember { mutableStateOf("") }
     var refreshIntervalHoursInput by remember { mutableStateOf(refreshIntervalHours) }
     var showApiTokenPlainText by remember { mutableStateOf(false) }
     var strategyBenchmarkRunning by remember { mutableStateOf(false) }
@@ -249,6 +259,89 @@ fun GitHubPage(
     val apkAssetErrors = remember { mutableStateMapOf<String, String>() }
     val apkAssetExpanded = remember { mutableStateMapOf<String, Boolean>() }
     val installerXRevivedPackageName = "com.rosan.installer.x.revived"
+    val packageInstallerOnlinePackageName = "io.github.vvb2060.packageinstaller"
+
+    data class DownloaderOption(
+        val packageName: String,
+        val label: String
+    )
+
+    val systemDefaultDownloaderOption = DownloaderOption(packageName = "", label = "系统默认值")
+    val systemDownloadManagerOption = DownloaderOption(packageName = "__system_download_manager__", label = "系统内置下载器")
+
+    data class OnlineShareTargetOption(
+        val packageName: String,
+        val label: String
+    )
+
+    val noOnlineShareTargetOption = OnlineShareTargetOption(packageName = "", label = "不联动")
+
+    fun queryOnlineShareTargetOptions(): List<OnlineShareTargetOption> {
+        val knownTargets = listOf(
+            OnlineShareTargetOption(installerXRevivedPackageName, "InstallerX Revived"),
+            OnlineShareTargetOption(packageInstallerOnlinePackageName, "Package Installer")
+        )
+        return knownTargets.filter { target ->
+            appList.any { it.packageName == target.packageName } || runCatching {
+                context.packageManager.getPackageInfo(target.packageName, PackageManager.PackageInfoFlags.of(0))
+                true
+            }.recoverCatching {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(target.packageName, 0)
+                true
+            }.getOrDefault(false)
+        }
+    }
+
+    fun ResolveInfo.toDownloaderOptionOrNull(): DownloaderOption? {
+        val packageName = activityInfo?.packageName?.trim().orEmpty()
+        val label = loadLabel(context.packageManager).toString().trim().ifBlank { packageName }
+        if (packageName.isBlank()) return null
+
+        val normalizedPackage = packageName.lowercase()
+        val normalizedLabel = label.lowercase()
+        val combined = "$normalizedPackage $normalizedLabel"
+        val excludedKeywords = listOf("android", "system ui", "package installer")
+        val positiveKeywords = listOf(
+            "download", "downloader", "downloadmanager", "manager", "loader",
+            "adm", "idm", "1dm", "aria", "fetch", "torrent", "下载"
+        )
+        val knownDownloaderPackages = listOf(
+            "com.dv.adm",
+            "idm.internet.download.manager.plus",
+            "idm.internet.download.manager",
+            "idm.internet.download.manager.adm.lite",
+            "com.apps2sd.adm"
+        )
+        if (excludedKeywords.any { combined == it || combined.contains(" $it") }) return null
+
+        val decoratedLabel = when {
+            positiveKeywords.any { combined.contains(it) } ||
+                knownDownloaderPackages.any { normalizedPackage == it || normalizedPackage.startsWith("$it.") } -> "$label · 推荐"
+            else -> label
+        }
+        return DownloaderOption(packageName = packageName, label = decoratedLabel)
+    }
+
+    fun queryDownloaderOptions(): List<DownloaderOption> {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/")).apply {
+            addCategory(Intent.CATEGORY_BROWSABLE)
+        }
+        val resolved = runCatching {
+            context.packageManager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
+        }.recoverCatching {
+            @Suppress("DEPRECATION")
+            context.packageManager.queryIntentActivities(intent, 0)
+        }.getOrDefault(emptyList<ResolveInfo>())
+
+        return resolved.mapNotNull { it.toDownloaderOptionOrNull() }
+            .filterNot { it.packageName == context.packageName }
+            .distinctBy { it.packageName }
+            .sortedWith(
+                compareByDescending<DownloaderOption> { it.label.contains("推荐") }
+                    .thenBy { it.label.lowercase() }
+            )
+    }
 
     fun isPackageInstalled(packageName: String): Boolean {
         return runCatching {
@@ -261,8 +354,8 @@ fun GitHubPage(
         }.getOrDefault(false)
     }
 
-    val isInstallerXRevivedInstalled = remember(appListLoaded, appList) {
-        appList.any { it.packageName == installerXRevivedPackageName } || isPackageInstalled(installerXRevivedPackageName)
+    val installedOnlineShareTargets = remember(appListLoaded, appList) {
+        queryOnlineShareTargetOptions()
     }
 
     val trackSnapshot by produceState(initialValue = GitHubTrackSnapshot()) {
@@ -276,7 +369,8 @@ fun GitHubPage(
         githubApiTokenInput = trackSnapshot.lookupConfig.apiToken
         checkAllTrackedPreReleasesInput = trackSnapshot.lookupConfig.checkAllTrackedPreReleases
         aggressiveApkFilteringInput = trackSnapshot.lookupConfig.aggressiveApkFiltering
-        installerXRevivedOnlineLinkingInput = trackSnapshot.lookupConfig.installerXRevivedOnlineLinking
+        onlineShareTargetPackageInput = trackSnapshot.lookupConfig.onlineShareTargetPackage
+        preferredDownloaderPackageInput = trackSnapshot.lookupConfig.preferredDownloaderPackage
         refreshIntervalHours = trackSnapshot.refreshIntervalHours
         refreshIntervalHoursInput = trackSnapshot.refreshIntervalHours
 
@@ -337,14 +431,18 @@ fun GitHubPage(
         onDispose { onActionBarInteractingChanged(false) }
     }
 
-    LaunchedEffect(isInstallerXRevivedInstalled) {
-        if (!isInstallerXRevivedInstalled) {
-            installerXRevivedOnlineLinkingInput = false
-            if (lookupConfig.installerXRevivedOnlineLinking) {
-                val updatedConfig = lookupConfig.copy(installerXRevivedOnlineLinking = false)
-                GitHubTrackStore.saveLookupConfig(updatedConfig)
-                lookupConfig = updatedConfig
-            }
+    LaunchedEffect(installedOnlineShareTargets) {
+        if (onlineShareTargetPackageInput.isNotBlank() && installedOnlineShareTargets.none {
+                it.packageName == onlineShareTargetPackageInput
+            }) {
+            onlineShareTargetPackageInput = ""
+        }
+        if (lookupConfig.onlineShareTargetPackage.isNotBlank() && installedOnlineShareTargets.none {
+                it.packageName == lookupConfig.onlineShareTargetPackage
+            }) {
+            val updatedConfig = lookupConfig.copy(onlineShareTargetPackage = "")
+            GitHubTrackStore.saveLookupConfig(updatedConfig)
+            lookupConfig = updatedConfig
         }
     }
 
@@ -477,14 +575,19 @@ fun GitHubPage(
         lookupConfig = config
         checkAllTrackedPreReleasesInput = config.checkAllTrackedPreReleases
         aggressiveApkFilteringInput = config.aggressiveApkFiltering
-        installerXRevivedOnlineLinkingInput = config.installerXRevivedOnlineLinking
+        onlineShareTargetPackageInput = config.onlineShareTargetPackage
+        preferredDownloaderPackageInput = config.preferredDownloaderPackage
         refreshIntervalHoursInput = GitHubTrackStore.loadRefreshIntervalHours()
         showCheckLogicIntervalPopup = false
+        showDownloaderPopup = false
+        showOnlineShareTargetPopup = false
         showCheckLogicSheet = true
     }
 
     fun closeCheckLogicSheet() {
         showCheckLogicIntervalPopup = false
+        showDownloaderPopup = false
+        showOnlineShareTargetPopup = false
         showCheckLogicSheet = false
     }
 
@@ -562,7 +665,7 @@ fun GitHubPage(
             apiToken = sanitizedToken,
             checkAllTrackedPreReleases = previousConfig.checkAllTrackedPreReleases,
             aggressiveApkFiltering = previousConfig.aggressiveApkFiltering,
-            installerXRevivedOnlineLinking = previousConfig.installerXRevivedOnlineLinking
+            onlineShareTargetPackage = previousConfig.onlineShareTargetPackage
         )
         GitHubTrackStore.saveLookupConfig(newConfig)
         lookupConfig = newConfig
@@ -609,7 +712,10 @@ fun GitHubPage(
         val newConfig = previousConfig.copy(
             checkAllTrackedPreReleases = checkAllTrackedPreReleasesInput,
             aggressiveApkFiltering = aggressiveApkFilteringInput,
-            installerXRevivedOnlineLinking = installerXRevivedOnlineLinkingInput && isInstallerXRevivedInstalled
+            onlineShareTargetPackage = onlineShareTargetPackageInput.trim().takeIf { selected ->
+                installedOnlineShareTargets.any { it.packageName == selected }
+            }.orEmpty(),
+            preferredDownloaderPackage = preferredDownloaderPackageInput.trim()
         )
         GitHubTrackStore.saveLookupConfig(newConfig)
         GitHubTrackStore.saveRefreshIntervalHours(refreshIntervalHoursInput)
@@ -827,19 +933,20 @@ fun GitHubPage(
     fun shareApkLink(asset: GitHubReleaseAssetFile) {
         scope.launch {
             val resolvedUrl = resolvePreferredAssetUrl(asset)
+            val onlineSharePackage = lookupConfig.onlineShareTargetPackage.trim()
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_SUBJECT, asset.name)
                 putExtra(Intent.EXTRA_TEXT, resolvedUrl)
-                if (lookupConfig.installerXRevivedOnlineLinking && isInstallerXRevivedInstalled) {
-                    `package` = installerXRevivedPackageName
+                if (onlineSharePackage.isNotBlank()) {
+                    `package` = onlineSharePackage
                     putExtra("channel", "Online")
                     putExtra("extra_channel", "Online")
                     putExtra("online_channel", true)
                 }
             }
             runCatching {
-                if (lookupConfig.installerXRevivedOnlineLinking && isInstallerXRevivedInstalled) {
+                if (onlineSharePackage.isNotBlank()) {
                     context.startActivity(intent)
                 } else {
                     context.startActivity(Intent.createChooser(intent, "分享 APK 下载链接"))
@@ -850,15 +957,60 @@ fun GitHubPage(
         }
     }
 
+    fun enqueueWithSystemDownloadManager(url: String, fileName: String) {
+        val request = DownloadManager.Request(url.toUri()).apply {
+            setAllowedNetworkTypes(
+                DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE
+            )
+            setTitle(fileName)
+            setDescription(fileName)
+            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+        }
+        val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+            ?: throw IllegalStateException("download manager unavailable")
+        manager.enqueue(request)
+    }
+
     fun openApkInDownloader(asset: GitHubReleaseAssetFile) {
         scope.launch {
             val resolvedUrl = resolvePreferredAssetUrl(asset)
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
-                addCategory(Intent.CATEGORY_BROWSABLE)
-            }
+            val preferredPackage = lookupConfig.preferredDownloaderPackage.trim()
             runCatching {
-                context.startActivity(intent)
-                Toast.makeText(context, "已交给外部下载器处理", Toast.LENGTH_SHORT).show()
+                when (preferredPackage) {
+                    systemDownloadManagerOption.packageName -> {
+                        enqueueWithSystemDownloadManager(resolvedUrl, asset.name)
+                        Toast.makeText(context, "已交给系统内置下载器处理", Toast.LENGTH_SHORT).show()
+                    }
+                    "" -> {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
+                                addCategory(Intent.CATEGORY_BROWSABLE)
+                            }
+                        )
+                        Toast.makeText(context, "已交给系统默认值处理", Toast.LENGTH_SHORT).show()
+                    }
+                    else -> {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
+                                addCategory(Intent.CATEGORY_BROWSABLE)
+                                setPackage(preferredPackage)
+                            }
+                        )
+                        Toast.makeText(context, "已交给所选下载器处理", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }.recoverCatching {
+                if (preferredPackage.isNotBlank() && preferredPackage != systemDownloadManagerOption.packageName) {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
+                            addCategory(Intent.CATEGORY_BROWSABLE)
+                        }
+                    )
+                    Toast.makeText(context, "所选下载器不可用，已回退系统默认值", Toast.LENGTH_SHORT).show()
+                } else {
+                    throw it
+                }
             }.onFailure {
                 Toast.makeText(context, "无法打开下载器", Toast.LENGTH_SHORT).show()
             }
@@ -2124,7 +2276,7 @@ fun GitHubPage(
 
     SnapshotWindowBottomSheet(
         show = showCheckLogicSheet,
-        title = "检查逻辑",
+        title = "检查与下载",
         onDismissRequest = { closeCheckLogicSheet() },
         startAction = {
             GlassIconButton(
@@ -2146,10 +2298,24 @@ fun GitHubPage(
         }
     ) {
         val selectedRefreshOption = RefreshIntervalOption.fromHours(refreshIntervalHoursInput)
+        val downloaderOptions = remember(showCheckLogicSheet) { queryDownloaderOptions() }
+        val allDownloaderOptions = remember(downloaderOptions) {
+            listOf(systemDefaultDownloaderOption, systemDownloadManagerOption) + downloaderOptions
+        }
+        val onlineShareTargetOptions = remember(showCheckLogicSheet, installedOnlineShareTargets) {
+            listOf(noOnlineShareTargetOption) + installedOnlineShareTargets
+        }
+        val selectedDownloaderLabel = allDownloaderOptions.firstOrNull {
+            it.packageName == preferredDownloaderPackageInput
+        }?.label ?: systemDefaultDownloaderOption.label
+        val selectedOnlineShareTargetLabel = onlineShareTargetOptions.firstOrNull {
+            it.packageName == onlineShareTargetPackageInput
+        }?.label ?: noOnlineShareTargetOption.label
         val logicChanged = refreshIntervalHoursInput != refreshIntervalHours ||
             checkAllTrackedPreReleasesInput != lookupConfig.checkAllTrackedPreReleases ||
             aggressiveApkFilteringInput != lookupConfig.aggressiveApkFiltering ||
-            installerXRevivedOnlineLinkingInput != lookupConfig.installerXRevivedOnlineLinking
+            onlineShareTargetPackageInput != lookupConfig.onlineShareTargetPackage ||
+            preferredDownloaderPackageInput != lookupConfig.preferredDownloaderPackage
 
         SheetContentColumn(verticalSpacing = 8.dp) {
             SheetSectionTitle("当前摘要")
@@ -2210,23 +2376,88 @@ fun GitHubPage(
                         onCheckedChange = { checked -> aggressiveApkFilteringInput = checked }
                     )
                 }
-                SheetControlRow(
-                    label = "InstallerX Revived Online 联动",
-                    summary = if (isInstallerXRevivedInstalled) {
-                        "直链/API 分享直接发到 InstallerX Revived 的 Online 通道"
-                    } else {
-                        "未检测到 InstallerX Revived，当前不可开启"
-                    }
-                ) {
-                    Switch(
-                        checked = installerXRevivedOnlineLinkingInput && isInstallerXRevivedInstalled,
-                        enabled = isInstallerXRevivedInstalled,
-                        onCheckedChange = { checked ->
-                            if (isInstallerXRevivedInstalled) {
-                                installerXRevivedOnlineLinkingInput = checked
+                SheetControlRow(label = "下载器", summary = "用于直链下载跳转；默认跟随系统") {
+                    Box(
+                        modifier = Modifier.capturePopupAnchor { downloaderPopupAnchorBounds = it }
+                    ) {
+                        GlassTextButton(
+                            backdrop = backdrop,
+                            variant = GlassVariant.SheetAction,
+                            text = selectedDownloaderLabel,
+                            onClick = { showDownloaderPopup = !showDownloaderPopup }
+                        )
+                        if (showDownloaderPopup) {
+                            SnapshotWindowListPopup(
+                                show = showDownloaderPopup,
+                                alignment = PopupPositionProvider.Align.BottomEnd,
+                                anchorBounds = downloaderPopupAnchorBounds,
+                                placement = SnapshotPopupPlacement.ButtonEnd,
+                                onDismissRequest = { showDownloaderPopup = false },
+                                enableWindowDim = false
+                            ) {
+                                LiquidDropdownColumn {
+                                    val options = allDownloaderOptions
+                                    options.forEachIndexed { index, option ->
+                                        LiquidDropdownImpl(
+                                            text = option.label,
+                                            optionSize = options.size,
+                                            isSelected = preferredDownloaderPackageInput == option.packageName,
+                                            index = index,
+                                            onSelectedIndexChange = { selectedIndex ->
+                                                preferredDownloaderPackageInput = options[selectedIndex].packageName
+                                                showDownloaderPopup = false
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
-                    )
+                    }
+                }
+                SheetControlRow(
+                    label = "分享到安装器",
+                    summary = if (installedOnlineShareTargets.isNotEmpty()) {
+                        "分享时可直接发送到支持直接边下载边安装的安装器"
+                    } else {
+                        "未检测到支持的安装器，默认不联动"
+                    }
+                ) {
+                    Box(
+                        modifier = Modifier.capturePopupAnchor { onlineShareTargetPopupAnchorBounds = it }
+                    ) {
+                        GlassTextButton(
+                            backdrop = backdrop,
+                            variant = GlassVariant.SheetAction,
+                            text = selectedOnlineShareTargetLabel,
+                            onClick = { showOnlineShareTargetPopup = !showOnlineShareTargetPopup }
+                        )
+                        if (showOnlineShareTargetPopup) {
+                            SnapshotWindowListPopup(
+                                show = showOnlineShareTargetPopup,
+                                alignment = PopupPositionProvider.Align.BottomEnd,
+                                anchorBounds = onlineShareTargetPopupAnchorBounds,
+                                placement = SnapshotPopupPlacement.ButtonEnd,
+                                onDismissRequest = { showOnlineShareTargetPopup = false },
+                                enableWindowDim = false
+                            ) {
+                                LiquidDropdownColumn {
+                                    val options = onlineShareTargetOptions
+                                    options.forEachIndexed { index, option ->
+                                        LiquidDropdownImpl(
+                                            text = option.label,
+                                            optionSize = options.size,
+                                            isSelected = onlineShareTargetPackageInput == option.packageName,
+                                            index = index,
+                                            onSelectedIndexChange = { selectedIndex ->
+                                                onlineShareTargetPackageInput = options[selectedIndex].packageName
+                                                showOnlineShareTargetPopup = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 SheetControlRow(label = "保存状态") {
                     StatusPill(
@@ -2248,7 +2479,10 @@ fun GitHubPage(
                     text = "若设备主要只关心 arm64，可开启“更激进的过滤方式”。它会过滤 `armeabi-v7a`、`armeabi`、`x86_64`、`x86`；只有同一 release 已存在 `arm64-v8a` 时，才会连带过滤 universal。"
                 )
                 SheetDescriptionText(
-                    text = "InstallerX Revived Online 联动只影响“分享”；若未安装 `com.rosan.installer.x.revived`，开关会保持关闭且不可开启。"
+                    text = "该选项只影响“分享”动作，默认不联动。目前仅识别 `com.rosan.installer.x.revived` 与 `io.github.vvb2060.packageinstaller`，可将分享直接发送到支持边下载边安装的安装器。"
+                )
+                SheetDescriptionText(
+                    text = "下载器列表会先扫描支持 `ACTION_VIEW` + `CATEGORY_BROWSABLE` 的候选应用，再优先标记更像下载器的条目；“系统内置下载器”会直接走 Android DownloadManager。"
                 )
             }
         }
