@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -20,7 +21,8 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun MiuixInfoItem(
     key: String,
     value: String,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    valueColor: Color? = null
 ) {
     val clickableModifier = if (onClick != null) {
         Modifier.clickable(onClick = onClick)
@@ -44,7 +46,7 @@ fun MiuixInfoItem(
         )
         Text(
             text = value.ifBlank { "N/A" },
-            color = MiuixTheme.colorScheme.onBackground,
+            color = valueColor ?: MiuixTheme.colorScheme.onBackground,
             modifier = Modifier.weight(0.58f),
             textAlign = TextAlign.End,
             maxLines = Int.MAX_VALUE,

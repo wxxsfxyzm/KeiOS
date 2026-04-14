@@ -1,6 +1,7 @@
 package com.example.keios.ui.page.main.student
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,18 +12,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import java.util.concurrent.ConcurrentHashMap
 
 internal fun LazyListScope.renderBaStudentGuideTabContent(
     activeBottomTab: GuideBottomTab,
@@ -284,6 +292,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                 .filterNot(::shouldHideMovedHeaderRow)
                                 .filterNot(::isGrowthTitleVoiceRow)
                                 .filterNot(::isVoicePlaceholderRow)
+                                .filterNot(::isProfileSectionHeaderRow)
                             val hasTopDataHeader = profileRowsBase.any { row ->
                                 normalizeProfileFieldKey(row.key) == normalizeProfileFieldKey("顶级数据")
                             }
@@ -416,10 +425,50 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                 color = MiuixTheme.colorScheme.onBackground
                                             )
                                             studentInfoRows.forEach { row ->
-                                                MiuixInfoItem(
-                                                    key = row.key.ifBlank { "信息" },
-                                                    value = row.value.ifBlank { "-" }
-                                                )
+                                                val normalizedKey = normalizeProfileFieldKey(row.key)
+                                                if (normalizedKey == profileRoleReferenceFieldKey) {
+                                                    val externalLink = remember(row.value) {
+                                                        extractProfileExternalLink(row.value)
+                                                    }
+                                                    val resolvedTitle by produceState(
+                                                        initialValue = if (externalLink.isNotBlank()) {
+                                                            profileLinkTitleCache[externalLink].orEmpty()
+                                                        } else {
+                                                            ""
+                                                        },
+                                                        key1 = externalLink
+                                                    ) {
+                                                        value = if (externalLink.isBlank()) {
+                                                            ""
+                                                        } else {
+                                                            withContext(Dispatchers.IO) {
+                                                                resolveProfileLinkTitle(externalLink)
+                                                            }
+                                                        }
+                                                    }
+                                                    val displayValue = when {
+                                                        externalLink.isBlank() -> row.value.ifBlank { "-" }
+                                                        resolvedTitle.isNotBlank() -> resolvedTitle
+                                                        else -> fallbackProfileLinkTitle(externalLink)
+                                                    }
+                                                    MiuixInfoItem(
+                                                        key = row.key.ifBlank { "信息" },
+                                                        value = displayValue,
+                                                        onClick = externalLink.takeIf { it.isNotBlank() }?.let { link ->
+                                                            { onOpenExternal(link) }
+                                                        },
+                                                        valueColor = if (externalLink.isNotBlank()) {
+                                                            Color(0xFF5FA8FF)
+                                                        } else {
+                                                            null
+                                                        }
+                                                    )
+                                                } else {
+                                                    MiuixInfoItem(
+                                                        key = row.key.ifBlank { "信息" },
+                                                        value = row.value.ifBlank { "-" }
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -1220,6 +1269,7 @@ private data class ProfileFieldSpec(
 )
 
 private val profileNicknameFieldSpecs = listOf(
+    ProfileFieldSpec("角色名称", listOf("角色名称")),
     ProfileFieldSpec("全名", listOf("全名")),
     ProfileFieldSpec("假名注音", listOf("假名注音", "假名注明")),
     ProfileFieldSpec("繁中译名", listOf("繁中译名")),
@@ -1232,6 +1282,8 @@ private val profileStudentInfoFieldSpecs = listOf(
     ProfileFieldSpec("身高", listOf("身高")),
     ProfileFieldSpec("画师", listOf("画师", "原画师")),
     ProfileFieldSpec("实装日期", listOf("实装日期")),
+    ProfileFieldSpec("声优", listOf("声优")),
+    ProfileFieldSpec("角色考据", listOf("角色考据"), hideWhenEmpty = true),
     ProfileFieldSpec("设计", listOf("设计", "设计师"), hideWhenEmpty = true)
 )
 
@@ -1252,6 +1304,104 @@ private fun normalizeProfileFieldKey(raw: String): String {
         .replace("）", ")")
         .trim()
         .lowercase()
+}
+
+private val profileRoleReferenceFieldKey = normalizeProfileFieldKey("角色考据")
+private val profileSectionHeaderKeys = setOf("介绍", "学生信息", "信息")
+    .map(::normalizeProfileFieldKey)
+    .toSet()
+private val profileLinkTitleCache = ConcurrentHashMap<String, String>()
+
+private fun isProfileSectionHeaderRow(row: BaGuideRow): Boolean {
+    val key = normalizeProfileFieldKey(row.key)
+    return key in profileSectionHeaderKeys
+}
+
+private fun extractProfileExternalLink(raw: String): String {
+    val source = raw.trim()
+    if (source.isBlank()) return ""
+
+    val direct = when {
+        source.startsWith("http://", ignoreCase = true) ||
+            source.startsWith("https://", ignoreCase = true) -> source
+        source.startsWith("www.", ignoreCase = true) -> "https://$source"
+        source.startsWith("/") -> normalizeGuideUrl(source)
+        else -> ""
+    }
+    if (direct.isNotBlank()) {
+        val scheme = runCatching { Uri.parse(direct).scheme.orEmpty() }.getOrDefault("")
+        if (scheme.equals("http", ignoreCase = true) || scheme.equals("https", ignoreCase = true)) {
+            return direct
+        }
+    }
+
+    val embedded = Regex("""https?://[^\s]+""", RegexOption.IGNORE_CASE)
+        .find(source)
+        ?.value
+        .orEmpty()
+        .trimEnd(')', ']', '}', ',', '。', '，')
+    if (embedded.isBlank()) return ""
+
+    val embeddedScheme = runCatching { Uri.parse(embedded).scheme.orEmpty() }.getOrDefault("")
+    return if (embeddedScheme.equals("http", ignoreCase = true) || embeddedScheme.equals("https", ignoreCase = true)) {
+        embedded
+    } else {
+        ""
+    }
+}
+
+private fun resolveProfileLinkTitle(url: String): String {
+    if (url.isBlank()) return ""
+    profileLinkTitleCache[url]?.let { return it }
+    val title = runCatching { fetchProfileLinkTitle(url) }.getOrDefault("")
+    profileLinkTitleCache[url] = title
+    return title
+}
+
+private fun fetchProfileLinkTitle(url: String): String {
+    if (url.isBlank()) return ""
+    val html = GameKeeFetchHelper.fetchHtml(
+        pathOrUrl = url,
+        refererPath = "/ba/"
+    )
+    if (html.isBlank()) return ""
+
+    val ogTitle = Regex(
+        pattern = """<meta\s+[^>]*(?:property|name)\s*=\s*["']og:title["'][^>]*content\s*=\s*["']([^"']+)["'][^>]*>""",
+        options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+    ).find(html)?.groupValues?.getOrNull(1).orEmpty()
+
+    val titleTag = Regex(
+        pattern = """<title[^>]*>(.*?)</title>""",
+        options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+    ).find(html)?.groupValues?.getOrNull(1).orEmpty()
+
+    return cleanProfileLinkTitle(
+        if (ogTitle.isNotBlank()) ogTitle else titleTag
+    )
+}
+
+private fun cleanProfileLinkTitle(raw: String): String {
+    if (raw.isBlank()) return ""
+    return raw
+        .replace(Regex("<[^>]+>"), " ")
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&#39;", "'")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+}
+
+private fun fallbackProfileLinkTitle(url: String): String {
+    val uri = runCatching { Uri.parse(url) }.getOrNull()
+    val lastSegment = uri?.lastPathSegment?.trim().orEmpty()
+    if (lastSegment.isNotBlank()) return lastSegment
+    val host = uri?.host?.trim().orEmpty()
+    if (host.isNotBlank()) return host
+    return "打开链接"
 }
 
 private fun isProfileValuePlaceholder(value: String): Boolean {
