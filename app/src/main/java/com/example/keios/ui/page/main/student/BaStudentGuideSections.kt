@@ -1579,7 +1579,6 @@ fun GuideCombatMetaTile(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GuideSkillCardItem(
     card: GuideSkillCardModel,
@@ -1618,50 +1617,48 @@ fun GuideSkillCardItem(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Top
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (card.iconUrl.isNotBlank()) {
-                    GuideRemoteIcon(
-                        imageUrl = card.iconUrl,
-                        iconWidth = 34.dp,
-                        iconHeight = 34.dp
-                    )
-                }
-                Column(
+                Row(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (card.iconUrl.isNotBlank()) {
+                        GuideRemoteIcon(
+                            imageUrl = card.iconUrl,
+                            iconWidth = 34.dp,
+                            iconHeight = 34.dp
+                        )
+                    }
                     Text(
                         text = card.name,
-                        color = MiuixTheme.colorScheme.onBackground
+                        modifier = Modifier.weight(1f),
+                        color = MiuixTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    if (card.type.isNotBlank() || skillCost.isNotBlank()) {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            if (card.type.isNotBlank()) {
-                                GlassTextButton(
-                                    backdrop = backdrop,
-                                    text = card.type,
-                                    enabled = false,
-                                    textColor = Color(0xFF3B82F6),
-                                    variant = GlassVariant.Compact,
-                                    onClick = {}
-                                )
-                            }
-                            if (skillCost.isNotBlank()) {
-                                GlassTextButton(
-                                    backdrop = backdrop,
-                                    text = "COST: $skillCost",
-                                    enabled = false,
-                                    textColor = Color(0xFF3B82F6),
-                                    variant = GlassVariant.Compact,
-                                    onClick = {}
-                                )
-                            }
-                        }
+
+                    if (card.type.isNotBlank()) {
+                        GlassTextButton(
+                            backdrop = backdrop,
+                            text = card.type,
+                            enabled = false,
+                            textColor = Color(0xFF3B82F6),
+                            variant = GlassVariant.Compact,
+                            onClick = {}
+                        )
+                    }
+                    if (skillCost.isNotBlank()) {
+                        GlassTextButton(
+                            backdrop = backdrop,
+                            text = "COST: $skillCost",
+                            enabled = false,
+                            textColor = Color(0xFF3B82F6),
+                            variant = GlassVariant.Compact,
+                            onClick = {}
+                        )
                     }
                 }
             }

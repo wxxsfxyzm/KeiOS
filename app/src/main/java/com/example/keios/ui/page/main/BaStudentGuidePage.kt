@@ -14,7 +14,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,7 +41,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -96,8 +94,6 @@ import com.example.keios.ui.page.main.student.weaponCardForDisplay
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.FrostedBlock
-import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
@@ -176,7 +172,6 @@ fun BaStudentGuidePage(
         }
     }
     val pageTitle = info?.title?.ifBlank { "学生图鉴" } ?: "学生图鉴"
-    val titleCapsuleScroll = rememberScrollState()
     val voicePlayer = remember(context, sourceUrl) {
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(createGameKeeMediaSourceFactory(context))
@@ -392,58 +387,40 @@ fun BaStudentGuidePage(
             .background(MiuixTheme.colorScheme.background)
             .nestedScroll(bottomBarNestedScrollConnection),
         topBar = {
-            Column {
-                TopAppBar(
-                    title = "",
-                    scrollBehavior = scrollBehavior,
-                    color = topBarMaterialBackdrop.getMiuixAppBarColor(),
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = MiuixIcons.Regular.Back,
-                                contentDescription = null,
-                                tint = MiuixTheme.colorScheme.onSurface
-                            )
-                        }
-                    },
-                    actions = {
-                        Box {
-                            LiquidActionBar(
-                                backdrop = backdrop,
-                                items = listOf(
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Share,
-                                        contentDescription = "分享来源",
-                                        onClick = ::shareSource
-                                    ),
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Refresh,
-                                        contentDescription = "刷新",
-                                        onClick = { refreshSignal += 1 }
-                                    )
+            TopAppBar(
+                title = pageTitle,
+                largeTitle = pageTitle,
+                scrollBehavior = scrollBehavior,
+                color = topBarMaterialBackdrop.getMiuixAppBarColor(),
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = MiuixIcons.Regular.Back,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onSurface
+                        )
+                    }
+                },
+                actions = {
+                    Box {
+                        LiquidActionBar(
+                            backdrop = backdrop,
+                            items = listOf(
+                                LiquidActionItem(
+                                    icon = MiuixIcons.Regular.Share,
+                                    contentDescription = "分享来源",
+                                    onClick = ::shareSource
+                                ),
+                                LiquidActionItem(
+                                    icon = MiuixIcons.Regular.Refresh,
+                                    contentDescription = "刷新",
+                                    onClick = { refreshSignal += 1 }
                                 )
                             )
-                        }
+                        )
                     }
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 54.dp, end = 12.dp, bottom = 8.dp)
-                        .horizontalScroll(titleCapsuleScroll),
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    GlassTextButton(
-                        backdrop = backdrop,
-                        text = pageTitle,
-                        enabled = false,
-                        textColor = MiuixTheme.colorScheme.onSurface,
-                        containerColor = Color(0x1A3B82F6),
-                        variant = GlassVariant.Bar,
-                        onClick = {}
-                    )
                 }
-            }
+            )
         },
         bottomBar = {
             Box(modifier = Modifier.fillMaxWidth()) {
