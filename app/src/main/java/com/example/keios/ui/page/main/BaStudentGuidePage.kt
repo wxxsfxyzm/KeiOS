@@ -4,11 +4,9 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -149,7 +147,7 @@ fun BaStudentGuidePage(
 
     val sourceUrl = remember { BaStudentGuideStore.loadCurrentUrl() }
     var info by remember(sourceUrl) { mutableStateOf(BaStudentGuideStore.loadInfo(sourceUrl)) }
-    var loading by remember { mutableStateOf(false) }
+    var loading by remember(sourceUrl) { mutableStateOf(sourceUrl.isNotBlank()) }
     var error by remember { mutableStateOf<String?>(null) }
     var refreshSignal by remember { mutableStateOf(0) }
     var selectedBottomTabIndex by rememberSaveable(sourceUrl) { mutableIntStateOf(0) }
@@ -502,24 +500,24 @@ fun BaStudentGuidePage(
                 end = 16.dp
             )
         ) {
-            item { SmallTitle(activeBottomTab.label) }
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = info?.subtitle?.ifBlank { "GameKee" } ?: "GameKee",
-                        color = MiuixTheme.colorScheme.onBackgroundVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (loading) {
-                        val progress = rememberGuideSyncProgress()
-                        val foregroundColor = guideSyncProgressColor(progress)
+                    Box(modifier = Modifier.weight(1f)) {
+                        SmallTitle(activeBottomTab.label)
+                    }
+                    if (sourceUrl.isNotBlank()) {
+                        val progress = rememberGuideSyncProgress(loading = loading)
+                        val foregroundColor = when {
+                            loading -> Color(0xFF3B82F6)
+                            !error.isNullOrBlank() -> Color(0xFFEF4444)
+                            else -> Color(0xFF22C55E)
+                        }
                         CircularProgressIndicator(
                             progress = progress,
                             size = 18.dp,
@@ -565,26 +563,26 @@ fun BaStudentGuidePage(
 }
 
 @Composable
-private fun rememberGuideSyncProgress(): Float {
-    val transition = rememberInfiniteTransition(label = "guideSyncProgress")
-    val progress by transition.animateFloat(
-        initialValue = 0.08f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1100, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "guideSyncProgressValue",
-    )
-    return progress
-}
-
-private fun guideSyncProgressColor(progress: Float): Color {
-    val value = progress.coerceIn(0f, 1f)
-    return when {
-        value < 0.35f -> Color(0xFF3B82F6)
-        value < 0.70f -> Color(0xFF06B6D4)
-        value < 0.92f -> Color(0xFFF59E0B)
-        else -> Color(0xFF22C55E)
+private fun rememberGuideSyncProgress(loading: Boolean): Float {
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(loading) {
+        if (loading) {
+            // Restart from a visible low point and move forward once, no looping.
+            progress.snapTo(0.12f)
+            progress.animateTo(
+                targetValue = 0.68f,
+                animationSpec = tween(durationMillis = 520, easing = FastOutSlowInEasing),
+            )
+            progress.animateTo(
+                targetValue = 0.90f,
+                animationSpec = tween(durationMillis = 1800, easing = LinearEasing),
+            )
+        } else {
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+            )
+        }
     }
+    return progress.value
 }
