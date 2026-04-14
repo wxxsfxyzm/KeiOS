@@ -585,7 +585,7 @@ internal fun BaCalendarCard(
                         }
                         Text(
                             text = "${formatBaDateTimeNoYearInTimeZone(activity.beginAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(activity.endAtMs, serverTimeZone)}",
-                            color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.92f),
+                            color = countdownBlue.copy(alpha = 0.92f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -720,7 +720,7 @@ internal fun BaPoolCard(
                         }
                         Text(
                             text = "${formatBaDateTimeNoYearInTimeZone(pool.startAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(pool.endAtMs, serverTimeZone)}",
-                            color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.92f),
+                            color = countdownBlue.copy(alpha = 0.92f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
