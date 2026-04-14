@@ -73,6 +73,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import coil3.compose.AsyncImage
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.example.keios.R
 import com.example.keios.ui.page.main.widget.GlassTextButton
@@ -210,6 +211,21 @@ fun GuideRemoteImageAdaptive(
         onLoadingChanged?.invoke(false)
         return
     }
+    if (isGifMediaSource(target)) {
+        progressState?.value = 1f
+        onLoadingChanged?.invoke(false)
+        val ratio = remember(target) { detectMediaRatioFromUrl(target) ?: (16f / 9f) }
+        AsyncImage(
+            model = target,
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = modifier
+                .fillMaxWidth()
+                .aspectRatio(ratio)
+                .clip(RoundedCornerShape(14.dp))
+        )
+        return
+    }
     val bitmap by produceState<Bitmap?>(initialValue = null, target) {
         progressState?.value = 0f
         onLoadingChanged?.invoke(true)
@@ -248,6 +264,24 @@ fun GuideRemoteImageAdaptive(
             .aspectRatio(ratio)
             .clip(RoundedCornerShape(14.dp))
     )
+}
+
+private fun isGifMediaSource(source: String): Boolean {
+    val value = source.trim()
+    if (value.isBlank()) return false
+    if (value.startsWith("data:image/gif", ignoreCase = true)) return true
+    return Regex("""\.gif(\?.*)?(#.*)?$""", RegexOption.IGNORE_CASE).containsMatchIn(value)
+}
+
+private fun detectMediaRatioFromUrl(source: String): Float? {
+    val match = Regex("""/w_(\d{1,4})/h_(\d{1,4})/""")
+        .find(source)
+    val width = match?.groupValues?.getOrNull(1)?.toFloatOrNull()
+    val height = match?.groupValues?.getOrNull(2)?.toFloatOrNull()
+    if (width == null || height == null || width <= 0f || height <= 0f) return null
+    val ratio = width / height
+    if (ratio.isNaN() || ratio.isInfinite()) return null
+    return ratio.coerceIn(0.4f, 4f)
 }
 
 @Composable
@@ -312,6 +346,8 @@ fun GuideGalleryCardItem(
     backdrop: Backdrop?,
     onOpenMedia: (String) -> Unit,
     mediaUrlResolver: (String) -> String = { it },
+    embedded: Boolean = false,
+    showMediaTypeLabel: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -411,18 +447,9 @@ fun GuideGalleryCardItem(
     val imageProgress by imageProgressState.collectAsState()
     var imageLoading by remember(displayImageUrl) { mutableStateOf(displayImageUrl.isNotBlank()) }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.defaultColors(
-            color = Color(0x223B82F6),
-            contentColor = MiuixTheme.colorScheme.onBackground
-        ),
-        onClick = {}
-    ) {
+    val content: @Composable (Modifier) -> Unit = { contentModifier ->
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = contentModifier,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
@@ -451,7 +478,7 @@ fun GuideGalleryCardItem(
                         )
                     )
                 }
-                if (mediaTypeLabel.isNotBlank()) {
+                if (showMediaTypeLabel && mediaTypeLabel.isNotBlank()) {
                     GlassTextButton(
                         backdrop = backdrop,
                         text = mediaTypeLabel,
@@ -564,6 +591,28 @@ fun GuideGalleryCardItem(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+    }
+
+    if (embedded) {
+        content(
+            modifier
+                .fillMaxWidth()
+        )
+    } else {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            colors = CardDefaults.defaultColors(
+                color = Color(0x223B82F6),
+                contentColor = MiuixTheme.colorScheme.onBackground
+            ),
+            onClick = {}
+        ) {
+            content(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            )
         }
     }
 

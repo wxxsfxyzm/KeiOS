@@ -186,6 +186,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-ui:$media3Version")
     implementation("io.github.panpf.zoomimage:zoomimage-compose-coil3:$zoomImageVersion")
+    implementation("io.coil-kt.coil3:coil-gif:3.2.0")
     implementation("com.xzakota.hyper.notification:focus-api:$focusApiVersion")
 
     // Keep kotlin-test aligned with the applied Kotlin plugin version to avoid version skew.

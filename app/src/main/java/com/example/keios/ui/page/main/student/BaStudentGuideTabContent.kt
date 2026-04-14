@@ -22,6 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.example.keios.ui.page.main.widget.FrostedBlock
+import com.example.keios.ui.page.main.widget.GlassTextButton
+import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +47,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
     isVoicePlaying: Boolean,
     voicePlayProgress: Float,
     onOpenExternal: (String) -> Unit,
+    onOpenGuide: (String) -> Unit,
     onToggleVoicePlayback: (String) -> Unit
 ) {
                 when (activeBottomTab) {
@@ -293,11 +296,20 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                 .filterNot(::isGrowthTitleVoiceRow)
                                 .filterNot(::isVoicePlaceholderRow)
                                 .filterNot(::isProfileSectionHeaderRow)
+                            val sameNameRoleRows = profileRowsBase.filter(::isSameNameRoleRow)
+                            val sameNameRoleItems = buildSameNameRoleItems(sameNameRoleRows)
+                            val sameNameRoleHint = sameNameRoleRows.firstNotNullOfOrNull { row ->
+                                if (normalizeProfileFieldKey(row.key) != relatedSameNameRoleHeaderKey) return@firstNotNullOfOrNull null
+                                row.value
+                                    .trim()
+                                    .trim('*')
+                                    .takeIf { it.isNotBlank() }
+                            }.orEmpty()
                             val hasTopDataHeader = profileRowsBase.any { row ->
                                 normalizeProfileFieldKey(row.key) == normalizeProfileFieldKey("顶级数据")
                             }
                             val allProfileRows = profileRowsBase.filterNot { row ->
-                                isSkillMigratedProfileRow(row, hasTopDataHeader)
+                                isSkillMigratedProfileRow(row, hasTopDataHeader) || isSameNameRoleRow(row)
                             }
                             val nicknameRows = buildProfileCardRows(
                                 rows = allProfileRows,
@@ -508,6 +520,106 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                 item { Spacer(modifier = Modifier.height(10.dp)) }
                             }
 
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.defaultColors(
+                                        color = Color(0x223B82F6),
+                                        contentColor = MiuixTheme.colorScheme.onBackground
+                                    ),
+                                    onClick = {}
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "相关同名角色",
+                                            color = MiuixTheme.colorScheme.onBackground
+                                        )
+                                        sameNameRoleHint.takeIf { it.isNotBlank() }?.let { hint ->
+                                            Text(
+                                                text = hint,
+                                                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+
+                                        if (sameNameRoleItems.isEmpty()) {
+                                            Text(
+                                                text = "暂无同名角色条目。",
+                                                color = MiuixTheme.colorScheme.onBackgroundVariant
+                                            )
+                                        } else {
+                                            sameNameRoleItems.forEachIndexed { index, role ->
+                                                if (index > 0) {
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                }
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    val previewImage = role.imageUrl.trim()
+                                                    if (previewImage.isNotBlank()) {
+                                                        Box(
+                                                            modifier = Modifier.width(74.dp)
+                                                        ) {
+                                                            GuideRemoteImage(
+                                                                imageUrl = previewImage,
+                                                                imageHeight = 54.dp
+                                                            )
+                                                        }
+                                                    }
+                                                    Column(
+                                                        modifier = Modifier.weight(1f),
+                                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = role.name.ifBlank { "同名角色" },
+                                                            color = MiuixTheme.colorScheme.onBackground,
+                                                            maxLines = 2,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                        val link = role.linkUrl.trim()
+                                                        if (link.isNotBlank()) {
+                                                            Row(
+                                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                GlassTextButton(
+                                                                    backdrop = backdrop,
+                                                                    text = "学生图鉴",
+                                                                    textColor = Color(0xFF3B82F6),
+                                                                    variant = GlassVariant.Compact,
+                                                                    onClick = { onOpenGuide(link) }
+                                                                )
+                                                                GlassTextButton(
+                                                                    backdrop = backdrop,
+                                                                    text = "网页",
+                                                                    textColor = Color(0xFF3B82F6),
+                                                                    variant = GlassVariant.Compact,
+                                                                    onClick = { onOpenExternal(link) }
+                                                                )
+                                                            }
+                                                        } else {
+                                                            Text(
+                                                                text = "暂无可跳转链接",
+                                                                color = MiuixTheme.colorScheme.onBackgroundVariant
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            item { Spacer(modifier = Modifier.height(10.dp)) }
+
                             if (normalProfileRows.isNotEmpty()) {
                                 item {
                                     Card(
@@ -583,27 +695,28 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                     value = value
                                                 )
                                             }
-                                        }
-                                    }
-                                }
-
-                                chocolateGalleryItems.forEach { chocolateItem ->
-                                    item { Spacer(modifier = Modifier.height(10.dp)) }
-                                    item {
-                                        GuideGalleryCardItem(
-                                            item = chocolateItem,
-                                            backdrop = backdrop,
-                                            onOpenMedia = onOpenExternal,
-                                            mediaUrlResolver = { raw ->
-                                                galleryCacheRevision.let {
-                                                    BaGuideTempMediaCache.resolveCachedUrl(
-                                                        context = context,
-                                                        sourceUrl = sourceUrl,
-                                                        rawUrl = raw
-                                                    )
+                                            chocolateGalleryItems.forEachIndexed { index, chocolateItem ->
+                                                if (chocolateInfoRows.isNotEmpty() || index > 0) {
+                                                    Spacer(modifier = Modifier.height(6.dp))
                                                 }
+                                                GuideGalleryCardItem(
+                                                    item = chocolateItem,
+                                                    backdrop = backdrop,
+                                                    onOpenMedia = onOpenExternal,
+                                                    mediaUrlResolver = { raw ->
+                                                        galleryCacheRevision.let {
+                                                            BaGuideTempMediaCache.resolveCachedUrl(
+                                                                context = context,
+                                                                sourceUrl = sourceUrl,
+                                                                rawUrl = raw
+                                                            )
+                                                        }
+                                                    },
+                                                    embedded = true,
+                                                    showMediaTypeLabel = false
+                                                )
                                             }
-                                        )
+                                        }
                                     }
                                 }
                             }
@@ -636,27 +749,28 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                     value = value
                                                 )
                                             }
-                                        }
-                                    }
-                                }
-
-                                furnitureGalleryItems.forEach { furnitureItem ->
-                                    item { Spacer(modifier = Modifier.height(10.dp)) }
-                                    item {
-                                        GuideGalleryCardItem(
-                                            item = furnitureItem,
-                                            backdrop = backdrop,
-                                            onOpenMedia = onOpenExternal,
-                                            mediaUrlResolver = { raw ->
-                                                galleryCacheRevision.let {
-                                                    BaGuideTempMediaCache.resolveCachedUrl(
-                                                        context = context,
-                                                        sourceUrl = sourceUrl,
-                                                        rawUrl = raw
-                                                    )
+                                            furnitureGalleryItems.forEachIndexed { index, furnitureItem ->
+                                                if (furnitureInfoRows.isNotEmpty() || index > 0) {
+                                                    Spacer(modifier = Modifier.height(6.dp))
                                                 }
+                                                GuideGalleryCardItem(
+                                                    item = furnitureItem,
+                                                    backdrop = backdrop,
+                                                    onOpenMedia = onOpenExternal,
+                                                    mediaUrlResolver = { raw ->
+                                                        galleryCacheRevision.let {
+                                                            BaGuideTempMediaCache.resolveCachedUrl(
+                                                                context = context,
+                                                                sourceUrl = sourceUrl,
+                                                                rawUrl = raw
+                                                            )
+                                                        }
+                                                    },
+                                                    embedded = true,
+                                                    showMediaTypeLabel = false
+                                                )
                                             }
-                                        )
+                                        }
                                     }
                                 }
                             }
@@ -1268,6 +1382,12 @@ private data class ProfileFieldSpec(
     val hideWhenEmpty: Boolean = false
 )
 
+private data class SameNameRoleItem(
+    val name: String,
+    val linkUrl: String,
+    val imageUrl: String
+)
+
 private val profileNicknameFieldSpecs = listOf(
     ProfileFieldSpec("角色名称", listOf("角色名称")),
     ProfileFieldSpec("全名", listOf("全名")),
@@ -1307,10 +1427,57 @@ private fun normalizeProfileFieldKey(raw: String): String {
 }
 
 private val profileRoleReferenceFieldKey = normalizeProfileFieldKey("角色考据")
+private val relatedSameNameRoleHeaderKey = normalizeProfileFieldKey("相关同名角色")
+private val sameNameRoleNameRowKey = normalizeProfileFieldKey("同名角色名称")
 private val profileSectionHeaderKeys = setOf("介绍", "学生信息", "信息")
     .map(::normalizeProfileFieldKey)
     .toSet()
 private val profileLinkTitleCache = ConcurrentHashMap<String, String>()
+
+private fun isSameNameRoleRow(row: BaGuideRow): Boolean {
+    val key = normalizeProfileFieldKey(row.key)
+    return key == relatedSameNameRoleHeaderKey || key == sameNameRoleNameRowKey
+}
+
+private fun splitRoleRowTokens(raw: String): List<String> {
+    if (raw.isBlank()) return emptyList()
+    return raw
+        .split(Regex("""\s+/\s+"""))
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+}
+
+private fun buildSameNameRoleItems(rows: List<BaGuideRow>): List<SameNameRoleItem> {
+    if (rows.isEmpty()) return emptyList()
+    val items = rows.mapNotNull { row ->
+        if (normalizeProfileFieldKey(row.key) != sameNameRoleNameRowKey) return@mapNotNull null
+        val tokens = splitRoleRowTokens(row.value)
+        val link = sequence<String> {
+            tokens.forEach { yield(it) }
+            yield(row.value)
+        }.map { token -> extractProfileExternalLink(token) }
+            .firstOrNull { it.isNotBlank() }
+            .orEmpty()
+        val name = tokens.firstOrNull { token ->
+            token.isNotBlank() && extractProfileExternalLink(token).isBlank()
+        }.orEmpty()
+        val image = (row.imageUrls + row.imageUrl)
+            .firstOrNull { candidate -> isRenderableGalleryImageUrl(candidate) }
+            .orEmpty()
+        if (name.isBlank() && link.isBlank() && image.isBlank()) {
+            return@mapNotNull null
+        }
+        SameNameRoleItem(
+            name = name.ifBlank { fallbackProfileLinkTitle(link) },
+            linkUrl = link,
+            imageUrl = image
+        )
+    }
+
+    return items.distinctBy { item ->
+        "${item.name.trim()}|${item.linkUrl.trim()}|${item.imageUrl.trim()}"
+    }
+}
 
 private fun isProfileSectionHeaderRow(row: BaGuideRow): Boolean {
     val key = normalizeProfileFieldKey(row.key)

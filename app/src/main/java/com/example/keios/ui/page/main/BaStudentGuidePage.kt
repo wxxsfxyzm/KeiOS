@@ -145,7 +145,7 @@ fun BaStudentGuidePage(
     val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     val scrollBehavior = MiuixScrollBehavior()
 
-    val sourceUrl = remember { BaStudentGuideStore.loadCurrentUrl() }
+    var sourceUrl by rememberSaveable { mutableStateOf(BaStudentGuideStore.loadCurrentUrl()) }
     var info by remember(sourceUrl) { mutableStateOf(BaStudentGuideStore.loadInfo(sourceUrl)) }
     var loading by remember(sourceUrl) { mutableStateOf(sourceUrl.isNotBlank()) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -260,6 +260,16 @@ fun BaStudentGuidePage(
         }.onFailure {
             Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun openGuideInPage(rawUrl: String) {
+        val target = normalizeGuideUrl(rawUrl)
+        if (target.isBlank()) return
+        if (target == sourceUrl) return
+        BaStudentGuideStore.setCurrentUrl(target)
+        sourceUrl = target
+        error = null
+        refreshSignal += 1
     }
 
     fun toggleVoicePlayback(rawAudioUrl: String) {
@@ -555,6 +565,7 @@ fun BaStudentGuidePage(
                     isVoicePlaying = isVoicePlaying,
                     voicePlayProgress = voicePlayProgress,
                     onOpenExternal = ::openExternal,
+                    onOpenGuide = ::openGuideInPage,
                     onToggleVoicePlayback = ::toggleVoicePlayback
                 )
             }
