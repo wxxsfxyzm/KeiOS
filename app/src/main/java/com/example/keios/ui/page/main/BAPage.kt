@@ -2,13 +2,10 @@ package com.example.keios.ui.page.main
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,19 +46,7 @@ fun BAPage(
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
-    val isDark = isSystemInDarkTheme()
     val surfaceColor = MiuixTheme.colorScheme.surface
-    val baCardShape = RoundedCornerShape(16.dp)
-    val baCardBaseColor = if (isDark) {
-        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.44f)
-    } else {
-        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.70f)
-    }
-    val baCardBorderColor = if (isDark) {
-        MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.22f)
-    } else {
-        MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.12f)
-    }
     val backdrop = rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
@@ -86,33 +71,19 @@ fun BAPage(
 
     var baCalendarEntries by remember { mutableStateOf(emptyList<BaCalendarEntry>()) }
     var baPoolEntries by remember { mutableStateOf(emptyList<BaPoolEntry>()) }
-    var glassButtonPressCount by remember { mutableIntStateOf(0) }
     val officeSmallTitle = when (ui.serverIndex) {
         0 -> "沙勒办公室"
         1 -> "夏萊行政室"
         else -> "夏莱办公室"
     }
-    val disableCardFeedback = glassButtonPressCount > 0 || !cardPressFeedbackEnabled
-    val onGlassButtonPressedChange: (Boolean) -> Unit = { pressed ->
-        glassButtonPressCount = if (pressed) {
-            glassButtonPressCount + 1
-        } else {
-            (glassButtonPressCount - 1).coerceAtLeast(0)
-        }
-    }
 
     val settingsSheetState = buildBaSettingsSheetState(ui)
     val pageContentState = buildBaPageContentState(
-        isDark = isDark,
         officeSmallTitle = officeSmallTitle,
         baSmallTitleMargin = baSmallTitleMargin,
-        baCardShape = baCardShape,
-        baCardBaseColor = baCardBaseColor,
-        baCardBorderColor = baCardBorderColor,
         office = office,
         ui = ui,
         serverOptions = serverOptions,
-        disableCardFeedback = disableCardFeedback,
         baCalendarEntries = baCalendarEntries,
         baPoolEntries = baPoolEntries,
     )
@@ -147,7 +118,6 @@ fun BAPage(
         context = context,
         office = office,
         ui = ui,
-        onGlassButtonPressedChange = onGlassButtonPressedChange,
         onRefreshCalendar = { refreshCalendar(force = true) },
         onRefreshPool = { refreshPool(force = true) },
         onOpenCalendarLink = { url -> openBaExternalLink(context = context, url = url) },

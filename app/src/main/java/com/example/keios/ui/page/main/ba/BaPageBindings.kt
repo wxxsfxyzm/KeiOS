@@ -2,8 +2,6 @@ package com.example.keios.ui.page.main.ba
 
 import android.content.Context
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Color
 import com.example.keios.ui.page.main.BASettingsStore
 import com.example.keios.ui.page.main.BaCalendarEntry
 import com.example.keios.ui.page.main.BaPoolEntry
@@ -22,26 +20,17 @@ internal fun buildBaSettingsSheetState(
 }
 
 internal fun buildBaPageContentState(
-    isDark: Boolean,
     officeSmallTitle: String,
     baSmallTitleMargin: PaddingValues,
-    baCardShape: RoundedCornerShape,
-    baCardBaseColor: Color,
-    baCardBorderColor: Color,
     office: BaOfficeController,
     ui: BaPageUiController,
     serverOptions: List<String>,
-    disableCardFeedback: Boolean,
     baCalendarEntries: List<BaCalendarEntry>,
     baPoolEntries: List<BaPoolEntry>,
 ): BaPageContentState {
     return BaPageContentState(
-        isDark = isDark,
         officeSmallTitle = officeSmallTitle,
         baSmallTitleMargin = baSmallTitleMargin,
-        baCardShape = baCardShape,
-        baCardBaseColor = baCardBaseColor,
-        baCardBorderColor = baCardBorderColor,
         officeState = office.state(),
         uiNowMs = ui.uiNowMs,
         serverOptions = serverOptions,
@@ -49,7 +38,6 @@ internal fun buildBaPageContentState(
         showOverviewServerPopup = ui.showOverviewServerPopup,
         overviewServerPopupAnchorBounds = ui.overviewServerPopupAnchorBounds,
         initState = ui.initState,
-        disableCardFeedback = disableCardFeedback,
         baCalendarEntries = baCalendarEntries,
         baCalendarLoading = ui.baCalendarLoading,
         baCalendarError = ui.baCalendarError,
@@ -108,7 +96,6 @@ internal fun buildBaPageContentActions(
     context: Context,
     office: BaOfficeController,
     ui: BaPageUiController,
-    onGlassButtonPressedChange: (Boolean) -> Unit,
     onRefreshCalendar: () -> Unit,
     onRefreshPool: () -> Unit,
     onOpenCalendarLink: (String) -> Unit,
@@ -146,7 +133,6 @@ internal fun buildBaPageContentActions(
         onForceResetInviteTicket1Cooldown = { office.forceResetInviteTicket1Cooldown() },
         onUseInviteTicket2 = { office.useInviteTicket2() },
         onForceResetInviteTicket2Cooldown = { office.forceResetInviteTicket2Cooldown() },
-        onGlassButtonPressedChange = onGlassButtonPressedChange,
         onRefreshCalendar = onRefreshCalendar,
         onOpenCalendarLink = onOpenCalendarLink,
         onRefreshPool = onRefreshPool,

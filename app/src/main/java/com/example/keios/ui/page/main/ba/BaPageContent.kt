@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.unit.Dp
@@ -21,12 +20,8 @@ import com.kyant.backdrop.Backdrop
 import top.yukonga.miuix.kmp.basic.SmallTitle
 
 internal data class BaPageContentState(
-    val isDark: Boolean,
     val officeSmallTitle: String,
     val baSmallTitleMargin: PaddingValues,
-    val baCardShape: androidx.compose.foundation.shape.RoundedCornerShape,
-    val baCardBaseColor: Color,
-    val baCardBorderColor: Color,
     val officeState: BaOfficeState,
     val uiNowMs: Long,
     val serverOptions: List<String>,
@@ -34,7 +29,6 @@ internal data class BaPageContentState(
     val showOverviewServerPopup: Boolean,
     val overviewServerPopupAnchorBounds: IntRect?,
     val initState: BAInitState,
-    val disableCardFeedback: Boolean,
     val baCalendarEntries: List<BaCalendarEntry>,
     val baCalendarLoading: Boolean,
     val baCalendarError: String?,
@@ -64,7 +58,6 @@ internal data class BaPageContentActions(
     val onForceResetInviteTicket1Cooldown: () -> Unit,
     val onUseInviteTicket2: () -> Unit,
     val onForceResetInviteTicket2Cooldown: () -> Unit,
-    val onGlassButtonPressedChange: (Boolean) -> Unit,
     val onRefreshCalendar: () -> Unit,
     val onOpenCalendarLink: (String) -> Unit,
     val onRefreshPool: () -> Unit,
@@ -104,10 +97,7 @@ internal fun BaPageContent(
 
         item {
             BaOverviewCard(
-                isDark = state.isDark,
                 backdrop = backdrop,
-                baCardShape = state.baCardShape,
-                baCardBaseColor = state.baCardBaseColor,
                 idFriendCode = state.officeState.idFriendCode,
                 uiNowMs = state.uiNowMs,
                 apSyncMs = state.officeState.apSyncMs,
@@ -132,20 +122,14 @@ internal fun BaPageContent(
                 onClaimCafeStoredAp = actions.onClaimCafeStoredAp,
                 initState = state.initState,
                 onInitStateChange = actions.onInitStateChange,
-                disableCardFeedback = state.disableCardFeedback,
             )
         }
 
-        item { Spacer(modifier = Modifier.height(6.dp)) }
-        item { SmallTitle("咖啡厅", insideMargin = state.baSmallTitleMargin) }
-        item { Spacer(modifier = Modifier.height(6.dp)) }
+        item { Spacer(modifier = Modifier.height(10.dp)) }
 
         item {
             BaCafeCard(
                 backdrop = backdrop,
-                baCardShape = state.baCardShape,
-                baCardBaseColor = state.baCardBaseColor,
-                baCardBorderColor = state.baCardBorderColor,
                 uiNowMs = state.uiNowMs,
                 serverIndex = state.serverIndex,
                 coffeeHeadpatMs = state.officeState.coffeeHeadpatMs,
@@ -157,21 +141,14 @@ internal fun BaPageContent(
                 onForceResetInviteTicket1Cooldown = actions.onForceResetInviteTicket1Cooldown,
                 onUseInviteTicket2 = actions.onUseInviteTicket2,
                 onForceResetInviteTicket2Cooldown = actions.onForceResetInviteTicket2Cooldown,
-                onGlassButtonPressedChange = actions.onGlassButtonPressedChange,
-                disableCardFeedback = state.disableCardFeedback,
             )
         }
 
-        item { Spacer(modifier = Modifier.height(6.dp)) }
-        item { SmallTitle("活动日历", insideMargin = state.baSmallTitleMargin) }
-        item { Spacer(modifier = Modifier.height(6.dp)) }
+        item { Spacer(modifier = Modifier.height(10.dp)) }
 
         item {
             BaCalendarCard(
                 backdrop = backdrop,
-                baCardShape = state.baCardShape,
-                baCardBaseColor = state.baCardBaseColor,
-                baCardBorderColor = state.baCardBorderColor,
                 serverOptions = state.serverOptions,
                 serverIndex = state.serverIndex,
                 uiNowMs = state.uiNowMs,
@@ -181,22 +158,16 @@ internal fun BaPageContent(
                 baCalendarLastSyncMs = state.baCalendarLastSyncMs,
                 showEndedActivities = state.showEndedActivities,
                 showCalendarPoolImages = state.showCalendarPoolImages,
-                disableCardFeedback = state.disableCardFeedback,
                 onRefreshCalendar = actions.onRefreshCalendar,
                 onOpenCalendarLink = actions.onOpenCalendarLink,
             )
         }
 
-        item { Spacer(modifier = Modifier.height(6.dp)) }
-        item { SmallTitle("卡池信息", insideMargin = state.baSmallTitleMargin) }
-        item { Spacer(modifier = Modifier.height(6.dp)) }
+        item { Spacer(modifier = Modifier.height(10.dp)) }
 
         item {
             BaPoolCard(
                 backdrop = backdrop,
-                baCardShape = state.baCardShape,
-                baCardBaseColor = state.baCardBaseColor,
-                baCardBorderColor = state.baCardBorderColor,
                 serverOptions = state.serverOptions,
                 serverIndex = state.serverIndex,
                 uiNowMs = state.uiNowMs,
@@ -206,47 +177,33 @@ internal fun BaPageContent(
                 baPoolLastSyncMs = state.baPoolLastSyncMs,
                 showEndedPools = state.showEndedPools,
                 showCalendarPoolImages = state.showCalendarPoolImages,
-                disableCardFeedback = state.disableCardFeedback,
                 onRefreshPool = actions.onRefreshPool,
                 onOpenPoolStudentGuide = actions.onOpenPoolStudentGuide,
                 onOpenCalendarLink = actions.onOpenCalendarLink,
             )
         }
 
-        item { Spacer(modifier = Modifier.height(6.dp)) }
-        item { SmallTitle("ID卡", insideMargin = state.baSmallTitleMargin) }
-        item { Spacer(modifier = Modifier.height(6.dp)) }
+        item { Spacer(modifier = Modifier.height(10.dp)) }
 
         item {
             BaIdCard(
                 backdrop = backdrop,
-                baCardShape = state.baCardShape,
-                baCardBaseColor = state.baCardBaseColor,
-                baCardBorderColor = state.baCardBorderColor,
                 idNicknameInput = state.officeState.idNicknameInput,
                 onIdNicknameInputChange = actions.onIdNicknameInputChange,
                 onSaveIdNickname = actions.onSaveIdNickname,
                 idFriendCodeInput = state.officeState.idFriendCodeInput,
                 onIdFriendCodeInputChange = actions.onIdFriendCodeInputChange,
                 onSaveIdFriendCode = actions.onSaveIdFriendCode,
-                disableCardFeedback = state.disableCardFeedback,
             )
         }
 
-        item { Spacer(modifier = Modifier.height(6.dp)) }
-        item { SmallTitle("Test", insideMargin = state.baSmallTitleMargin) }
-        item { Spacer(modifier = Modifier.height(6.dp)) }
+        item { Spacer(modifier = Modifier.height(10.dp)) }
 
         item {
             BaDebugCard(
                 backdrop = backdrop,
-                baCardShape = state.baCardShape,
-                baCardBaseColor = state.baCardBaseColor,
-                baCardBorderColor = state.baCardBorderColor,
-                disableCardFeedback = state.disableCardFeedback,
                 onSendApTestNotification = actions.onSendApTestNotification,
                 onTestCafePlus3Hours = actions.onTestCafePlus3Hours,
-                onGlassButtonPressedChange = actions.onGlassButtonPressedChange,
             )
         }
     }
