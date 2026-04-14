@@ -93,6 +93,19 @@ object BaGuideTempMediaCache {
         runCatching { sessionDir(context, sourceUrl).deleteRecursively() }
     }
 
+    fun clearMediaCache(
+        context: Context,
+        sourceUrl: String,
+        rawUrl: String
+    ) {
+        val normalized = normalizeTarget(rawUrl)
+        if (normalized.isBlank()) return
+        runCatching {
+            val file = targetFile(context, sourceUrl, normalized)
+            if (file.exists()) file.delete()
+        }
+    }
+
     fun clearAll(context: Context) {
         runCatching { rootDir(context).deleteRecursively() }
     }

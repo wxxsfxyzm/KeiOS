@@ -350,6 +350,8 @@ fun GuideGalleryCardItem(
     mediaUrlResolver: (String) -> String = { it },
     embedded: Boolean = false,
     showMediaTypeLabel: Boolean = true,
+    showReloadCapsule: Boolean = false,
+    onReloadRequest: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -466,6 +468,15 @@ fun GuideGalleryCardItem(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (showReloadCapsule) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "刷新",
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = { onReloadRequest?.invoke() }
+                    )
+                }
                 if (isImageType && displayImageUrl.isNotBlank()) {
                     val imageProgressValue = if (imageLoading) imageProgress.coerceIn(0f, 1f) else 1f
                     val progressForegroundColor = if (imageProgressValue >= 0.999f) Color(0xFF34C759) else Color(0xFF3B82F6)

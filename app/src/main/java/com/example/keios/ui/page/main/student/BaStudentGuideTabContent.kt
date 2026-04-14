@@ -71,7 +71,8 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
     onOpenExternal: (String) -> Unit,
     onOpenGuide: (String) -> Unit,
     onToggleVoicePlayback: (String) -> Unit,
-    onSelectedVoiceLanguageChange: (String) -> Unit
+    onSelectedVoiceLanguageChange: (String) -> Unit,
+    onReloadInteractiveFurnitureGif: (String) -> Unit = {}
 ) {
                 when (activeBottomTab) {
                     GuideBottomTab.Archive -> {
@@ -780,6 +781,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                 if (furnitureInfoRows.isNotEmpty() || index > 0) {
                                                     Spacer(modifier = Modifier.height(6.dp))
                                                 }
+                                                val showReloadCapsule = isInteractiveFurniture12GalleryItem(furnitureItem)
                                                 GuideGalleryCardItem(
                                                     item = furnitureItem,
                                                     backdrop = backdrop,
@@ -794,7 +796,17 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                         }
                                                     },
                                                     embedded = true,
-                                                    showMediaTypeLabel = false
+                                                    showMediaTypeLabel = false,
+                                                    showReloadCapsule = showReloadCapsule,
+                                                    onReloadRequest = if (showReloadCapsule) {
+                                                        {
+                                                            onReloadInteractiveFurnitureGif(
+                                                                furnitureItem.mediaUrl.ifBlank { furnitureItem.imageUrl }
+                                                            )
+                                                        }
+                                                    } else {
+                                                        null
+                                                    }
                                                 )
                                             }
                                         }
@@ -1816,8 +1828,8 @@ private fun GuideSimulateEquipmentCard(
                             if (group.iconUrl.isNotBlank()) {
                                 GuideRemoteIcon(
                                     imageUrl = group.iconUrl,
-                                    iconWidth = 24.dp,
-                                    iconHeight = 24.dp
+                                    iconWidth = 40.dp,
+                                    iconHeight = 40.dp
                                 )
                             }
                             group.itemName.takeIf { it.isNotBlank() }?.let { name ->
@@ -1838,12 +1850,6 @@ private fun GuideSimulateEquipmentCard(
                                 text = group.slotLabel,
                                 backdrop = backdrop
                             )
-                            group.tierText.takeIf { it.isNotBlank() }?.let { tier ->
-                                GuideSimulateInlineCapsule(
-                                    text = tier,
-                                    backdrop = backdrop
-                                )
-                            }
                         }
                     }
 
@@ -2878,6 +2884,14 @@ private fun sortGalleryItemsByTitleNumbers(items: List<BaGuideGalleryItem>): Lis
             { normalizeGalleryTitle(it.title) }
         )
     )
+}
+
+private fun isInteractiveFurniture12GalleryItem(item: BaGuideGalleryItem): Boolean {
+    if (!isInteractiveFurnitureGalleryItem(item)) return false
+    val title = normalizeGalleryTitle(item.title)
+    if (title.contains("互动家具12")) return true
+    val digits = title.filter(Char::isDigit)
+    return digits == "12"
 }
 
 private data class ProfileFieldSpec(

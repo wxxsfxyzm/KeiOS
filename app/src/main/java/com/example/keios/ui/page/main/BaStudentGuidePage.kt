@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -104,6 +105,7 @@ import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -159,6 +161,7 @@ fun BaStudentGuidePage(
     var galleryCacheRevision by remember(sourceUrl) { mutableIntStateOf(0) }
     val bottomTabs = GuideBottomTab.entries
     val activeBottomTab = bottomTabs.getOrElse(selectedBottomTabIndex) { GuideBottomTab.Archive }
+    val pageScope = rememberCoroutineScope()
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
     var showBottomBar by remember { mutableStateOf(true) }
@@ -301,6 +304,27 @@ fun BaStudentGuidePage(
             isVoicePlaying = false
             voicePlayProgress = 0f
             Toast.makeText(context, "语音播放失败", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun reloadInteractiveFurnitureGif(rawUrl: String) {
+        val target = normalizeGuideUrl(rawUrl)
+        if (target.isBlank()) return
+        val currentSource = sourceUrl
+        pageScope.launch {
+            withContext(Dispatchers.IO) {
+                BaGuideTempMediaCache.clearMediaCache(
+                    context = context,
+                    sourceUrl = currentSource,
+                    rawUrl = target
+                )
+                BaGuideTempMediaCache.prefetchForGuide(
+                    context = context,
+                    sourceUrl = currentSource,
+                    rawUrls = listOf(target)
+                )
+            }
+            galleryCacheRevision += 1
         }
     }
 
@@ -570,7 +594,8 @@ fun BaStudentGuidePage(
                     onOpenExternal = ::openExternal,
                     onOpenGuide = ::openGuideInPage,
                     onToggleVoicePlayback = ::toggleVoicePlayback,
-                    onSelectedVoiceLanguageChange = { selectedVoiceLanguage = it }
+                    onSelectedVoiceLanguageChange = { selectedVoiceLanguage = it },
+                    onReloadInteractiveFurnitureGif = ::reloadInteractiveFurnitureGif
                 )
             }
         }
