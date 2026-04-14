@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.example.keios.ui.page.main.widget.FrostedBlock
@@ -1413,50 +1415,55 @@ private fun GuideProfileInfoItem(
     val displayKey = key.ifBlank { "信息" }
     val displayValue = value.ifBlank { "-" }
     val showCapsule = preferCapsule && shouldUseProfileValueCapsule(displayKey, displayValue, onClick)
-    val keyWeight = adaptiveProfileKeyWeight(displayKey, displayValue)
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 1.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = displayKey,
-            color = MiuixTheme.colorScheme.onBackgroundVariant,
-            modifier = Modifier
-                .widthIn(min = 52.dp, max = 136.dp)
-                .weight(keyWeight, fill = false),
-            maxLines = Int.MAX_VALUE,
-            overflow = TextOverflow.Clip
-        )
-        Box(
-            modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.TopEnd
+            .padding(vertical = 1.dp)
         ) {
-            if (showCapsule) {
-                GuideProfileValueCapsule(
-                    label = displayValue,
-                    tint = valueColor ?: Color(0xFF5FA8FF),
-                    onClick = onClick
-                )
-            } else {
-                val clickableModifier = if (onClick != null) {
-                    Modifier.clickable(onClick = onClick)
+        val keyMaxWidth = adaptiveProfileKeyMaxWidth(
+            key = displayKey,
+            value = displayValue,
+            containerWidth = maxWidth
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                text = displayKey,
+                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                modifier = Modifier.widthIn(min = 52.dp, max = keyMaxWidth),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.TopEnd
+            ) {
+                if (showCapsule) {
+                    GuideProfileValueCapsule(
+                        label = displayValue,
+                        tint = valueColor ?: Color(0xFF5FA8FF),
+                        onClick = onClick
+                    )
                 } else {
-                    Modifier
+                    val clickableModifier = if (onClick != null) {
+                        Modifier.clickable(onClick = onClick)
+                    } else {
+                        Modifier
+                    }
+                    Text(
+                        text = displayValue,
+                        color = valueColor ?: MiuixTheme.colorScheme.onBackground,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(clickableModifier),
+                        textAlign = TextAlign.End,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = Int.MAX_VALUE,
+                        overflow = TextOverflow.Clip
+                    )
                 }
-                Text(
-                    text = displayValue,
-                    color = valueColor ?: MiuixTheme.colorScheme.onBackground,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(clickableModifier),
-                    textAlign = TextAlign.End,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = Int.MAX_VALUE,
-                    overflow = TextOverflow.Clip
-                )
             }
         }
     }
@@ -1650,15 +1657,28 @@ private fun shouldUseProfileValueCapsule(
     return value.length <= 8 && !value.contains(" ")
 }
 
-private fun adaptiveProfileKeyWeight(key: String, value: String): Float {
+private fun adaptiveProfileKeyMaxWidth(
+    key: String,
+    value: String,
+    containerWidth: Dp
+): Dp {
     val keyLength = key.trim().length
-    return when {
-        keyLength >= 10 -> 0.46f
-        keyLength >= 8 -> 0.42f
-        keyLength >= 6 -> 0.38f
-        value.length <= 8 -> 0.30f
-        else -> 0.34f
+    val baseWidth = when {
+        keyLength >= 12 -> 148.dp
+        keyLength >= 10 -> 138.dp
+        keyLength >= 8 -> 124.dp
+        keyLength >= 6 -> 110.dp
+        else -> 94.dp
     }
+    val valuePenalty = when {
+        value.length >= 64 -> 24.dp
+        value.length >= 40 -> 16.dp
+        value.length >= 24 -> 8.dp
+        else -> 0.dp
+    }
+    val preferred = (baseWidth - valuePenalty).coerceAtLeast(84.dp)
+    val containerLimit = (containerWidth * 0.48f).coerceAtLeast(84.dp)
+    return preferred.coerceAtMost(containerLimit)
 }
 
 private fun isSameNameRoleRow(row: BaGuideRow): Boolean {
