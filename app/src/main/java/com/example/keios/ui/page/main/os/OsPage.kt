@@ -702,6 +702,7 @@ fun OsPage(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(searchBarScrollConnection)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
             contentPadding = PaddingValues(
