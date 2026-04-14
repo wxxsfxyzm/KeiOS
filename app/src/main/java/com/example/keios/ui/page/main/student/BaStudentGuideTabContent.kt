@@ -180,7 +180,6 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                         } else {
                             val skillCards = guide.skillCardsForDisplay()
                             val weaponCard = guide.weaponCardForDisplay()
-                            val topDataRows = buildTopDataRowsForSkillPage(guide)
 
                             if (!error.isNullOrBlank()) {
                                 item {
@@ -254,36 +253,6 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                         card = weapon,
                                         backdrop = backdrop
                                     )
-                                }
-                            }
-
-                            if (topDataRows.isNotEmpty()) {
-                                item { Spacer(modifier = Modifier.height(10.dp)) }
-                                item {
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = CardDefaults.defaultColors(
-                                            color = Color(0x223B82F6),
-                                            contentColor = MiuixTheme.colorScheme.onBackground
-                                        ),
-                                        onClick = {}
-                                    ) {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Text(
-                                                text = "顶级数据",
-                                                color = MiuixTheme.colorScheme.onBackground
-                                            )
-                                            GuideRowsSection(
-                                                rows = topDataRows,
-                                                emptyText = "暂无顶级数据。"
-                                            )
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -1632,6 +1601,7 @@ private fun GuideSimulateRowItem(
     val key = row.key.trim().ifBlank { "信息" }
     val value = row.value.trim()
     val iconUrl = row.imageUrl.trim().ifBlank { row.imageUrls.firstOrNull().orEmpty() }
+    val statGlyph = simulateStatGlyphForKey(key)
     if (isSimulateSubHeader(key)) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1680,6 +1650,13 @@ private fun GuideSimulateRowItem(
                     iconWidth = 18.dp,
                     iconHeight = 18.dp
                 )
+            } else if (statGlyph != null) {
+                Text(
+                    text = statGlyph,
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    modifier = Modifier.width(16.dp),
+                    textAlign = TextAlign.Center
+                )
             }
             Text(
                 text = key,
@@ -1705,6 +1682,32 @@ private fun isSimulateSubHeader(key: String): Boolean {
     if (Regex("""^羁绊角色\d+$""").matches(normalized)) return true
     if (Regex("""^\d+级$""").matches(normalized)) return true
     return false
+}
+
+private fun simulateStatGlyphForKey(raw: String): String? {
+    val key = normalizeProfileFieldKey(raw)
+    return when (key) {
+        normalizeProfileFieldKey("攻击力") -> "✢"
+        normalizeProfileFieldKey("防御力") -> "⛨"
+        normalizeProfileFieldKey("生命值") -> "♥"
+        normalizeProfileFieldKey("治愈力") -> "✚"
+        normalizeProfileFieldKey("命中值") -> "◎"
+        normalizeProfileFieldKey("闪避值") -> "◌"
+        normalizeProfileFieldKey("暴击值") -> "✶"
+        normalizeProfileFieldKey("暴击伤害") -> "✹"
+        normalizeProfileFieldKey("稳定值") -> "≋"
+        normalizeProfileFieldKey("射程") -> "➚"
+        normalizeProfileFieldKey("群控强化力") -> "⬆"
+        normalizeProfileFieldKey("群控抵抗力") -> "⬡"
+        normalizeProfileFieldKey("装弹数") -> "☰"
+        normalizeProfileFieldKey("防御无视值") -> "⊘"
+        normalizeProfileFieldKey("受恢复率") -> "⟳"
+        normalizeProfileFieldKey("COST恢复力") -> "⌛"
+        normalizeProfileFieldKey("暴击抵抗值") -> "⛯"
+        normalizeProfileFieldKey("暴伤抵抗率"),
+        normalizeProfileFieldKey("暴击伤害抵抗率") -> "✺"
+        else -> null
+    }
 }
 
 private fun buildGuideSimulateData(rows: List<BaGuideRow>): GuideSimulateData {
@@ -1839,15 +1842,20 @@ private fun expandSimulateRows(rows: List<BaGuideRow>): List<BaGuideRow> {
             )
         }
 
+        var pairIndex = 0
         while (index + 1 < tokens.size) {
             val statKey = tokens[index].trim()
             val statValue = tokens[index + 1].trim()
             if (statKey.isNotBlank() && statValue.isNotBlank()) {
+                val pairIcon = if (images.size > 1) images.getOrNull(pairIndex).orEmpty() else ""
                 expanded += BaGuideRow(
                     key = statKey,
-                    value = statValue
+                    value = statValue,
+                    imageUrl = pairIcon,
+                    imageUrls = listOfNotNull(pairIcon.takeIf { it.isNotBlank() })
                 )
             }
+            pairIndex += 1
             index += 2
         }
     }
@@ -2499,74 +2507,6 @@ private fun isSkillMigratedProfileRow(row: BaGuideRow, hasTopDataHeader: Boolean
     if (key == normalizeProfileFieldKey("25级")) return true
     if (hasTopDataHeader && key in normalizedTopDataStatKeys) return true
     return false
-}
-
-private fun buildTopDataRowsForSkillPage(info: BaStudentGuideInfo): List<BaGuideRow> {
-    val sourceRows = buildList {
-        addAll(info.skillRowsForDisplay())
-        addAll(info.growthRowsForDisplay())
-        addAll(info.profileRowsForDisplay())
-    }
-    if (sourceRows.isEmpty()) return emptyList()
-
-    val result = mutableListOf<BaGuideRow>()
-    var inTopDataBlock = false
-    sourceRows.forEach { row ->
-        val key = row.key.trim()
-        val value = row.value.trim()
-        val normalizedKey = normalizeProfileFieldKey(key)
-        if (normalizedKey == normalizeProfileFieldKey("顶级数据")) {
-            inTopDataBlock = true
-            if (value.isNotBlank()) {
-                result += BaGuideRow(
-                    key = "说明",
-                    value = value.trim('*')
-                )
-            }
-            return@forEach
-        }
-
-        if (inTopDataBlock && (
-                normalizedKey == normalizeProfileFieldKey("专武") ||
-                    normalizedKey == normalizeProfileFieldKey("装备") ||
-                    normalizedKey == normalizeProfileFieldKey("爱用品") ||
-                    normalizedKey == normalizeProfileFieldKey("能力解放") ||
-                    normalizedKey.contains(normalizeProfileFieldKey("羁绊等级奖励"))
-                )
-        ) {
-            inTopDataBlock = false
-        }
-        if (!inTopDataBlock) return@forEach
-
-        if (normalizedKey in normalizedTopDataStatKeys && value.isNotBlank()) {
-            val tokens = splitGuideCompositeValues(value)
-            if (tokens.isEmpty()) return@forEach
-
-            val firstTokenLooksLikeKey = normalizeProfileFieldKey(tokens.first()) in normalizedTopDataStatKeys
-            var index = if (firstTokenLooksLikeKey) 0 else 1
-            if (!firstTokenLooksLikeKey) {
-                result += BaGuideRow(
-                    key = key.ifBlank { "数据" },
-                    value = tokens.first()
-                )
-            }
-            while (index + 1 < tokens.size) {
-                val statKey = tokens[index].trim()
-                val statValue = tokens[index + 1].trim()
-                if (statKey.isNotBlank() && statValue.isNotBlank()) {
-                    result += BaGuideRow(
-                        key = statKey,
-                        value = statValue
-                    )
-                }
-                index += 2
-            }
-        }
-    }
-
-    return result.distinctBy { row ->
-        "${normalizeProfileFieldKey(row.key)}|${row.value.trim()}"
-    }
 }
 
 private fun canonicalVoiceLanguageForDisplay(raw: String): String {

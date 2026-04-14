@@ -568,6 +568,97 @@ private fun resolveSimulateSectionHeader(rawKey: String): String? {
     }
 }
 
+private data class SimulateSupplementIcons(
+    val weaponIcon: String = "",
+    val favorIcon: String = "",
+    val equipmentSlotIcons: Map<String, String> = emptyMap(),
+    val unlockMaterialIcons: List<String> = emptyList()
+)
+
+private fun collectSimulateSupplementIcons(
+    baseData: JSONArray,
+    sourceUrl: String
+): SimulateSupplementIcons {
+    fun extractRowImages(row: JSONArray): List<String> {
+        val out = linkedSetOf<String>()
+        for (j in 1 until row.length()) {
+            val cell = row.optJSONObject(j) ?: continue
+            val type = cell.optString("type").trim().lowercase()
+            val rawValueAny = cell.opt("value")
+            val rawValue = cell.optString("value").trim()
+            if (rawValue.isBlank()) continue
+            when (type) {
+                "image" -> {
+                    if (isPlaceholderMediaToken(rawValue)) continue
+                    val normalized = normalizeImageUrl(sourceUrl, rawValue)
+                    if (looksLikeImageUrl(normalized)) {
+                        out += normalized
+                    }
+                }
+
+                "imageset", "live2d" -> {
+                    out += extractImageUrlsFromAny(sourceUrl, rawValueAny)
+                }
+
+                else -> {
+                    out += extractImageUrlsFromHtml(sourceUrl, rawValue)
+                    out += extractImageUrlsFromAny(sourceUrl, rawValueAny)
+                }
+            }
+        }
+        return out
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+    }
+
+    var weaponIcon = ""
+    var favorIcon = ""
+    val equipmentSlotIcons = linkedMapOf<String, String>()
+    var unlockMaterialIcons: List<String> = emptyList()
+
+    for (i in 0 until baseData.length()) {
+        val row = baseData.optJSONArray(i) ?: continue
+        if (row.length() == 0) continue
+        val key = stripHtml((row.optJSONObject(0)?.optString("value") ?: "").trim())
+        val normalizedKey = normalizeGuideRowKey(key)
+        val images = extractRowImages(row)
+        if (images.isEmpty()) continue
+
+        when {
+            normalizedKey == normalizeGuideRowKey("专武图标") -> {
+                if (weaponIcon.isBlank()) {
+                    weaponIcon = images.first()
+                }
+            }
+
+            normalizedKey == normalizeGuideRowKey("爱用品图标") -> {
+                if (favorIcon.isBlank()) {
+                    favorIcon = images.first()
+                }
+            }
+
+            Regex("""^装备([123])$""").matches(normalizedKey) -> {
+                val slot = Regex("""^装备([123])$""").find(normalizedKey)?.groupValues?.getOrNull(1).orEmpty()
+                if (slot.isNotBlank() && images.firstOrNull().orEmpty().isNotBlank()) {
+                    equipmentSlotIcons["${slot}号装备"] = images.first()
+                }
+            }
+
+            normalizedKey == normalizeGuideRowKey("能力解放所需材料") -> {
+                unlockMaterialIcons = images
+            }
+        }
+    }
+
+    return SimulateSupplementIcons(
+        weaponIcon = weaponIcon,
+        favorIcon = favorIcon,
+        equipmentSlotIcons = equipmentSlotIcons,
+        unlockMaterialIcons = unlockMaterialIcons
+    )
+}
+
 private fun parseSimulateRowsFromBaseData(
     baseData: JSONArray,
     sourceUrl: String
@@ -686,7 +777,83 @@ private fun parseSimulateRowsFromBaseData(
         out += guideRow
     }
 
-    return out
+    val supplementIcons = collectSimulateSupplementIcons(baseData, sourceUrl)
+    val patchedRows = mutableListOf<BaGuideRow>()
+    var currentSection = ""
+    var currentEquipmentSlot = ""
+    var hasAppliedWeaponIcon = false
+    var hasAppliedFavorIcon = false
+
+    out.forEach { row ->
+        val sectionHeader = resolveSimulateSectionHeader(row.key)
+        if (sectionHeader != null) {
+            currentSection = sectionHeader
+            currentEquipmentSlot = ""
+            patchedRows += row
+            return@forEach
+        }
+
+        var patched = row
+        when (currentSection) {
+            "专武" -> {
+                if (!hasAppliedWeaponIcon && patched.imageUrl.isBlank() && supplementIcons.weaponIcon.isNotBlank()) {
+                    patched = patched.copy(
+                        imageUrl = supplementIcons.weaponIcon,
+                        imageUrls = listOf(supplementIcons.weaponIcon)
+                    )
+                    hasAppliedWeaponIcon = true
+                }
+            }
+
+            "装备" -> {
+                val normalizedKey = normalizeGuideRowKey(patched.key)
+                val slot = Regex("""^([123])号装备$""").find(normalizedKey)?.groupValues?.getOrNull(1).orEmpty()
+                if (slot.isNotBlank()) {
+                    currentEquipmentSlot = "${slot}号装备"
+                }
+                val slotIcon = supplementIcons.equipmentSlotIcons[currentEquipmentSlot].orEmpty()
+                if (slotIcon.isNotBlank() && patched.imageUrl.isBlank()) {
+                    val shouldAttachSlotIcon =
+                        slot.isNotBlank() || !isTopDataStatKey(patched.key)
+                    if (shouldAttachSlotIcon) {
+                        patched = patched.copy(
+                            imageUrl = slotIcon,
+                            imageUrls = listOf(slotIcon)
+                        )
+                    }
+                }
+            }
+
+            "爱用品" -> {
+                if (!hasAppliedFavorIcon && patched.imageUrl.isBlank() && supplementIcons.favorIcon.isNotBlank()) {
+                    patched = patched.copy(
+                        imageUrl = supplementIcons.favorIcon,
+                        imageUrls = listOf(supplementIcons.favorIcon)
+                    )
+                    hasAppliedFavorIcon = true
+                }
+            }
+
+            "能力解放" -> {
+                val normalizedKey = normalizeGuideRowKey(patched.key)
+                if (
+                    Regex("""^\d+级$""").matches(normalizedKey) &&
+                    patched.imageUrl.isBlank() &&
+                    patched.imageUrls.isEmpty() &&
+                    supplementIcons.unlockMaterialIcons.isNotEmpty()
+                ) {
+                    patched = patched.copy(
+                        imageUrl = supplementIcons.unlockMaterialIcons.first(),
+                        imageUrls = supplementIcons.unlockMaterialIcons
+                    )
+                }
+            }
+        }
+
+        patchedRows += patched
+    }
+
+    return patchedRows
         .map { row ->
             row.copy(
                 key = row.key.trim(),
