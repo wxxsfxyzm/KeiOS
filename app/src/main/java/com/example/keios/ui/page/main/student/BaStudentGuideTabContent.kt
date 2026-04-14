@@ -51,6 +51,8 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.math.abs
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 internal fun LazyListScope.renderBaStudentGuideTabContent(
@@ -1449,6 +1451,13 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                 backdrop = backdrop
                                             )
 
+                                            "羁绊等级奖励" -> GuideSimulateBondCard(
+                                                title = title,
+                                                rows = rows,
+                                                hint = hint,
+                                                backdrop = backdrop
+                                            )
+
                                             else -> GuideSimulateSectionCard(
                                                 title = title,
                                                 rows = rows,
@@ -1534,9 +1543,18 @@ private fun GuideSimulateAbilityCard(
     var selectedAbility by rememberSaveable(
         data.initialRows.size,
         data.maxRows.size
-    ) { mutableStateOf("初始能力") }
+    ) { mutableStateOf("最大培养") }
     val selectedRows = if (selectedAbility == "最大培养") data.maxRows else data.initialRows
     val selectedHint = if (selectedAbility == "最大培养") data.maxHint else data.initialHint
+    val initialValueByKey = remember(data.initialRows) {
+        linkedMapOf<String, String>().apply {
+            data.initialRows.forEach { row ->
+                val key = normalizeProfileFieldKey(row.key)
+                if (key.isBlank() || row.value.isBlank()) return@forEach
+                putIfAbsent(key, row.value.trim())
+            }
+        }
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1584,7 +1602,19 @@ private fun GuideSimulateAbilityCard(
             }
             if (selectedRows.isNotEmpty()) {
                 selectedRows.forEach { row ->
-                    GuideSimulateRowItem(row = row, backdrop = backdrop)
+                    val deltaText = if (selectedAbility == "最大培养") {
+                        buildSimulateMaxDeltaText(
+                            maxValue = row.value,
+                            initialValue = initialValueByKey[normalizeProfileFieldKey(row.key)]
+                        )
+                    } else {
+                        ""
+                    }
+                    GuideSimulateRowItem(
+                        row = row,
+                        backdrop = backdrop,
+                        valueDelta = deltaText
+                    )
                 }
             } else {
                 Text(
@@ -1826,6 +1856,129 @@ private fun GuideSimulateEquipmentCard(
     }
 }
 
+private data class SimulateBondGroup(
+    val roleLabel: String,
+    val iconUrl: String,
+    val statRows: List<BaGuideRow>
+)
+
+private fun buildSimulateBondGroups(rows: List<BaGuideRow>): List<SimulateBondGroup> {
+    if (rows.isEmpty()) return emptyList()
+
+    val groups = mutableListOf<SimulateBondGroup>()
+    var currentRole = ""
+    var currentIcon = ""
+    val currentRows = mutableListOf<BaGuideRow>()
+
+    fun commitGroup() {
+        if (currentRole.isBlank() && currentRows.isEmpty()) return
+        groups += SimulateBondGroup(
+            roleLabel = currentRole.ifBlank { "羁绊角色" },
+            iconUrl = currentIcon,
+            statRows = currentRows.toList()
+        )
+        currentRole = ""
+        currentIcon = ""
+        currentRows.clear()
+    }
+
+    rows.forEach { row ->
+        val key = row.key.trim()
+        val normalizedKey = normalizeProfileFieldKey(key)
+        val rowIcon = row.imageUrl.trim().ifBlank { row.imageUrls.firstOrNull().orEmpty() }
+
+        if (Regex("""^羁绊角色\d+$""").matches(normalizedKey)) {
+            commitGroup()
+            currentRole = key
+            currentIcon = rowIcon
+            return@forEach
+        }
+
+        if (key.isBlank() && row.value.isBlank()) return@forEach
+        currentRows += row.copy(
+            imageUrl = "",
+            imageUrls = emptyList()
+        )
+    }
+    commitGroup()
+
+    return groups
+}
+
+@Composable
+private fun GuideSimulateBondCard(
+    title: String,
+    rows: List<BaGuideRow>,
+    hint: String,
+    backdrop: LayerBackdrop
+) {
+    val groups = buildSimulateBondGroups(rows)
+    val levelCapsule = extractSimulateLevelCapsule(hint)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = Color(0x223B82F6),
+            contentColor = MiuixTheme.colorScheme.onBackground
+        ),
+        onClick = {}
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            GuideSimulateCardTitleRow(
+                title = title,
+                capsule = levelCapsule,
+                backdrop = backdrop
+            )
+
+            if (groups.isNotEmpty()) {
+                groups.forEach { group ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        if (group.iconUrl.isNotBlank()) {
+                            Box(modifier = Modifier.width(112.dp)) {
+                                GuideRemoteImage(
+                                    imageUrl = group.iconUrl,
+                                    imageHeight = 86.dp
+                                )
+                            }
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = group.roleLabel,
+                                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            group.statRows.forEach { stat ->
+                                GuideSimulateRowItem(
+                                    row = stat,
+                                    backdrop = backdrop
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text(
+                    text = "暂无羁绊等级奖励数据。",
+                    color = MiuixTheme.colorScheme.onBackgroundVariant
+                )
+            }
+        }
+    }
+}
+
 private data class SimulateWeaponViewData(
     val imageUrl: String,
     val statRows: List<BaGuideRow>
@@ -1994,7 +2147,8 @@ private fun GuideSimulateInlineCapsule(
 @Composable
 private fun GuideSimulateRowItem(
     row: BaGuideRow,
-    backdrop: LayerBackdrop
+    backdrop: LayerBackdrop,
+    valueDelta: String = ""
 ) {
     val key = row.key.trim().ifBlank { "信息" }
     val value = row.value.trim()
@@ -2063,14 +2217,28 @@ private fun GuideSimulateRowItem(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        Text(
-            text = value.ifBlank { "-" },
-            color = valueColor,
+        Row(
             modifier = Modifier.weight(0.55f),
-            textAlign = TextAlign.End,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = value.ifBlank { "-" },
+                color = valueColor,
+                textAlign = TextAlign.End,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            valueDelta.takeIf { it.isNotBlank() }?.let { delta ->
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = delta,
+                    color = Color(0xFFE3B547),
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip
+                )
+            }
+        }
     }
 }
 
@@ -2106,6 +2274,39 @@ private fun simulateStatGlyphForKey(raw: String): String? {
         normalizeProfileFieldKey("暴击伤害抵抗率") -> "✺"
         else -> null
     }
+}
+
+private fun buildSimulateMaxDeltaText(
+    maxValue: String,
+    initialValue: String?
+): String {
+    val maxText = maxValue.trim()
+    val initialText = initialValue?.trim().orEmpty()
+    if (maxText.isBlank() || initialText.isBlank()) return ""
+    if (Regex("""\([+-]\d+(\.\d+)?\)""").containsMatchIn(maxText)) return ""
+
+    val maxNumber = extractComparableNumber(maxText) ?: return ""
+    val initialNumber = extractComparableNumber(initialText) ?: return ""
+    val diff = maxNumber - initialNumber
+    if (abs(diff) < 0.0001) return ""
+
+    val sign = if (diff > 0) "+" else "-"
+    val absDiff = abs(diff)
+    val deltaText = if (abs(absDiff - absDiff.toLong().toDouble()) < 0.0001) {
+        absDiff.toLong().toString()
+    } else {
+        String.format(Locale.US, "%.2f", absDiff).trimEnd('0').trimEnd('.')
+    }
+    return "($sign$deltaText)"
+}
+
+private fun extractComparableNumber(raw: String): Double? {
+    val normalized = raw.replace(",", "").trim()
+    val numberText = Regex("""-?\d+(\.\d+)?""")
+        .find(normalized)
+        ?.value
+        .orEmpty()
+    return numberText.toDoubleOrNull()
 }
 
 private fun buildGuideSimulateData(rows: List<BaGuideRow>): GuideSimulateData {
