@@ -22,6 +22,7 @@ internal fun buildBaPageContentState(
     office: BaOfficeController,
     ui: BaPageUiController,
     serverOptions: List<String>,
+    cafeLevelOptions: List<Int>,
     baCalendarEntries: List<BaCalendarEntry>,
     baPoolEntries: List<BaPoolEntry>,
 ): BaPageContentState {
@@ -31,9 +32,12 @@ internal fun buildBaPageContentState(
         officeState = office.state(),
         uiNowMs = ui.uiNowMs,
         serverOptions = serverOptions,
+        cafeLevelOptions = cafeLevelOptions,
         serverIndex = ui.serverIndex,
         showOverviewServerPopup = ui.showOverviewServerPopup,
+        showCafeLevelPopup = ui.showCafeLevelPopup,
         overviewServerPopupAnchorBounds = ui.overviewServerPopupAnchorBounds,
+        cafeLevelPopupAnchorBounds = ui.cafeLevelPopupAnchorBounds,
         initState = ui.initState,
         baCalendarEntries = baCalendarEntries,
         baCalendarLoading = ui.baCalendarLoading,
@@ -115,6 +119,17 @@ internal fun buildBaPageContentActions(
         },
         onOverviewServerPopupAnchorBoundsChange = { ui.overviewServerPopupAnchorBounds = it },
         onOverviewServerPopupChange = { ui.showOverviewServerPopup = it },
+        onCafeLevelPopupAnchorBoundsChange = { ui.cafeLevelPopupAnchorBounds = it },
+        onCafeLevelPopupChange = { ui.showCafeLevelPopup = it },
+        onCafeLevelChange = { level ->
+            val normalized = level.coerceIn(1, 10)
+            office.applyCafeStorage()
+            office.cafeLevel = normalized
+            office.clampCafeStoredToCap()
+            BASettingsStore.saveCafeLevel(normalized)
+            ui.sheetCafeLevel = normalized
+            ui.showCafeLevelPopup = false
+        },
         onServerSelected = { selected ->
             ui.serverIndex = selected
             BASettingsStore.saveServerIndex(selected)

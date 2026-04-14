@@ -354,6 +354,13 @@ internal fun BaCafeCard(
     backdrop: Backdrop?,
     uiNowMs: Long,
     serverIndex: Int,
+    cafeLevel: Int,
+    cafeLevelOptions: List<Int>,
+    showCafeLevelPopup: Boolean,
+    cafeLevelPopupAnchorBounds: IntRect?,
+    onCafeLevelPopupAnchorBoundsChange: (IntRect?) -> Unit,
+    onCafeLevelPopupChange: (Boolean) -> Unit,
+    onCafeLevelChange: (Int) -> Unit,
     coffeeHeadpatMs: Long,
     coffeeInvite1UsedMs: Long,
     coffeeInvite2UsedMs: Long,
@@ -390,7 +397,45 @@ internal fun BaCafeCard(
         accentColor = accentPink,
         accentAlpha = 0f,
     ) {
-        BaCardHeader(title = "咖啡厅")
+        BaCardHeader(
+            title = "咖啡厅",
+            trailing = {
+                Box(modifier = Modifier.capturePopupAnchor { onCafeLevelPopupAnchorBoundsChange(it) }) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "Lv$cafeLevel",
+                        textColor = accentPink,
+                        variant = GlassVariant.Content,
+                        onClick = { onCafeLevelPopupChange(!showCafeLevelPopup) },
+                    )
+                    if (showCafeLevelPopup) {
+                        SnapshotWindowListPopup(
+                            show = showCafeLevelPopup,
+                            alignment = PopupPositionProvider.Align.BottomEnd,
+                            anchorBounds = cafeLevelPopupAnchorBounds,
+                            placement = SnapshotPopupPlacement.ButtonEnd,
+                            onDismissRequest = { onCafeLevelPopupChange(false) },
+                            enableWindowDim = false,
+                        ) {
+                            LiquidDropdownColumn {
+                                cafeLevelOptions.forEachIndexed { index, level ->
+                                    LiquidDropdownImpl(
+                                        text = "Lv$level",
+                                        optionSize = cafeLevelOptions.size,
+                                        isSelected = cafeLevel == level,
+                                        index = index,
+                                        onSelectedIndexChange = { selected ->
+                                            onCafeLevelChange(cafeLevelOptions[selected])
+                                            onCafeLevelPopupChange(false)
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),

@@ -89,6 +89,7 @@ fun BAPage(
         office = office,
         ui = ui,
         serverOptions = serverOptions,
+        cafeLevelOptions = cafeLevelOptions,
         baCalendarEntries = baCalendarEntries,
         baPoolEntries = baPoolEntries,
     )
@@ -221,12 +222,6 @@ fun BAPage(
         show = ui.showSettingsSheet,
         backdrop = backdrop,
         state = settingsSheetState,
-        cafeLevelOptions = cafeLevelOptions,
-        showCafeLevelPopup = ui.showCafeLevelPopup,
-        cafeLevelPopupAnchorBounds = ui.cafeLevelPopupAnchorBounds,
-        onCafeLevelPopupAnchorBoundsChange = { ui.cafeLevelPopupAnchorBounds = it },
-        onShowCafeLevelPopupChange = { ui.showCafeLevelPopup = it },
-        onCafeLevelChange = { ui.sheetCafeLevel = it },
         onApNotifyEnabledChange = { ui.sheetApNotifyEnabled = it },
         onApNotifyThresholdTextChange = { ui.sheetApNotifyThresholdText = it },
         onApNotifyThresholdDone = {
