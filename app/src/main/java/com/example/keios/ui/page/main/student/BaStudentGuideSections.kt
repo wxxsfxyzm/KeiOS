@@ -97,6 +97,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Play
+import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
@@ -471,7 +472,8 @@ fun GuideGalleryCardItem(
                 if (showReloadCapsule) {
                     GlassTextButton(
                         backdrop = backdrop,
-                        text = "刷新",
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Refresh,
                         textColor = Color(0xFF3B82F6),
                         variant = GlassVariant.Compact,
                         onClick = { onReloadRequest?.invoke() }
