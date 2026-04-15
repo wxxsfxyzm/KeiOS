@@ -1,19 +1,35 @@
-# macOS / OS
+# OS / Filesystem
 .DS_Store
 Thumbs.db
+Desktop.ini
+.AppleDouble
+.LSOverride
 
-# IDE
+# IDE / Editor
 .idea/
+.vscode/
 *.iml
 *.ipr
 *.iws
+*.swp
+*.swo
+*~
 
-# Gradle / Kotlin
+# Gradle / Kotlin / Build
 .gradle/
 .gradle-home/
 .kotlin/
 build/
 **/build/
+**/outputs/
+**/reports/
+**/test-results/
+
+# Keep Gradle wrapper tracked
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+!gradlew
+!gradlew.bat
 
 # Android local config
 local.properties
@@ -22,13 +38,20 @@ local.properties
 .cxx/
 .externalNativeBuild/
 
-# Android Studio captures / profiling
+# Android Studio captures / profiling / packages
 captures/
+.navigation/
 *.hprof
 *.prof
+*.apk
+*.aab
+*.ap_
+*.dex
 
-# Logs
+# Logs / crash dumps
 *.log
+hs_err_pid*
+replay_pid*
 
 # Signing / secrets
 *.jks
@@ -46,11 +69,9 @@ signing.properties
 tmp/
 /tmp/
 *.tmp
+*.temp
 *.bak
+*.orig
 
-# Keep Gradle wrapper jars and scripts tracked
-!gradle/wrapper/gradle-wrapper.jar
-!gradle/wrapper/gradle-wrapper.properties
-!gradlew
-!gradlew.bat
+# Local tooling state
 /.codex/
