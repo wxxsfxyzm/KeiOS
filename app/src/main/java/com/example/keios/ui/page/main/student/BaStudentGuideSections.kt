@@ -1602,6 +1602,7 @@ fun GuideSkillCardItem(
     var levelPopupAnchorBounds by remember(card.id) { mutableStateOf<IntRect?>(null) }
     val levelOptions = card.levelOptions
     var selectedLevel by rememberSaveable(card.id) { mutableStateOf(card.defaultLevel) }
+    var descriptionLineCount by remember(card.id, selectedLevel) { mutableStateOf(1) }
 
     LaunchedEffect(card.id, card.defaultLevel, levelOptions) {
         if (levelOptions.isEmpty()) {
@@ -1618,6 +1619,8 @@ fun GuideSkillCardItem(
     val hasSkillMetaColumn = remember(card.type, skillCost, levelOptions) {
         card.type.isNotBlank() || skillCost.isNotBlank() || levelOptions.isNotEmpty()
     }
+    val metaColumnShouldTopAlign = descriptionLineCount >= 3
+    val metaColumnAlignment = if (metaColumnShouldTopAlign) Alignment.Top else Alignment.CenterVertically
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -1632,7 +1635,7 @@ fun GuideSkillCardItem(
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = metaColumnAlignment
         ) {
             Column(
                 modifier = Modifier.weight(1f),
@@ -1641,7 +1644,7 @@ fun GuideSkillCardItem(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (card.iconUrl.isNotBlank()) {
                         GuideRemoteIcon(
@@ -1662,6 +1665,12 @@ fun GuideSkillCardItem(
                     description = skillDesc.ifBlank { "暂未解析到技能描述。" },
                     glossaryIcons = card.glossaryIcons,
                     descriptionIcons = card.descriptionIconsFor(selectedLevel),
+                    onLineCountChanged = { lineCount ->
+                        val safeLineCount = lineCount.coerceAtLeast(1)
+                        if (descriptionLineCount != safeLineCount) {
+                            descriptionLineCount = safeLineCount
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -2380,6 +2389,7 @@ private fun GuideSkillDescriptionText(
     description: String,
     glossaryIcons: Map<String, String>,
     descriptionIcons: List<String> = emptyList(),
+    onLineCountChanged: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val textColor = MiuixTheme.colorScheme.onBackground
@@ -2394,6 +2404,9 @@ private fun GuideSkillDescriptionText(
     BasicText(
         text = richText.text,
         inlineContent = richText.inlineContent,
+        onTextLayout = { layoutResult ->
+            onLineCountChanged?.invoke(layoutResult.lineCount)
+        },
         style = TextStyle(
             color = textColor,
             fontSize = 15.sp,
