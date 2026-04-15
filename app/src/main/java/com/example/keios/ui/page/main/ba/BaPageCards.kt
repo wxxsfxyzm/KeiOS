@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -243,9 +244,12 @@ internal fun BaOverviewCard(
                         contentDescription = "打开图鉴",
                         variant = GlassVariant.Content,
                         onClick = onOpenGuideCatalog,
-                        width = 34.dp,
+                        width = 48.dp,
                         height = 34.dp,
-                        iconTint = Color.Unspecified
+                        iconTint = Color.Unspecified,
+                        iconModifier = Modifier
+                            .width(26.dp)
+                            .height(26.dp)
                     )
                 }
 
@@ -483,7 +487,10 @@ internal fun BaCafeCard(
                     variant = GlassVariant.Content,
                     width = 52.dp,
                     height = 40.dp,
-                    iconTint = Color.Unspecified
+                    iconTint = Color.Unspecified,
+                    iconModifier = Modifier
+                        .width(30.dp)
+                        .height(22.dp)
                 )
                 Box(modifier = Modifier.capturePopupAnchor { onCafeLevelPopupAnchorBoundsChange(it) }) {
                     GlassTextButton(

@@ -90,7 +90,8 @@ fun GlassIconButton(
     shape: Shape = ContinuousCapsule,
     blurRadius: Dp? = null,
     variant: GlassVariant = GlassVariant.Content,
-    iconTint: Color = Color.Unspecified
+    iconTint: Color = Color.Unspecified,
+    iconModifier: Modifier = Modifier
 ) {
     val isDark = isSystemInDarkTheme()
     GlassIconButtonContainer(
@@ -108,6 +109,7 @@ fun GlassIconButton(
         Icon(
             painter = painter,
             contentDescription = contentDescription,
+            modifier = iconModifier,
             tint = iconTint
         )
     }
