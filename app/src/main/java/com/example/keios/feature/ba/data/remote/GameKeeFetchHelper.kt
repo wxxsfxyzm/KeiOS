@@ -5,18 +5,14 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import okhttp3.Cookie
 import okhttp3.CookieJar
-import okhttp3.Dns
 import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import okhttp3.dnsoverhttps.DnsOverHttps
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
-import java.net.InetAddress
-import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -26,24 +22,18 @@ object GameKeeFetchHelper {
         Class.forName("com.example.keios.BuildConfig").getField("DEBUG").getBoolean(null)
     }.getOrDefault(false)
     private const val BASE_WWW = "https://www.gamekee.com"
-    private const val BASE_BARE = "https://gamekee.com"
     private const val ACCEPT_JSON = "application/json, text/plain, */*"
     private const val ACCEPT_HTML = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
     private const val ACCEPT_IMAGE = "image/*,*/*"
     private const val ACCEPT_LANGUAGE = "zh-CN"
     private const val DEFAULT_MAX_DECODE_EDGE = 2560
-    private const val DNS_CACHE_TTL_MS = 10 * 60 * 1000L
+    private const val REFERER_HOME_PATH = "/"
+    private const val REFERER_ACTIVITY_PATH = "/ba/huodong/15"
+    private const val REFERER_POOL_PATH = "/ba/kachi/15"
     private const val DESKTOP_UA =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
     private const val ANDROID_UA =
         "Mozilla/5.0 (Linux; Android 15; 23127PN0CC Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.6478.122 Mobile Safari/537.36"
-
-    private data class CachedDns(
-        val addresses: List<InetAddress>,
-        val expiresAtMs: Long
-    )
-
-    private val dnsCache = ConcurrentHashMap<String, CachedDns>()
 
     private class InMemoryCookieJar : CookieJar {
         private val store = ConcurrentHashMap<String, MutableList<Cookie>>()
@@ -74,69 +64,6 @@ object GameKeeFetchHelper {
         }
     }
 
-    private val bootstrapClient: OkHttpClient = OkHttpClient.Builder()
-        .callTimeout(2500, TimeUnit.MILLISECONDS)
-        .connectTimeout(1500, TimeUnit.MILLISECONDS)
-        .readTimeout(1500, TimeUnit.MILLISECONDS)
-        .writeTimeout(1500, TimeUnit.MILLISECONDS)
-        .retryOnConnectionFailure(false)
-        .fastFallback(true)
-        .followRedirects(true)
-        .followSslRedirects(true)
-        .build()
-
-    private val dohGoogle: DnsOverHttps by lazy {
-        DnsOverHttps.Builder()
-            .client(bootstrapClient)
-            .url("https://dns.google/dns-query".toHttpUrl())
-            .bootstrapDnsHosts(
-                InetAddress.getByName("8.8.8.8"),
-                InetAddress.getByName("8.8.4.4")
-            )
-            .includeIPv6(true)
-            .resolvePrivateAddresses(true)
-            .build()
-    }
-
-    private val dohCloudflare: DnsOverHttps by lazy {
-        DnsOverHttps.Builder()
-            .client(bootstrapClient)
-            .url("https://cloudflare-dns.com/dns-query".toHttpUrl())
-            .bootstrapDnsHosts(
-                InetAddress.getByName("1.1.1.1"),
-                InetAddress.getByName("1.0.0.1")
-            )
-            .includeIPv6(true)
-            .resolvePrivateAddresses(true)
-            .build()
-    }
-
-    private val dohAliDns: DnsOverHttps by lazy {
-        DnsOverHttps.Builder()
-            .client(bootstrapClient)
-            .url("https://dns.alidns.com/dns-query".toHttpUrl())
-            .bootstrapDnsHosts(
-                InetAddress.getByName("223.5.5.5"),
-                InetAddress.getByName("223.6.6.6")
-            )
-            .includeIPv6(true)
-            .resolvePrivateAddresses(true)
-            .build()
-    }
-
-    private val dohDnsPod: DnsOverHttps by lazy {
-        DnsOverHttps.Builder()
-            .client(bootstrapClient)
-            .url("https://doh.pub/dns-query".toHttpUrl())
-            .bootstrapDnsHosts(
-                InetAddress.getByName("119.29.29.29"),
-                InetAddress.getByName("1.12.12.12")
-            )
-            .includeIPv6(true)
-            .resolvePrivateAddresses(true)
-            .build()
-    }
-
     private fun logD(msg: String) {
         if (ENABLE_LOG) Log.d(TAG, msg)
     }
@@ -158,14 +85,6 @@ object GameKeeFetchHelper {
         }
     }
 
-    private fun shortBase(base: String): String {
-        return when (base) {
-            BASE_WWW -> "www"
-            BASE_BARE -> "bare"
-            else -> base
-        }
-    }
-
     private fun Throwable.toCompactLogMessage(): String {
         val root = generateSequence(this) { it.cause }.last()
         val head = "${javaClass.simpleName}:${message.orEmpty()}".compactForLog(120)
@@ -177,94 +96,6 @@ object GameKeeFetchHelper {
         return (head + tail).compactForLog(220)
     }
 
-    private fun normalizeAddresses(addresses: List<InetAddress>): List<InetAddress> {
-        return addresses
-            .asSequence()
-            .distinctBy { it.hostAddress }
-            .toList()
-    }
-
-    private fun loadDnsCache(hostname: String): List<InetAddress>? {
-        val key = hostname.lowercase()
-        val cached = dnsCache[key] ?: return null
-        if (cached.expiresAtMs <= System.currentTimeMillis()) {
-            dnsCache.remove(key)
-            return null
-        }
-        return cached.addresses
-    }
-
-    private fun saveDnsCache(hostname: String, addresses: List<InetAddress>) {
-        if (addresses.isEmpty()) return
-        dnsCache[hostname.lowercase()] = CachedDns(
-            addresses = addresses,
-            expiresAtMs = System.currentTimeMillis() + DNS_CACHE_TTL_MS
-        )
-    }
-
-    private val smartDns = object : Dns {
-        override fun lookup(hostname: String): List<InetAddress> {
-            val host = hostname.lowercase()
-            val isGameKee = host.contains("gamekee.com")
-            if (!isGameKee) return Dns.SYSTEM.lookup(hostname)
-            val isApiHost = host == "www.gamekee.com" || host == "gamekee.com"
-            if (!isApiHost) {
-                // 图片域名不走 DoH，避免大量并发图片请求把 DNS 重试链路拖垮主数据同步。
-                return Dns.SYSTEM.lookup(hostname)
-            }
-
-            loadDnsCache(hostname)?.let { cached ->
-                logD("dns cache hit: $hostname -> $cached")
-                return cached
-            }
-
-            var lastError: Throwable? = null
-            val collected = LinkedHashMap<String, InetAddress>()
-
-            fun collectFrom(name: String, resolver: () -> List<InetAddress>) {
-                val startMs = System.currentTimeMillis()
-                val result = runCatching { normalizeAddresses(resolver()) }
-                val costMs = System.currentTimeMillis() - startMs
-                val addresses = result.getOrNull().orEmpty()
-                if (addresses.isNotEmpty()) {
-                    addresses.forEach { addr ->
-                        val key = addr.hostAddress ?: addr.hostName ?: return@forEach
-                        collected.putIfAbsent(key, addr)
-                    }
-                    logD("dns $name ok (${costMs}ms): $hostname -> $addresses")
-                } else {
-                    val error = result.exceptionOrNull()
-                    if (error != null) {
-                        lastError = error
-                        logD("dns $name failed (${costMs}ms): $hostname err=${error.message}")
-                    }
-                }
-            }
-
-            collectFrom("system") { Dns.SYSTEM.lookup(hostname) }
-            val hasIpv6 = collected.values.any { it.hostAddress?.contains(":") == true }
-            if (!hasIpv6) {
-                // 某些网络下 IPv4 通路不稳定，补充 DoH 以拿到 IPv6 地址。
-                collectFrom("alidns-doh") { dohAliDns.lookup(hostname) }
-                collectFrom("dnspod-doh") { dohDnsPod.lookup(hostname) }
-            }
-            if (collected.isEmpty()) {
-                collectFrom("google-doh") { dohGoogle.lookup(hostname) }
-                collectFrom("cloudflare-doh") { dohCloudflare.lookup(hostname) }
-            }
-
-            val finalAddresses = collected.values.toList()
-            if (finalAddresses.isNotEmpty()) {
-                saveDnsCache(hostname, finalAddresses)
-                return finalAddresses
-            }
-
-            throw UnknownHostException("Unable to resolve $hostname").also { ex ->
-                lastError?.let { ex.addSuppressed(it) }
-            }
-        }
-    }
-
     private val client: OkHttpClient = OkHttpClient.Builder()
         .callTimeout(12, TimeUnit.SECONDS)
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -274,7 +105,6 @@ object GameKeeFetchHelper {
         .fastFallback(true)
         .followRedirects(true)
         .followSslRedirects(true)
-        .dns(smartDns)
         .cookieJar(InMemoryCookieJar())
         .build()
 
@@ -284,9 +114,34 @@ object GameKeeFetchHelper {
         return if (raw.startsWith("/")) "$base$raw" else "$base/$raw"
     }
 
-    private fun normalizeReferer(base: String, refererPath: String): String {
-        val ref = refererPath.trim().ifBlank { "/" }
-        return normalizeUrl(base, ref)
+    private fun extractPathHint(pathOrUrl: String): String {
+        val raw = pathOrUrl.trim()
+        if (raw.isBlank()) return ""
+        val fromUrl = raw.toHttpUrlOrNull()
+        if (fromUrl != null) {
+            val query = fromUrl.query
+            return buildString {
+                append(fromUrl.encodedPath)
+                if (!query.isNullOrBlank()) append("?").append(query)
+            }
+        }
+        return if (raw.startsWith("/")) raw else "/$raw"
+    }
+
+    private fun resolveReferer(pathOrUrl: String, refererPath: String): String {
+        val refererHint = extractPathHint(refererPath)
+        val requestHint = extractPathHint(pathOrUrl)
+        val mergedHint = "${refererHint.lowercase()} ${requestHint.lowercase()}"
+        val selectedPath = when {
+            mergedHint.contains("/ba/huodong") -> {
+                if (refererHint.lowercase().contains("/ba/huodong")) refererHint else REFERER_ACTIVITY_PATH
+            }
+            mergedHint.contains("/ba/kachi") -> {
+                if (refererHint.lowercase().contains("/ba/kachi")) refererHint else REFERER_POOL_PATH
+            }
+            else -> REFERER_HOME_PATH
+        }
+        return normalizeUrl(BASE_WWW, selectedPath)
     }
 
     private fun isJsonLike(body: String): Boolean {
@@ -338,23 +193,18 @@ object GameKeeFetchHelper {
         requireJsonBody: Boolean
     ): String {
         val traceId = "txt-${System.nanoTime().toString(16)}"
-        val candidates = listOf(
-            Triple(BASE_WWW, DESKTOP_UA, normalizeReferer(BASE_WWW, refererPath)),
-            Triple(BASE_WWW, ANDROID_UA, normalizeReferer(BASE_WWW, refererPath)),
-            Triple(BASE_BARE, DESKTOP_UA, normalizeReferer(BASE_BARE, refererPath)),
-            Triple(BASE_BARE, ANDROID_UA, normalizeReferer(BASE_BARE, refererPath))
-        )
-
+        val url = normalizeUrl(BASE_WWW, pathOrUrl)
+        val referer = resolveReferer(pathOrUrl = pathOrUrl, refererPath = refererPath)
+        val uas = listOf(DESKTOP_UA, ANDROID_UA)
         var lastError: Throwable? = null
         val errors = mutableListOf<String>()
-        val totalAttempts = candidates.size
+        val totalAttempts = uas.size
         logD(
-            "text[$traceId] start path=${pathOrUrl.compactForLog(140)} " +
-                "ref=${refererPath.compactForLog(80)} json=$requireJsonBody accept=${acceptHeader.compactForLog(36)} " +
+            "text[$traceId] start path=${pathOrUrl.compactForLog(140)} url=${url.compactForLog(120)} " +
+                "referer=${referer.compactForLog(80)} json=$requireJsonBody accept=${acceptHeader.compactForLog(36)} " +
                 "headers=${extraHeaders.keys.joinToString(",").ifBlank { "-" }}"
         )
-        candidates.forEachIndexed { index, (base, ua, referer) ->
-            val url = normalizeUrl(base, pathOrUrl)
+        uas.forEachIndexed { index, ua ->
             val attempt = index + 1
             val startMs = System.currentTimeMillis()
             val result = runCatching {
@@ -370,16 +220,16 @@ object GameKeeFetchHelper {
             val elapsedMs = System.currentTimeMillis() - startMs
             if (result.isSuccess) {
                 logD(
-                    "text[$traceId] ok a$attempt/$totalAttempts ${shortBase(base)}/${shortUa(ua)} " +
-                        "${elapsedMs}ms url=${url.compactForLog(120)}"
+                    "text[$traceId] ok a$attempt/$totalAttempts ${shortUa(ua)} " +
+                        "${elapsedMs}ms url=${url.compactForLog(120)} referer=${referer.compactForLog(80)}"
                 )
                 return result.getOrThrow()
             }
             lastError = result.exceptionOrNull()
             val err = lastError?.toCompactLogMessage().orEmpty()
-            errors += "a$attempt:${shortBase(base)}/${shortUa(ua)}:${err.compactForLog(140)}"
+            errors += "a$attempt:${shortUa(ua)}:${err.compactForLog(140)}"
             logD(
-                "text[$traceId] fail a$attempt/$totalAttempts ${shortBase(base)}/${shortUa(ua)} " +
+                "text[$traceId] fail a$attempt/$totalAttempts ${shortUa(ua)} " +
                     "${elapsedMs}ms url=${url.compactForLog(120)} referer=${referer.compactForLog(80)} err=$err"
             )
         }
@@ -474,13 +324,8 @@ object GameKeeFetchHelper {
         }.distinct()
 
         var lastError: Throwable? = null
-        val referers = listOf(
-            "https://www.gamekee.com/",
-            "https://www.gamekee.com/ba/huodong/15",
-            "https://www.gamekee.com/ba/kachi/15"
-        )
         val uas = listOf(DESKTOP_UA, ANDROID_UA)
-        val totalAttempts = requestUrls.size * referers.size * uas.size
+        val totalAttempts = requestUrls.size * uas.size
         var attempt = 0
         val errors = mutableListOf<String>()
         logD(
@@ -488,51 +333,50 @@ object GameKeeFetchHelper {
         )
 
         requestUrls.forEach { url ->
-            referers.forEach { referer ->
-                uas.forEach { ua ->
-                    attempt += 1
-                    val startMs = System.currentTimeMillis()
-                    val req = Request.Builder()
-                        .url(url)
-                        .get()
-                        .header("Accept", ACCEPT_IMAGE)
-                        .header("Accept-Language", ACCEPT_LANGUAGE)
-                        .header("Referer", referer)
-                        .header("User-Agent", ua)
-                        .build()
-                    val result = runCatching {
-                        client.newCall(req).execute().use { resp: Response ->
-                            if (!resp.isSuccessful) {
-                                val contentType = resp.header("Content-Type").orEmpty()
-                                throw IOException("http=${resp.code} ct=${contentType.ifBlank { "-" }}")
-                            }
-                            decodeBitmap(
-                                response = resp,
-                                maxDecodeDimension = maxDecodeDimension,
-                                onProgress = onProgress
-                            ) ?: throw IOException("bitmap-decode-null")
+            val referer = resolveReferer(pathOrUrl = url, refererPath = "")
+            uas.forEach { ua ->
+                attempt += 1
+                val startMs = System.currentTimeMillis()
+                val req = Request.Builder()
+                    .url(url)
+                    .get()
+                    .header("Accept", ACCEPT_IMAGE)
+                    .header("Accept-Language", ACCEPT_LANGUAGE)
+                    .header("Referer", referer)
+                    .header("User-Agent", ua)
+                    .build()
+                val result = runCatching {
+                    client.newCall(req).execute().use { resp: Response ->
+                        if (!resp.isSuccessful) {
+                            val contentType = resp.header("Content-Type").orEmpty()
+                            throw IOException("http=${resp.code} ct=${contentType.ifBlank { "-" }}")
                         }
+                        decodeBitmap(
+                            response = resp,
+                            maxDecodeDimension = maxDecodeDimension,
+                            onProgress = onProgress
+                        ) ?: throw IOException("bitmap-decode-null")
                     }
-                    val elapsedMs = System.currentTimeMillis() - startMs
-                    if (result.isSuccess) {
-                        val bitmap = result.getOrNull()
-                        if (bitmap != null) {
-                            logD(
-                                "image[$traceId] ok a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
-                                    "size=${bitmap.width}x${bitmap.height} url=${url.compactForLog(110)}"
-                            )
-                            return bitmap
-                        }
-                    }
-                    if (result.isFailure) {
-                        lastError = result.exceptionOrNull()
-                        val err = lastError?.toCompactLogMessage().orEmpty()
-                        errors += "a$attempt:${shortUa(ua)}:${err.compactForLog(120)}"
+                }
+                val elapsedMs = System.currentTimeMillis() - startMs
+                if (result.isSuccess) {
+                    val bitmap = result.getOrNull()
+                    if (bitmap != null) {
                         logD(
-                            "image[$traceId] fail a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
-                                "url=${url.compactForLog(110)} referer=${referer.compactForLog(80)} err=$err"
+                            "image[$traceId] ok a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
+                                "size=${bitmap.width}x${bitmap.height} url=${url.compactForLog(110)} referer=${referer.compactForLog(80)}"
                         )
+                        return bitmap
                     }
+                }
+                if (result.isFailure) {
+                    lastError = result.exceptionOrNull()
+                    val err = lastError?.toCompactLogMessage().orEmpty()
+                    errors += "a$attempt:${shortUa(ua)}:${err.compactForLog(120)}"
+                    logD(
+                        "image[$traceId] fail a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
+                            "url=${url.compactForLog(110)} referer=${referer.compactForLog(80)} err=$err"
+                    )
                 }
             }
         }
@@ -581,15 +425,10 @@ object GameKeeFetchHelper {
             if (normalized.startsWith("//")) add("https:$normalized")
         }.distinct()
 
-        val referers = listOf(
-            "https://www.gamekee.com/",
-            "https://www.gamekee.com/ba/huodong/15",
-            "https://www.gamekee.com/ba/kachi/15"
-        )
         val uas = listOf(DESKTOP_UA, ANDROID_UA)
         val tempFile = File(targetFile.parentFile ?: return false, "${targetFile.name}.part")
         targetFile.parentFile?.mkdirs()
-        val totalAttempts = requestUrls.size * referers.size * uas.size
+        val totalAttempts = requestUrls.size * uas.size
         var attempt = 0
         val errors = mutableListOf<String>()
         logD(
@@ -599,77 +438,76 @@ object GameKeeFetchHelper {
 
         var lastError: Throwable? = null
         requestUrls.forEach { url ->
-            referers.forEach { referer ->
-                uas.forEach { ua ->
-                    attempt += 1
-                    val startMs = System.currentTimeMillis()
-                    val req = Request.Builder()
-                        .url(url)
-                        .get()
-                        .header("Accept", ACCEPT_IMAGE)
-                        .header("Accept-Language", ACCEPT_LANGUAGE)
-                        .header("Referer", referer)
-                        .header("User-Agent", ua)
-                        .build()
+            val referer = resolveReferer(pathOrUrl = url, refererPath = "")
+            uas.forEach { ua ->
+                attempt += 1
+                val startMs = System.currentTimeMillis()
+                val req = Request.Builder()
+                    .url(url)
+                    .get()
+                    .header("Accept", ACCEPT_IMAGE)
+                    .header("Accept-Language", ACCEPT_LANGUAGE)
+                    .header("Referer", referer)
+                    .header("User-Agent", ua)
+                    .build()
 
-                    val result = runCatching {
-                        client.newCall(req).execute().use { resp ->
-                            if (!resp.isSuccessful) {
-                                val contentType = resp.header("Content-Type").orEmpty()
-                                throw IOException("http=${resp.code} ct=${contentType.ifBlank { "-" }}")
-                            }
-                            val body = resp.body
-                            val total = body.contentLength()
-                            body.byteStream().use { input ->
-                                tempFile.outputStream().use { out ->
-                                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                                    var downloaded = 0L
-                                    while (true) {
-                                        val count = input.read(buffer)
-                                        if (count <= 0) break
-                                        out.write(buffer, 0, count)
-                                        downloaded += count
-                                        onProgress?.invoke(downloaded, total)
-                                    }
+                val result = runCatching {
+                    client.newCall(req).execute().use { resp ->
+                        if (!resp.isSuccessful) {
+                            val contentType = resp.header("Content-Type").orEmpty()
+                            throw IOException("http=${resp.code} ct=${contentType.ifBlank { "-" }}")
+                        }
+                        val body = resp.body
+                        val total = body.contentLength()
+                        body.byteStream().use { input ->
+                            tempFile.outputStream().use { out ->
+                                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                                var downloaded = 0L
+                                while (true) {
+                                    val count = input.read(buffer)
+                                    if (count <= 0) break
+                                    out.write(buffer, 0, count)
+                                    downloaded += count
+                                    onProgress?.invoke(downloaded, total)
                                 }
                             }
-                            Unit
                         }
+                        Unit
                     }
-                    val elapsedMs = System.currentTimeMillis() - startMs
-                    if (result.isSuccess) {
-                        if (targetFile.exists()) {
-                            runCatching { targetFile.delete() }
-                        }
-                        val renamed = tempFile.renameTo(targetFile)
-                        if (renamed) {
-                            val size = targetFile.length()
-                            logD(
-                                "download[$traceId] ok a$attempt/$totalAttempts ${shortUa(ua)} " +
-                                    "${elapsedMs}ms bytes=$size file=${targetFile.name}"
-                            )
-                            return true
-                        }
-                        val renameError = IOException("rename-failed ${tempFile.absolutePath} -> ${targetFile.absolutePath}")
-                        lastError = renameError
-                        errors += "a$attempt:${shortUa(ua)}:${renameError.toCompactLogMessage().compactForLog(120)}"
+                }
+                val elapsedMs = System.currentTimeMillis() - startMs
+                if (result.isSuccess) {
+                    if (targetFile.exists()) {
+                        runCatching { targetFile.delete() }
+                    }
+                    val renamed = tempFile.renameTo(targetFile)
+                    if (renamed) {
+                        val size = targetFile.length()
                         logD(
-                            "download[$traceId] fail a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
-                                "url=${url.compactForLog(110)} err=${renameError.toCompactLogMessage()}"
+                            "download[$traceId] ok a$attempt/$totalAttempts ${shortUa(ua)} " +
+                                "${elapsedMs}ms bytes=$size file=${targetFile.name}"
                         )
+                        return true
                     }
-                    if (result.isFailure) {
-                        lastError = result.exceptionOrNull()
-                        val err = lastError?.toCompactLogMessage().orEmpty()
-                        errors += "a$attempt:${shortUa(ua)}:${err.compactForLog(120)}"
-                        logD(
-                            "download[$traceId] fail a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
-                                "url=${url.compactForLog(110)} referer=${referer.compactForLog(80)} err=$err"
-                        )
-                    }
-                    if (tempFile.exists()) {
-                        runCatching { tempFile.delete() }
-                    }
+                    val renameError = IOException("rename-failed ${tempFile.absolutePath} -> ${targetFile.absolutePath}")
+                    lastError = renameError
+                    errors += "a$attempt:${shortUa(ua)}:${renameError.toCompactLogMessage().compactForLog(120)}"
+                    logD(
+                        "download[$traceId] fail a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
+                            "url=${url.compactForLog(110)} err=${renameError.toCompactLogMessage()}"
+                    )
+                }
+                if (result.isFailure) {
+                    lastError = result.exceptionOrNull()
+                    val err = lastError?.toCompactLogMessage().orEmpty()
+                    errors += "a$attempt:${shortUa(ua)}:${err.compactForLog(120)}"
+                    logD(
+                        "download[$traceId] fail a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
+                            "url=${url.compactForLog(110)} referer=${referer.compactForLog(80)} err=$err"
+                    )
+                }
+                if (tempFile.exists()) {
+                    runCatching { tempFile.delete() }
                 }
             }
         }
