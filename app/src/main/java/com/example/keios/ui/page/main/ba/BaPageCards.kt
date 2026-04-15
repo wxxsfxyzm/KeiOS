@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -794,88 +795,90 @@ internal fun BaPoolCard(
 
             else -> {
                 visiblePoolEntries.forEach { pool ->
-                    val isEnded = pool.endAtMs <= uiNowMs
-                    val remainTarget = if (pool.isRunning || isEnded) pool.endAtMs else pool.startAtMs
-                    val remainText = if (isEnded) "已结束" else formatBaRemainingTime(remainTarget, uiNowMs)
-                    val statusText = when {
-                        pool.isRunning -> "进行中"
-                        isEnded -> "已结束"
-                        else -> "即将开始"
-                    }
-                    val statusColor = when {
-                        pool.isRunning -> accentGreen
-                        isEnded -> MiuixTheme.colorScheme.onBackgroundVariant
-                        else -> accentBlue
-                    }
-                    val showPoolCoverImage = showCalendarPoolImages && pool.imageUrl.isNotBlank()
+                    key(pool.id) {
+                        val isEnded = pool.endAtMs <= uiNowMs
+                        val remainTarget = if (pool.isRunning || isEnded) pool.endAtMs else pool.startAtMs
+                        val remainText = if (isEnded) "已结束" else formatBaRemainingTime(remainTarget, uiNowMs)
+                        val statusText = when {
+                            pool.isRunning -> "进行中"
+                            isEnded -> "已结束"
+                            else -> "即将开始"
+                        }
+                        val statusColor = when {
+                            pool.isRunning -> accentGreen
+                            isEnded -> MiuixTheme.colorScheme.onBackgroundVariant
+                            else -> accentBlue
+                        }
+                        val showPoolCoverImage = showCalendarPoolImages && pool.imageUrl.isNotBlank()
 
-                    BaGlassPanel(
-                        backdrop = backdrop,
-                        modifier = Modifier.fillMaxWidth(),
-                        accentColor = statusColor,
-                        onClick = { onOpenPoolStudentGuide(pool.linkUrl) },
-                        onLongClick = { onOpenCalendarLink(pool.linkUrl) },
-                    ) {
-                        Row(
+                        BaGlassPanel(
+                            backdrop = backdrop,
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.Top,
+                            accentColor = statusColor,
+                            onClick = { onOpenPoolStudentGuide(pool.linkUrl) },
+                            onLongClick = { onOpenCalendarLink(pool.linkUrl) },
                         ) {
-                            if (showPoolCoverImage) {
-                                Box(
-                                    modifier = Modifier.width(106.dp),
-                                    contentAlignment = Alignment.TopCenter,
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                if (showPoolCoverImage) {
+                                    Box(
+                                        modifier = Modifier.width(106.dp),
+                                        contentAlignment = Alignment.TopCenter,
+                                    ) {
+                                        GameKeeCoverImage(
+                                            imageUrl = pool.imageUrl,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentScale = ContentScale.Fit,
+                                            aspectRatioRange = 0.66f..1.34f
+                                        )
+                                    }
+                                }
+                                Column(
+                                    modifier = if (showPoolCoverImage) Modifier.weight(1f) else Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(5.dp),
                                 ) {
-                                    GameKeeCoverImage(
-                                        imageUrl = pool.imageUrl,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        contentScale = ContentScale.Fit,
-                                        aspectRatioRange = 0.66f..1.34f
+                                    Text(
+                                        text = statusText,
+                                        color = statusColor,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        text = "${pool.tagName} · ${pool.name}",
+                                        color = MiuixTheme.colorScheme.onBackground,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        text = "${formatBaDateTimeNoYearInTimeZone(pool.startAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(pool.endAtMs, serverTimeZone)}",
+                                        color = countdownBlue.copy(alpha = 0.92f),
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Clip,
+                                    )
+                                    Text(
+                                        text = remainText,
+                                        color = if (isEnded) MiuixTheme.colorScheme.onBackgroundVariant else countdownBlue,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 }
                             }
-                            Column(
-                                modifier = if (showPoolCoverImage) Modifier.weight(1f) else Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(5.dp),
-                            ) {
-                                Text(
-                                    text = statusText,
-                                    color = statusColor,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    text = "${pool.tagName} · ${pool.name}",
-                                    color = MiuixTheme.colorScheme.onBackground,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    text = "${formatBaDateTimeNoYearInTimeZone(pool.startAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(pool.endAtMs, serverTimeZone)}",
-                                    color = countdownBlue.copy(alpha = 0.92f),
-                                    maxLines = 3,
-                                    overflow = TextOverflow.Clip,
-                                )
-                                Text(
-                                    text = remainText,
-                                    color = if (isEnded) MiuixTheme.colorScheme.onBackgroundVariant else countdownBlue,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
+                            LinearProgressIndicator(
+                                progress = poolProgress(pool, uiNowMs),
+                                modifier = Modifier.fillMaxWidth(),
+                                height = 5.dp,
+                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                    foregroundColor = if (pool.isRunning) accentGreen else accentBlue,
+                                    backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f),
+                                ),
+                            )
                         }
-                        LinearProgressIndicator(
-                            progress = poolProgress(pool, uiNowMs),
-                            modifier = Modifier.fillMaxWidth(),
-                            height = 5.dp,
-                            colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                foregroundColor = if (pool.isRunning) accentGreen else accentBlue,
-                                backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f),
-                            ),
-                        )
                     }
                 }
             }

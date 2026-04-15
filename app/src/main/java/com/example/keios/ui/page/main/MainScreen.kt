@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageInfo
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -50,6 +51,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -70,6 +72,8 @@ import com.example.keios.ui.navigation.Navigator
 import com.example.keios.ui.page.main.about.AboutPage
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.student.BaStudentGuideStore
+import com.example.keios.ui.page.main.student.extractGuideContentIdFromUrl
+import com.example.keios.ui.page.main.student.normalizeGuideUrl
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.core.system.ShizukuApiUtils
@@ -104,6 +108,7 @@ fun MainScreen(
 ) {
     val backStack = remember { mutableStateListOf<NavKey>().apply { add(KeiosRoute.Main) } }
     val navigator = remember { Navigator(backStack) }
+    val context = LocalContext.current
     val currentAppLabel by rememberUpdatedState(appLabel)
     val currentPackageInfo by rememberUpdatedState(packageInfo)
     val currentShizukuStatus by rememberUpdatedState(shizukuStatus)
@@ -137,6 +142,18 @@ fun MainScreen(
     var visibleBottomPageNames by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.visibleBottomPageNames) }
     val view = LocalView.current
 
+    val openGuideDetail: (String) -> Unit = { rawUrl ->
+        val normalized = normalizeGuideUrl(rawUrl)
+        val contentId = if (normalized.isBlank()) null else extractGuideContentIdFromUrl(normalized)
+        if (contentId == null || contentId <= 0L) {
+            Toast.makeText(context, "该卡池暂未关联学生图鉴", Toast.LENGTH_SHORT).show()
+        } else {
+            val canonicalGuideUrl = "https://www.gamekee.com/ba/tj/$contentId.html"
+            BaStudentGuideStore.setCurrentUrl(canonicalGuideUrl)
+            navigator.push(KeiosRoute.BaStudentGuide(nonce = System.nanoTime()))
+        }
+    }
+
     if (!view.isInEditMode) {
         SideEffect {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@SideEffect
@@ -169,12 +186,13 @@ fun MainScreen(
                     packageInfo = currentPackageInfo,
                     shizukuStatus = currentShizukuStatus,
                     onCheckOrRequestShizuku = currentOnCheckOrRequestShizuku,
-                    notificationPermissionGranted = currentNotificationPermissionGranted,
-                    shizukuApiUtils = shizukuApiUtils,
-                    mcpServerManager = mcpServerManager,
-                    requestedBottomPage = requestedBottomPage,
-                    requestedBottomPageToken = requestedBottomPageToken
-                )
+                        notificationPermissionGranted = currentNotificationPermissionGranted,
+                        shizukuApiUtils = shizukuApiUtils,
+                        mcpServerManager = mcpServerManager,
+                        onOpenGuideDetail = openGuideDetail,
+                        requestedBottomPage = requestedBottomPage,
+                        requestedBottomPageToken = requestedBottomPageToken
+                    )
             }
             entry<KeiosRoute.Settings> {
                 SettingsPage(
@@ -250,11 +268,7 @@ fun MainScreen(
                     liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                     onBack = { navigator.pop() },
                     onOpenGuide = { sourceUrl ->
-                        val target = sourceUrl.trim()
-                        if (target.isNotBlank()) {
-                            BaStudentGuideStore.setCurrentUrl(target)
-                            navigator.push(KeiosRoute.BaStudentGuide)
-                        }
+                        openGuideDetail(sourceUrl)
                     }
                 )
             }
@@ -288,6 +302,7 @@ private fun MainPagerLayout(
     notificationPermissionGranted: Boolean,
     shizukuApiUtils: ShizukuApiUtils,
     mcpServerManager: McpServerManager,
+    onOpenGuideDetail: (String) -> Unit,
     requestedBottomPage: String?,
     requestedBottomPageToken: Int
 ) {
@@ -606,11 +621,7 @@ private fun MainPagerLayout(
                             cardPressFeedbackEnabled = cardPressFeedbackEnabled,
                             liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                             onOpenPoolStudentGuide = { sourceUrl ->
-                                val target = sourceUrl.trim()
-                                if (target.isNotBlank()) {
-                                    BaStudentGuideStore.setCurrentUrl(target)
-                                    navigator.push(KeiosRoute.BaStudentGuide)
-                                }
+                                onOpenGuideDetail(sourceUrl)
                             },
                             onOpenGuideCatalog = {
                                 navigator.push(KeiosRoute.BaGuideCatalog)

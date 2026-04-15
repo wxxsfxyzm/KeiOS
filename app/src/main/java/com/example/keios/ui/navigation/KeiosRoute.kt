@@ -20,7 +20,9 @@ sealed interface KeiosRoute : NavKey {
     data object About : KeiosRoute
 
     @Serializable
-    data object BaStudentGuide : KeiosRoute
+    data class BaStudentGuide(
+        val nonce: Long = 0L
+    ) : KeiosRoute
 
     @Serializable
     data object BaGuideCatalog : KeiosRoute

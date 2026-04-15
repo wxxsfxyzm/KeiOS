@@ -296,6 +296,14 @@ fun BaStudentGuidePage(
         refreshSignal += 1
     }
 
+    LaunchedEffect(Unit) {
+        val latestStored = BaStudentGuideStore.loadCurrentUrl()
+        if (latestStored.isNotBlank() && latestStored != sourceUrl) {
+            sourceUrl = latestStored
+            error = null
+        }
+    }
+
     fun toggleVoicePlayback(rawAudioUrl: String) {
         val target = normalizeGuideUrl(rawAudioUrl)
         if (target.isBlank()) return
@@ -453,20 +461,25 @@ fun BaStudentGuidePage(
     }
 
     LaunchedEffect(sourceUrl, refreshSignal) {
-        if (sourceUrl.isBlank()) return@LaunchedEffect
-        val cached = BaStudentGuideStore.loadInfo(sourceUrl)
-        if (cached != null) info = cached
+        val requestUrl = sourceUrl
+        if (requestUrl.isBlank()) return@LaunchedEffect
+        val cached = BaStudentGuideStore.loadInfo(requestUrl)
+        info = cached
         loading = true
         val result = withContext(Dispatchers.IO) {
-            runCatching { fetchGuideInfo(sourceUrl) }
+            runCatching { fetchGuideInfo(requestUrl) }
         }
+        if (requestUrl != sourceUrl) return@LaunchedEffect
         result.onSuccess { latest ->
+            if (requestUrl != sourceUrl) return@onSuccess
             info = latest
             error = null
             withContext(Dispatchers.IO) { BaStudentGuideStore.saveInfo(latest) }
         }.onFailure {
+            if (requestUrl != sourceUrl) return@onFailure
             error = if (info != null) "网络请求失败，已显示本地缓存" else "图鉴信息加载失败"
         }
+        if (requestUrl != sourceUrl) return@LaunchedEffect
         loading = false
     }
 

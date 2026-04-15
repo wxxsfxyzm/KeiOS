@@ -17,6 +17,15 @@ fun normalizeGuideUrl(raw: String): String {
     }
 }
 
+private val GUIDE_CONTENT_ID_REGEX_PATTERNS = listOf(
+    Regex("/v1/content/detail/(\\d+)"),
+    Regex("/tj/(\\d+)\\.html"),
+    Regex("/ba/(\\d+)\\.html"),
+    Regex("/(\\d+)\\.html")
+)
+
+private val GUIDE_CONTENT_ID_QUERY_KEYS = listOf("content_id", "id", "cid")
+
 private fun decodeBasicHtmlEntity(raw: String): String {
     return raw
         .replace("&nbsp;", " ")
@@ -2231,22 +2240,15 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
     }.getOrDefault(GuideDetailExtract())
 }
 
-private fun extractContentIdFromGuideUrl(sourceUrl: String): Long? {
+fun extractGuideContentIdFromUrl(sourceUrl: String): Long? {
     val target = normalizeGuideUrl(sourceUrl)
     if (target.isBlank()) return null
-    val patterns = listOf(
-        Regex("/v1/content/detail/(\\d+)"),
-        Regex("/tj/(\\d+)\\.html"),
-        Regex("/ba/(\\d+)\\.html"),
-        Regex("/(\\d+)\\.html")
-    )
-    patterns.forEach { regex ->
+    GUIDE_CONTENT_ID_REGEX_PATTERNS.forEach { regex ->
         val id = regex.find(target)?.groupValues?.getOrNull(1)?.toLongOrNull()
         if (id != null && id > 0L) return id
     }
     val uri = runCatching { Uri.parse(target) }.getOrNull() ?: return null
-    val qpKeys = listOf("content_id", "id", "cid")
-    qpKeys.forEach { key ->
+    GUIDE_CONTENT_ID_QUERY_KEYS.forEach { key ->
         val id = uri.getQueryParameter(key)?.toLongOrNull()
         if (id != null && id > 0L) return id
     }
@@ -2262,7 +2264,7 @@ private fun extractContentIdFromGuideUrl(sourceUrl: String): Long? {
 private fun fetchGuideInfoByApi(sourceUrl: String): BaStudentGuideInfo {
     val target = normalizeGuideUrl(sourceUrl)
     require(target.isNotBlank()) { "empty url" }
-    val contentId = extractContentIdFromGuideUrl(target)
+    val contentId = extractGuideContentIdFromUrl(target)
         ?: error("unable to resolve content_id")
 
     val refererPath = runCatching { Uri.parse(target).path.orEmpty() }

@@ -235,10 +235,12 @@ object BaStudentGuideStore {
     }
 
     fun setCurrentUrl(url: String) {
-        kv().encode(BA_GUIDE_KEY_CURRENT_URL, url.trim())
+        kv().encode(BA_GUIDE_KEY_CURRENT_URL, normalizeGuideUrl(url).trim())
     }
 
-    fun loadCurrentUrl(): String = kv().decodeString(BA_GUIDE_KEY_CURRENT_URL, "").orEmpty()
+    fun loadCurrentUrl(): String = normalizeGuideUrl(
+        kv().decodeString(BA_GUIDE_KEY_CURRENT_URL, "").orEmpty()
+    )
 
     private fun cacheKey(url: String): String {
         val id = url.trim().hashCode().toUInt().toString(16)
