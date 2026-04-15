@@ -25,7 +25,8 @@ import org.intellij.lang.annotations.Language
 class InteractiveHighlight(
     val animationScope: CoroutineScope,
     val position: (size: Size, offset: Offset) -> Offset = { _, offset -> offset },
-    val highlightColor: Color = Color.White
+    val highlightColor: Color = Color.White,
+    val highlightStrength: Float = 1f
 ) {
     private val pressProgressAnimationSpec = spring(0.5f, 300f, 0.001f)
     private val positionAnimationSpec = spring(0.5f, 300f, Offset.VisibilityThreshold)
@@ -54,14 +55,15 @@ class InteractiveHighlight(
     val modifier: Modifier = Modifier.drawWithContent {
         val progress = pressProgressAnimation.value
         if (progress > 0f) {
+            val strength = highlightStrength.fastCoerceIn(0.1f, 3f)
             drawRect(
-                highlightColor.copy(0.06f * progress),
+                highlightColor.copy((0.06f * progress * strength).fastCoerceIn(0f, 0.45f)),
                 blendMode = BlendMode.Plus
             )
             shader.apply {
                 val point = position(size, positionAnimation.value)
                 setFloatUniform("size", size.width, size.height)
-                setColorUniform("color", highlightColor.copy(0.12f * progress).toArgb())
+                setColorUniform("color", highlightColor.copy((0.12f * progress * strength).fastCoerceIn(0f, 0.55f)).toArgb())
                 setFloatUniform("radius", size.minDimension * 1.2f)
                 setFloatUniform(
                     "position",
