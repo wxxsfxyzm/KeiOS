@@ -5,6 +5,8 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageInfo
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -307,6 +309,8 @@ private fun MainPagerLayout(
     var mcpScrollToTopSignal by remember { mutableIntStateOf(0) }
     var githubScrollToTopSignal by remember { mutableIntStateOf(0) }
     var pagerScrollEnabled by remember { mutableStateOf(true) }
+    val farJumpAlpha = remember { Animatable(1f) }
+    val farJumpOffsetX = remember { Animatable(0f) }
 
     var showBottomBar by remember { mutableStateOf(true) }
     val nestedScrollConnection = remember {
@@ -336,6 +340,7 @@ private fun MainPagerLayout(
     }
 
     val density = LocalDensity.current
+    val farJumpOffsetPx = with(density) { 24.dp.toPx() }
     val navigationBarBottom = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
     val bottomOverlayPadding = 112.dp + navigationBarBottom
     val systemInsets = WindowInsets.safeDrawing.union(WindowInsets.navigationBars).asPaddingValues()
@@ -371,8 +376,30 @@ private fun MainPagerLayout(
                 tabJumpJob = coroutineScope.launch {
                     val jumpDistance = abs(index - stablePageIndex)
                     if (jumpDistance > 1) {
-                        // Use direct jump for far targets to avoid transient intermediate-page flash.
+                        val direction = if (index > stablePageIndex) 1f else -1f
+                        val offset = farJumpOffsetPx * direction
+                        farJumpAlpha.snapTo(1f)
+                        farJumpOffsetX.snapTo(0f)
+                        farJumpAlpha.animateTo(
+                            targetValue = 0.86f,
+                            animationSpec = tween(durationMillis = 90, easing = FastOutSlowInEasing)
+                        )
+                        farJumpOffsetX.animateTo(
+                            targetValue = -offset * 0.18f,
+                            animationSpec = tween(durationMillis = 90, easing = FastOutSlowInEasing)
+                        )
+                        // Keep direct jump for far targets to avoid transient intermediate-page load/flash.
                         pagerState.scrollToPage(index)
+                        farJumpOffsetX.snapTo(offset * 0.24f)
+                        farJumpAlpha.snapTo(0.82f)
+                        farJumpAlpha.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing)
+                        )
+                        farJumpOffsetX.animateTo(
+                            targetValue = 0f,
+                            animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing)
+                        )
                     } else {
                         pagerState.animateScrollToPage(index)
                     }
@@ -495,6 +522,10 @@ private fun MainPagerLayout(
             // otherwise consumer composables will attempt to draw a detached Native pointer causing SIGSEGV.
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer {
+                    alpha = farJumpAlpha.value
+                    translationX = farJumpOffsetX.value
+                }
                 .layerBackdrop(backdrop)
         ) { pageIndex ->
 

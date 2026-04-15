@@ -187,8 +187,11 @@ fun BaGuideCatalogPage(
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
     var showBottomBar by remember { mutableStateOf(true) }
+    val farJumpAlpha = remember { Animatable(1f) }
+    val farJumpOffsetX = remember { Animatable(0f) }
     var showSearchBar by remember { mutableStateOf(true) }
     val density = LocalDensity.current
+    val farJumpOffsetPx = with(density) { 24.dp.toPx() }
     var searchBarHideOffsetPx by remember { mutableStateOf(0f) }
     val searchBarHideThresholdPx = remember(density) { with(density) { 28.dp.toPx() } }
     val bottomBarNestedScrollConnection = remember(searchBarHideThresholdPx) {
@@ -229,8 +232,30 @@ fun BaGuideCatalogPage(
         tabJumpJob = pagerScope.launch {
             val jumpDistance = abs(index - stablePageIndex)
             if (jumpDistance > 1) {
-                // Use direct jump for far targets to avoid transient intermediate-page flash.
+                val direction = if (index > stablePageIndex) 1f else -1f
+                val offset = farJumpOffsetPx * direction
+                farJumpAlpha.snapTo(1f)
+                farJumpOffsetX.snapTo(0f)
+                farJumpAlpha.animateTo(
+                    targetValue = 0.86f,
+                    animationSpec = tween(durationMillis = 90, easing = FastOutSlowInEasing),
+                )
+                farJumpOffsetX.animateTo(
+                    targetValue = -offset * 0.18f,
+                    animationSpec = tween(durationMillis = 90, easing = FastOutSlowInEasing),
+                )
+                // Keep direct jump for far targets to avoid transient intermediate-page load/flash.
                 pagerState.scrollToPage(index)
+                farJumpOffsetX.snapTo(offset * 0.24f)
+                farJumpAlpha.snapTo(0.82f)
+                farJumpAlpha.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                )
+                farJumpOffsetX.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                )
             } else {
                 pagerState.animateScrollToPage(index)
             }
@@ -449,6 +474,10 @@ fun BaGuideCatalogPage(
             key = { index -> tabs[index].name },
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer {
+                    alpha = farJumpAlpha.value
+                    translationX = farJumpOffsetX.value
+                }
                 .layerBackdrop(bottomBarBackdrop),
             beyondViewportPageCount = 0
         ) { pageIndex ->
