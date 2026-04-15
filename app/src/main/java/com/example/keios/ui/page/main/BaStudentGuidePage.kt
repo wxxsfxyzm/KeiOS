@@ -32,6 +32,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -139,7 +141,15 @@ fun BaStudentGuidePage(
         activationCount++
         onDispose { }
     }
-    val backdrop: LayerBackdrop = key(activationCount) {
+    // Keep top-level backdrop only for navigator/pager layer and bottom bar.
+    val navBackdrop: LayerBackdrop = key("nav-$activationCount") {
+        rememberLayerBackdrop {
+            drawRect(surfaceColor)
+            drawContent()
+        }
+    }
+    // Top action bar uses its own backdrop instance to avoid cross-layer recursion.
+    val topBarBackdrop: LayerBackdrop = key("topbar-$activationCount") {
         rememberLayerBackdrop {
             drawRect(surfaceColor)
             drawContent()
@@ -161,7 +171,11 @@ fun BaStudentGuidePage(
     var galleryPrefetchRequested by rememberSaveable(sourceUrl) { mutableStateOf(false) }
     var galleryCacheRevision by remember(sourceUrl) { mutableIntStateOf(0) }
     val bottomTabs = GuideBottomTab.entries
-    val activeBottomTab = bottomTabs.getOrElse(selectedBottomTabIndex) { GuideBottomTab.Archive }
+    val pagerState = rememberPagerState(
+        initialPage = selectedBottomTabIndex,
+        pageCount = { bottomTabs.size }
+    )
+    val activeBottomTab = bottomTabs.getOrElse(pagerState.currentPage) { GuideBottomTab.Archive }
     val pageScope = rememberCoroutineScope()
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
@@ -329,6 +343,34 @@ fun BaStudentGuidePage(
         }
     }
 
+    fun selectBottomTab(index: Int) {
+        if (index !in bottomTabs.indices) return
+        showBottomBar = true
+        selectedBottomTabIndex = index
+        if (index != pagerState.currentPage) {
+            pageScope.launch {
+                pagerState.animateScrollToPage(index)
+            }
+        }
+    }
+
+    LaunchedEffect(sourceUrl, bottomTabs.size, selectedBottomTabIndex) {
+        val targetIndex = selectedBottomTabIndex.coerceIn(0, bottomTabs.lastIndex)
+        if (targetIndex != selectedBottomTabIndex) {
+            selectedBottomTabIndex = targetIndex
+            return@LaunchedEffect
+        }
+        if (pagerState.currentPage != targetIndex) {
+            pagerState.scrollToPage(targetIndex)
+        }
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        if (selectedBottomTabIndex != pagerState.currentPage) {
+            selectedBottomTabIndex = pagerState.currentPage
+        }
+    }
+
     LaunchedEffect(isVoicePlaying, playingVoiceUrl) {
         if (!isVoicePlaying || playingVoiceUrl.isBlank()) {
             voicePlayProgress = 0f
@@ -428,12 +470,12 @@ fun BaStudentGuidePage(
                 },
                 actions = {
                     Box {
-                        LiquidActionBar(
-                            backdrop = backdrop,
-                            items = listOf(
-                                LiquidActionItem(
-                                    icon = MiuixIcons.Regular.Share,
-                                    contentDescription = "分享来源",
+                            LiquidActionBar(
+                                backdrop = topBarBackdrop,
+                                items = listOf(
+                                    LiquidActionItem(
+                                        icon = MiuixIcons.Regular.Share,
+                                        contentDescription = "分享来源",
                                     onClick = ::shareSource
                                 ),
                                 LiquidActionItem(
@@ -472,15 +514,19 @@ fun BaStudentGuidePage(
                                 horizontal = 12.dp,
                                 vertical = 12.dp + navigationBarBottom
                             ),
-                        selectedIndex = { selectedBottomTabIndex },
-                        onSelected = { index -> selectedBottomTabIndex = index },
-                        backdrop = backdrop,
+                        selectedIndex = { pagerState.currentPage },
+                        onSelected = { index ->
+                            if (index != pagerState.currentPage) {
+                                selectBottomTab(index)
+                            }
+                        },
+                        backdrop = navBackdrop,
                         tabsCount = bottomTabs.size,
                         isBlurEnabled = liquidBottomBarEnabled
                     ) {
                         bottomTabs.forEachIndexed { index, tab ->
                             FloatingBottomBarItem(
-                                onClick = { selectedBottomTabIndex = index },
+                                onClick = { selectBottomTab(index) },
                                 modifier = Modifier.defaultMinSize(minWidth = 76.dp)
                             ) {
                                 val tabIconModifier = Modifier
@@ -526,79 +572,95 @@ fun BaStudentGuidePage(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
+        HorizontalPager(
+            state = pagerState,
+            overscrollEffect = null,
+            beyondViewportPageCount = 0,
             modifier = Modifier
                 .fillMaxSize()
-                .layerBackdrop(backdrop)
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
-                bottom = innerPadding.calculateBottomPadding() + 16.dp,
-                start = 16.dp,
-                end = 16.dp
-            )
-        ) {
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        SmallTitle(activeBottomTab.label)
-                    }
-                    if (sourceUrl.isNotBlank()) {
-                        val progress = rememberGuideSyncProgress(loading = loading)
-                        val foregroundColor = when {
-                            loading -> Color(0xFF3B82F6)
-                            !error.isNullOrBlank() -> Color(0xFFEF4444)
-                            else -> Color(0xFF22C55E)
-                        }
-                        CircularProgressIndicator(
-                            progress = progress,
-                            size = 18.dp,
-                            strokeWidth = 2.dp,
-                            colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                foregroundColor = foregroundColor,
-                                backgroundColor = foregroundColor.copy(alpha = 0.30f),
-                            ),
-                        )
-                    }
+                .layerBackdrop(navBackdrop)
+        ) { pageIndex ->
+            val pageBottomTab = bottomTabs.getOrElse(pageIndex) { GuideBottomTab.Archive }
+            // Each guide page owns an isolated backdrop instance.
+            val pageBackdrop: LayerBackdrop = key("page-$activationCount-$sourceUrl-$pageIndex") {
+                rememberLayerBackdrop {
+                    drawRect(surfaceColor)
+                    drawContent()
                 }
             }
-            item { Spacer(modifier = Modifier.height(12.dp)) }
-
-            if (sourceUrl.isBlank()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentPadding = PaddingValues(
+                    top = innerPadding.calculateTopPadding(),
+                    bottom = innerPadding.calculateBottomPadding() + 16.dp,
+                    start = 16.dp,
+                    end = 16.dp
+                )
+            ) {
                 item {
-                    FrostedBlock(
-                        backdrop = backdrop,
-                        title = "未选择学生",
-                        subtitle = "请从 BA 卡池信息中点击对应卡池进入",
-                        accent = accent
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            SmallTitle(pageBottomTab.label)
+                        }
+                        if (sourceUrl.isNotBlank()) {
+                            val progress = rememberGuideSyncProgress(loading = loading)
+                            val foregroundColor = when {
+                                loading -> Color(0xFF3B82F6)
+                                !error.isNullOrBlank() -> Color(0xFFEF4444)
+                                else -> Color(0xFF22C55E)
+                            }
+                            CircularProgressIndicator(
+                                progress = progress,
+                                size = 18.dp,
+                                strokeWidth = 2.dp,
+                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                    foregroundColor = foregroundColor,
+                                    backgroundColor = foregroundColor.copy(alpha = 0.30f),
+                                ),
+                            )
+                        }
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(12.dp)) }
+
+                if (sourceUrl.isBlank()) {
+                    item {
+                        FrostedBlock(
+                            backdrop = pageBackdrop,
+                            title = "未选择学生",
+                            subtitle = "请从 BA 卡池信息中点击对应卡池进入",
+                            accent = accent
+                        )
+                    }
+                } else {
+                    renderBaStudentGuideTabContent(
+                        activeBottomTab = pageBottomTab,
+                        info = info,
+                        error = error,
+                        backdrop = pageBackdrop,
+                        accent = accent,
+                        context = context,
+                        sourceUrl = sourceUrl,
+                        galleryCacheRevision = galleryCacheRevision,
+                        playingVoiceUrl = playingVoiceUrl,
+                        isVoicePlaying = isVoicePlaying,
+                        voicePlayProgress = voicePlayProgress,
+                        selectedVoiceLanguage = selectedVoiceLanguage,
+                        onOpenExternal = ::openExternal,
+                        onOpenGuide = ::openGuideInPage,
+                        onToggleVoicePlayback = ::toggleVoicePlayback,
+                        onSelectedVoiceLanguageChange = { selectedVoiceLanguage = it },
+                        onReloadInteractiveFurnitureGif = ::reloadInteractiveFurnitureGif
                     )
                 }
-            } else {
-                renderBaStudentGuideTabContent(
-                    activeBottomTab = activeBottomTab,
-                    info = info,
-                    error = error,
-                    backdrop = backdrop,
-                    accent = accent,
-                    context = context,
-                    sourceUrl = sourceUrl,
-                    galleryCacheRevision = galleryCacheRevision,
-                    playingVoiceUrl = playingVoiceUrl,
-                    isVoicePlaying = isVoicePlaying,
-                    voicePlayProgress = voicePlayProgress,
-                    selectedVoiceLanguage = selectedVoiceLanguage,
-                    onOpenExternal = ::openExternal,
-                    onOpenGuide = ::openGuideInPage,
-                    onToggleVoicePlayback = ::toggleVoicePlayback,
-                    onSelectedVoiceLanguageChange = { selectedVoiceLanguage = it },
-                    onReloadInteractiveFurnitureGif = ::reloadInteractiveFurnitureGif
-                )
             }
         }
     }
