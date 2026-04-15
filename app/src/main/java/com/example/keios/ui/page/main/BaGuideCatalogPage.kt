@@ -186,6 +186,7 @@ fun BaGuideCatalogPage(
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
     var showBottomBar by remember { mutableStateOf(true) }
+    val farJumpAlpha = remember { Animatable(1f) }
     var showSearchBar by remember { mutableStateOf(true) }
     val density = LocalDensity.current
     var searchBarHideOffsetPx by remember { mutableStateOf(0f) }
@@ -228,7 +229,20 @@ fun BaGuideCatalogPage(
         tabJumpJob = pagerScope.launch {
             pagerState.animateTabSwitch(
                 fromIndex = stablePageIndex,
-                targetIndex = index
+                targetIndex = index,
+                onFarJumpBefore = {
+                    farJumpAlpha.snapTo(1f)
+                    farJumpAlpha.animateTo(
+                        targetValue = 0.92f,
+                        animationSpec = tween(durationMillis = 70)
+                    )
+                },
+                onFarJumpAfter = {
+                    farJumpAlpha.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 120)
+                    )
+                }
             )
         }
     }
@@ -445,6 +459,7 @@ fun BaGuideCatalogPage(
             key = { index -> tabs[index].name },
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer { alpha = farJumpAlpha.value }
                 .layerBackdrop(bottomBarBackdrop),
             beyondViewportPageCount = 0
         ) { pageIndex ->

@@ -5,6 +5,7 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageInfo
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -306,6 +307,7 @@ private fun MainPagerLayout(
     var mcpScrollToTopSignal by remember { mutableIntStateOf(0) }
     var githubScrollToTopSignal by remember { mutableIntStateOf(0) }
     var pagerScrollEnabled by remember { mutableStateOf(true) }
+    val farJumpAlpha = remember { Animatable(1f) }
 
     var showBottomBar by remember { mutableStateOf(true) }
     val nestedScrollConnection = remember {
@@ -370,7 +372,20 @@ private fun MainPagerLayout(
                 tabJumpJob = coroutineScope.launch {
                     pagerState.animateTabSwitch(
                         fromIndex = stablePageIndex,
-                        targetIndex = index
+                        targetIndex = index,
+                        onFarJumpBefore = {
+                            farJumpAlpha.snapTo(1f)
+                            farJumpAlpha.animateTo(
+                                targetValue = 0.92f,
+                                animationSpec = tween(durationMillis = 70)
+                            )
+                        },
+                        onFarJumpAfter = {
+                            farJumpAlpha.animateTo(
+                                targetValue = 1f,
+                                animationSpec = tween(durationMillis = 120)
+                            )
+                        }
                     )
                 }
             }
@@ -390,7 +405,20 @@ private fun MainPagerLayout(
             tabJumpJob = coroutineScope.launch {
                 pagerState.animateTabSwitch(
                     fromIndex = stablePageIndex,
-                    targetIndex = index
+                    targetIndex = index,
+                    onFarJumpBefore = {
+                        farJumpAlpha.snapTo(1f)
+                        farJumpAlpha.animateTo(
+                            targetValue = 0.92f,
+                            animationSpec = tween(durationMillis = 70)
+                        )
+                    },
+                    onFarJumpAfter = {
+                        farJumpAlpha.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 120)
+                        )
+                    }
                 )
             }
             showBottomBar = true
@@ -494,6 +522,7 @@ private fun MainPagerLayout(
             // otherwise consumer composables will attempt to draw a detached Native pointer causing SIGSEGV.
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer { alpha = farJumpAlpha.value }
                 .layerBackdrop(backdrop)
         ) { pageIndex ->
 

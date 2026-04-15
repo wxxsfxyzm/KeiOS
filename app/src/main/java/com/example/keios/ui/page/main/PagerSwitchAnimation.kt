@@ -5,7 +5,9 @@ import kotlin.math.abs
 
 internal suspend fun PagerState.animateTabSwitch(
     fromIndex: Int,
-    targetIndex: Int
+    targetIndex: Int,
+    onFarJumpBefore: suspend () -> Unit = {},
+    onFarJumpAfter: suspend () -> Unit = {}
 ) {
     val total = pageCount
     if (total <= 0) return
@@ -19,12 +21,9 @@ internal suspend fun PagerState.animateTabSwitch(
         animateScrollToPage(target)
         return
     }
-
-    val nearTarget = if (target > from) target - 1 else target + 1
-    val anchor = nearTarget.coerceIn(0, total - 1)
-
-    if (currentPage != anchor || isScrollInProgress) {
-        scrollToPage(anchor)
+    onFarJumpBefore()
+    if (currentPage != target || isScrollInProgress) {
+        scrollToPage(target)
     }
-    animateScrollToPage(target)
+    onFarJumpAfter()
 }

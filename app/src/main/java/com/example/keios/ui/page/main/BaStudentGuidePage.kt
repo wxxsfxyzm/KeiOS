@@ -184,6 +184,7 @@ fun BaStudentGuidePage(
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
     var showBottomBar by remember { mutableStateOf(true) }
+    val farJumpAlpha = remember { Animatable(1f) }
     val bottomBarNestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -361,7 +362,20 @@ fun BaStudentGuidePage(
         tabJumpJob = pageScope.launch {
             pagerState.animateTabSwitch(
                 fromIndex = fromIndex,
-                targetIndex = index
+                targetIndex = index,
+                onFarJumpBefore = {
+                    farJumpAlpha.snapTo(1f)
+                    farJumpAlpha.animateTo(
+                        targetValue = 0.92f,
+                        animationSpec = tween(durationMillis = 70)
+                    )
+                },
+                onFarJumpAfter = {
+                    farJumpAlpha.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 120)
+                    )
+                }
             )
         }
     }
@@ -588,6 +602,7 @@ fun BaStudentGuidePage(
             beyondViewportPageCount = 0,
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer { alpha = farJumpAlpha.value }
                 .layerBackdrop(navBackdrop)
         ) { pageIndex ->
             val pageBottomTab = bottomTabs.getOrElse(pageIndex) { GuideBottomTab.Archive }
