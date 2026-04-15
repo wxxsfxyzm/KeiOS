@@ -3,6 +3,7 @@ package com.example.keios.ui.page.main.ba
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -208,16 +209,6 @@ internal fun BaOverviewCard(
         BaCardHeader(
             title = "办公室总览",
             trailing = {
-                GlassIconButton(
-                    backdrop = backdrop,
-                    painter = painterResource(id = R.drawable.mp_student),
-                    contentDescription = "打开图鉴",
-                    variant = GlassVariant.Content,
-                    onClick = onOpenGuideCatalog,
-                    width = 34.dp,
-                    height = 34.dp,
-                    iconTint = Color.Unspecified
-                )
                 Text(
                     text = if (isWorkActivated) "已激活" else "默认",
                     color = stateAccent,
@@ -231,42 +222,70 @@ internal fun BaOverviewCard(
             backdrop = backdrop,
             accentColor = stateAccent,
         ) {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Box(
-                    modifier = Modifier.heightIn(min = 40.dp),
-                    contentAlignment = Alignment.CenterStart,
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("服务器", color = MiuixTheme.colorScheme.onBackground)
-                }
-                Box(modifier = Modifier.capturePopupAnchor { onOverviewServerPopupAnchorBoundsChange(it) }) {
-                    GlassTextButton(
+                    Box(
+                        modifier = Modifier.heightIn(min = 40.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text("学生/NPC/卫星图鉴", color = MiuixTheme.colorScheme.onBackground)
+                    }
+                    GlassIconButton(
                         backdrop = backdrop,
-                        text = serverOptions[serverIndex],
+                        painter = painterResource(id = R.drawable.mp_student),
+                        contentDescription = "打开图鉴",
                         variant = GlassVariant.Content,
-                        onClick = { onOverviewServerPopupChange(!showOverviewServerPopup) },
+                        onClick = onOpenGuideCatalog,
+                        width = 34.dp,
+                        height = 34.dp,
+                        iconTint = Color.Unspecified
                     )
-                    if (showOverviewServerPopup) {
-                        SnapshotWindowListPopup(
-                            show = showOverviewServerPopup,
-                            alignment = PopupPositionProvider.Align.BottomEnd,
-                            anchorBounds = overviewServerPopupAnchorBounds,
-                            placement = SnapshotPopupPlacement.ButtonEnd,
-                            onDismissRequest = { onOverviewServerPopupChange(false) },
-                            enableWindowDim = false,
-                        ) {
-                            LiquidDropdownColumn {
-                                serverOptions.forEachIndexed { index, server ->
-                                    LiquidDropdownImpl(
-                                        text = server,
-                                        optionSize = serverOptions.size,
-                                        isSelected = serverIndex == index,
-                                        index = index,
-                                        onSelectedIndexChange = { selected -> onServerSelected(selected) },
-                                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier.heightIn(min = 40.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text("服务器", color = MiuixTheme.colorScheme.onBackground)
+                    }
+                    Box(modifier = Modifier.capturePopupAnchor { onOverviewServerPopupAnchorBoundsChange(it) }) {
+                        GlassTextButton(
+                            backdrop = backdrop,
+                            text = serverOptions[serverIndex],
+                            variant = GlassVariant.Content,
+                            onClick = { onOverviewServerPopupChange(!showOverviewServerPopup) },
+                        )
+                        if (showOverviewServerPopup) {
+                            SnapshotWindowListPopup(
+                                show = showOverviewServerPopup,
+                                alignment = PopupPositionProvider.Align.BottomEnd,
+                                anchorBounds = overviewServerPopupAnchorBounds,
+                                placement = SnapshotPopupPlacement.ButtonEnd,
+                                onDismissRequest = { onOverviewServerPopupChange(false) },
+                                enableWindowDim = false,
+                            ) {
+                                LiquidDropdownColumn {
+                                    serverOptions.forEachIndexed { index, server ->
+                                        LiquidDropdownImpl(
+                                            text = server,
+                                            optionSize = serverOptions.size,
+                                            isSelected = serverIndex == index,
+                                            index = index,
+                                            onSelectedIndexChange = { selected -> onServerSelected(selected) },
+                                        )
+                                    }
                                 }
                             }
                         }
