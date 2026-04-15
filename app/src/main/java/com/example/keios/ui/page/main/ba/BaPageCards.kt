@@ -36,6 +36,7 @@ import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.ContactsBook
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -178,12 +179,14 @@ internal fun BaOverviewCard(
         BaCardHeader(
             title = "办公室总览",
             trailing = {
-                GlassTextButton(
+                GlassIconButton(
                     backdrop = backdrop,
-                    text = "图鉴",
-                    textColor = stateAccent,
+                    icon = MiuixIcons.Regular.ContactsBook,
+                    contentDescription = "打开图鉴",
                     variant = GlassVariant.Content,
-                    onClick = onOpenGuideCatalog
+                    onClick = onOpenGuideCatalog,
+                    width = 34.dp,
+                    height = 34.dp
                 )
                 Text(
                     text = if (isWorkActivated) "已激活" else "默认",
