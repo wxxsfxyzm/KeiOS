@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,6 +56,72 @@ fun GlassIconButton(
 ) {
     val isDark = isSystemInDarkTheme()
     val iconTint = MiuixTheme.colorScheme.primary
+    GlassIconButtonContainer(
+        backdrop = backdrop,
+        onClick = onClick,
+        modifier = modifier,
+        width = width,
+        height = height,
+        shape = shape,
+        blurRadius = blurRadius,
+        variant = variant,
+        isDark = isDark
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = iconTint
+        )
+    }
+}
+
+@Composable
+fun GlassIconButton(
+    backdrop: Backdrop?,
+    painter: Painter,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    width: Dp = 40.dp,
+    height: Dp = 40.dp,
+    shape: Shape = ContinuousCapsule,
+    blurRadius: Dp? = null,
+    variant: GlassVariant = GlassVariant.Content,
+    iconTint: Color = Color.Unspecified
+) {
+    val isDark = isSystemInDarkTheme()
+    GlassIconButtonContainer(
+        backdrop = backdrop,
+        onClick = onClick,
+        modifier = modifier,
+        width = width,
+        height = height,
+        shape = shape,
+        blurRadius = blurRadius,
+        variant = variant,
+        isDark = isDark
+    ) {
+        Icon(
+            painter = painter,
+            contentDescription = contentDescription,
+            tint = iconTint
+        )
+    }
+}
+
+@Composable
+private fun GlassIconButtonContainer(
+    backdrop: Backdrop?,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    width: Dp,
+    height: Dp,
+    shape: Shape,
+    blurRadius: Dp?,
+    variant: GlassVariant,
+    isDark: Boolean,
+    content: @Composable () -> Unit
+) {
     val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
     val glass = glassStyle(
         isDark = isDark,
@@ -115,11 +182,7 @@ fun GlassIconButton(
                     )
             )
         }
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = iconTint
-        )
+        content()
     }
 }
 

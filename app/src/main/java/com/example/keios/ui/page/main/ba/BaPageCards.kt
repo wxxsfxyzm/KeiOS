@@ -319,11 +319,12 @@ internal fun BaOverviewCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    GlassTextButton(
+                    GlassIconButton(
                         backdrop = backdrop,
-                        text = "领取",
-                        textColor = accentGreen,
+                        painter = painterResource(id = R.drawable.goods_icon_biweekly_0),
+                        contentDescription = "领取咖啡厅AP",
                         variant = GlassVariant.Content,
+                        iconTint = Color.Unspecified,
                         onClick = onClaimCafeStoredAp,
                     )
                     GlassTextButton(
