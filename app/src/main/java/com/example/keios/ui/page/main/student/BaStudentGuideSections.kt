@@ -1,10 +1,7 @@
 package com.example.keios.ui.page.main.student
 
 import com.example.keios.ui.page.main.widget.GlassVariant
-import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
-import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -32,6 +29,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -156,14 +154,6 @@ private fun loadGuideBitmapSource(
             imageUrl = source,
             maxDecodeDimension = maxDecodeDimension
         )
-    }
-}
-
-private tailrec fun Context.findActivity(): Activity? {
-    return when (this) {
-        is Activity -> this
-        is ContextWrapper -> baseContext.findActivity()
-        else -> null
     }
 }
 
@@ -1000,6 +990,7 @@ private fun GuideInlineVideoPlayer(
             mediaUrl = normalizedUrl,
             onDismiss = { showFullscreen = false }
         )
+        return
     }
 
     if (!expanded) {
@@ -1009,6 +1000,7 @@ private fun GuideInlineVideoPlayer(
                     if (normalizedUrl.isBlank()) {
                         Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
                     } else {
+                        expanded = false
                         showFullscreen = true
                     }
                 }
@@ -1048,6 +1040,7 @@ private fun GuideInlineVideoPlayer(
                         Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
                         return@GlassTextButton
                     }
+                    expanded = false
                     showFullscreen = true
                 }
             )
@@ -1157,7 +1150,10 @@ private fun GuideInlineVideoPlayer(
             text = "全屏",
             textColor = Color(0xFF3B82F6),
             variant = GlassVariant.Compact,
-            onClick = { showFullscreen = true }
+            onClick = {
+                expanded = false
+                showFullscreen = true
+            }
         )
         GlassTextButton(
             backdrop = backdrop,
@@ -1209,28 +1205,6 @@ private fun GuideInlineVideoPlayer(
 }
 
 @Composable
-private fun GuideRequestedOrientationEffect(requestedOrientation: Int) {
-    val activity = LocalContext.current.findActivity()
-    DisposableEffect(activity, requestedOrientation) {
-        if (activity == null || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
-            onDispose { }
-        } else {
-            val previousOrientation = activity.requestedOrientation
-            val applied = runCatching {
-                activity.requestedOrientation = requestedOrientation
-            }.isSuccess
-            onDispose {
-                if (applied) {
-                    runCatching {
-                        activity.requestedOrientation = previousOrientation
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun GuideImageFullscreenDialog(
     imageUrl: String,
     onDismiss: () -> Unit
@@ -1242,7 +1216,7 @@ private fun GuideImageFullscreenDialog(
             runCatching {
                 loadGuideBitmapSource(
                     source = normalizedImageUrl,
-                    maxDecodeDimension = 1024
+                    maxDecodeDimension = 2048
                 )
             }.getOrNull()
         }
@@ -1265,30 +1239,57 @@ private fun GuideImageFullscreenDialog(
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            if (ratio > 1.02f) {
-                val rotatedRatio = if (ratio > 0f) (1f / ratio) else 1f
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CoilZoomAsyncImage(
-                        model = normalizedImageUrl,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .aspectRatio(rotatedRatio)
-                            .rotate(90f),
-                        contentScale = ContentScale.Fit
-                    )
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                val safeRatio = ratio.coerceAtLeast(0.1f)
+                val viewportWidth = maxWidth
+                val viewportHeight = maxHeight
+                val viewportRatio = if (viewportHeight.value > 0f) {
+                    viewportWidth.value / viewportHeight.value
+                } else {
+                    1f
                 }
-            } else {
+
+                fun fitSize(targetRatio: Float): Pair<androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp> {
+                    val normalizedRatio = targetRatio.coerceAtLeast(0.1f)
+                    return if (viewportRatio >= normalizedRatio) {
+                        val fittedHeight = viewportHeight
+                        val fittedWidth = fittedHeight * normalizedRatio
+                        fittedWidth to fittedHeight
+                    } else {
+                        val fittedWidth = viewportWidth
+                        val fittedHeight = fittedWidth / normalizedRatio
+                        fittedWidth to fittedHeight
+                    }
+                }
+
+                val normalSize = fitSize(safeRatio)
+                val rotatedRatio = (1f / safeRatio).coerceAtLeast(0.1f)
+                val rotatedSize = fitSize(rotatedRatio)
+                val normalArea = normalSize.first.value * normalSize.second.value
+                val rotatedArea = rotatedSize.first.value * rotatedSize.second.value
+                val shouldRotate90 =
+                    safeRatio > 1.02f && rotatedArea > (normalArea * 1.12f)
+                val targetSize = if (shouldRotate90) rotatedSize else normalSize
+
                 CoilZoomAsyncImage(
                     model = normalizedImageUrl,
                     contentDescription = null,
                     modifier = Modifier
-                        .fillMaxSize()
+                        .width(targetSize.first)
+                        .height(targetSize.second)
+                        .let { base ->
+                            if (shouldRotate90) {
+                                base.rotate(90f)
+                            } else {
+                                base
+                            }
+                        }
                         .align(Alignment.Center),
-                    contentScale = ContentScale.Fit
+                    contentScale = ContentScale.Fit,
+                    onTap = { onDismiss() }
                 )
             }
             GlassTextButton(
@@ -1298,7 +1299,8 @@ private fun GuideImageFullscreenDialog(
                 variant = GlassVariant.Compact,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 20.dp, end = 16.dp),
+                    .statusBarsPadding()
+                    .padding(top = 12.dp, end = 16.dp),
                 onClick = onDismiss
             )
         }
@@ -1312,7 +1314,6 @@ private fun GuideVideoFullscreenDialog(
 ) {
     val context = LocalContext.current
     val normalizedUrl = remember(mediaUrl) { normalizeGuideMediaSource(mediaUrl) }
-    GuideRequestedOrientationEffect(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
     var loadError by remember(normalizedUrl) { mutableStateOf<String?>(null) }
 
     val player = remember(context, normalizedUrl) {
@@ -1388,7 +1389,8 @@ private fun GuideVideoFullscreenDialog(
                 variant = GlassVariant.Compact,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 20.dp, end = 16.dp),
+                    .statusBarsPadding()
+                    .padding(top = 12.dp, end = 16.dp),
                 onClick = onDismiss
             )
 
