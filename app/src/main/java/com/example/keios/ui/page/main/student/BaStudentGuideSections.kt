@@ -1252,37 +1252,30 @@ private fun GuideImageFullscreenDialog(
                     1f
                 }
 
-                fun fitSize(targetRatio: Float): Pair<androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp> {
+                fun fitArea(targetRatio: Float): Float {
                     val normalizedRatio = targetRatio.coerceAtLeast(0.1f)
                     return if (viewportRatio >= normalizedRatio) {
-                        val fittedHeight = viewportHeight
+                        val fittedHeight = viewportHeight.value
                         val fittedWidth = fittedHeight * normalizedRatio
-                        fittedWidth to fittedHeight
+                        fittedWidth * fittedHeight
                     } else {
-                        val fittedWidth = viewportWidth
+                        val fittedWidth = viewportWidth.value
                         val fittedHeight = fittedWidth / normalizedRatio
-                        fittedWidth to fittedHeight
+                        fittedWidth * fittedHeight
                     }
                 }
 
-                val normalSize = fitSize(safeRatio)
+                val normalArea = fitArea(safeRatio)
                 val rotatedRatio = (1f / safeRatio).coerceAtLeast(0.1f)
-                // fitSize(rotatedRatio) 是“旋转后最终落在屏幕上的尺寸”。
-                // 由于我们是对容器做 rotate(90f)，因此旋转前容器需要交换宽高。
-                val rotatedFinalSize = fitSize(rotatedRatio)
-                val rotatedPreRotateSize = rotatedFinalSize.second to rotatedFinalSize.first
-                val normalArea = normalSize.first.value * normalSize.second.value
-                val rotatedArea = rotatedFinalSize.first.value * rotatedFinalSize.second.value
+                val rotatedArea = fitArea(rotatedRatio)
                 val shouldRotate90 =
                     safeRatio > 1.02f && rotatedArea > (normalArea * 1.12f)
-                val targetSize = if (shouldRotate90) rotatedPreRotateSize else normalSize
 
                 CoilZoomAsyncImage(
                     model = normalizedImageUrl,
                     contentDescription = null,
                     modifier = Modifier
-                        .width(targetSize.first)
-                        .height(targetSize.second)
+                        .fillMaxSize()
                         .let { base ->
                             if (shouldRotate90) {
                                 base.rotate(90f)
