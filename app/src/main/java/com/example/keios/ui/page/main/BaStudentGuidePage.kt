@@ -102,6 +102,7 @@ import com.example.keios.core.prefs.UiPrefs
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -528,6 +529,7 @@ fun BaStudentGuidePage(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .layerBackdrop(backdrop)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
