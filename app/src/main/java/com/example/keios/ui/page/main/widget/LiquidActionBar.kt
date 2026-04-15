@@ -260,6 +260,11 @@ fun LiquidActionBar(
         }
     }
 
+    val interactionHighlightColor = if (!layeredStyleEnabled && isInLightTheme) {
+        Color(0xFF8FCBFF)
+    } else {
+        Color.White
+    }
     val interactiveHighlight = if (isBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         remember(animationScope, tabWidthPx) {
             InteractiveHighlight(
@@ -270,7 +275,8 @@ fun LiquidActionBar(
                         else size.width - (dampedDragAnimation.value + 0.5f) * tabWidthPx + effectivePanelOffset,
                         size.height / 2f
                     )
-                }
+                },
+                highlightColor = interactionHighlightColor
             )
         }
     } else {
