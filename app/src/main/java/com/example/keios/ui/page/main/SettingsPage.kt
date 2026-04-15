@@ -123,7 +123,7 @@ fun SettingsPage(
             TopAppBar(
                 title = settingsTitle,
                 scrollBehavior = scrollBehavior,
-                color = MiuixTheme.colorScheme.surface,
+                color = Color.Transparent,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
