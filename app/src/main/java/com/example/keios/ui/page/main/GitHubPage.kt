@@ -209,6 +209,12 @@ fun GitHubPage(
             drawContent()
         }
     }
+    val searchBarHostBackdrop: LayerBackdrop = key("github-search-host-$activationCount") {
+        rememberLayerBackdrop {
+            drawRect(surfaceColor)
+            drawContent()
+        }
+    }
     val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     var trackedSearch by remember { mutableStateOf("") }
     var repoUrlInput by remember { mutableStateOf("") }
@@ -1170,6 +1176,7 @@ fun GitHubPage(
         scrollBehavior = scrollBehavior,
         addButtonScrollConnection = addButtonScrollConnection,
         topBarBackdrop = topBarBackdrop,
+        searchBarHostBackdrop = searchBarHostBackdrop,
         contentBackdrop = contentBackdrop,
         topBarColor = topBarMaterialBackdrop.getMiuixAppBarColor(),
         enableSearchBar = enableSearchBar,

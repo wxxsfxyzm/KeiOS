@@ -80,7 +80,6 @@ import com.example.keios.core.system.getAllSystemProperties
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -177,6 +176,12 @@ fun OsPage(
         }
     }
     val sheetBackdrop: LayerBackdrop = key("os-sheet-$activationCount") {
+        rememberLayerBackdrop {
+            drawRect(surfaceColor)
+            drawContent()
+        }
+    }
+    val searchBarHostBackdrop: LayerBackdrop = key("os-search-host-$activationCount") {
         rememberLayerBackdrop {
             drawRect(surfaceColor)
             drawContent()
@@ -591,11 +596,7 @@ fun OsPage(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .layerBackdrop(topBarBackdrop)
-            ) {
+            Column {
                 TopAppBar(
                     title = "",
                     largeTitle = "OS",
@@ -646,7 +647,7 @@ fun OsPage(
                     SearchBarHost(
                         visible = showSearchBar,
                         animationLabelPrefix = "osSearchBar",
-                        backdrop = topBarBackdrop,
+                        backdrop = searchBarHostBackdrop,
                     ) {
                         Column {
                             GlassSearchField(

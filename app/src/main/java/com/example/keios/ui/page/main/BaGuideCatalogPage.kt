@@ -149,6 +149,12 @@ fun BaGuideCatalogPage(
             drawContent()
         }
     }
+    val searchBarHostBackdrop: LayerBackdrop = key("catalog-search-host-$activationCount") {
+        rememberLayerBackdrop {
+            drawRect(surfaceColor)
+            drawContent()
+        }
+    }
     val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -248,11 +254,7 @@ fun BaGuideCatalogPage(
             .background(MiuixTheme.colorScheme.background)
             .nestedScroll(bottomBarNestedScrollConnection),
         topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .layerBackdrop(topBarBackdrop)
-            ) {
+            Column {
                 TopAppBar(
                     title = pageTitle,
                     largeTitle = pageTitle,
@@ -319,7 +321,7 @@ fun BaGuideCatalogPage(
                     SearchBarHost(
                         visible = showSearchBar,
                         animationLabelPrefix = "baGuideCatalogSearch",
-                        backdrop = topBarBackdrop,
+                        backdrop = searchBarHostBackdrop,
                     ) {
                         Column {
                             GlassSearchField(

@@ -107,6 +107,7 @@ internal fun GitHubMainContent(
     scrollBehavior: ScrollBehavior,
     addButtonScrollConnection: NestedScrollConnection,
     topBarBackdrop: LayerBackdrop,
+    searchBarHostBackdrop: LayerBackdrop,
     contentBackdrop: LayerBackdrop,
     topBarColor: Color,
     enableSearchBar: Boolean,
@@ -152,6 +153,7 @@ internal fun GitHubMainContent(
         topBar = {
             GitHubTopBarSection(
                 backdrop = topBarBackdrop,
+                searchHostBackdrop = searchBarHostBackdrop,
                 topBarColor = topBarColor,
                 scrollBehavior = scrollBehavior,
                 enableSearchBar = enableSearchBar,

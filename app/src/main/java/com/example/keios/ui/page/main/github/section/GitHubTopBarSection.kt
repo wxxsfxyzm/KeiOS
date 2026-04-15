@@ -24,7 +24,6 @@ import com.example.keios.ui.page.main.widget.SearchBarHost
 import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -37,6 +36,7 @@ import top.yukonga.miuix.kmp.icon.extended.Tune
 @Composable
 internal fun GitHubTopBarSection(
     backdrop: LayerBackdrop,
+    searchHostBackdrop: LayerBackdrop,
     topBarColor: Color,
     scrollBehavior: ScrollBehavior,
     enableSearchBar: Boolean,
@@ -53,11 +53,7 @@ internal fun GitHubTopBarSection(
     onRefreshAllTracked: () -> Unit,
     onActionBarInteractingChanged: (Boolean) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .layerBackdrop(backdrop)
-    ) {
+    Column {
         TopAppBar(
             title = "",
             largeTitle = stringResource(R.string.github_page_title),
@@ -130,7 +126,7 @@ internal fun GitHubTopBarSection(
             SearchBarHost(
                 visible = showSearchBar,
                 animationLabelPrefix = "githubSearchBar",
-                backdrop = backdrop,
+                backdrop = searchHostBackdrop,
             ) {
                 Column {
                     GlassSearchField(
