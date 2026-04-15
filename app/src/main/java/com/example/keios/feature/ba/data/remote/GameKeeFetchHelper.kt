@@ -30,10 +30,9 @@ object GameKeeFetchHelper {
     private const val REFERER_HOME_PATH = "/"
     private const val REFERER_ACTIVITY_PATH = "/ba/huodong/15"
     private const val REFERER_POOL_PATH = "/ba/kachi/15"
-    private const val DESKTOP_UA =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
-    private const val ANDROID_UA =
-        "Mozilla/5.0 (Linux; Android 15; 23127PN0CC Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.6478.122 Mobile Safari/537.36"
+    private const val FIREFOX_ANDROID_UA =
+        "Mozilla/5.0 (Android 15; Mobile; rv:140.0) Gecko/140.0 Firefox/140.0"
+    private val REQUEST_UAS = listOf(FIREFOX_ANDROID_UA)
 
     private class InMemoryCookieJar : CookieJar {
         private val store = ConcurrentHashMap<String, MutableList<Cookie>>()
@@ -79,8 +78,7 @@ object GameKeeFetchHelper {
 
     private fun shortUa(ua: String): String {
         return when (ua) {
-            DESKTOP_UA -> "desktop"
-            ANDROID_UA -> "android"
+            FIREFOX_ANDROID_UA -> "firefox-android"
             else -> "custom"
         }
     }
@@ -194,7 +192,7 @@ object GameKeeFetchHelper {
         val traceId = "txt-${System.nanoTime().toString(16)}"
         val url = normalizeUrl(BASE_WWW, pathOrUrl)
         val referer = resolveReferer(pathOrUrl = pathOrUrl, refererPath = refererPath)
-        val uas = listOf(DESKTOP_UA, ANDROID_UA)
+        val uas = REQUEST_UAS
         var lastError: Throwable? = null
         val errors = mutableListOf<String>()
         val totalAttempts = uas.size
@@ -323,7 +321,7 @@ object GameKeeFetchHelper {
         }.distinct()
 
         var lastError: Throwable? = null
-        val uas = listOf(DESKTOP_UA, ANDROID_UA)
+        val uas = REQUEST_UAS
         val totalAttempts = requestUrls.size * uas.size
         var attempt = 0
         val errors = mutableListOf<String>()
@@ -424,7 +422,7 @@ object GameKeeFetchHelper {
             if (normalized.startsWith("//")) add("https:$normalized")
         }.distinct()
 
-        val uas = listOf(DESKTOP_UA, ANDROID_UA)
+        val uas = REQUEST_UAS
         val tempFile = File(targetFile.parentFile ?: return false, "${targetFile.name}.part")
         targetFile.parentFile?.mkdirs()
         val totalAttempts = requestUrls.size * uas.size
