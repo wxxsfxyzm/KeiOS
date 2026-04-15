@@ -50,7 +50,7 @@ object UiPrefs {
         kv().encode(KEY_CARD_PRESS_FEEDBACK, value)
     }
 
-    fun isHomeIconHdrEnabled(defaultValue: Boolean = true): Boolean {
+    fun isHomeIconHdrEnabled(defaultValue: Boolean = false): Boolean {
         return kv().decodeBool(KEY_HOME_ICON_HDR, defaultValue)
     }
 
@@ -114,7 +114,7 @@ object UiPrefs {
         return UiPrefsSnapshot(
             liquidBottomBarEnabled = true,
             cardPressFeedbackEnabled = true,
-            homeIconHdrEnabled = true,
+            homeIconHdrEnabled = false,
             superIslandNotificationEnabled = false,
             superIslandBypassRestrictionEnabled = false,
             cacheDiagnosticsEnabled = true,
@@ -128,7 +128,7 @@ object UiPrefs {
         return UiPrefsSnapshot(
             liquidBottomBarEnabled = store.decodeBool(KEY_LIQUID_BOTTOM_BAR, true),
             cardPressFeedbackEnabled = store.decodeBool(KEY_CARD_PRESS_FEEDBACK, true),
-            homeIconHdrEnabled = store.decodeBool(KEY_HOME_ICON_HDR, true),
+            homeIconHdrEnabled = store.decodeBool(KEY_HOME_ICON_HDR, false),
             superIslandNotificationEnabled = store.decodeBool(KEY_SUPER_ISLAND_NOTIFICATION, false),
             superIslandBypassRestrictionEnabled = store.decodeBool(KEY_SUPER_ISLAND_BYPASS_RESTRICTION, false),
             cacheDiagnosticsEnabled = store.decodeBool(KEY_CACHE_DIAGNOSTICS, true),

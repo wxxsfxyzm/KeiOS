@@ -54,8 +54,8 @@
     <string name="settings_home_shine_header">Home Shine</string>
     <string name="settings_home_shine_title">主页图标与标题 HDR 高光</string>
     <string name="settings_home_shine_summary_enabled">启用主页 Kei 图标与 KeiOS 标题联动高光（亮屏时更明显）</string>
-    <string name="settings_home_shine_summary_disabled">关闭主页图标与标题高光，减少夜间眩光感</string>
-    <string name="settings_home_shine_scope">影响主页 Kei 图标与 KeiOS 标题的联动高光效果</string>
+    <string name="settings_home_shine_summary_disabled">默认关闭。开启会激发 HDR 高光，谨慎打开。</string>
+    <string name="settings_home_shine_scope">影响主页 Kei 图标与 KeiOS 标题的联动高光效果；开启会激发 HDR，谨慎打开。</string>
     <string name="settings_mcp_notify_header">MCP Notify</string>
     <string name="settings_super_island_bypass_title">超级岛兼容绕过</string>
     <string name="settings_super_island_bypass_summary_enabled">已启用兼容绕过（高风险）：会临时改动系统网络规则以强触发超级岛。</string>
