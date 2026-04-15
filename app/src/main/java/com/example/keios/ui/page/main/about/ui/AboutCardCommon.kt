@@ -52,7 +52,7 @@ fun AboutCompactRow(
         val maxTitleWidth = (maxWidth * 0.44f).coerceAtLeast(96.dp)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
@@ -77,7 +77,7 @@ fun AboutCompactRow(
             Row(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.CenterVertically,
                 content = valueContent
             )
         }
