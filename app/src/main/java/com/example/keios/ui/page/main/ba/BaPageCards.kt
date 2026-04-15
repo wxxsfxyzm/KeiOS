@@ -52,7 +52,7 @@ private fun BaCardHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -66,7 +66,7 @@ private fun BaCardHeader(
                 Image(
                     painter = painterResource(id = iconRes),
                     contentDescription = title,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -108,11 +108,13 @@ private fun BaInlineActionPanel(
                     backdrop = backdrop,
                     painter = painterResource(id = buttonIconRes),
                     contentDescription = buttonText,
-                    onClick = onClick,
+                    onClick = {
+                        if (enabled) onClick()
+                    },
                     onLongClick = onLongClick,
                     variant = GlassVariant.Content,
-                    width = 34.dp,
-                    height = 34.dp,
+                    width = 40.dp,
+                    height = 40.dp,
                     iconTint = Color.Unspecified
                 )
             } else {
