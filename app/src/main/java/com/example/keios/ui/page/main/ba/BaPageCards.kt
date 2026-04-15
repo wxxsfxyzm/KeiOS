@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -806,6 +807,12 @@ internal fun BaPoolCard(
                         isEnded -> MiuixTheme.colorScheme.onBackgroundVariant
                         else -> accentBlue
                     }
+                    val countdownText = when {
+                        isEnded -> "已结束"
+                        pool.isRunning -> "结束倒计时 $remainText"
+                        else -> "开启倒计时 $remainText"
+                    }
+                    val showPoolCoverImage = showCalendarPoolImages && pool.imageUrl.isNotBlank()
 
                     BaGlassPanel(
                         backdrop = backdrop,
@@ -816,31 +823,55 @@ internal fun BaPoolCard(
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.Top,
                         ) {
-                            Text(text = statusText, color = statusColor, fontWeight = FontWeight.Medium)
-                            Text(text = remainText, color = countdownBlue, fontWeight = FontWeight.Bold, maxLines = 1)
+                            if (showPoolCoverImage) {
+                                Box(
+                                    modifier = Modifier.width(106.dp),
+                                    contentAlignment = Alignment.TopCenter,
+                                ) {
+                                    GameKeeCoverImage(
+                                        imageUrl = pool.imageUrl,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentScale = ContentScale.Fit,
+                                        aspectRatioRange = 0.66f..1.34f
+                                    )
+                                }
+                            }
+                            Column(
+                                modifier = if (showPoolCoverImage) Modifier.weight(1f) else Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                Text(
+                                    text = "${pool.tagName} · ${pool.name}",
+                                    color = MiuixTheme.colorScheme.onBackground,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    text = "${formatBaDateTimeNoYearInTimeZone(pool.startAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(pool.endAtMs, serverTimeZone)}",
+                                    color = countdownBlue.copy(alpha = 0.92f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(text = statusText, color = statusColor, fontWeight = FontWeight.Medium)
+                                    Text(
+                                        text = countdownText,
+                                        color = if (isEnded) MiuixTheme.colorScheme.onBackgroundVariant else countdownBlue,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                         }
-                        Text(
-                            text = "${pool.tagName} · ${pool.name}",
-                            color = MiuixTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (showCalendarPoolImages) {
-                            GameKeeCoverImage(
-                                imageUrl = pool.imageUrl,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                        Text(
-                            text = "${formatBaDateTimeNoYearInTimeZone(pool.startAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(pool.endAtMs, serverTimeZone)}",
-                            color = countdownBlue.copy(alpha = 0.92f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
                         LinearProgressIndicator(
                             progress = poolProgress(pool, uiNowMs),
                             modifier = Modifier.fillMaxWidth(),

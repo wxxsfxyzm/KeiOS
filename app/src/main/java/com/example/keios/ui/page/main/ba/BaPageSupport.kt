@@ -434,7 +434,9 @@ internal fun extractGameKeeImageLink(item: JSONObject): String {
 @Composable
 internal fun GameKeeCoverImage(
     imageUrl: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop,
+    aspectRatioRange: ClosedFloatingPointRange<Float> = 1.0f..2.4f
 ) {
     val normalizedUrl = remember(imageUrl) { normalizeGameKeeImageLink(imageUrl) }
     if (normalizedUrl.isBlank()) return
@@ -447,15 +449,17 @@ internal fun GameKeeCoverImage(
     }
 
     val rendered = bitmap ?: return
-    val aspectRatioValue = remember(rendered.width, rendered.height) {
+    val minRatio = aspectRatioRange.start.coerceAtLeast(0.2f)
+    val maxRatio = aspectRatioRange.endInclusive.coerceAtLeast(minRatio + 0.01f)
+    val aspectRatioValue = remember(rendered.width, rendered.height, minRatio, maxRatio) {
         val w = rendered.width.coerceAtLeast(1)
         val h = rendered.height.coerceAtLeast(1)
-        (w.toFloat() / h.toFloat()).coerceIn(1.0f, 2.4f)
+        (w.toFloat() / h.toFloat()).coerceIn(minRatio, maxRatio)
     }
     Image(
         bitmap = rendered.asImageBitmap(),
         contentDescription = null,
-        contentScale = ContentScale.Crop,
+        contentScale = contentScale,
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(aspectRatioValue)
