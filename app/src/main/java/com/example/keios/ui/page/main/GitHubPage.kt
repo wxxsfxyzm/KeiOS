@@ -4,8 +4,6 @@ import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
-import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.graphics.Bitmap
 import android.widget.Toast
@@ -108,14 +106,18 @@ import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.domain.GitHubReleaseCheckService
 import com.example.keios.feature.github.domain.GitHubStrategyBenchmarkService
 import com.example.keios.feature.github.model.GitHubApiAuthMode
-import com.example.keios.feature.github.model.GitHubCheckCacheEntry
 import com.example.keios.feature.github.model.GitHubApiCredentialStatus
+import com.example.keios.feature.github.model.GitHubCheckCacheEntry
 import com.example.keios.feature.github.model.GitHubLookupConfig
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.feature.github.model.GitHubStrategyLoadTrace
-import com.example.keios.feature.github.model.GitHubTrackedReleaseCheck
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.feature.github.model.InstalledAppItem
+import com.example.keios.ui.page.main.github.asset.*
+import com.example.keios.ui.page.main.github.query.*
+import com.example.keios.ui.page.main.github.sheet.*
+import com.example.keios.ui.page.main.github.state.*
+import com.example.keios.ui.page.main.github.section.*
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
@@ -158,7 +160,6 @@ import top.yukonga.miuix.kmp.icon.extended.Update
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 import kotlin.math.max
-import java.util.concurrent.TimeUnit
 
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -258,104 +259,8 @@ fun GitHubPage(
     val apkAssetLoading = remember { mutableStateMapOf<String, Boolean>() }
     val apkAssetErrors = remember { mutableStateMapOf<String, String>() }
     val apkAssetExpanded = remember { mutableStateMapOf<String, Boolean>() }
-    val installerXRevivedPackageName = "com.rosan.installer.x.revived"
-    val packageInstallerOnlinePackageName = "io.github.vvb2060.packageinstaller"
-
-    data class DownloaderOption(
-        val packageName: String,
-        val label: String
-    )
-
-    val systemDefaultDownloaderOption = DownloaderOption(packageName = "", label = "系统默认值")
-    val systemDownloadManagerOption = DownloaderOption(packageName = "__system_download_manager__", label = "系统内置下载器")
-
-    data class OnlineShareTargetOption(
-        val packageName: String,
-        val label: String
-    )
-
-    val noOnlineShareTargetOption = OnlineShareTargetOption(packageName = "", label = "不联动")
-
-    fun queryOnlineShareTargetOptions(): List<OnlineShareTargetOption> {
-        val knownTargets = listOf(
-            OnlineShareTargetOption(installerXRevivedPackageName, "InstallerX Revived"),
-            OnlineShareTargetOption(packageInstallerOnlinePackageName, "Package Installer")
-        )
-        return knownTargets.filter { target ->
-            appList.any { it.packageName == target.packageName } || runCatching {
-                context.packageManager.getPackageInfo(target.packageName, PackageManager.PackageInfoFlags.of(0))
-                true
-            }.recoverCatching {
-                @Suppress("DEPRECATION")
-                context.packageManager.getPackageInfo(target.packageName, 0)
-                true
-            }.getOrDefault(false)
-        }
-    }
-
-    fun ResolveInfo.toDownloaderOptionOrNull(): DownloaderOption? {
-        val packageName = activityInfo?.packageName?.trim().orEmpty()
-        val label = loadLabel(context.packageManager).toString().trim().ifBlank { packageName }
-        if (packageName.isBlank()) return null
-
-        val normalizedPackage = packageName.lowercase()
-        val normalizedLabel = label.lowercase()
-        val combined = "$normalizedPackage $normalizedLabel"
-        val excludedKeywords = listOf("android", "system ui", "package installer")
-        val positiveKeywords = listOf(
-            "download", "downloader", "downloadmanager", "manager", "loader",
-            "adm", "idm", "1dm", "aria", "fetch", "torrent", "下载"
-        )
-        val knownDownloaderPackages = listOf(
-            "com.dv.adm",
-            "idm.internet.download.manager.plus",
-            "idm.internet.download.manager",
-            "idm.internet.download.manager.adm.lite",
-            "com.apps2sd.adm"
-        )
-        if (excludedKeywords.any { combined == it || combined.contains(" $it") }) return null
-
-        val decoratedLabel = when {
-            positiveKeywords.any { combined.contains(it) } ||
-                knownDownloaderPackages.any { normalizedPackage == it || normalizedPackage.startsWith("$it.") } -> "$label · 推荐"
-            else -> label
-        }
-        return DownloaderOption(packageName = packageName, label = decoratedLabel)
-    }
-
-    fun queryDownloaderOptions(): List<DownloaderOption> {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/")).apply {
-            addCategory(Intent.CATEGORY_BROWSABLE)
-        }
-        val resolved = runCatching {
-            context.packageManager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
-        }.recoverCatching {
-            @Suppress("DEPRECATION")
-            context.packageManager.queryIntentActivities(intent, 0)
-        }.getOrDefault(emptyList<ResolveInfo>())
-
-        return resolved.mapNotNull { it.toDownloaderOptionOrNull() }
-            .filterNot { it.packageName == context.packageName }
-            .distinctBy { it.packageName }
-            .sortedWith(
-                compareByDescending<DownloaderOption> { it.label.contains("推荐") }
-                    .thenBy { it.label.lowercase() }
-            )
-    }
-
-    fun isPackageInstalled(packageName: String): Boolean {
-        return runCatching {
-            context.packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
-            true
-        }.recoverCatching {
-            @Suppress("DEPRECATION")
-            context.packageManager.getPackageInfo(packageName, 0)
-            true
-        }.getOrDefault(false)
-    }
-
     val installedOnlineShareTargets = remember(appListLoaded, appList) {
-        queryOnlineShareTargetOptions()
+        queryOnlineShareTargetOptions(context, appList)
     }
 
     val trackSnapshot by produceState(initialValue = GitHubTrackSnapshot()) {
@@ -445,75 +350,6 @@ fun GitHubPage(
             lookupConfig = updatedConfig
         }
     }
-
-    fun VersionCheckUi.toCacheEntry(): GitHubCheckCacheEntry = GitHubCheckCacheEntry(
-        loading = false,
-        localVersion = localVersion,
-        localVersionCode = localVersionCode,
-        latestTag = latestTag,
-        latestStableName = latestStableName,
-        latestStableRawTag = latestStableRawTag,
-        latestStableUrl = latestStableUrl,
-        latestPreName = latestPreName,
-        latestPreRawTag = latestPreRawTag,
-        latestPreUrl = latestPreUrl,
-        hasStableRelease = hasStableRelease,
-        hasUpdate = hasUpdate,
-        message = message,
-        isPreRelease = isPreRelease,
-        preReleaseInfo = preReleaseInfo,
-        showPreReleaseInfo = showPreReleaseInfo,
-        hasPreReleaseUpdate = hasPreReleaseUpdate,
-        recommendsPreRelease = recommendsPreRelease,
-        releaseHint = releaseHint,
-        sourceStrategyId = sourceStrategyId
-    )
-
-    fun GitHubCheckCacheEntry.toUi(): VersionCheckUi = VersionCheckUi(
-        loading = false,
-        localVersion = localVersion,
-        localVersionCode = localVersionCode,
-        latestTag = latestTag,
-        latestStableName = latestStableName,
-        latestStableRawTag = latestStableRawTag,
-        latestStableUrl = latestStableUrl,
-        latestPreName = latestPreName,
-        latestPreRawTag = latestPreRawTag,
-        latestPreUrl = latestPreUrl,
-        hasStableRelease = hasStableRelease,
-        hasUpdate = hasUpdate,
-        message = message,
-        isPreRelease = isPreRelease,
-        preReleaseInfo = preReleaseInfo,
-        showPreReleaseInfo = showPreReleaseInfo,
-        hasPreReleaseUpdate = hasPreReleaseUpdate,
-        recommendsPreRelease = recommendsPreRelease,
-        releaseHint = releaseHint,
-        sourceStrategyId = sourceStrategyId
-    )
-
-    fun GitHubTrackedReleaseCheck.toUi(): VersionCheckUi = VersionCheckUi(
-        loading = false,
-        localVersion = localVersion,
-        localVersionCode = localVersionCode,
-        latestTag = stableRelease?.displayVersion.orEmpty(),
-        latestStableName = stableRelease?.rawName.orEmpty(),
-        latestStableRawTag = stableRelease?.rawTag.orEmpty(),
-        latestStableUrl = stableRelease?.link.orEmpty(),
-        latestPreName = preRelease?.rawName.orEmpty(),
-        latestPreRawTag = preRelease?.rawTag.orEmpty(),
-        latestPreUrl = preRelease?.link.orEmpty(),
-        hasStableRelease = hasStableRelease,
-        hasUpdate = hasUpdate,
-        message = message,
-        isPreRelease = isPreReleaseInstalled,
-        preReleaseInfo = preReleaseInfo,
-        showPreReleaseInfo = showPreReleaseInfo,
-        hasPreReleaseUpdate = hasPreReleaseUpdate,
-        recommendsPreRelease = recommendsPreRelease,
-        releaseHint = releaseHint,
-        sourceStrategyId = strategyId
-    )
 
     fun persistCheckCache(refreshTimestamp: Long = lastRefreshMs) {
         val states = trackedItems.associate { item ->
@@ -808,52 +644,6 @@ fun GitHubPage(
         }
     }
 
-    data class ApkAssetTarget(
-        val rawTag: String,
-        val releaseUrl: String,
-        val label: String
-    )
-
-    fun VersionCheckUi.apkAssetTarget(owner: String, repo: String): ApkAssetTarget? {
-        val stableTag = latestStableRawTag.ifBlank {
-            GitHubReleaseAssetRepository.parseReleaseTagFromUrl(latestStableUrl)
-        }
-        val preTag = latestPreRawTag.ifBlank {
-            GitHubReleaseAssetRepository.parseReleaseTagFromUrl(latestPreUrl)
-        }
-        return when {
-            recommendsPreRelease && preTag.isNotBlank() -> ApkAssetTarget(
-                rawTag = preTag,
-                releaseUrl = latestPreUrl.ifBlank { GitHubVersionUtils.buildReleaseTagUrl(owner, repo, preTag) },
-                label = "预发资源"
-            )
-            hasUpdate == true && stableTag.isNotBlank() -> ApkAssetTarget(
-                rawTag = stableTag,
-                releaseUrl = latestStableUrl.ifBlank { GitHubVersionUtils.buildReleaseTagUrl(owner, repo, stableTag) },
-                label = "稳定资源"
-            )
-            hasPreReleaseUpdate && preTag.isNotBlank() -> ApkAssetTarget(
-                rawTag = preTag,
-                releaseUrl = latestPreUrl.ifBlank { GitHubVersionUtils.buildReleaseTagUrl(owner, repo, preTag) },
-                label = "预发资源"
-            )
-            else -> null
-        }
-    }
-
-    fun formatAssetSize(sizeBytes: Long): String {
-        if (sizeBytes <= 0L) return "未知"
-        val kb = 1024L
-        val mb = kb * 1024L
-        val gb = mb * 1024L
-        return when {
-            sizeBytes >= gb -> String.format("%.1fG", sizeBytes.toDouble() / gb.toDouble())
-            sizeBytes >= mb -> String.format("%.1fM", sizeBytes.toDouble() / mb.toDouble())
-            sizeBytes >= kb -> String.format("%.0fK", sizeBytes.toDouble() / kb.toDouble())
-            else -> "${sizeBytes}B"
-        }
-    }
-
     suspend fun resolvePreferredAssetUrl(asset: GitHubReleaseAssetFile): String {
         val token = lookupConfig.apiToken.trim()
         val preferApiAsset = lookupConfig.selectedStrategy == GitHubLookupStrategyOption.GitHubApiToken
@@ -863,70 +653,6 @@ fun GitHubPage(
                 useApiAssetUrl = preferApiAsset,
                 apiToken = token
             ).getOrElse { asset.downloadUrl }
-        }
-    }
-
-    fun prefersApiAssetTransport(asset: GitHubReleaseAssetFile): Boolean {
-        return lookupConfig.selectedStrategy == GitHubLookupStrategyOption.GitHubApiToken &&
-            lookupConfig.apiToken.trim().isNotBlank() &&
-            asset.apiAssetUrl.isNotBlank()
-    }
-
-    fun assetTransportLabel(asset: GitHubReleaseAssetFile): String {
-        return if (prefersApiAssetTransport(asset)) "API" else "直链"
-    }
-
-    fun bundleTransportLabel(bundle: GitHubReleaseAssetBundle?): String? {
-        if (bundle == null) return null
-        return if (bundle.assets.any { prefersApiAssetTransport(it) }) "API" else "直链"
-    }
-
-    fun bundleCommitLabel(bundle: GitHubReleaseAssetBundle?): String? {
-        return bundle?.shortCommitSha?.trim().takeIf { !it.isNullOrBlank() }
-    }
-
-    fun assetAbiLabel(fileName: String): String? {
-        val lowerName = fileName.lowercase()
-        return when {
-            "arm64-v8a" in lowerName || "aarch64" in lowerName || Regex("(^|[^a-z0-9])arm64([^a-z0-9]|$)").containsMatchIn(lowerName) -> "arm64"
-            "universal" in lowerName || "fat" in lowerName -> "universal"
-            "armeabi-v7a" in lowerName || "armv7" in lowerName -> "armeabi-v7a"
-            Regex("(^|[^a-z0-9])armeabi([^a-z0-9]|$)").containsMatchIn(lowerName) -> "armeabi"
-            "x86_64" in lowerName -> "x86_64"
-            Regex("(^|[^a-z0-9])x86([^a-z0-9]|$)").containsMatchIn(lowerName) -> "x86"
-            else -> null
-        }
-    }
-
-    fun assetFileExtensionLabel(fileName: String): String? {
-        val trimmedName = fileName.trim()
-        val extension = trimmedName.substringAfterLast('.', "")
-            .takeIf { '.' in trimmedName && it.isNotBlank() }
-            ?.lowercase()
-            ?: return null
-        return extension
-    }
-
-    fun assetDisplayName(fileName: String): String {
-        val trimmedName = fileName.trim()
-        val extension = assetFileExtensionLabel(trimmedName) ?: return trimmedName
-        return trimmedName.removeSuffix(".$extension")
-    }
-
-    fun assetRelativeTimeLabel(updatedAtMillis: Long?): String? {
-        val updatedAt = updatedAtMillis ?: return null
-        val diffMillis = (System.currentTimeMillis() - updatedAt).coerceAtLeast(0L)
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(diffMillis)
-        val hours = TimeUnit.MILLISECONDS.toHours(diffMillis)
-        val days = TimeUnit.MILLISECONDS.toDays(diffMillis)
-        return when {
-            minutes < 1L -> "just now"
-            minutes < 60L -> "$minutes min ago"
-            hours < 24L -> "$hours hr ago"
-            days < 7L -> "$days day${if (days == 1L) "" else "s"} ago"
-            days < 30L -> "last week"
-            days < 60L -> "last month"
-            else -> "${days / 30L} mo ago"
         }
     }
 
@@ -1236,1261 +962,142 @@ fun GitHubPage(
         s?.hasUpdate == false && s.isPreRelease.not()
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            Column {
-                TopAppBar(
-                    title = "",
-                    largeTitle = "GitHub",
-                    scrollBehavior = scrollBehavior,
-                    color = topBarMaterialBackdrop.getMiuixAppBarColor(),
-                    actions = {
-                        Box {
-                            LiquidActionBar(
-                                backdrop = backdrop,
-                                items = listOf(
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Edit,
-                                        contentDescription = "编辑抓取方案",
-                                        onClick = { openStrategySheet() }
-                                    ),
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Tune,
-                                        contentDescription = "检查逻辑",
-                                        onClick = { openCheckLogicSheet() }
-                                    ),
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Sort,
-                                        contentDescription = "排序",
-                                        onClick = { showSortPopup = !showSortPopup }
-                                    ),
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Refresh,
-                                        contentDescription = "检查",
-                                        onClick = { refreshAllTracked(showToast = true) },
-                                        enabled = !deleteInProgress
-                                    )
-                                ),
-                                onInteractionChanged = onActionBarInteractingChanged
-                            )
+    GitHubMainContent(
+        contentBottomPadding = contentBottomPadding,
+        listState = listState,
+        scrollBehavior = scrollBehavior,
+        addButtonScrollConnection = addButtonScrollConnection,
+        backdrop = backdrop,
+        topBarColor = topBarMaterialBackdrop.getMiuixAppBarColor(),
+        showSearchBar = showSearchBar,
+        trackedSearch = trackedSearch,
+        sortMode = sortMode,
+        showSortPopup = showSortPopup,
+        showFloatingAddButton = showFloatingAddButton,
+        deleteInProgress = deleteInProgress,
+        isDark = isDark,
+        overviewRefreshState = overviewRefreshState,
+        refreshProgress = refreshProgress,
+        lastRefreshMs = lastRefreshMs,
+        lookupConfig = lookupConfig,
+        overviewMetrics = GitHubOverviewMetrics(
+            trackedCount = trackedCount,
+            updatableCount = updatableCount,
+            stableLatestCount = stableLatestCount,
+            preReleaseCount = preReleaseCount,
+            preReleaseUpdateCount = preReleaseUpdateCount,
+            failedCount = failedCount
+        ),
+        cardPressFeedbackEnabled = cardPressFeedbackEnabled,
+        trackedItems = trackedItems,
+        filteredTracked = filteredTracked,
+        sortedTracked = sortedTracked,
+        checkStates = checkStates,
+        apkAssetBundles = apkAssetBundles,
+        apkAssetLoading = apkAssetLoading,
+        apkAssetErrors = apkAssetErrors,
+        apkAssetExpanded = apkAssetExpanded,
+        onTrackedSearchChange = { trackedSearch = it },
+        onShowSortPopupChange = { showSortPopup = it },
+        onSortModeChange = { sortMode = it },
+        onOpenStrategySheet = { openStrategySheet() },
+        onOpenCheckLogicSheet = { openCheckLogicSheet() },
+        onRefreshAllTracked = { refreshAllTracked(showToast = true) },
+        onOpenTrackSheetForAdd = { openTrackSheetForAdd() },
+        onOpenTrackSheetForEdit = { openTrackSheetForEdit(it) },
+        onClearApkAssetUiState = { clearApkAssetUiState(it) },
+        onLoadApkAssets = { item, state, toggleOnlyWhenCached, includeAllAssets ->
+            loadApkAssets(
+                item = item,
+                state = state,
+                toggleOnlyWhenCached = toggleOnlyWhenCached,
+                includeAllAssets = includeAllAssets
+            )
+        },
+        onOpenExternalUrl = { openExternalUrl(it) },
+        onOpenApkInDownloader = { openApkInDownloader(it) },
+        onShareApkLink = { shareApkLink(it) },
+        onActionBarInteractingChanged = onActionBarInteractingChanged
+    )
 
-                            LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex, popupAnchorBounds ->
-                                when (slotIndex) {
-                                    2 -> if (showSortPopup) {
-                                        SnapshotWindowListPopup(
-                                            show = showSortPopup,
-                                            alignment = PopupPositionProvider.Align.BottomStart,
-                                            anchorBounds = popupAnchorBounds,
-                                            placement = SnapshotPopupPlacement.ActionBarCenter,
-                                            onDismissRequest = { showSortPopup = false },
-                                            enableWindowDim = false
-                                        ) {
-                                            LiquidDropdownColumn {
-                                                val modes = GitHubSortMode.entries
-                                                modes.forEachIndexed { index, mode ->
-                                                    LiquidDropdownImpl(
-                                                        text = mode.label,
-                                                        optionSize = modes.size,
-                                                        isSelected = sortMode == mode,
-                                                        index = index,
-                                                        onSelectedIndexChange = { selectedIndex ->
-                                                            sortMode = modes[selectedIndex]
-                                                            showSortPopup = false
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                )
-                SearchBarHost(
-                    visible = showSearchBar,
-                    animationLabelPrefix = "githubSearchBar"
-                ) {
-                    Column {
-                        GlassSearchField(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp),
-                            value = trackedSearch,
-                            onValueChange = { trackedSearch = it },
-                            label = "搜索已跟踪项目（仓库/应用/包名）",
-                            backdrop = backdrop,
-                            variant = GlassVariant.Bar,
-                            singleLine = true
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-            }
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(addButtonScrollConnection)
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                state = listState,
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 64.dp,
-                    start = 12.dp,
-                    end = 12.dp
-                )
-            ) {
-            item { Spacer(modifier = Modifier.height(8.dp)) }
-            item { Spacer(modifier = Modifier.height(2.dp)) }
-            item {
-                val overviewShape = RoundedCornerShape(16.dp)
-                val overviewTitleColor = if (isDark) Color.White else MiuixTheme.colorScheme.onBackgroundVariant
-                Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(overviewShape)
-                    .background(
-                        overviewRefreshState.surfaceColor(
-                            isDark = isDark,
-                            neutralSurface = MiuixTheme.colorScheme.surface
-                        ),
-                        overviewShape
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = overviewRefreshState.borderColor(
-                            isDark = isDark,
-                            neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
-                        ),
-                        shape = overviewShape
-                    ),
-                colors = CardDefaults.defaultColors(
-                    color = overviewRefreshState.surfaceColor(
-                        isDark = isDark,
-                        neutralSurface = MiuixTheme.colorScheme.surface
-                    ),
-                    contentColor = MiuixTheme.colorScheme.onBackground
-                ),
-                showIndication = cardPressFeedbackEnabled,
-                onClick = { refreshAllTracked(showToast = true) }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .combinedClickable(
-                            onClick = { refreshAllTracked(showToast = true) },
-                            onLongClick = { openTrackSheetForAdd() }
-                        )
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        Text("项目版本跟踪", color = MiuixTheme.colorScheme.onBackground)
-                        Spacer(modifier = Modifier.weight(1f))
-                        if (overviewRefreshState != OverviewRefreshState.Idle) {
-                            val indicatorColor = overviewRefreshState.color(
-                                neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
-                            )
-                            val indicatorBg = overviewRefreshState.indicatorBackground(
-                                neutralSurface = MiuixTheme.colorScheme.surface
-                            )
-                            val progressValue = when (overviewRefreshState) {
-                                OverviewRefreshState.Refreshing -> refreshProgress.coerceIn(0f, 1f)
-                                OverviewRefreshState.Completed,
-                                OverviewRefreshState.Cached -> 1f
-                                OverviewRefreshState.Idle -> 0f
-                            }
-                            CircularProgressIndicator(
-                                progress = progressValue,
-                                size = 18.dp,
-                                strokeWidth = 2.dp,
-                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                    foregroundColor = indicatorColor,
-                                    backgroundColor = indicatorBg
-                                )
-                            )
-                        }
-                        StatusPill(
-                            label = formatRefreshAgo(lastRefreshMs),
-                            color = overviewRefreshState.color(
-                                neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
-                            ),
-                            backgroundAlphaOverride = if (isDark) 0.18f else 0.24f,
-                            borderAlphaOverride = if (isDark) 0.35f else 0.42f
-                        )
-                        StatusPill(
-                            label = when (overviewRefreshState) {
-                                OverviewRefreshState.Cached -> StatusLabelText.Cached
-                                OverviewRefreshState.Refreshing -> StatusLabelText.Checking
-                                OverviewRefreshState.Completed -> StatusLabelText.Checked
-                                OverviewRefreshState.Idle -> StatusLabelText.PendingCheck
-                            },
-                            color = overviewRefreshState.color(
-                                neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
-                            )
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        GitHubOverviewMetricItem(
-                            label = "策略",
-                            value = lookupConfig.selectedStrategy.overviewLabel(),
-                            titleColor = overviewTitleColor,
-                            valueColor = MiuixTheme.colorScheme.primary,
-                            modifier = Modifier.weight(1f)
-                        )
-                        GitHubOverviewMetricItem(
-                            label = "API",
-                            value = lookupConfig.overviewApiLabel(),
-                            titleColor = overviewTitleColor,
-                            valueColor = if (lookupConfig.selectedStrategy == GitHubLookupStrategyOption.GitHubApiToken) {
-                                if (lookupConfig.apiToken.isBlank()) {
-                                    GitHubStatusPalette.PreRelease
-                                } else {
-                                    GitHubStatusPalette.Active
-                                }
-                            } else {
-                                MiuixTheme.colorScheme.onBackgroundVariant
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        GitHubOverviewMetricItem(
-                            label = "已追踪",
-                            value = "$trackedCount 项",
-                            titleColor = overviewTitleColor,
-                            valueColor = if (trackedCount > 0) GitHubStatusPalette.Stable else MiuixTheme.colorScheme.onBackgroundVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                        GitHubOverviewMetricItem(
-                            label = "稳定可更新",
-                            value = "$updatableCount 项",
-                            titleColor = overviewTitleColor,
-                            valueColor = if (updatableCount > 0) GitHubStatusPalette.Update else MiuixTheme.colorScheme.onBackgroundVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        GitHubOverviewMetricItem(
-                            label = "稳定已最新",
-                            value = "$stableLatestCount 项",
-                            titleColor = overviewTitleColor,
-                            valueColor = if (stableLatestCount > 0) GitHubStatusPalette.Stable else MiuixTheme.colorScheme.onBackgroundVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                        GitHubOverviewMetricItem(
-                            label = "预发跟踪",
-                            value = "$preReleaseCount 项",
-                            titleColor = overviewTitleColor,
-                            valueColor = if (preReleaseCount > 0) GitHubStatusPalette.PreRelease else MiuixTheme.colorScheme.onBackgroundVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        GitHubOverviewMetricItem(
-                            label = "预发可更新",
-                            value = "$preReleaseUpdateCount 项",
-                            titleColor = overviewTitleColor,
-                            valueColor = if (preReleaseUpdateCount > 0) GitHubStatusPalette.PreRelease else MiuixTheme.colorScheme.onBackgroundVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                        GitHubOverviewMetricItem(
-                            label = "检查失败",
-                            value = "$failedCount 项",
-                            titleColor = overviewTitleColor,
-                            valueColor = if (failedCount > 0) GitHubStatusPalette.Error else MiuixTheme.colorScheme.onBackgroundVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-            }
-
-            item { Spacer(modifier = Modifier.height(10.dp)) }
-
-            if (trackedItems.isEmpty()) {
-                item { MiuixInfoItem("跟踪列表", "暂无条目，请先新增") }
-            } else if (filteredTracked.isEmpty()) {
-                item { MiuixInfoItem("搜索结果", "没有匹配的跟踪项目") }
-            } else {
-                items(sortedTracked, key = { it.id }) { item ->
-                    var expanded by remember(item.id) { mutableStateOf(false) }
-                    MiuixAccordionCard(
-                        backdrop = backdrop,
-                        title = item.appLabel,
-                        subtitle = item.packageName,
-                        expanded = expanded,
-                        onExpandedChange = {
-                            expanded = it
-                            if (!it) {
-                                clearApkAssetUiState(item.id)
-                            }
-                        },
-                        headerStartAction = {
-                            AppIcon(packageName = item.packageName, size = 24.dp)
-                        },
-                        onHeaderLongClick = { openTrackSheetForEdit(item) },
-                        headerActions = {
-                            val state = checkStates[item.id] ?: VersionCheckUi()
-                            val statusColor = state.statusColor(
-                                neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
-                            )
-                            val statusReleaseUrl = state.statusActionUrl(
-                                owner = item.owner,
-                                repo = item.repo
-                            )
-                            val canLoadApkAssets = state.hasUpdate == true ||
-                                state.recommendsPreRelease ||
-                                state.hasPreReleaseUpdate
-                            val isAssetPanelExpanded = apkAssetExpanded[item.id] == true
-                            val isAssetPanelLoading = apkAssetLoading[item.id] == true
-                            val statusIcon = when {
-                                isAssetPanelLoading -> MiuixIcons.Regular.Refresh
-                                canLoadApkAssets && isAssetPanelExpanded -> MiuixIcons.Regular.Close
-                                else -> state.statusIcon()
-                            }
-                            val clickableModifier = if (statusReleaseUrl.isNotBlank()) {
-                                Modifier.clickable {
-                                    if (canLoadApkAssets) {
-                                        if (isAssetPanelExpanded) {
-                                            apkAssetExpanded[item.id] = false
-                                        } else {
-                                            loadApkAssets(item, state)
-                                        }
-                                    } else {
-                                        runCatching {
-                                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(statusReleaseUrl)))
-                                        }.onFailure {
-                                            Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            } else {
-                                Modifier
-                            }
-                            Icon(
-                                imageVector = statusIcon,
-                                contentDescription = state.message.ifBlank { "状态" },
-                                tint = statusColor,
-                                modifier = clickableModifier
-                            )
-                        }
-                    ) {
-                        val state = checkStates[item.id] ?: VersionCheckUi()
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            GitHubCompactInfoRow(
-                                label = "仓库地址",
-                                value = "${item.owner}/${item.repo}",
-                                valueColor = MiuixTheme.colorScheme.primary,
-                                titleColor = MiuixTheme.colorScheme.primary,
-                                onClick = {
-                                    val releaseUrl = GitHubVersionUtils.buildReleaseUrl(item.owner, item.repo)
-                                    runCatching {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl)))
-                                    }.onFailure {
-                                        Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            )
-                            if (state.localVersion.isNotBlank()) {
-                                val normalizedLocalVersion = formatReleaseValue(
-                                    releaseName = state.localVersion,
-                                    rawTag = state.localVersion
-                                )
-                                val localText = if (state.localVersionCode >= 0L) {
-                                    "$normalizedLocalVersion (${state.localVersionCode})"
-                                } else {
-                                    normalizedLocalVersion
-                                }
-                                VersionValueRow(
-                                    label = "本地版本",
-                                    value = localText,
-                                    valueColor = MiuixTheme.colorScheme.primary
-                                )
-                            }
-                            if (state.hasStableRelease &&
-                                (state.latestStableName.isNotBlank() ||
-                                    state.latestStableRawTag.isNotBlank() ||
-                                    state.latestTag.isNotBlank())
-                            ) {
-                                val latestColor = state.stableVersionColor(
-                                    neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
-                                )
-                                VersionValueRow(
-                                    label = "稳定版本",
-                                    value = formatReleaseValue(
-                                        releaseName = state.latestStableName.ifBlank { state.latestTag },
-                                        rawTag = state.latestStableRawTag
-                                    ),
-                                    valueColor = latestColor,
-                                    emphasized = state.hasUpdate == true && !state.recommendsPreRelease
-                                )
-                            }
-                            if (state.showPreReleaseInfo &&
-                                (state.latestPreName.isNotBlank() ||
-                                    state.latestPreRawTag.isNotBlank() ||
-                                    state.preReleaseInfo.isNotBlank())
-                            ) {
-                                val preColor = state.preReleaseVersionColor(
-                                    neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
-                                )
-                                VersionValueRow(
-                                    label = "预发版本",
-                                    value = formatReleaseValue(
-                                        releaseName = state.latestPreName.ifBlank { state.preReleaseInfo },
-                                        rawTag = state.latestPreRawTag
-                                    ),
-                                    valueColor = preColor,
-                                    emphasized = state.recommendsPreRelease || state.hasPreReleaseUpdate
-                                )
-                            }
-                            if (state.releaseHint.isNotBlank()) {
-                                GitHubCompactInfoRow(
-                                    label = "提示",
-                                    value = state.releaseHint,
-                                    valueColor = MiuixTheme.colorScheme.onBackgroundVariant,
-                                    titleColor = MiuixTheme.colorScheme.onBackgroundVariant
-                                )
-                            }
-
-                            val assetBundle = apkAssetBundles[item.id]
-                            val assetLoading = apkAssetLoading[item.id] == true
-                            val assetError = apkAssetErrors[item.id].orEmpty()
-                            val assetExpanded = apkAssetExpanded[item.id] == true
-                            AnimatedVisibility(
-                                visible = assetExpanded || assetLoading || assetError.isNotBlank()
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 4.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    val target = state.apkAssetTarget(item.owner, item.repo)
-                                    val targetAccent = when {
-                                        state.recommendsPreRelease || state.hasPreReleaseUpdate -> GitHubStatusPalette.PreRelease
-                                        else -> GitHubStatusPalette.Update
-                                    }
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = CardDefaults.defaultColors(
-                                            color = GitHubStatusPalette.tonedSurface(
-                                                targetAccent,
-                                                isDark = isDark
-                                            ).copy(alpha = if (isDark) 0.30f else 0.18f)
-                                        )
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .combinedClickable(
-                                                    onClick = {
-                                                        val releaseUrl = assetBundle?.htmlUrl
-                                                            ?.takeIf { it.isNotBlank() }
-                                                            ?: target?.releaseUrl
-                                                            .orEmpty()
-                                                        if (releaseUrl.isNotBlank()) {
-                                                            openExternalUrl(releaseUrl)
-                                                        }
-                                                    },
-                                                    onLongClick = {
-                                                        loadApkAssets(
-                                                            item = item,
-                                                            state = state,
-                                                            toggleOnlyWhenCached = false,
-                                                            includeAllAssets = true
-                                                        )
-                                                    }
-                                                )
-                                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .width(28.dp)
-                                                    .height(28.dp)
-                                                    .clip(RoundedCornerShape(10.dp))
-                                                    .background(targetAccent.copy(alpha = if (isDark) 0.24f else 0.14f)),
-                                                contentAlignment = androidx.compose.ui.Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = if (assetBundle?.showingAllAssets == true) MiuixIcons.Regular.More else MiuixIcons.Regular.Update,
-                                                    contentDescription = null,
-                                                    tint = targetAccent
-                                                )
-                                            }
-                                            Column(
-                                                modifier = Modifier.weight(1f),
-                                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                                                ) {
-                                                    Text(
-                                                        text = target?.label ?: "更新资源",
-                                                        color = targetAccent,
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.weight(1f),
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                    Row(
-                                                        modifier = Modifier.padding(start = 2.dp),
-                                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                                                    ) {
-                                                        val commitLabel = bundleCommitLabel(assetBundle)
-                                                        if (commitLabel != null && !assetLoading && assetError.isBlank()) {
-                                                            StatusPill(
-                                                                label = commitLabel,
-                                                                color = GitHubStatusPalette.Active.copy(alpha = 0.92f),
-                                                                contentPadding = PaddingValues(horizontal = 7.dp, vertical = 4.dp)
-                                                            )
-                                                        }
-                                                        val transportLabel = bundleTransportLabel(assetBundle)
-                                                        if (transportLabel != null && !assetLoading && assetError.isBlank()) {
-                                                            StatusPill(
-                                                                label = transportLabel,
-                                                                color = GitHubStatusPalette.Active,
-                                                                contentPadding = PaddingValues(horizontal = 7.dp, vertical = 4.dp)
-                                                            )
-                                                        }
-                                                    }
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(28.dp)
-                                                            .height(28.dp)
-                                                            .clip(RoundedCornerShape(999.dp))
-                                                            .background(
-                                                                when {
-                                                                    assetLoading -> GitHubStatusPalette.Active.copy(alpha = if (isDark) 0.22f else 0.16f)
-                                                                    assetError.isNotBlank() -> GitHubStatusPalette.Error.copy(alpha = if (isDark) 0.22f else 0.16f)
-                                                                    else -> targetAccent.copy(alpha = if (isDark) 0.22f else 0.16f)
-                                                                }
-                                                            )
-                                                            .border(
-                                                                width = 0.8.dp,
-                                                                color = when {
-                                                                    assetLoading -> GitHubStatusPalette.Active.copy(alpha = if (isDark) 0.36f else 0.30f)
-                                                                    assetError.isNotBlank() -> GitHubStatusPalette.Error.copy(alpha = if (isDark) 0.36f else 0.30f)
-                                                                    else -> targetAccent.copy(alpha = if (isDark) 0.36f else 0.30f)
-                                                                },
-                                                                shape = RoundedCornerShape(999.dp)
-                                                            ),
-                                                        contentAlignment = androidx.compose.ui.Alignment.Center
-                                                    ) {
-                                                        Text(
-                                                            text = when {
-                                                                assetLoading -> "…"
-                                                                assetBundle != null -> assetBundle.assets.size.toString()
-                                                                assetError.isNotBlank() -> "!"
-                                                                else -> "·"
-                                                            },
-                                                            color = when {
-                                                                assetLoading -> GitHubStatusPalette.Active
-                                                                assetError.isNotBlank() -> GitHubStatusPalette.Error
-                                                                else -> targetAccent
-                                                            },
-                                                            fontWeight = FontWeight.Bold,
-                                                            maxLines = 1
-                                                        )
-                                                    }
-                                                }
-                                                Text(
-                                                    text = when {
-                                                        assetLoading -> "正在准备可下载文件"
-                                                        assetBundle?.showingAllAssets == true -> "未找到 APK 或已手动全加载"
-                                                        assetError.isNotBlank() -> "资源读取失败"
-                                                        else -> "进 Release / 长按全载"
-                                                    },
-                                                    color = MiuixTheme.colorScheme.onBackgroundVariant,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-                                    }
-                                    when {
-                                        assetLoading -> {
-                                            Card(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                colors = CardDefaults.defaultColors(
-                                                    color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f)
-                                                )
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(horizontal = 12.dp, vertical = 12.dp),
-                                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                                                ) {
-                                                    CircularProgressIndicator(
-                                                        progress = 0f,
-                                                        size = 18.dp,
-                                                        strokeWidth = 2.dp,
-                                                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                                            foregroundColor = MiuixTheme.colorScheme.primary,
-                                                            backgroundColor = MiuixTheme.colorScheme.primary.copy(alpha = 0.18f)
-                                                        )
-                                                    )
-                                                    Column(
-                                                        modifier = Modifier.weight(1f),
-                                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = "正在读取 release 里的可下载文件",
-                                                            color = MiuixTheme.colorScheme.onBackground,
-                                                            fontWeight = FontWeight.Medium
-                                                        )
-                                                        Text(
-                                                            text = "会优先筛出 .apk；若找不到 APK，会自动回退显示其它资源",
-                                                            color = MiuixTheme.colorScheme.onBackgroundVariant
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        assetError.isNotBlank() -> {
-                                            Card(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                colors = CardDefaults.defaultColors(
-                                                    color = GitHubStatusPalette.tonedSurface(
-                                                        GitHubStatusPalette.Error,
-                                                        isDark = isDark
-                                                    ).copy(alpha = if (isDark) 0.84f else 0.96f)
-                                                )
-                                            ) {
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "资源读取失败",
-                                                        color = GitHubStatusPalette.Error,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                    Text(
-                                                        text = assetError,
-                                                        color = MiuixTheme.colorScheme.onBackgroundVariant
-                                                    )
-                                                }
-                                            }
-                                        }
-                                        assetBundle != null -> {
-                                            assetBundle.assets.forEach { asset ->
-                                                val actionAccent = when {
-                                                    assetTransportLabel(asset) == "API" -> GitHubStatusPalette.Active
-                                                    else -> GitHubStatusPalette.Update
-                                                }
-                                                val abiLabel = assetAbiLabel(asset.name)
-                                                val extensionLabel = assetFileExtensionLabel(asset.name)
-                                                val displayName = assetDisplayName(asset.name)
-                                                val sizeLabel = formatAssetSize(asset.sizeBytes)
-                                                val relativeTimeLabel = assetRelativeTimeLabel(asset.updatedAtMillis)
-                                                Card(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    colors = CardDefaults.defaultColors(
-                                                        color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f)
-                                                    )
-                                                ) {
-                                                    Column(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = displayName,
-                                                            color = MiuixTheme.colorScheme.onBackground,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                        Row(
-                                                            modifier = Modifier.fillMaxWidth(),
-                                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                                                        ) {
-                                                            FlowRow(
-                                                                modifier = Modifier.weight(1f),
-                                                                horizontalArrangement = Arrangement.spacedBy(if (relativeTimeLabel != null) 8.dp else 6.dp),
-                                                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                                                            ) {
-                                                                extensionLabel?.let { label ->
-                                                                    StatusPill(
-                                                                        label = label,
-                                                                        color = MiuixTheme.colorScheme.primary
-                                                                    )
-                                                                }
-                                                                abiLabel?.let { label ->
-                                                                    StatusPill(
-                                                                        label = label,
-                                                                        color = actionAccent
-                                                                    )
-                                                                }
-                                                            }
-                                                            relativeTimeLabel?.let { label ->
-                                                                StatusPill(
-                                                                    label = label,
-                                                                    color = MiuixTheme.colorScheme.onBackgroundVariant
-                                                                )
-                                                            }
-                                                        }
-                                                        Row(
-                                                            modifier = Modifier.fillMaxWidth(),
-                                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                                                        ) {
-                                                            Spacer(modifier = Modifier.weight(1f))
-                                                            Row(
-                                                                modifier = Modifier.wrapContentWidth(androidx.compose.ui.Alignment.End),
-                                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                                                            ) {
-                                                                GlassTextButton(
-                                                                    backdrop = backdrop,
-                                                                    text = sizeLabel,
-                                                                    leadingIcon = MiuixIcons.Regular.Download,
-                                                                    onClick = { openApkInDownloader(asset) },
-                                                                    modifier = Modifier,
-                                                                    variant = GlassVariant.SheetAction
-                                                                )
-                                                                GlassIconButton(
-                                                                    backdrop = backdrop,
-                                                                    icon = MiuixIcons.Regular.Share,
-                                                                    contentDescription = "分享 ${asset.name}",
-                                                                    onClick = { shareApkLink(asset) },
-                                                                    width = 40.dp,
-                                                                    height = 40.dp,
-                                                                    variant = GlassVariant.SheetAction
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-            }
-
-            AnimatedVisibility(
-                visible = showFloatingAddButton,
-                enter = fadeIn(animationSpec = tween(180)) + slideInVertically(
-                    animationSpec = tween(220),
-                    initialOffsetY = { it / 2 }
-                ),
-                exit = fadeOut(animationSpec = tween(120)) + slideOutVertically(
-                    animationSpec = tween(180),
-                    targetOffsetY = { it / 2 }
-                ),
-                modifier = Modifier.align(androidx.compose.ui.Alignment.BottomEnd)
-            ) {
-                GlassIconButton(
-                    backdrop = backdrop,
-                    icon = MiuixIcons.Regular.AddCircle,
-                    contentDescription = "新增跟踪",
-                    onClick = { openTrackSheetForAdd() },
-                    modifier = Modifier.padding(end = 14.dp, bottom = contentBottomPadding - 24.dp),
-                    width = 60.dp,
-                    height = 44.dp,
-                    variant = GlassVariant.Bar
-                )
-            }
-        }
-    }
-
-    SnapshotWindowBottomSheet(
+    GitHubStrategySheet(
         show = showStrategySheet,
-        title = "GitHub 抓取方案",
+        backdrop = backdrop,
+        lookupConfig = lookupConfig,
+        selectedStrategyInput = selectedStrategyInput,
+        githubApiTokenInput = githubApiTokenInput,
+        showApiTokenPlainText = showApiTokenPlainText,
+        credentialCheckRunning = credentialCheckRunning,
+        credentialCheckError = credentialCheckError,
+        credentialCheckStatus = credentialCheckStatus,
+        strategyBenchmarkRunning = strategyBenchmarkRunning,
+        strategyBenchmarkError = strategyBenchmarkError,
+        strategyBenchmarkReport = strategyBenchmarkReport,
+        trackedCount = trackedItems.size,
+        recommendedTokenGuideExpanded = recommendedTokenGuideExpanded,
         onDismissRequest = { closeStrategySheet() },
-        startAction = {
-            GlassIconButton(
-                backdrop = backdrop,
-                variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
-                contentDescription = "关闭",
-                onClick = { closeStrategySheet() }
-            )
+        onApply = { applyLookupConfig() },
+        onSelectedStrategyChange = { selectedStrategyInput = it },
+        onTokenInputChange = {
+            githubApiTokenInput = it
+            credentialCheckError = null
+            credentialCheckStatus = null
         },
-        endAction = {
-            GlassIconButton(
-                backdrop = backdrop,
-                variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Ok,
-                contentDescription = "保存方案",
-                onClick = { applyLookupConfig() }
-            )
+        onToggleTokenVisibility = { showApiTokenPlainText = !showApiTokenPlainText },
+        onRunCredentialCheck = { runCredentialCheck() },
+        onRunStrategyBenchmark = { runStrategyBenchmark() },
+        onRecommendedTokenGuideExpandedChange = { recommendedTokenGuideExpanded = it },
+        onOpenExternalUrl = { url, failureMessage ->
+            openExternalUrl(url = url, failureMessage = failureMessage)
         }
-    ) {
-        val sanitizedTokenInput = githubApiTokenInput.trim()
-        val draftChanged = selectedStrategyInput != lookupConfig.selectedStrategy ||
-            sanitizedTokenInput != lookupConfig.apiToken
-        val tokenStatusLabel = when {
-            selectedStrategyInput != GitHubLookupStrategyOption.GitHubApiToken -> "未使用"
-            sanitizedTokenInput.isBlank() -> "游客"
-            else -> "已填写"
-        }
-        val tokenStatusColor = when {
-            selectedStrategyInput != GitHubLookupStrategyOption.GitHubApiToken -> MiuixTheme.colorScheme.onBackgroundVariant
-            sanitizedTokenInput.isBlank() -> GitHubStatusPalette.PreRelease
-            else -> GitHubStatusPalette.Update
-        }
-        val credentialAvailabilityLabel = when {
-            credentialCheckRunning -> "检测中"
-            credentialCheckStatus != null -> "可用"
-            credentialCheckError != null -> "不可用"
-            else -> "未检测"
-        }
-        val credentialAvailabilityColor = when {
-            credentialCheckRunning -> MiuixTheme.colorScheme.primary
-            credentialCheckStatus != null -> GitHubStatusPalette.Update
-            credentialCheckError != null -> GitHubStatusPalette.Error
-            else -> MiuixTheme.colorScheme.onBackgroundVariant
-        }
+    )
 
-        @Composable
-        fun StrategyBenchmarkSection() {
-            SheetSectionTitle("本地对比")
-            SheetSectionCard {
-                SheetDescriptionText(
-                    text = if (trackedItems.isEmpty()) {
-                        "会用当前已追踪仓库做对比，最多抽 6 个样本；当前还没有可用样本。"
-                    } else {
-                        "会跑一轮冷启动和一轮缓存复测，直接对比 Atom、游客 API、Token API 的耗时与命中率。"
-                    }
-                )
-                if (trackedItems.isNotEmpty()) {
-                    SheetActionGroup {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            variant = GlassVariant.SheetAction,
-                            text = if (strategyBenchmarkRunning) "对比中..." else "运行双策略对比",
-                            enabled = !strategyBenchmarkRunning,
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { runStrategyBenchmark() }
-                        )
-                    }
-                }
-                strategyBenchmarkError?.let { error ->
-                    SheetDescriptionText(
-                        text = "对比测试失败：$error"
-                    )
-                }
-            }
-            strategyBenchmarkReport?.results?.forEach { result ->
-                GitHubStrategyBenchmarkCard(result = result)
-            }
-        }
-
-        SheetContentColumn(
-            verticalSpacing = 8.dp
-        ) {
-            SheetSectionTitle("配置摘要")
-            GitHubStrategyDraftSummaryCard(
-                selectedStrategy = selectedStrategyInput,
-                tokenInput = sanitizedTokenInput,
-                trackedCount = trackedItems.size,
-                changed = draftChanged
-            )
-
-            SheetSectionTitle("抓取方案")
-            githubStrategyGuides.forEach { guide ->
-                GitHubStrategyGuideCard(
-                    guide = guide,
-                    selected = selectedStrategyInput == guide.option,
-                    onSelect = { selectedStrategyInput = guide.option }
-                )
-            }
-
-            if (selectedStrategyInput == GitHubLookupStrategyOption.GitHubApiToken) {
-                SheetSectionTitle("凭证设置")
-                SheetSectionCard {
-                    SheetControlRow(label = "Token 状态") {
-                        StatusPill(
-                            label = tokenStatusLabel,
-                            color = tokenStatusColor
-                        )
-                    }
-                    SheetControlRow(label = "可用性") {
-                        StatusPill(
-                            label = credentialAvailabilityLabel,
-                            color = credentialAvailabilityColor
-                        )
-                    }
-                    SheetFieldBlock(
-                        title = "GitHub API Token",
-                        summary = if (sanitizedTokenInput.isBlank()) {
-                            "当前走游客 API，可随时补 token"
-                        } else {
-                            "当前已填 token，可在此替换"
-                        },
-                        trailing = {
-                            GlassTextButton(
-                                backdrop = backdrop,
-                                variant = GlassVariant.SheetAction,
-                                text = if (showApiTokenPlainText) "隐藏 Token" else "显示 Token",
-                                onClick = { showApiTokenPlainText = !showApiTokenPlainText }
-                            )
-                        }
-                    ) {
-                        GlassSearchField(
-                            value = githubApiTokenInput,
-                            onValueChange = {
-                                githubApiTokenInput = it
-                                credentialCheckError = null
-                                credentialCheckStatus = null
-                            },
-                            label = "GitHub API token（选填）",
-                            backdrop = backdrop,
-                            variant = GlassVariant.SheetInput,
-                            singleLine = true,
-                            visualTransformation = if (showApiTokenPlainText) {
-                                VisualTransformation.None
-                            } else {
-                                PasswordVisualTransformation()
-                            }
-                        )
-                    }
-                }
-                SheetSectionTitle("立即验证")
-                SheetSectionCard {
-                    SheetActionGroup {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            variant = GlassVariant.SheetAction,
-                            text = if (credentialCheckRunning) "检测中..." else "检测当前凭证",
-                            enabled = !credentialCheckRunning,
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { runCredentialCheck() }
-                        )
-                    }
-                    SheetDescriptionText(
-                        text = "留空时自动走游客 API，适合少量追踪；若项目变多或遇到限流，再补本地 token 即可。token 仅保存在当前设备 MMKV。"
-                    )
-                    SheetDescriptionText(
-                        text = "当前这套 GitHub API 检查与资源下载只需 Fine-grained PAT 的 `Contents: Read`。它既能读 release 元数据，也能走 assets API 下载 APK；若是 private 仓库，还需 token 本身有该仓库访问权。"
-                    )
-                    credentialCheckError?.let { error ->
-                        SheetDescriptionText(
-                            text = "凭证检测失败：$error"
-                        )
-                    }
-                }
-                credentialCheckStatus?.let { status ->
-                    GitHubCredentialStatusCard(status = status)
-                    SheetDescriptionText(
-                        text = if (status.authMode == GitHubApiAuthMode.Guest) {
-                            "当前游客 API 可用，但额度较低；追踪项目变多后建议补 token。"
-                        } else {
-                            "当前 token 已被 GitHub API 接受，但这不等于它对所有 private 仓库都有权限。"
-                        }
-                    )
-                }
-                StrategyBenchmarkSection()
-                SheetDescriptionText(
-                    text = "API 方案直接走 Releases API。首次体验可先用游客模式；长期追踪较多仓库时，补专用 token 会更稳。"
-                )
-                SheetSectionTitle("推荐新建")
-                GitHubRecommendedTokenGuideCard(
-                    guide = githubRecommendedTokenGuide,
-                    expanded = recommendedTokenGuideExpanded,
-                    onExpandedChange = { recommendedTokenGuideExpanded = it }
-                )
-                SheetActionGroup {
-                    GlassTextButton(
-                        backdrop = backdrop,
-                        variant = GlassVariant.SheetAction,
-                        text = "打开预填创建页",
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            openExternalUrl(
-                                url = buildGitHubFineGrainedTokenTemplateUrl(),
-                                failureMessage = "无法打开 GitHub 创建页"
-                            )
-                        }
-                    )
-                    GlassTextButton(
-                        backdrop = backdrop,
-                        variant = GlassVariant.SheetAction,
-                        text = "查看官方说明",
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            openExternalUrl(
-                                url = githubFineGrainedPatDocsUrl,
-                                failureMessage = "无法打开官方说明"
-                            )
-                        }
-                    )
-                }
-                SheetDescriptionText(
-                    text = "建议单独创建 KeiOS 专用 Fine-grained token，不要复用 classic token，这样权限面更小。"
-                )
-            } else {
-                SheetSectionTitle("方案说明")
-                SheetSectionCard {
-                    SheetDescriptionText(
-                        text = "Atom 方案无需 Token，适合公开仓库和轻量检查；若你更看重稳定性、资源读取或 private 仓库支持，可切到 API。"
-                    )
-                }
-                StrategyBenchmarkSection()
-            }
-        }
+    val checkLogicDownloaderOptions = remember(showCheckLogicSheet) {
+        queryDownloaderOptions(context)
     }
-
-    SnapshotWindowBottomSheet(
+    GitHubCheckLogicSheet(
         show = showCheckLogicSheet,
-        title = "检查与下载",
+        backdrop = backdrop,
+        lookupConfig = lookupConfig,
+        refreshIntervalHours = refreshIntervalHours,
+        refreshIntervalHoursInput = refreshIntervalHoursInput,
+        checkAllTrackedPreReleasesInput = checkAllTrackedPreReleasesInput,
+        aggressiveApkFilteringInput = aggressiveApkFilteringInput,
+        onlineShareTargetPackageInput = onlineShareTargetPackageInput,
+        preferredDownloaderPackageInput = preferredDownloaderPackageInput,
+        installedOnlineShareTargets = installedOnlineShareTargets,
+        showCheckLogicIntervalPopup = showCheckLogicIntervalPopup,
+        showDownloaderPopup = showDownloaderPopup,
+        showOnlineShareTargetPopup = showOnlineShareTargetPopup,
+        checkLogicIntervalPopupAnchorBounds = checkLogicIntervalPopupAnchorBounds,
+        downloaderPopupAnchorBounds = downloaderPopupAnchorBounds,
+        onlineShareTargetPopupAnchorBounds = onlineShareTargetPopupAnchorBounds,
+        downloaderOptions = checkLogicDownloaderOptions,
         onDismissRequest = { closeCheckLogicSheet() },
-        startAction = {
-            GlassIconButton(
-                backdrop = backdrop,
-                variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
-                contentDescription = "关闭",
-                onClick = { closeCheckLogicSheet() }
-            )
-        },
-        endAction = {
-            GlassIconButton(
-                backdrop = backdrop,
-                variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Ok,
-                contentDescription = "保存检查逻辑",
-                onClick = { applyCheckLogicSheet() }
-            )
-        }
-    ) {
-        val selectedRefreshOption = RefreshIntervalOption.fromHours(refreshIntervalHoursInput)
-        val downloaderOptions = remember(showCheckLogicSheet) { queryDownloaderOptions() }
-        val allDownloaderOptions = remember(downloaderOptions) {
-            listOf(systemDefaultDownloaderOption, systemDownloadManagerOption) + downloaderOptions
-        }
-        val onlineShareTargetOptions = remember(showCheckLogicSheet, installedOnlineShareTargets) {
-            listOf(noOnlineShareTargetOption) + installedOnlineShareTargets
-        }
-        val selectedDownloaderLabel = allDownloaderOptions.firstOrNull {
-            it.packageName == preferredDownloaderPackageInput
-        }?.label ?: systemDefaultDownloaderOption.label
-        val selectedOnlineShareTargetLabel = onlineShareTargetOptions.firstOrNull {
-            it.packageName == onlineShareTargetPackageInput
-        }?.label ?: noOnlineShareTargetOption.label
-        val logicChanged = refreshIntervalHoursInput != refreshIntervalHours ||
-            checkAllTrackedPreReleasesInput != lookupConfig.checkAllTrackedPreReleases ||
-            aggressiveApkFilteringInput != lookupConfig.aggressiveApkFiltering ||
-            onlineShareTargetPackageInput != lookupConfig.onlineShareTargetPackage ||
-            preferredDownloaderPackageInput != lookupConfig.preferredDownloaderPackage
+        onApply = { applyCheckLogicSheet() },
+        onRefreshIntervalHoursInputChange = { refreshIntervalHoursInput = it },
+        onCheckAllTrackedPreReleasesInputChange = { checkAllTrackedPreReleasesInput = it },
+        onAggressiveApkFilteringInputChange = { aggressiveApkFilteringInput = it },
+        onPreferredDownloaderPackageInputChange = { preferredDownloaderPackageInput = it },
+        onOnlineShareTargetPackageInputChange = { onlineShareTargetPackageInput = it },
+        onShowCheckLogicIntervalPopupChange = { showCheckLogicIntervalPopup = it },
+        onShowDownloaderPopupChange = { showDownloaderPopup = it },
+        onShowOnlineShareTargetPopupChange = { showOnlineShareTargetPopup = it },
+        onCheckLogicIntervalPopupAnchorBoundsChange = { checkLogicIntervalPopupAnchorBounds = it },
+        onDownloaderPopupAnchorBoundsChange = { downloaderPopupAnchorBounds = it },
+        onOnlineShareTargetPopupAnchorBoundsChange = { onlineShareTargetPopupAnchorBounds = it }
+    )
 
-        SheetContentColumn(verticalSpacing = 8.dp) {
-            SheetSectionTitle("当前摘要")
-            SheetSectionCard {
-                SheetControlRow(label = "更新间隔", summary = "超时后自动视为过期") {
-                    Box(
-                        modifier = Modifier.capturePopupAnchor { checkLogicIntervalPopupAnchorBounds = it }
-                    ) {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            variant = GlassVariant.SheetAction,
-                            text = selectedRefreshOption.label,
-                            onClick = { showCheckLogicIntervalPopup = !showCheckLogicIntervalPopup }
-                        )
-                        if (showCheckLogicIntervalPopup) {
-                            SnapshotWindowListPopup(
-                                show = showCheckLogicIntervalPopup,
-                                alignment = PopupPositionProvider.Align.BottomEnd,
-                                anchorBounds = checkLogicIntervalPopupAnchorBounds,
-                                placement = SnapshotPopupPlacement.ButtonEnd,
-                                onDismissRequest = { showCheckLogicIntervalPopup = false },
-                                enableWindowDim = false
-                            ) {
-                                LiquidDropdownColumn {
-                                    val options = RefreshIntervalOption.entries
-                                    options.forEachIndexed { index, option ->
-                                        LiquidDropdownImpl(
-                                            text = option.label,
-                                            optionSize = options.size,
-                                            isSelected = selectedRefreshOption == option,
-                                            index = index,
-                                            onSelectedIndexChange = { selectedIndex ->
-                                                refreshIntervalHoursInput = options[selectedIndex].hours
-                                                showCheckLogicIntervalPopup = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                SheetControlRow(
-                    label = "检查所有追踪项的预发行最新版",
-                    summary = "额外检查每个项目的最新预发，但不代表自动推荐安装"
-                ) {
-                    Switch(
-                        checked = checkAllTrackedPreReleasesInput,
-                        onCheckedChange = { checked -> checkAllTrackedPreReleasesInput = checked }
-                    )
-                }
-                SheetControlRow(
-                    label = "更激进的过滤方式",
-                    summary = "忽略 `armeabi-v7a`、`armeabi`、`x86_64`、`x86`；若有 arm64-v8a 也忽略 universal"
-                ) {
-                    Switch(
-                        checked = aggressiveApkFilteringInput,
-                        onCheckedChange = { checked -> aggressiveApkFilteringInput = checked }
-                    )
-                }
-                SheetControlRow(label = "下载器", summary = "用于直链下载跳转；默认跟随系统") {
-                    Box(
-                        modifier = Modifier.capturePopupAnchor { downloaderPopupAnchorBounds = it }
-                    ) {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            variant = GlassVariant.SheetAction,
-                            text = selectedDownloaderLabel,
-                            onClick = { showDownloaderPopup = !showDownloaderPopup }
-                        )
-                        if (showDownloaderPopup) {
-                            SnapshotWindowListPopup(
-                                show = showDownloaderPopup,
-                                alignment = PopupPositionProvider.Align.BottomEnd,
-                                anchorBounds = downloaderPopupAnchorBounds,
-                                placement = SnapshotPopupPlacement.ButtonEnd,
-                                onDismissRequest = { showDownloaderPopup = false },
-                                enableWindowDim = false
-                            ) {
-                                LiquidDropdownColumn {
-                                    val options = allDownloaderOptions
-                                    options.forEachIndexed { index, option ->
-                                        LiquidDropdownImpl(
-                                            text = option.label,
-                                            optionSize = options.size,
-                                            isSelected = preferredDownloaderPackageInput == option.packageName,
-                                            index = index,
-                                            onSelectedIndexChange = { selectedIndex ->
-                                                preferredDownloaderPackageInput = options[selectedIndex].packageName
-                                                showDownloaderPopup = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                SheetControlRow(
-                    label = "分享到安装器",
-                    summary = if (installedOnlineShareTargets.isNotEmpty()) {
-                        "分享时可直接发送到支持直接边下载边安装的安装器"
-                    } else {
-                        "未检测到支持的安装器，默认不联动"
-                    }
-                ) {
-                    Box(
-                        modifier = Modifier.capturePopupAnchor { onlineShareTargetPopupAnchorBounds = it }
-                    ) {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            variant = GlassVariant.SheetAction,
-                            text = selectedOnlineShareTargetLabel,
-                            onClick = { showOnlineShareTargetPopup = !showOnlineShareTargetPopup }
-                        )
-                        if (showOnlineShareTargetPopup) {
-                            SnapshotWindowListPopup(
-                                show = showOnlineShareTargetPopup,
-                                alignment = PopupPositionProvider.Align.BottomEnd,
-                                anchorBounds = onlineShareTargetPopupAnchorBounds,
-                                placement = SnapshotPopupPlacement.ButtonEnd,
-                                onDismissRequest = { showOnlineShareTargetPopup = false },
-                                enableWindowDim = false
-                            ) {
-                                LiquidDropdownColumn {
-                                    val options = onlineShareTargetOptions
-                                    options.forEachIndexed { index, option ->
-                                        LiquidDropdownImpl(
-                                            text = option.label,
-                                            optionSize = options.size,
-                                            isSelected = onlineShareTargetPackageInput == option.packageName,
-                                            index = index,
-                                            onSelectedIndexChange = { selectedIndex ->
-                                                onlineShareTargetPackageInput = options[selectedIndex].packageName
-                                                showOnlineShareTargetPopup = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                SheetControlRow(label = "保存状态") {
-                    StatusPill(
-                        label = if (logicChanged) "待保存" else "已同步",
-                        color = if (logicChanged) GitHubStatusPalette.PreRelease else MiuixTheme.colorScheme.onBackgroundVariant
-                    )
-                }
-            }
-
-            SheetSectionTitle("说明")
-            SheetSectionCard {
-                SheetDescriptionText(
-                    text = "全局开关只决定是否顺手检查最新预发；单条目的“优先预发行版本”才决定推荐更新时是否偏向预发。"
-                )
-                SheetDescriptionText(
-                    text = "这样就把“想知道有没有新预发”和“真的想装预发”拆开了。"
-                )
-                SheetDescriptionText(
-                    text = "若设备主要只关心 arm64，可开启“更激进的过滤方式”。它会过滤 `armeabi-v7a`、`armeabi`、`x86_64`、`x86`；只有同一 release 已存在 `arm64-v8a` 时，才会连带过滤 universal。"
-                )
-                SheetDescriptionText(
-                    text = "该选项只影响“分享”动作，默认不联动。目前仅识别 `com.rosan.installer.x.revived` 与 `io.github.vvb2060.packageinstaller`，可将分享直接发送到支持边下载边安装的安装器。"
-                )
-                SheetDescriptionText(
-                    text = "下载器列表会先扫描支持 `ACTION_VIEW` + `CATEGORY_BROWSABLE` 的候选应用，再优先标记更像下载器的条目；“系统内置下载器”会直接走 Android DownloadManager。"
-                )
-            }
-        }
-    }
-
-    SnapshotWindowBottomSheet(
+    GitHubTrackEditSheet(
         show = showAddSheet,
-        title = if (editingTrackedItem == null) "新增跟踪" else "编辑跟踪",
+        backdrop = backdrop,
+        editingTrackedItem = editingTrackedItem,
+        repoUrlInput = repoUrlInput,
+        appSearch = appSearch,
+        pickerExpanded = pickerExpanded,
+        selectedApp = selectedApp,
+        appList = appList,
+        preferPreReleaseInput = preferPreReleaseInput,
         onDismissRequest = {
             showAddSheet = false
             pickerExpanded = false
@@ -2498,172 +1105,44 @@ fun GitHubPage(
             preferPreReleaseInput = false
             editingTrackedItem = null
         },
-        startAction = {
-            GlassIconButton(
-                backdrop = backdrop,
-                variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
-                contentDescription = "关闭",
-                onClick = {
-                    showAddSheet = false
-                    pickerExpanded = false
-                    appSearch = ""
-                    preferPreReleaseInput = false
-                    editingTrackedItem = null
-                }
-            )
-        },
-        endAction = {
-            GlassIconButton(
-                backdrop = backdrop,
-                variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Ok,
-                contentDescription = if (editingTrackedItem == null) "确认新增" else "确认保存",
-                onClick = { applyTrackSheet() }
-            )
+        onApply = { applyTrackSheet() },
+        onRepoUrlInputChange = { repoUrlInput = it },
+        onAppSearchChange = { appSearch = it },
+        onPickerExpandedChange = { pickerExpanded = it },
+        onSelectedAppChange = { selectedApp = it },
+        onPreferPreReleaseInputChange = { preferPreReleaseInput = it },
+        onRequestDelete = {
+            pendingDeleteItem = editingTrackedItem
+            showAddSheet = false
+            pickerExpanded = false
+            appSearch = ""
+            editingTrackedItem = null
         }
-    ) {
-        SheetContentColumn(verticalSpacing = 8.dp) {
-            SheetSectionTitle("仓库与应用")
-            SheetSectionCard {
-                SheetInputTitle("GitHub 项目地址")
-                GlassSearchField(
-                    value = repoUrlInput,
-                    onValueChange = { repoUrlInput = it },
-                    label = "GitHub 项目地址",
-                    backdrop = backdrop,
-                    variant = GlassVariant.SheetInput,
-                    singleLine = true
-                )
-                SheetInputTitle("筛选本机 App")
-                GlassSearchField(
-                    value = appSearch,
-                    onValueChange = { appSearch = it },
-                    label = "名称或包名",
-                    backdrop = backdrop,
-                    variant = GlassVariant.SheetInput,
-                    singleLine = true
-                )
-                SheetControlRow(
-                    label = "已选应用",
-                    summary = if (selectedApp == null) "未选择" else null
-                ) {
-                    GlassTextButton(
-                        backdrop = backdrop,
-                        variant = GlassVariant.SheetAction,
-                        text = if (pickerExpanded) "收起列表" else "选择应用",
-                        onClick = { pickerExpanded = !pickerExpanded }
-                    )
-                }
-                selectedApp?.let { app ->
-                    GitHubSelectedAppCard(selectedApp = app)
-                }
-            }
-            SheetSectionTitle("检查选项")
-            SheetSectionCard {
-                SheetControlRow(
-                    label = "优先预发行版本",
-                    summary = "仅影响这个项目的推荐更新目标，不影响全局是否检查预发行"
-                ) {
-                    Switch(
-                        checked = preferPreReleaseInput,
-                        onCheckedChange = { checked -> preferPreReleaseInput = checked }
-                    )
-                }
-            }
-            if (pickerExpanded) {
-                val filteredApps = appList.filter { app ->
-                    appSearch.isBlank() ||
-                        app.label.contains(appSearch, ignoreCase = true) ||
-                        app.packageName.contains(appSearch, ignoreCase = true)
-                }.take(80)
-                SheetSectionTitle("应用候选")
-                SheetSectionCard(verticalSpacing = 6.dp) {
-                    if (filteredApps.isEmpty()) {
-                        MiuixInfoItem("应用列表", "没有匹配结果")
-                    } else {
-                        filteredApps.forEach { app ->
-                            GitHubAppCandidateRow(
-                                app = app,
-                                selected = selectedApp?.packageName == app.packageName,
-                                onClick = {
-                                    selectedApp = app
-                                    pickerExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-            if (editingTrackedItem != null) {
-                SheetSectionTitle(
-                    text = "危险操作",
-                    danger = true
-                )
-                SheetSectionCard {
-                    GlassTextButton(
-                        backdrop = backdrop,
-                        variant = GlassVariant.SheetDangerAction,
-                        text = "删除跟踪",
-                        textColor = MiuixTheme.colorScheme.error,
-                        onClick = {
-                            pendingDeleteItem = editingTrackedItem
-                            showAddSheet = false
-                            pickerExpanded = false
-                            appSearch = ""
-                            editingTrackedItem = null
-                        }
-                    )
-                }
-            }
-        }
-    }
+    )
 
-    WindowDialog(
-        show = pendingDeleteItem != null,
-        title = "删除跟踪",
-        summary = pendingDeleteItem?.let { "确定删除 ${it.appLabel} (${it.owner}/${it.repo}) 吗？" },
-        onDismissRequest = { pendingDeleteItem = null }
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                TextButton(
-                    modifier = Modifier.weight(1f),
-                    text = "取消",
-                    onClick = {
-                        if (!deleteInProgress) pendingDeleteItem = null
-                    }
-                )
-                TextButton(
-                    modifier = Modifier.weight(1f),
-                    text = if (deleteInProgress) "删除中..." else "删除",
-                    colors = ButtonDefaults.textButtonColors(
-                        color = MiuixTheme.colorScheme.error,
-                        textColor = MiuixTheme.colorScheme.onError
-                    ),
-                    onClick = {
-                        if (deleteInProgress) return@TextButton
-                        pendingDeleteItem?.let { deleting ->
-                            deleteInProgress = true
-                            try {
-                                cancelRefreshAll()
-                                trackedItems.remove(deleting)
-                                checkStates.remove(deleting.id)
-                                saveTracked()
-                                persistCheckCache()
-                                Toast.makeText(context, "已删除 ${deleting.appLabel}", Toast.LENGTH_SHORT).show()
-                            } finally {
-                                deleteInProgress = false
-                            }
-                        }
-                        pendingDeleteItem = null
-                    }
-                )
+    GitHubDeleteTrackDialog(
+        pendingDeleteItem = pendingDeleteItem,
+        deleteInProgress = deleteInProgress,
+        onDismissRequest = { pendingDeleteItem = null },
+        onCancel = {
+            if (!deleteInProgress) pendingDeleteItem = null
+        },
+        onConfirmDelete = {
+            if (deleteInProgress) return@GitHubDeleteTrackDialog
+            pendingDeleteItem?.let { deleting ->
+                deleteInProgress = true
+                try {
+                    cancelRefreshAll()
+                    trackedItems.remove(deleting)
+                    checkStates.remove(deleting.id)
+                    saveTracked()
+                    persistCheckCache()
+                    Toast.makeText(context, "已删除 ${deleting.appLabel}", Toast.LENGTH_SHORT).show()
+                } finally {
+                    deleteInProgress = false
+                }
             }
+            pendingDeleteItem = null
         }
-    }
+    )
 }
