@@ -70,6 +70,10 @@ val media3Version = "1.10.0"
 val coil3Version = "3.4.0"
 val zoomImageVersion = "1.4.0"
 val focusApiVersion = "1.4"
+val projectCompileSdk = 37
+val projectMinSdk = 35
+val projectTargetSdk = 37
+val projectGradleVersion = gradle.gradleVersion
 val projectJavaVersion = JavaVersion.VERSION_21
 val projectJvmTarget = JvmTarget.JVM_21
 
@@ -80,12 +84,12 @@ plugins {
 
 android {
     namespace = "com.example.keios"
-    compileSdk = 37
+    compileSdk = projectCompileSdk
 
     defaultConfig {
         applicationId = "com.example.keios"
-        minSdk = 35
-        targetSdk = 37
+        minSdk = projectMinSdk
+        targetSdk = projectTargetSdk
         versionCode = autoVersionCode
         versionName = autoVersionName
         buildConfigField("String", "MIUIX_VERSION", "\"$miuixVersion\"")
@@ -99,6 +103,12 @@ android {
         buildConfigField("String", "OKHTTP_VERSION", "\"$okhttpVersion\"")
         buildConfigField("String", "MEDIA3_VERSION", "\"$media3Version\"")
         buildConfigField("String", "ZOOMIMAGE_VERSION", "\"$zoomImageVersion\"")
+        buildConfigField("String", "GRADLE_VERSION", "\"$projectGradleVersion\"")
+        buildConfigField("int", "COMPILE_SDK_VERSION", projectCompileSdk.toString())
+        buildConfigField("int", "MIN_SDK_VERSION", projectMinSdk.toString())
+        buildConfigField("int", "TARGET_SDK_VERSION", projectTargetSdk.toString())
+        buildConfigField("String", "JAVA_VERSION", "\"${projectJavaVersion.majorVersion}\"")
+        buildConfigField("String", "JVM_TARGET_VERSION", "\"${projectJvmTarget.target}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

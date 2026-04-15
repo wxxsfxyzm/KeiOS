@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -157,6 +158,42 @@ private fun AboutCompactPillRow(
     }
 }
 
+@Composable
+private fun AboutSectionCard(
+    cardColor: Color,
+    title: String,
+    subtitle: String,
+    titleColor: Color,
+    subtitleColor: Color,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = cardColor,
+            contentColor = MiuixTheme.colorScheme.onBackground
+        ),
+        onClick = {}
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = title,
+                color = titleColor
+            )
+            Text(
+                text = subtitle,
+                color = subtitleColor
+            )
+            content()
+        }
+    }
+}
+
 private fun normalizeLower(value: String): String = value.trim().lowercase(Locale.ROOT)
 
 private fun selinuxStatusColor(selinuxState: String): Color {
@@ -197,7 +234,10 @@ fun AboutPage(
     val readyColor = Color(0xFF2E7D32)
     val notReadyColor = Color(0xFFC62828)
     val infoCardColor = Color(0x223B82F6)
-    val frameworkCardColor = Color(0x223B82F6)
+    val buildCardColor = Color(0x223B82F6)
+    val uiFrameworkCardColor = Color(0x2233A1F4)
+    val networkServiceCardColor = Color(0x2222C55E)
+    val mediaStorageCardColor = Color(0x2260A5FA)
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -209,17 +249,39 @@ fun AboutPage(
     val shizukuDetailMap = remember(shizukuStatus) {
         shizukuApiUtils.detailedRows().toMap()
     }
-    val frameworkRows = remember {
+    val buildRows = remember {
+        listOf(
+            "Kotlin" to KotlinVersion.CURRENT.toString(),
+            "Gradle" to BuildConfig.GRADLE_VERSION,
+            "Java" to BuildConfig.JAVA_VERSION,
+            "JVM Target" to BuildConfig.JVM_TARGET_VERSION,
+            "Compile SDK" to BuildConfig.COMPILE_SDK_VERSION.toString(),
+            "Min SDK" to BuildConfig.MIN_SDK_VERSION.toString(),
+            "Target SDK" to BuildConfig.TARGET_SDK_VERSION.toString(),
+            "Runtime API" to Build.VERSION.SDK_INT.toString()
+        )
+    }
+    val uiFrameworkRows = remember {
         listOf(
             "UI 框架" to "Miuix UI ${BuildConfig.MIUIX_VERSION}",
             "声明式界面" to "Jetpack Compose ${BuildConfig.COMPOSE_VERSION}",
             "页面导航" to "Navigation3 ${BuildConfig.NAVIGATION3_VERSION}",
             "玻璃材质" to "Backdrop ${BuildConfig.BACKDROP_VERSION} · Capsule ${BuildConfig.CAPSULE_VERSION}",
-            "权限桥接" to "Shizuku API ${ShizukuApiUtils.API_VERSION}",
-            "MCP 服务栈" to "kotlin-sdk ${BuildConfig.MCP_KOTLIN_SDK_VERSION} · Ktor ${BuildConfig.KTOR_VERSION}",
-            "网络请求" to "OkHttp ${BuildConfig.OKHTTP_VERSION}",
-            "多媒体" to "Media3 ${BuildConfig.MEDIA3_VERSION} · ZoomImage ${BuildConfig.ZOOMIMAGE_VERSION}",
-            "本地存储" to "MMKV ${BuildConfig.MMKV_VERSION}"
+            "权限桥接" to "Shizuku API ${ShizukuApiUtils.API_VERSION}"
+        )
+    }
+    val networkServiceRows = remember {
+        listOf(
+            "MCP SDK" to BuildConfig.MCP_KOTLIN_SDK_VERSION,
+            "Ktor" to BuildConfig.KTOR_VERSION,
+            "OkHttp" to BuildConfig.OKHTTP_VERSION
+        )
+    }
+    val mediaStorageRows = remember {
+        listOf(
+            "Media3" to BuildConfig.MEDIA3_VERSION,
+            "ZoomImage" to BuildConfig.ZOOMIMAGE_VERSION,
+            "MMKV" to BuildConfig.MMKV_VERSION
         )
     }
     val shizukuReady = shizukuStatus.contains("granted", ignoreCase = true)
@@ -231,7 +293,7 @@ fun AboutPage(
             TopAppBar(
                 title = "About",
                 scrollBehavior = scrollBehavior,
-                color = MiuixTheme.colorScheme.surface,
+                color = Color.Transparent,
                 navigationIcon = {
                     if (onBack != null) {
                         IconButton(onClick = onBack) {
@@ -328,35 +390,70 @@ fun AboutPage(
             item { Spacer(modifier = Modifier.height(14.dp)) }
 
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.defaultColors(
-                        color = frameworkCardColor,
-                        contentColor = MiuixTheme.colorScheme.onBackground
-                    ),
-                    onClick = {}
+                AboutSectionCard(
+                    cardColor = buildCardColor,
+                    title = "构建与SDK",
+                    subtitle = "Kotlin / Gradle / Java 与构建目标",
+                    titleColor = accent,
+                    subtitleColor = subtitleColor
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "框架",
-                            color = accent
-                        )
-                        Text(
-                            text = "项目依赖与技术栈",
-                            color = subtitleColor
-                        )
-                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                            frameworkRows.forEach { (title, value) ->
-                                AboutCompactInfoRow(
-                                    title = title,
-                                    value = value
-                                )
-                            }
+                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        buildRows.forEach { (title, value) ->
+                            AboutCompactInfoRow(title = title, value = value)
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(14.dp)) }
+
+            item {
+                AboutSectionCard(
+                    cardColor = uiFrameworkCardColor,
+                    title = "UI与框架",
+                    subtitle = "页面渲染、导航与材质能力",
+                    titleColor = accent,
+                    subtitleColor = subtitleColor
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        uiFrameworkRows.forEach { (title, value) ->
+                            AboutCompactInfoRow(title = title, value = value)
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(14.dp)) }
+
+            item {
+                AboutSectionCard(
+                    cardColor = networkServiceCardColor,
+                    title = "网络与服务",
+                    subtitle = "MCP与请求服务栈",
+                    titleColor = readyColor,
+                    subtitleColor = subtitleColor
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        networkServiceRows.forEach { (title, value) ->
+                            AboutCompactInfoRow(title = title, value = value)
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(14.dp)) }
+
+            item {
+                AboutSectionCard(
+                    cardColor = mediaStorageCardColor,
+                    title = "媒体与存储",
+                    subtitle = "播放器、图像与本地存储能力",
+                    titleColor = accent,
+                    subtitleColor = subtitleColor
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        mediaStorageRows.forEach { (title, value) ->
+                            AboutCompactInfoRow(title = title, value = value)
                         }
                     }
                 }
