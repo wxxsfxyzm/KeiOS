@@ -1372,7 +1372,23 @@ private fun parseVoiceCvByLanguageFromBaseData(baseData: JSONArray): Map<String,
     }
 
     fun cleanCvValue(raw: String): String {
-        return raw.trim()
+        val hintRegex = Regex("""(?:<-|←)?\s*大部分时候可以去别的图鉴复制""")
+        val strippedHint = if (hintRegex.containsMatchIn(raw)) {
+            val segments = raw
+                .split(Regex("""\s*(?:/|／|\||｜|,|，|\n)\s*"""))
+                .map { it.trim() }
+                .filter { part ->
+                    part.isNotBlank() && !hintRegex.containsMatchIn(part)
+                }
+            if (segments.isNotEmpty()) {
+                segments.joinToString(" / ")
+            } else {
+                raw.replace(hintRegex, "")
+            }
+        } else {
+            raw
+        }
+        return strippedHint.trim()
             .trim(',', '，', ';', '；', '|', '/', '／')
             .trim()
     }

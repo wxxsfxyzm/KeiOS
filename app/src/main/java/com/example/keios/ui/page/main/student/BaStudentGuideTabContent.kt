@@ -3024,7 +3024,7 @@ private val profileHobbyFieldSpecs = listOf(
     ProfileFieldSpec("兴趣爱好", listOf("兴趣爱好")),
     ProfileFieldSpec("个人简介", listOf("个人简介")),
     ProfileFieldSpec("MomoTalk状态消息", listOf("MomoTalk状态消息", "Momotalk状态消息")),
-    ProfileFieldSpec("MomoTalk解锁等级", listOf("MomoTalk解锁等级", "Momotalk解锁等级"))
+    ProfileFieldSpec("MomoTalk解锁等级", listOf("MomoTalk解锁等级", "Momotalk解锁等级"), hideWhenEmpty = true)
 )
 
 private val profileStructuredFieldSpecs = profileNicknameFieldSpecs + profileStudentInfoFieldSpecs + profileHobbyFieldSpecs
@@ -3270,12 +3270,47 @@ private fun fallbackProfileLinkTitle(url: String): String {
 
 private fun isProfileValuePlaceholder(value: String): Boolean {
     val normalized = value.trim()
+    val compact = normalized
+        .replace(" ", "")
+        .replace("　", "")
+        .lowercase()
     if (normalized.isBlank()) return true
     return normalized == "-" ||
         normalized == "—" ||
         normalized == "--" ||
         normalized == "暂无" ||
-        normalized == "无"
+        normalized == "无" ||
+        compact == "不用写"
+}
+
+private fun stripProfileCopyHint(raw: String): String {
+    if (raw.isBlank()) return ""
+    val hintRegex = Regex("""(?:<-|←)?\s*大部分时候可以去别的图鉴复制""")
+    if (!hintRegex.containsMatchIn(raw)) return raw.trim()
+
+    val segments = raw
+        .split(Regex("""\s*(?:/|／|\||｜|,|，|\n)\s*"""))
+        .map { it.trim() }
+        .filter { part ->
+            part.isNotBlank() && !hintRegex.containsMatchIn(part)
+        }
+    if (segments.isNotEmpty()) {
+        return segments.joinToString(" / ").trim()
+    }
+    return raw
+        .replace(hintRegex, "")
+        .trim(' ', '/', '／', '|', '｜', ',', '，', ';', '；')
+        .trim()
+}
+
+private fun sanitizeProfileFieldValue(key: String, value: String): String {
+    if (value.isBlank()) return ""
+    val normalizedKey = normalizeProfileFieldKey(key)
+    var cleaned = value.trim()
+    if (normalizedKey == normalizeProfileFieldKey("声优")) {
+        cleaned = stripProfileCopyHint(cleaned)
+    }
+    return cleaned
 }
 
 private fun isProfileRowAliasMatch(row: BaGuideRow, aliases: List<String>): Boolean {
@@ -3292,10 +3327,11 @@ private fun buildProfileCardRows(rows: List<BaGuideRow>, specs: List<ProfileFiel
             val matched = rows.firstOrNull { row ->
                 isProfileRowAliasMatch(row, spec.aliases)
             } ?: return@forEach
-            if (spec.hideWhenEmpty && isProfileValuePlaceholder(matched.value)) {
+            val normalizedValue = sanitizeProfileFieldValue(spec.title, matched.value)
+            if (spec.hideWhenEmpty && isProfileValuePlaceholder(normalizedValue)) {
                 return@forEach
             }
-            add(matched.copy(key = spec.title))
+            add(matched.copy(key = spec.title, value = normalizedValue))
         }
     }
 }
