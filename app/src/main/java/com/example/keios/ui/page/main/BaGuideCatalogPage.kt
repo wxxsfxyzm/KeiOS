@@ -49,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -95,6 +96,7 @@ import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import kotlin.math.max
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -451,22 +453,30 @@ private fun CatalogTabContent(
     LaunchedEffect(filteredEntries.size) {
         visibleCount = minOf(filteredEntries.size, CATALOG_BATCH_SIZE)
     }
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            val totalCount = listState.layoutInfo.totalItemsCount
-            visibleCount < filteredEntries.size &&
-                totalCount > 0 &&
-                lastVisible >= (totalCount - 1 - CATALOG_LOAD_MORE_THRESHOLD).coerceAtLeast(0)
-        }
-    }
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            visibleCount = minOf(visibleCount + CATALOG_BATCH_SIZE, filteredEntries.size)
+    LaunchedEffect(listState, filteredEntries.size, loading) {
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            lastVisible to layoutInfo.totalItemsCount
+        }.collect { (lastVisible, totalCount) ->
+            if (loading) return@collect
+            if (visibleCount >= filteredEntries.size) return@collect
+            if (totalCount <= 0) return@collect
+            val triggerIndex = (totalCount - 1 - CATALOG_LOAD_MORE_THRESHOLD).coerceAtLeast(0)
+            if (lastVisible < triggerIndex) return@collect
+
+            val viewportItems = listState.layoutInfo.visibleItemsInfo.size.coerceAtLeast(6)
+            val appendBatch = max(CATALOG_BATCH_SIZE, viewportItems * 3)
+                .coerceAtMost(CATALOG_BATCH_SIZE * 3)
+            visibleCount = minOf(visibleCount + appendBatch, filteredEntries.size)
         }
     }
     val displayedEntries = remember(filteredEntries, visibleCount) {
-        filteredEntries.take(visibleCount)
+        if (visibleCount >= filteredEntries.size) {
+            filteredEntries
+        } else {
+            filteredEntries.subList(0, visibleCount)
+        }
     }
 
     LazyColumn(
