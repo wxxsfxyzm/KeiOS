@@ -26,7 +26,7 @@ class MiIslandNotificationBuilder(
         private const val HIGHLIGHT_BG_COLOR = "#006EFF"
         private const val HIGHLIGHT_TITLE_COLOR = "#FFFFFF"
         private const val ISLAND_ICON_RES_ID_DEFAULT = R.drawable.ic_kei_logo_island
-        private const val ISLAND_ICON_RES_ID_AP = R.drawable.ba_ap_icon
+        private const val ISLAND_ICON_RES_ID_AP = R.drawable.ic_ba_ap_island_shift
     }
 
     override fun build(payload: NotificationPayload): Notification {
