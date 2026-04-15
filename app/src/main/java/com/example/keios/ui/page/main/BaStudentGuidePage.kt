@@ -55,7 +55,6 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -112,7 +111,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -186,10 +184,6 @@ fun BaStudentGuidePage(
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
     var showBottomBar by remember { mutableStateOf(true) }
-    val farJumpAlpha = remember { Animatable(1f) }
-    val farJumpOffsetX = remember { Animatable(0f) }
-    val density = LocalDensity.current
-    val farJumpOffsetPx = with(density) { 24.dp.toPx() }
     val bottomBarNestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -365,35 +359,10 @@ fun BaStudentGuidePage(
         selectedBottomTabIndex = index
         tabJumpJob?.cancel()
         tabJumpJob = pageScope.launch {
-            val jumpDistance = abs(index - fromIndex)
-            if (jumpDistance > 1) {
-                val direction = if (index > fromIndex) 1f else -1f
-                val offset = farJumpOffsetPx * direction
-                farJumpAlpha.snapTo(1f)
-                farJumpOffsetX.snapTo(0f)
-                farJumpAlpha.animateTo(
-                    targetValue = 0.86f,
-                    animationSpec = tween(durationMillis = 90, easing = FastOutSlowInEasing),
-                )
-                farJumpOffsetX.animateTo(
-                    targetValue = -offset * 0.18f,
-                    animationSpec = tween(durationMillis = 90, easing = FastOutSlowInEasing),
-                )
-                // Keep direct jump for far targets to avoid transient intermediate-page load/flash.
-                pagerState.scrollToPage(index)
-                farJumpOffsetX.snapTo(offset * 0.24f)
-                farJumpAlpha.snapTo(0.82f)
-                farJumpAlpha.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
-                )
-                farJumpOffsetX.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
-                )
-            } else {
-                pagerState.animateScrollToPage(index)
-            }
+            pagerState.animateTabSwitch(
+                fromIndex = fromIndex,
+                targetIndex = index
+            )
         }
     }
 
@@ -619,10 +588,6 @@ fun BaStudentGuidePage(
             beyondViewportPageCount = 0,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer {
-                    alpha = farJumpAlpha.value
-                    translationX = farJumpOffsetX.value
-                }
                 .layerBackdrop(navBackdrop)
         ) { pageIndex ->
             val pageBottomTab = bottomTabs.getOrElse(pageIndex) { GuideBottomTab.Archive }
