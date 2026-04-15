@@ -1289,6 +1289,7 @@ private fun GuideImageFullscreenDialog(
                         }
                         .align(Alignment.Center),
                     contentScale = ContentScale.Fit,
+                    scrollBar = null,
                     onTap = { onDismiss() }
                 )
             }
