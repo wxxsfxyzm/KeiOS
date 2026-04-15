@@ -11,7 +11,7 @@ class LegacyNotificationBuilder(
 
     private companion object {
         private const val ICON_DEFAULT = R.drawable.ic_kei_logo_color
-        private const val ICON_AP = R.drawable.ic_kei_logo_island_ap_combo
+        private const val ICON_AP = R.drawable.ba_ap_icon
     }
 
     private data class LiveProgressState(

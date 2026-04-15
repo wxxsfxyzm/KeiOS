@@ -18,7 +18,7 @@ class ModernNotificationBuilder(
         private const val PROGRESS_ACTIVE_COLOR = 0xFF2E7D32.toInt()
         private const val PROGRESS_IDLE_COLOR = 0xFF64748B.toInt()
         private const val ICON_DEFAULT = R.drawable.ic_kei_logo_color
-        private const val ICON_AP = R.drawable.ic_kei_logo_island_ap_combo
+        private const val ICON_AP = R.drawable.ba_ap_icon
     }
 
     private val baseNotificationBuilder by lazy {
