@@ -24,6 +24,8 @@ object GitHubRefreshNotificationHelper {
     private const val TAG = "GitHubRefreshNotify"
     const val CHANNEL_ID = "github_refresh_channel_v1"
     const val NOTIFICATION_ID = 38990
+    private const val ISLAND_ICON_BLUE_LIGHT = 0xFF2B6DFF.toInt()
+    private const val ISLAND_ICON_BLUE_DARK = 0xFF5EA8FF.toInt()
 
     private data class RefreshState(
         val current: Int,
@@ -297,8 +299,12 @@ object GitHubRefreshNotificationHelper {
         readPendingIntent: PendingIntent
     ) = runCatching {
         FocusNotification.buildV3 {
-            val lightLogoIcon = Icon.createWithResource(context, iconResId).setTint(Color.BLACK)
-            val darkLogoIcon = Icon.createWithResource(context, iconResId).setTint(Color.WHITE)
+            val lightLogoIcon = Icon.createWithResource(context, iconResId).setTint(
+                ISLAND_ICON_BLUE_LIGHT
+            )
+            val darkLogoIcon = Icon.createWithResource(context, iconResId).setTint(
+                ISLAND_ICON_BLUE_DARK
+            )
             val light = createPicture("github_logo_light", lightLogoIcon)
             val dark = createPicture("github_logo_dark", darkLogoIcon)
 
