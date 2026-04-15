@@ -1484,14 +1484,16 @@ fun GuideProfileMetaLine(item: BaGuideMetaItem) {
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val titleMaxWidth = (maxWidth * 0.48f).coerceIn(80.dp, 176.dp)
-        val valueCharBudget = ((maxWidth - titleMaxWidth).value / 7.2f).toInt().coerceAtLeast(10)
-        val summaryMaxLines = adaptiveValueMaxLines(summary, valueCharBudget)
+        val titleMaxWidth = if (inlineTitleIcon) {
+            (maxWidth * 0.34f).coerceIn(68.dp, 136.dp)
+        } else {
+            (maxWidth * 0.42f).coerceIn(80.dp, 176.dp)
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             if (inlineTitleIcon) {
                 Row(
@@ -1503,7 +1505,7 @@ fun GuideProfileMetaLine(item: BaGuideMetaItem) {
                         text = item.title,
                         color = MiuixTheme.colorScheme.onBackgroundVariant,
                         modifier = Modifier.weight(1f, fill = false),
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Clip
                     )
                     if (item.imageUrl.isNotBlank()) {
@@ -1525,7 +1527,7 @@ fun GuideProfileMetaLine(item: BaGuideMetaItem) {
                         text = item.title,
                         color = MiuixTheme.colorScheme.onBackgroundVariant,
                         modifier = Modifier.weight(1f, fill = false),
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Clip
                     )
                     if (hasLeadingIcon) {
@@ -1547,14 +1549,13 @@ fun GuideProfileMetaLine(item: BaGuideMetaItem) {
             if (!isPosition) {
                 Box(
                     modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.CenterEnd
+                    contentAlignment = Alignment.TopStart
                 ) {
                     Text(
                         text = summary,
                         color = MiuixTheme.colorScheme.onBackground,
-                        textAlign = TextAlign.End,
-                        maxLines = summaryMaxLines,
-                        overflow = TextOverflow.Ellipsis
+                        textAlign = TextAlign.Start,
+                        overflow = TextOverflow.Clip
                     )
                 }
             } else {

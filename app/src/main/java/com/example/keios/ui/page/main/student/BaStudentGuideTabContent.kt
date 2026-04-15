@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -115,8 +116,8 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                             Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .height(152.dp),
-                                                verticalArrangement = Arrangement.SpaceBetween
+                                                    .heightIn(min = 152.dp),
+                                                verticalArrangement = Arrangement.spacedBy(6.dp)
                                             ) {
                                                 profileItems.forEach { item ->
                                                     GuideProfileMetaLine(item)
