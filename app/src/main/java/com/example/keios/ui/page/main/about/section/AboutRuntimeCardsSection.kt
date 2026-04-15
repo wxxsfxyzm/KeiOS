@@ -1,0 +1,323 @@
+package com.example.keios.ui.page.main.about.section
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.example.keios.R
+import com.example.keios.ui.page.main.about.model.AboutComponentEntry
+import com.example.keios.ui.page.main.about.model.AboutComponentType
+import com.example.keios.ui.page.main.about.model.AboutPermissionEntry
+import com.example.keios.ui.page.main.about.ui.AboutCompactInfoRow
+import com.example.keios.ui.page.main.about.ui.AboutCompactPillRow
+import com.example.keios.ui.page.main.about.ui.AboutSectionCard
+import com.example.keios.ui.page.main.widget.StatusLabelText
+import java.util.Locale
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Filter
+import top.yukonga.miuix.kmp.icon.extended.GridView
+import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.Layers
+import top.yukonga.miuix.kmp.icon.extended.ListView
+import top.yukonga.miuix.kmp.icon.extended.Lock
+import top.yukonga.miuix.kmp.icon.extended.Notes
+import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Report
+import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.icon.extended.Tune
+
+@Composable
+fun AboutRuntimeStatusCardSection(
+    cardColor: Color,
+    accent: Color,
+    shizukuReady: Boolean,
+    readyColor: Color,
+    notReadyColor: Color,
+    subtitleColor: Color,
+    notificationPermissionGranted: Boolean,
+    shizukuDetailMap: Map<String, String>,
+    permissionCount: Int,
+    componentCount: Int,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onCheckShizuku: () -> Unit
+) {
+    val titleColor = if (shizukuReady) readyColor else notReadyColor
+    val selinuxRaw = shizukuDetailMap["Shizuku getenforce"] ?: stringResource(R.string.common_na)
+    AboutSectionCard(
+        cardColor = cardColor,
+        title = stringResource(R.string.about_card_runtime_title),
+        subtitle = stringResource(R.string.about_card_runtime_subtitle),
+        titleColor = titleColor,
+        subtitleColor = subtitleColor,
+        sectionIcon = MiuixIcons.Regular.Info,
+        collapsible = true,
+        expanded = expanded,
+        onExpandedChange = onExpandedChange
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 0.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            AboutCompactPillRow(
+                title = stringResource(R.string.about_runtime_label_notification_permission),
+                label = if (notificationPermissionGranted) {
+                    StatusLabelText.Authorized
+                } else {
+                    StatusLabelText.Unauthorized
+                },
+                titleIcon = MiuixIcons.Regular.Report,
+                color = if (notificationPermissionGranted) readyColor else notReadyColor
+            )
+            AboutCompactPillRow(
+                title = stringResource(R.string.about_runtime_label_selinux),
+                label = StatusLabelText.selinux(selinuxRaw),
+                titleIcon = MiuixIcons.Regular.Lock,
+                color = selinuxStatusColor(selinuxRaw),
+                onClick = onCheckShizuku
+            )
+            AboutCompactInfoRow(
+                title = stringResource(R.string.about_runtime_label_uname),
+                value = shizukuDetailMap["Shizuku uname"] ?: stringResource(R.string.common_na),
+                titleIcon = MiuixIcons.Regular.Notes,
+                valueColor = accent,
+                onClick = onCheckShizuku
+            )
+            AboutCompactInfoRow(
+                title = stringResource(R.string.about_runtime_label_permission_count),
+                value = permissionCount.toString(),
+                titleIcon = MiuixIcons.Regular.ListView
+            )
+            AboutCompactInfoRow(
+                title = stringResource(R.string.about_runtime_label_component_count),
+                value = componentCount.toString(),
+                titleIcon = MiuixIcons.Regular.Layers
+            )
+        }
+    }
+}
+
+@Composable
+fun AboutPermissionCardSection(
+    cardColor: Color,
+    accent: Color,
+    subtitleColor: Color,
+    readyColor: Color,
+    notReadyColor: Color,
+    entries: List<AboutPermissionEntry>,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
+) {
+    AboutSectionCard(
+        cardColor = cardColor,
+        title = stringResource(R.string.about_card_permission_title),
+        subtitle = stringResource(R.string.about_card_permission_subtitle),
+        titleColor = accent,
+        subtitleColor = subtitleColor,
+        sectionIcon = MiuixIcons.Regular.Lock,
+        collapsible = true,
+        expanded = expanded,
+        onExpandedChange = onExpandedChange
+    ) {
+        if (entries.isEmpty()) {
+            AboutCompactInfoRow(
+                title = stringResource(R.string.about_label_status),
+                value = stringResource(R.string.about_permission_empty)
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                entries.forEachIndexed { index, entry ->
+                    AboutPermissionEntryView(
+                        entry = entry,
+                        accent = accent,
+                        grantedColor = readyColor,
+                        deniedColor = notReadyColor
+                    )
+                    if (index < entries.lastIndex) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AboutComponentCardSection(
+    cardColor: Color,
+    titleColor: Color,
+    subtitleColor: Color,
+    accent: Color,
+    entries: List<AboutComponentEntry>,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
+) {
+    AboutSectionCard(
+        cardColor = cardColor,
+        title = stringResource(R.string.about_card_component_title),
+        subtitle = stringResource(R.string.about_card_component_subtitle),
+        titleColor = titleColor,
+        subtitleColor = subtitleColor,
+        sectionIcon = MiuixIcons.Regular.ListView,
+        collapsible = true,
+        expanded = expanded,
+        onExpandedChange = onExpandedChange
+    ) {
+        if (entries.isEmpty()) {
+            AboutCompactInfoRow(
+                title = stringResource(R.string.about_label_status),
+                value = stringResource(R.string.about_component_empty)
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                entries.forEachIndexed { index, entry ->
+                    AboutComponentEntryView(
+                        entry = entry,
+                        accent = accent,
+                        exportedColor = Color(0xFFB26A00),
+                        internalColor = titleColor
+                    )
+                    if (index < entries.lastIndex) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AboutPermissionEntryView(
+    entry: AboutPermissionEntry,
+    accent: Color,
+    grantedColor: Color,
+    deniedColor: Color
+) {
+    val statusColor = if (entry.granted) grantedColor else deniedColor
+    val statusLabel = if (entry.granted) {
+        StatusLabelText.Authorized
+    } else {
+        StatusLabelText.Unauthorized
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        AboutCompactInfoRow(
+            title = stringResource(R.string.about_permission_label_permission),
+            value = entry.title,
+            titleIcon = MiuixIcons.Regular.Lock,
+            valueColor = accent
+        )
+        AboutCompactPillRow(
+            title = stringResource(R.string.about_permission_label_granted),
+            label = statusLabel,
+            titleIcon = if (entry.granted) MiuixIcons.Regular.Ok else MiuixIcons.Regular.Close,
+            color = statusColor
+        )
+        AboutCompactInfoRow(
+            title = stringResource(R.string.about_permission_label_system_name),
+            value = entry.name,
+            titleIcon = MiuixIcons.Regular.Notes
+        )
+        AboutCompactInfoRow(
+            title = stringResource(R.string.about_permission_label_purpose),
+            value = entry.purpose,
+            titleIcon = MiuixIcons.Regular.Tune
+        )
+        AboutCompactInfoRow(
+            title = stringResource(R.string.about_permission_label_used_in),
+            value = entry.usedIn,
+            titleIcon = MiuixIcons.Regular.Layers
+        )
+    }
+}
+
+@Composable
+private fun AboutComponentEntryView(
+    entry: AboutComponentEntry,
+    accent: Color,
+    exportedColor: Color,
+    internalColor: Color
+) {
+    val exportColor = if (entry.exported) exportedColor else internalColor
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        AboutCompactInfoRow(
+            title = stringResource(entry.type.titleRes),
+            value = entry.name,
+            titleIcon = componentTypeIcon(entry.type),
+            valueColor = accent
+        )
+        AboutCompactPillRow(
+            title = stringResource(R.string.about_component_label_export_state),
+            label = if (entry.exported) {
+                stringResource(R.string.about_component_state_exported)
+            } else {
+                stringResource(R.string.about_component_state_internal)
+            },
+            titleIcon = if (entry.exported) MiuixIcons.Regular.Report else MiuixIcons.Regular.Lock,
+            color = exportColor
+        )
+        AboutCompactInfoRow(
+            title = stringResource(R.string.about_permission_label_purpose),
+            value = entry.purpose,
+            titleIcon = MiuixIcons.Regular.Tune
+        )
+        AboutCompactInfoRow(
+            title = stringResource(R.string.about_permission_label_used_in),
+            value = entry.usedIn,
+            titleIcon = MiuixIcons.Regular.Layers
+        )
+        entry.extra.forEach { extra ->
+            AboutCompactInfoRow(
+                title = stringResource(extra.labelRes),
+                value = extra.value,
+                titleIcon = componentExtraIcon(extra.labelRes)
+            )
+        }
+    }
+}
+
+private fun componentTypeIcon(type: AboutComponentType): ImageVector {
+    return when (type) {
+        AboutComponentType.Service -> MiuixIcons.Regular.Settings
+        AboutComponentType.Receiver -> MiuixIcons.Regular.Refresh
+        AboutComponentType.Provider -> MiuixIcons.Regular.GridView
+    }
+}
+
+private fun componentExtraIcon(labelRes: Int): ImageVector {
+    return when (labelRes) {
+        R.string.about_component_label_class -> MiuixIcons.Regular.Notes
+        R.string.about_component_label_fgs_type -> MiuixIcons.Regular.Filter
+        R.string.about_component_label_authority -> MiuixIcons.Regular.Info
+        else -> MiuixIcons.Regular.Info
+    }
+}
+
+private fun normalizeLower(value: String): String = value.trim().lowercase(Locale.ROOT)
+
+private fun selinuxStatusColor(selinuxState: String): Color {
+    return when (normalizeLower(selinuxState)) {
+        "enforcing" -> Color(0xFF2E7D32)
+        "permissive" -> Color(0xFFB26A00)
+        "disabled" -> Color(0xFFC62828)
+        "n/a", "", "unknown" -> Color(0xFF6B7280)
+        else -> Color(0xFF2563EB)
+    }
+}

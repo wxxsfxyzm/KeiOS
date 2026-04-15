@@ -66,6 +66,7 @@ import com.example.keios.mcp.McpNotificationHelper
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.navigation.KeiosRoute
 import com.example.keios.ui.navigation.Navigator
+import com.example.keios.ui.page.main.about.AboutPage
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.student.BaStudentGuideStore
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
