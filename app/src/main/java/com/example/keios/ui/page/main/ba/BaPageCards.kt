@@ -807,11 +807,6 @@ internal fun BaPoolCard(
                         isEnded -> MiuixTheme.colorScheme.onBackgroundVariant
                         else -> accentBlue
                     }
-                    val countdownText = when {
-                        isEnded -> "已结束"
-                        pool.isRunning -> "结束倒计时 $remainText"
-                        else -> "开启倒计时 $remainText"
-                    }
                     val showPoolCoverImage = showCalendarPoolImages && pool.imageUrl.isNotBlank()
 
                     BaGlassPanel(
@@ -844,32 +839,32 @@ internal fun BaPoolCard(
                                 verticalArrangement = Arrangement.spacedBy(5.dp),
                             ) {
                                 Text(
+                                    text = statusText,
+                                    color = statusColor,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
                                     text = "${pool.tagName} · ${pool.name}",
                                     color = MiuixTheme.colorScheme.onBackground,
                                     fontWeight = FontWeight.Bold,
-                                    maxLines = 3,
+                                    maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
                                     text = "${formatBaDateTimeNoYearInTimeZone(pool.startAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(pool.endAtMs, serverTimeZone)}",
                                     color = countdownBlue.copy(alpha = 0.92f),
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Clip,
+                                )
+                                Text(
+                                    text = remainText,
+                                    color = if (isEnded) MiuixTheme.colorScheme.onBackgroundVariant else countdownBlue,
+                                    fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(text = statusText, color = statusColor, fontWeight = FontWeight.Medium)
-                                    Text(
-                                        text = countdownText,
-                                        color = if (isEnded) MiuixTheme.colorScheme.onBackgroundVariant else countdownBlue,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
                             }
                         }
                         LinearProgressIndicator(
