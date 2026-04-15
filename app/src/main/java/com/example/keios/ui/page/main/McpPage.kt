@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -42,6 +43,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -90,6 +93,8 @@ import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Notes
+import top.yukonga.miuix.kmp.icon.extended.GridView
+import top.yukonga.miuix.kmp.icon.extended.Tune
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -390,7 +395,13 @@ fun McpPage(
                 title = "服务控制",
                 subtitle = "通知与连接调试",
                 expanded = controlExpanded,
-                onExpandedChange = { controlExpanded = it }
+                onExpandedChange = { controlExpanded = it },
+                headerStartAction = {
+                    McpSectionHeaderIcon(
+                        icon = MiuixIcons.Regular.Tune,
+                        contentDescription = "服务控制"
+                    )
+                }
             ) {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     GlassTextButton(
@@ -416,7 +427,13 @@ fun McpPage(
                 title = "工具",
                 subtitle = "${uiState.tools.size} 个工具",
                 expanded = configExpanded,
-                onExpandedChange = { configExpanded = it }
+                onExpandedChange = { configExpanded = it },
+                headerStartAction = {
+                    McpSectionHeaderIcon(
+                        icon = MiuixIcons.Regular.GridView,
+                        contentDescription = "工具"
+                    )
+                }
             ) {
                 uiState.tools.forEach { tool ->
                     MiuixInfoItem(tool.name, tool.description)
@@ -432,7 +449,13 @@ fun McpPage(
                 title = "MCP Logs",
                 subtitle = "${uiState.logs.size} 条",
                 expanded = logsExpanded,
-                onExpandedChange = { logsExpanded = it }
+                onExpandedChange = { logsExpanded = it },
+                headerStartAction = {
+                    McpSectionHeaderIcon(
+                        icon = MiuixIcons.Regular.Notes,
+                        contentDescription = "MCP Logs"
+                    )
+                }
             ) {
                 if (uiState.logs.isEmpty()) {
                     MiuixInfoItem("Log", "暂无日志")
@@ -678,6 +701,22 @@ private data class McpOverviewMetric(
     val value: String,
     val valueColor: Color? = null
 )
+
+@Composable
+private fun McpSectionHeaderIcon(
+    icon: ImageVector,
+    contentDescription: String,
+    modifier: Modifier = Modifier
+) {
+    top.yukonga.miuix.kmp.basic.Icon(
+        imageVector = icon,
+        contentDescription = contentDescription,
+        tint = MiuixTheme.colorScheme.primary,
+        modifier = modifier
+            .size(22.dp)
+            .defaultMinSize(minHeight = 22.dp)
+    )
+}
 
 private fun formatMcpUptime(durationMs: Long): String {
     val totalMinutes = (durationMs.coerceAtLeast(0L) / 60_000L)
