@@ -236,7 +236,7 @@ object GitHubRefreshNotificationHelper {
             .setStyle(progressStyle)
             .setShortCriticalText(state.shortText)
             .addAction(0, context.getString(R.string.common_open), openPendingIntent)
-            .addAction(0, context.getString(R.string.common_mark_read), readPendingIntent)
+            .addAction(0, context.getString(R.string.common_acknowledge), readPendingIntent)
             .build()
     }
 
@@ -268,7 +268,7 @@ object GitHubRefreshNotificationHelper {
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setProgress(100, state.progressPercent, false)
             .addAction(0, context.getString(R.string.common_open), openPendingIntent)
-            .addAction(0, context.getString(R.string.common_mark_read), readPendingIntent)
+            .addAction(0, context.getString(R.string.common_acknowledge), readPendingIntent)
             .build()
     }
 
@@ -383,11 +383,11 @@ object GitHubRefreshNotificationHelper {
                 addActionInfo {
                     val nativeAction = Notification.Action.Builder(
                         Icon.createWithResource(context, iconResId),
-                        context.getString(R.string.common_mark_read),
+                        context.getString(R.string.common_acknowledge),
                         readPendingIntent
                     ).build()
                     action = createAction("github_action_read", nativeAction)
-                    actionTitle = context.getString(R.string.common_mark_read)
+                    actionTitle = context.getString(R.string.common_acknowledge)
                 }
             }
         }

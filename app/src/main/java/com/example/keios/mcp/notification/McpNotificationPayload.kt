@@ -14,6 +14,7 @@ data class McpNotificationPayload(
     val onlyAlertOnce: Boolean,
     val openPendingIntent: PendingIntent,
     val stopPendingIntent: PendingIntent,
+    val secondaryActionLabel: String? = null,
     val outerGlow: Boolean = true
 ) {
     private val normalizedServerName: String
@@ -77,8 +78,9 @@ data class McpNotificationPayload(
         }
 
     fun stopActionTitle(context: Context): String {
+        secondaryActionLabel?.takeIf { it.isNotBlank() }?.let { return it }
         return if (isBlueArchiveAp) {
-            context.getString(R.string.common_close)
+            context.getString(R.string.common_mark_read)
         } else {
             context.getString(R.string.mcp_action_toggle_service)
         }

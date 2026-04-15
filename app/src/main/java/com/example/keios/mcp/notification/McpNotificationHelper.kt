@@ -11,6 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.example.keios.MainActivity
 import com.example.keios.R
 import com.example.keios.core.system.ShizukuApiUtils
+import com.example.keios.feature.notification.NotificationActionReceiver
 import com.example.keios.mcp.domain.notification.SessionNotifier
 import com.example.keios.mcp.framework.notification.NotificationHelper
 import com.example.keios.mcp.framework.notification.SessionNotifierImpl
@@ -70,6 +71,11 @@ object McpNotificationHelper {
         val style: NotificationRenderStyle,
         val useXiaomiMagic: Boolean
     )
+
+    private enum class SecondaryActionMode {
+        DEFAULT,
+        MARK_READ
+    }
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -153,7 +159,9 @@ object McpNotificationHelper {
         path: String,
         clients: Int,
         ongoing: Boolean,
-        onlyAlertOnce: Boolean
+        onlyAlertOnce: Boolean,
+        secondaryActionMode: SecondaryActionMode = SecondaryActionMode.DEFAULT,
+        notificationId: Int = KEEPALIVE_NOTIFICATION_ID
     ): SessionNotifier.NotificationBuildResult {
         val isBlueArchiveAp = serverName.trim() == "BlueArchive AP"
         val openIntent = Intent(context, MainActivity::class.java).apply {
@@ -173,7 +181,7 @@ object McpNotificationHelper {
             openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val stopPendingIntent = if (isBlueArchiveAp) {
+        val (stopPendingIntent, secondaryActionLabel) = if (isBlueArchiveAp) {
             val dismissIntent = Intent(context, McpKeepAliveService::class.java).apply {
                 action = ACTION_DISMISS
                 putExtra(EXTRA_NOTIFICATION_ID, BA_AP_NOTIFICATION_ID)
@@ -183,7 +191,18 @@ object McpNotificationHelper {
                 1102,
                 dismissIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            ) to context.getString(R.string.common_mark_read)
+        } else if (secondaryActionMode == SecondaryActionMode.MARK_READ) {
+            val readIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+                action = NotificationActionReceiver.ACTION_MARK_READ
+                putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+            }
+            PendingIntent.getBroadcast(
+                context,
+                2102,
+                readIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            ) to context.getString(R.string.common_acknowledge)
         } else {
             val toggleIntent = Intent(context, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -195,7 +214,7 @@ object McpNotificationHelper {
                 1102,
                 toggleIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            ) to context.getString(R.string.mcp_action_toggle_service)
         }
 
         val payload = McpNotificationPayload(
@@ -207,7 +226,8 @@ object McpNotificationHelper {
             ongoing = ongoing,
             onlyAlertOnce = onlyAlertOnce,
             openPendingIntent = openPendingIntent,
-            stopPendingIntent = stopPendingIntent
+            stopPendingIntent = stopPendingIntent,
+            secondaryActionLabel = secondaryActionLabel
         )
         val notifier = SessionNotifierImpl(NotificationHelper(context))
         return notifier.build(payload)
@@ -251,7 +271,9 @@ object McpNotificationHelper {
             path = path,
             clients = clients,
             ongoing = runningForNotification,
-            onlyAlertOnce = false
+            onlyAlertOnce = false,
+            secondaryActionMode = SecondaryActionMode.MARK_READ,
+            notificationId = if (isBlueArchiveAp) BA_AP_NOTIFICATION_ID else TEST_NOTIFICATION_ID
         )
         val snapshot = CachedNotificationSnapshot(
             serverName = serverName,
@@ -387,7 +409,8 @@ object McpNotificationHelper {
             path = snapshot.path,
             clients = snapshot.clients,
             ongoing = snapshot.ongoing,
-            onlyAlertOnce = snapshot.onlyAlertOnce
+            onlyAlertOnce = snapshot.onlyAlertOnce,
+            notificationId = notificationId
         )
         cacheNotificationSnapshot(
             notificationId = notificationId,

@@ -11,6 +11,7 @@
     <string name="common_reset">重置</string>
     <string name="common_stop">停止</string>
     <string name="common_mark_read">已读</string>
+    <string name="common_acknowledge">知道了</string>
     <string name="common_note">说明</string>
     <string name="common_scope">作用范围</string>
     <string name="common_processing">处理中</string>
