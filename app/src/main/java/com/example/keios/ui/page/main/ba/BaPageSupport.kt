@@ -2,8 +2,10 @@ package com.example.keios.ui.page.main.ba
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -354,6 +356,7 @@ internal fun normalizeGameKeeLink(url: String): String {
 internal fun normalizeGameKeeImageLink(url: String): String {
     val raw = url.trim()
     if (raw.isBlank()) return ""
+    if (raw.startsWith("file://")) return raw
     if (raw.startsWith("http://") || raw.startsWith("https://")) return raw
     if (raw.startsWith("//")) return "https:$raw"
     return if (raw.startsWith("/")) "https://www.gamekee.com$raw" else "https://www.gamekee.com/$raw"
@@ -443,7 +446,14 @@ internal fun GameKeeCoverImage(
 
     val bitmap by produceState<Bitmap?>(initialValue = null, normalizedUrl) {
         value = withContext(Dispatchers.IO) {
-            runCatching { GameKeeFetchHelper.fetchImage(normalizedUrl) }
+            runCatching {
+                if (normalizedUrl.startsWith("file://")) {
+                    val localPath = Uri.parse(normalizedUrl).path.orEmpty()
+                    if (localPath.isBlank()) null else BitmapFactory.decodeFile(localPath)
+                } else {
+                    GameKeeFetchHelper.fetchImage(normalizedUrl)
+                }
+            }
                 .getOrNull()
         }
     }

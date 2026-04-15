@@ -106,6 +106,18 @@ internal fun BaCalendarSyncEffect(
         } else {
             emptyList()
         }
+        val cachedEntriesWithLocalImages = if (cachedEntries.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                BaCalendarPoolImageCache.applyCachedCalendarImageUrls(
+                    context = context,
+                    serverIndex = serverIndex,
+                    entries = cachedEntries,
+                    localOnly = true
+                )
+            }
+        } else {
+            emptyList()
+        }
         val networkAvailable = isNetworkAvailable(context)
         val intervalMs = calendarRefreshIntervalHours.coerceAtLeast(1) * 60L * 60L * 1000L
         val cacheExpired = !hasCache || cacheSnapshot.syncMs <= 0L || (now - cacheSnapshot.syncMs).coerceAtLeast(0L) >= intervalMs
@@ -114,7 +126,7 @@ internal fun BaCalendarSyncEffect(
         val shouldRequestNetwork = forceRefresh || cacheExpired || cacheSchemaExpired
 
         if (hasCache) {
-            onEntriesChange(cachedEntries)
+            onEntriesChange(cachedEntriesWithLocalImages)
             onLastSyncMsChange(cacheSnapshot.syncMs)
         } else {
             onEntriesChange(emptyList())
@@ -149,27 +161,45 @@ internal fun BaCalendarSyncEffect(
                     }
                 }
             }
-            result
-                .onSuccess { entries ->
-                    val effective = if (entries.isNotEmpty()) entries else cachedEntries
-                    onEntriesChange(effective)
-                    onLastSyncMsChange(if (entries.isNotEmpty()) now else cacheSnapshot.syncMs)
-                    onErrorChange(
-                        if (entries.isNotEmpty() || !hasCache) null else "本次返回空数据，已保留本地缓存"
-                    )
-                    if (entries.isNotEmpty()) {
+            if (result.isSuccess) {
+                val entries = result.getOrThrow()
+                if (entries.isNotEmpty()) {
+                    val entriesWithLocalImages = withContext(Dispatchers.IO) {
                         BASettingsStore.saveCalendarCache(serverIndex, encodeBaCalendarEntries(entries), now)
+                        BaCalendarPoolImageCache.prefetchForCalendar(
+                            context = context,
+                            serverIndex = serverIndex,
+                            entries = entries
+                        )
+                        BaCalendarPoolImageCache.pruneCalendarStale(
+                            context = context,
+                            serverIndex = serverIndex,
+                            entries = entries
+                        )
+                        BaCalendarPoolImageCache.applyCachedCalendarImageUrls(
+                            context = context,
+                            serverIndex = serverIndex,
+                            entries = entries,
+                            localOnly = true
+                        )
                     }
+                    onEntriesChange(entriesWithLocalImages)
+                    onLastSyncMsChange(now)
+                    onErrorChange(null)
+                } else {
+                    onEntriesChange(cachedEntriesWithLocalImages)
+                    onLastSyncMsChange(cacheSnapshot.syncMs)
+                    onErrorChange(if (hasCache) "本次返回空数据，已保留本地缓存" else null)
                 }
-                .onFailure {
-                    if (hasCache) {
-                        onEntriesChange(cachedEntries)
-                        onLastSyncMsChange(cacheSnapshot.syncMs)
-                        onErrorChange("同步超时或网络失败，已显示本地缓存")
-                    } else {
-                        onErrorChange("活动日历同步失败（超时或网络异常）")
-                    }
+            } else {
+                if (hasCache) {
+                    onEntriesChange(cachedEntriesWithLocalImages)
+                    onLastSyncMsChange(cacheSnapshot.syncMs)
+                    onErrorChange("同步超时或网络失败，已显示本地缓存")
+                } else {
+                    onErrorChange("活动日历同步失败（超时或网络异常）")
                 }
+            }
         } finally {
             onLoadingChange(false)
         }
@@ -200,6 +230,18 @@ internal fun BaPoolSyncEffect(
         } else {
             emptyList()
         }
+        val cachedEntriesWithLocalImages = if (cachedEntries.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                BaCalendarPoolImageCache.applyCachedPoolImageUrls(
+                    context = context,
+                    serverIndex = serverIndex,
+                    entries = cachedEntries,
+                    localOnly = true
+                )
+            }
+        } else {
+            emptyList()
+        }
         val networkAvailable = isNetworkAvailable(context)
         val intervalMs = calendarRefreshIntervalHours.coerceAtLeast(1) * 60L * 60L * 1000L
         val cacheExpired = !hasCache || cacheSnapshot.syncMs <= 0L || (now - cacheSnapshot.syncMs).coerceAtLeast(0L) >= intervalMs
@@ -208,7 +250,7 @@ internal fun BaPoolSyncEffect(
         val shouldRequestNetwork = forceRefresh || cacheExpired || cacheSchemaExpired
 
         if (hasCache) {
-            onEntriesChange(cachedEntries)
+            onEntriesChange(cachedEntriesWithLocalImages)
             onLastSyncMsChange(cacheSnapshot.syncMs)
         } else {
             onEntriesChange(emptyList())
@@ -243,27 +285,45 @@ internal fun BaPoolSyncEffect(
                     }
                 }
             }
-            result
-                .onSuccess { entries ->
-                    val effective = if (entries.isNotEmpty()) entries else cachedEntries
-                    onEntriesChange(effective)
-                    onLastSyncMsChange(if (entries.isNotEmpty()) now else cacheSnapshot.syncMs)
-                    onErrorChange(
-                        if (entries.isNotEmpty() || !hasCache) null else "本次返回空数据，已保留本地缓存"
-                    )
-                    if (entries.isNotEmpty()) {
+            if (result.isSuccess) {
+                val entries = result.getOrThrow()
+                if (entries.isNotEmpty()) {
+                    val entriesWithLocalImages = withContext(Dispatchers.IO) {
                         BASettingsStore.savePoolCache(serverIndex, encodeBaPoolEntries(entries), now)
+                        BaCalendarPoolImageCache.prefetchForPool(
+                            context = context,
+                            serverIndex = serverIndex,
+                            entries = entries
+                        )
+                        BaCalendarPoolImageCache.prunePoolStale(
+                            context = context,
+                            serverIndex = serverIndex,
+                            entries = entries
+                        )
+                        BaCalendarPoolImageCache.applyCachedPoolImageUrls(
+                            context = context,
+                            serverIndex = serverIndex,
+                            entries = entries,
+                            localOnly = true
+                        )
                     }
+                    onEntriesChange(entriesWithLocalImages)
+                    onLastSyncMsChange(now)
+                    onErrorChange(null)
+                } else {
+                    onEntriesChange(cachedEntriesWithLocalImages)
+                    onLastSyncMsChange(cacheSnapshot.syncMs)
+                    onErrorChange(if (hasCache) "本次返回空数据，已保留本地缓存" else null)
                 }
-                .onFailure {
-                    if (hasCache) {
-                        onEntriesChange(cachedEntries)
-                        onLastSyncMsChange(cacheSnapshot.syncMs)
-                        onErrorChange("同步超时或网络失败，已显示本地缓存")
-                    } else {
-                        onErrorChange("卡池同步失败（超时或网络异常）")
-                    }
+            } else {
+                if (hasCache) {
+                    onEntriesChange(cachedEntriesWithLocalImages)
+                    onLastSyncMsChange(cacheSnapshot.syncMs)
+                    onErrorChange("同步超时或网络失败，已显示本地缓存")
+                } else {
+                    onErrorChange("卡池同步失败（超时或网络异常）")
                 }
+            }
         } finally {
             onLoadingChange(false)
         }
