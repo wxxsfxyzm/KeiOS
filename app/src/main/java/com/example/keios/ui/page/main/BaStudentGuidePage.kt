@@ -88,9 +88,11 @@ import com.example.keios.ui.page.main.student.fetchGuideInfo
 import com.example.keios.ui.page.main.student.growthRowsForDisplay
 import com.example.keios.ui.page.main.student.hasRenderableGalleryMedia
 import com.example.keios.ui.page.main.student.isMemoryHallFileGalleryItem
+import com.example.keios.ui.page.main.student.isInteractiveFurnitureGalleryItem
 import com.example.keios.ui.page.main.student.isRenderableGalleryImageUrl
 import com.example.keios.ui.page.main.student.isRenderableGalleryVideoUrl
 import com.example.keios.ui.page.main.student.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.normalizeGalleryTitle
 import com.example.keios.ui.page.main.student.profileRowsForDisplay
 import com.example.keios.ui.page.main.student.renderBaStudentGuideTabContent
 import com.example.keios.ui.page.main.student.shouldHideMovedHeaderRow
@@ -464,6 +466,28 @@ fun BaStudentGuidePage(
         galleryCacheRevision += 1
     }
 
+    // 优先预热“互动家具1 2”GIF，减少进入学生档案时首次加载等待与失败率。
+    LaunchedEffect(sourceUrl, info?.syncedAtMs) {
+        val guide = info ?: return@LaunchedEffect
+        val furnitureGifUrls = guide.galleryItems
+            .asSequence()
+            .filter(::isInteractiveFurniture12GalleryItemForPrefetch)
+            .map { item -> item.mediaUrl.ifBlank { item.imageUrl } }
+            .map(::normalizeGuideUrl)
+            .filter { it.isNotBlank() }
+            .distinct()
+            .toList()
+        if (furnitureGifUrls.isEmpty()) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            BaGuideTempMediaCache.prefetchForGuide(
+                context = context,
+                sourceUrl = sourceUrl,
+                rawUrls = furnitureGifUrls
+            )
+        }
+        galleryCacheRevision += 1
+    }
+
     LaunchedEffect(sourceUrl, refreshSignal) {
         val requestUrl = sourceUrl
         if (requestUrl.isBlank()) return@LaunchedEffect
@@ -758,6 +782,14 @@ fun BaStudentGuidePage(
             }
         }
     }
+}
+
+private fun isInteractiveFurniture12GalleryItemForPrefetch(item: BaGuideGalleryItem): Boolean {
+    if (!isInteractiveFurnitureGalleryItem(item)) return false
+    val title = normalizeGalleryTitle(item.title)
+    if (title.contains("互动家具12")) return true
+    val digits = title.filter(Char::isDigit)
+    return digits == "12"
 }
 
 @Composable

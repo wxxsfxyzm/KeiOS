@@ -37,6 +37,33 @@ object BaGuideTempMediaCache {
         return normalizeGuideUrl(raw.trim()).trim()
     }
 
+    private fun looksLikeGifUrl(url: String): Boolean {
+        val normalized = url.trim()
+        if (normalized.isBlank()) return false
+        if (Regex("""\.gif(\?.*)?(#.*)?$""", RegexOption.IGNORE_CASE).containsMatchIn(normalized)) return true
+        val lower = normalized.lowercase()
+        return lower.contains("format=gif") || lower.contains("image/gif")
+    }
+
+    private fun hasGifHeader(file: File): Boolean {
+        if (!file.exists() || file.length() < 6L) return false
+        return runCatching {
+            file.inputStream().use { input ->
+                val header = ByteArray(6)
+                if (input.read(header) != 6) return@runCatching false
+                val magic = String(header)
+                magic == "GIF87a" || magic == "GIF89a"
+            }
+        }.getOrDefault(false)
+    }
+
+    private fun isUsableCachedMedia(url: String, file: File): Boolean {
+        if (!file.exists() || file.length() <= 0L) return false
+        val strictGif = looksLikeGifUrl(url) || file.extension.equals("gif", ignoreCase = true)
+        if (!strictGif) return true
+        return hasGifHeader(file)
+    }
+
     private fun fileExtFromUrl(url: String): String {
         val normalized = url.substringBefore('?').substringBefore('#')
         val fromPath = runCatching { Uri.parse(normalized).lastPathSegment.orEmpty() }
@@ -45,7 +72,7 @@ object BaGuideTempMediaCache {
             .lowercase()
         val ext = when (fromPath) {
             "png", "jpg", "jpeg", "webp", "gif", "bmp", "mp4", "webm", "mov", "m3u8" -> fromPath
-            else -> "bin"
+            else -> if (looksLikeGifUrl(url)) "gif" else "bin"
         }
         return ".$ext"
     }
@@ -75,8 +102,24 @@ object BaGuideTempMediaCache {
                     semaphore.withPermit {
                         ensureActive()
                         val file = targetFile(context, sourceUrl, url)
-                        if (file.exists() && file.length() > 0L) return@withPermit
-                        runCatching { GameKeeFetchHelper.downloadToFile(url, file) }
+                        if (isUsableCachedMedia(url, file)) return@withPermit
+                        if (file.exists()) {
+                            runCatching { file.delete() }
+                        }
+                        val strictGif = looksLikeGifUrl(url) || file.extension.equals("gif", ignoreCase = true)
+                        val firstAttemptOk = runCatching {
+                            GameKeeFetchHelper.downloadToFile(url, file)
+                        }.getOrDefault(false)
+                        if (firstAttemptOk && isUsableCachedMedia(url, file)) return@withPermit
+                        runCatching { file.delete() }
+                        if (strictGif) {
+                            val retryOk = runCatching {
+                                GameKeeFetchHelper.downloadToFile(url, file)
+                            }.getOrDefault(false)
+                            if (!retryOk || !isUsableCachedMedia(url, file)) {
+                                runCatching { file.delete() }
+                            }
+                        }
                     }
                 }
             }.awaitAll()
@@ -92,8 +135,11 @@ object BaGuideTempMediaCache {
         val normalized = normalizeTarget(rawUrl)
         if (normalized.isBlank()) return normalized
         val file = targetFile(context, sourceUrl, normalized)
-        if (file.exists() && file.length() > 0L) {
+        if (isUsableCachedMedia(normalized, file)) {
             return Uri.fromFile(file).toString()
+        }
+        if (file.exists()) {
+            runCatching { file.delete() }
         }
         return normalized
     }

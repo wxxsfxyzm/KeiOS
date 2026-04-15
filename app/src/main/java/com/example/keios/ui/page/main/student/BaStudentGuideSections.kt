@@ -210,7 +210,8 @@ fun GuideRemoteImageAdaptive(
         onLoadingChanged?.invoke(false)
         return
     }
-    if (isGifMediaSource(target)) {
+    val isGifSource = remember(target) { isGifMediaSource(target) }
+    if (isGifSource) {
         progressState?.value = 1f
         onLoadingChanged?.invoke(false)
         val ratio = remember(target) { detectMediaRatioFromUrl(target) ?: (16f / 9f) }
@@ -269,7 +270,19 @@ private fun isGifMediaSource(source: String): Boolean {
     val value = source.trim()
     if (value.isBlank()) return false
     if (value.startsWith("data:image/gif", ignoreCase = true)) return true
-    return Regex("""\.gif(\?.*)?(#.*)?$""", RegexOption.IGNORE_CASE).containsMatchIn(value)
+    if (Regex("""\.gif(\?.*)?(#.*)?$""", RegexOption.IGNORE_CASE).containsMatchIn(value)) return true
+    val uri = runCatching { Uri.parse(value) }.getOrNull()
+    if (!uri?.scheme.equals("file", ignoreCase = true)) return false
+    val path = uri?.path.orEmpty().ifBlank { Uri.decode(uri?.encodedPath.orEmpty()) }
+    if (path.isBlank()) return false
+    return runCatching {
+        java.io.File(path).inputStream().use { input ->
+            val header = ByteArray(6)
+            if (input.read(header) != 6) return@runCatching false
+            val magic = String(header)
+            magic == "GIF87a" || magic == "GIF89a"
+        }
+    }.getOrDefault(false)
 }
 
 private fun detectMediaRatioFromUrl(source: String): Float? {
@@ -353,6 +366,25 @@ fun GuideGalleryCardItem(
 ) {
     val context = LocalContext.current
     val normalizedMediaType = item.mediaType.lowercase()
+    val isInteractiveFurniture12 = remember(item.title) {
+        val title = normalizeGalleryTitle(item.title)
+        if (!title.contains("互动家具")) return@remember false
+        if (title.contains("互动家具12")) return@remember true
+        title.filter(Char::isDigit) == "12"
+    }
+    val preferredImageRaw = remember(
+        item.imageUrl,
+        item.mediaUrl,
+        normalizedMediaType,
+        isInteractiveFurniture12
+    ) {
+        when {
+            normalizedMediaType == "video" || normalizedMediaType == "audio" -> item.imageUrl
+            isInteractiveFurniture12 && item.mediaUrl.isNotBlank() -> item.mediaUrl
+            item.imageUrl.isNotBlank() -> item.imageUrl
+            else -> item.mediaUrl
+        }
+    }
     val mediaTypeLabel = when (normalizedMediaType) {
         "video" -> "视频"
         "audio" -> ""
@@ -360,14 +392,15 @@ fun GuideGalleryCardItem(
         "imageset" -> "图集"
         else -> "影画"
     }
-    val displayImageUrl = mediaUrlResolver(item.imageUrl)
-    val displayMediaUrl = mediaUrlResolver(item.mediaUrl)
+    val displayImageUrl = mediaUrlResolver(preferredImageRaw)
+    val displayMediaUrl = mediaUrlResolver(item.mediaUrl.ifBlank { preferredImageRaw })
     val noteText = item.note.trim()
     val displayTitle = remember(item.title, normalizedMediaType) {
         normalizeGalleryDisplayTitle(item.title, normalizedMediaType)
     }
     val isImageType = normalizedMediaType != "video" && normalizedMediaType != "audio"
-    val canOpenMedia = item.mediaUrl.isNotBlank() && item.mediaUrl != item.imageUrl
+    val canOpenMedia = item.mediaUrl.isNotBlank() &&
+        normalizeGuideMediaSource(displayMediaUrl) != normalizeGuideMediaSource(displayImageUrl)
     var showImageFullscreen by remember(displayImageUrl, normalizedMediaType) { mutableStateOf(false) }
     val audioTargetUrl = remember(normalizedMediaType, displayMediaUrl) {
         if (normalizedMediaType == "audio") normalizeGuideMediaSource(displayMediaUrl) else ""
