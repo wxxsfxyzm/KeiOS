@@ -31,5 +31,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "KeiOSDemo"
+rootProject.name = "KeiOS"
 include(":app")
