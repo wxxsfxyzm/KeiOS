@@ -79,6 +79,7 @@ import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.example.keios.R
+import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.Backdrop
@@ -97,6 +98,7 @@ import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.icon.extended.Refresh
@@ -1285,16 +1287,18 @@ private fun GuideImageFullscreenDialog(
                     onTap = { onDismiss() }
                 )
             }
-            GlassTextButton(
+            GlassIconButton(
                 backdrop = null,
-                text = "关闭",
-                textColor = Color(0xFFBFDBFE),
+                icon = MiuixIcons.Regular.Close,
+                contentDescription = "关闭",
                 variant = GlassVariant.Compact,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
                     .padding(top = 12.dp, end = 16.dp),
-                onClick = onDismiss
+                onClick = onDismiss,
+                width = 40.dp,
+                height = 40.dp
             )
         }
     }
@@ -1415,16 +1419,18 @@ private fun GuideVideoFullscreenDialog(
                 )
             }
 
-            GlassTextButton(
+            GlassIconButton(
                 backdrop = null,
-                text = "关闭",
-                textColor = Color(0xFFBFDBFE),
+                icon = MiuixIcons.Regular.Close,
+                contentDescription = "关闭",
                 variant = GlassVariant.Compact,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
                     .padding(top = 12.dp, end = 16.dp),
-                onClick = onDismiss
+                onClick = onDismiss,
+                width = 40.dp,
+                height = 40.dp
             )
 
             loadError?.takeIf { it.isNotBlank() }?.let { err ->
