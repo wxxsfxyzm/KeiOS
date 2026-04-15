@@ -107,9 +107,11 @@ import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -177,6 +179,7 @@ fun BaStudentGuidePage(
     )
     val activeBottomTab = bottomTabs.getOrElse(pagerState.currentPage) { GuideBottomTab.Archive }
     val pageScope = rememberCoroutineScope()
+    var tabJumpJob by remember { mutableStateOf<Job?>(null) }
     val ignoreStringInput: (String) -> Unit = remember { { _: String -> } }
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
@@ -346,11 +349,23 @@ fun BaStudentGuidePage(
 
     fun selectBottomTab(index: Int) {
         if (index !in bottomTabs.indices) return
+        val fromIndex = if (pagerState.isScrollInProgress) {
+            pagerState.targetPage
+        } else {
+            pagerState.settledPage
+        }
+        if (index == fromIndex && !pagerState.isScrollInProgress) return
         showBottomBar = true
         selectedBottomTabIndex = index
-        if (index == pagerState.targetPage && !pagerState.isScrollInProgress) return
-        pageScope.launch {
-            pagerState.animateScrollToPage(index)
+        tabJumpJob?.cancel()
+        tabJumpJob = pageScope.launch {
+            val jumpDistance = abs(index - fromIndex)
+            if (jumpDistance > 1) {
+                // Far jumps go directly to target page to avoid transient intermediate-page flash.
+                pagerState.scrollToPage(index)
+            } else {
+                pagerState.animateScrollToPage(index)
+            }
         }
     }
 
