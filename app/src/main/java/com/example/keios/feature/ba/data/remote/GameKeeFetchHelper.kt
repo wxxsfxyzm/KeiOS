@@ -141,6 +141,42 @@ object GameKeeFetchHelper {
         if (ENABLE_LOG) Log.d(TAG, msg)
     }
 
+    private fun String.compactForLog(limit: Int = 160): String {
+        val compact = replace('\n', ' ')
+            .replace('\r', ' ')
+            .replace('\t', ' ')
+            .trim()
+        if (compact.length <= limit) return compact
+        return compact.take(limit) + "…"
+    }
+
+    private fun shortUa(ua: String): String {
+        return when (ua) {
+            DESKTOP_UA -> "desktop"
+            ANDROID_UA -> "android"
+            else -> "custom"
+        }
+    }
+
+    private fun shortBase(base: String): String {
+        return when (base) {
+            BASE_WWW -> "www"
+            BASE_BARE -> "bare"
+            else -> base
+        }
+    }
+
+    private fun Throwable.toCompactLogMessage(): String {
+        val root = generateSequence(this) { it.cause }.last()
+        val head = "${javaClass.simpleName}:${message.orEmpty()}".compactForLog(120)
+        val tail = if (root !== this) {
+            " root=${root.javaClass.simpleName}:${root.message.orEmpty()}".compactForLog(90)
+        } else {
+            ""
+        }
+        return (head + tail).compactForLog(220)
+    }
+
     private fun normalizeAddresses(addresses: List<InetAddress>): List<InetAddress> {
         return addresses
             .asSequence()
@@ -277,10 +313,18 @@ object GameKeeFetchHelper {
         extraHeaders.forEach { (k, v) -> builder.header(k, v) }
 
         client.newCall(builder.build()).execute().use { resp ->
-            if (!resp.isSuccessful) throw IOException("HTTP ${resp.code}")
+            if (!resp.isSuccessful) {
+                val contentType = resp.header("Content-Type").orEmpty()
+                val bodyPreview = runCatching { resp.peekBody(256).string() }
+                    .getOrDefault("")
+                    .compactForLog(120)
+                throw IOException(
+                    "http=${resp.code} ct=${contentType.ifBlank { "-" }} body=${bodyPreview.ifBlank { "-" }}"
+                )
+            }
             val body = resp.body.string()
             if (requireJsonBody && !isJsonLike(body)) {
-                throw IOException("non-json body")
+                throw IOException("non-json body=${body.compactForLog(120)}")
             }
             return body
         }
@@ -293,6 +337,7 @@ object GameKeeFetchHelper {
         extraHeaders: Map<String, String>,
         requireJsonBody: Boolean
     ): String {
+        val traceId = "txt-${System.nanoTime().toString(16)}"
         val candidates = listOf(
             Triple(BASE_WWW, DESKTOP_UA, normalizeReferer(BASE_WWW, refererPath)),
             Triple(BASE_WWW, ANDROID_UA, normalizeReferer(BASE_WWW, refererPath)),
@@ -301,8 +346,17 @@ object GameKeeFetchHelper {
         )
 
         var lastError: Throwable? = null
-        candidates.forEach { (base, ua, referer) ->
+        val errors = mutableListOf<String>()
+        val totalAttempts = candidates.size
+        logD(
+            "text[$traceId] start path=${pathOrUrl.compactForLog(140)} " +
+                "ref=${refererPath.compactForLog(80)} json=$requireJsonBody accept=${acceptHeader.compactForLog(36)} " +
+                "headers=${extraHeaders.keys.joinToString(",").ifBlank { "-" }}"
+        )
+        candidates.forEachIndexed { index, (base, ua, referer) ->
             val url = normalizeUrl(base, pathOrUrl)
+            val attempt = index + 1
+            val startMs = System.currentTimeMillis()
             val result = runCatching {
                 executeText(
                     url = url,
@@ -313,11 +367,26 @@ object GameKeeFetchHelper {
                     requireJsonBody = requireJsonBody
                 )
             }
-            if (result.isSuccess) return result.getOrThrow()
+            val elapsedMs = System.currentTimeMillis() - startMs
+            if (result.isSuccess) {
+                logD(
+                    "text[$traceId] ok a$attempt/$totalAttempts ${shortBase(base)}/${shortUa(ua)} " +
+                        "${elapsedMs}ms url=${url.compactForLog(120)}"
+                )
+                return result.getOrThrow()
+            }
             lastError = result.exceptionOrNull()
-            logD("fetch failed: url=$url referer=$referer ua=${ua.take(24)} err=${lastError?.message}")
+            val err = lastError?.toCompactLogMessage().orEmpty()
+            errors += "a$attempt:${shortBase(base)}/${shortUa(ua)}:${err.compactForLog(140)}"
+            logD(
+                "text[$traceId] fail a$attempt/$totalAttempts ${shortBase(base)}/${shortUa(ua)} " +
+                    "${elapsedMs}ms url=${url.compactForLog(120)} referer=${referer.compactForLog(80)} err=$err"
+            )
         }
 
+        if (errors.isNotEmpty()) {
+            logD("text[$traceId] fail-all summary=${errors.joinToString(" | ").compactForLog(720)}")
+        }
         throw (lastError ?: IOException("gamekee fetch failed"))
     }
 
@@ -397,6 +466,7 @@ object GameKeeFetchHelper {
     ): Bitmap? {
         val normalized = imageUrl.trim()
         if (normalized.isBlank()) return null
+        val traceId = "img-${System.nanoTime().toString(16)}"
 
         val requestUrls = buildList {
             add(normalized)
@@ -410,10 +480,18 @@ object GameKeeFetchHelper {
             "https://www.gamekee.com/ba/kachi/15"
         )
         val uas = listOf(DESKTOP_UA, ANDROID_UA)
+        val totalAttempts = requestUrls.size * referers.size * uas.size
+        var attempt = 0
+        val errors = mutableListOf<String>()
+        logD(
+            "image[$traceId] start url=${normalized.compactForLog(140)} decodeMax=$maxDecodeDimension attempts=$totalAttempts"
+        )
 
         requestUrls.forEach { url ->
             referers.forEach { referer ->
                 uas.forEach { ua ->
+                    attempt += 1
+                    val startMs = System.currentTimeMillis()
                     val req = Request.Builder()
                         .url(url)
                         .get()
@@ -424,19 +502,44 @@ object GameKeeFetchHelper {
                         .build()
                     val result = runCatching {
                         client.newCall(req).execute().use { resp: Response ->
+                            if (!resp.isSuccessful) {
+                                val contentType = resp.header("Content-Type").orEmpty()
+                                throw IOException("http=${resp.code} ct=${contentType.ifBlank { "-" }}")
+                            }
                             decodeBitmap(
                                 response = resp,
                                 maxDecodeDimension = maxDecodeDimension,
                                 onProgress = onProgress
-                            )
+                            ) ?: throw IOException("bitmap-decode-null")
                         }
                     }
-                    if (result.isSuccess && result.getOrNull() != null) return result.getOrNull()
-                    if (result.isFailure) lastError = result.exceptionOrNull()
+                    val elapsedMs = System.currentTimeMillis() - startMs
+                    if (result.isSuccess) {
+                        val bitmap = result.getOrNull()
+                        if (bitmap != null) {
+                            logD(
+                                "image[$traceId] ok a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
+                                    "size=${bitmap.width}x${bitmap.height} url=${url.compactForLog(110)}"
+                            )
+                            return bitmap
+                        }
+                    }
+                    if (result.isFailure) {
+                        lastError = result.exceptionOrNull()
+                        val err = lastError?.toCompactLogMessage().orEmpty()
+                        errors += "a$attempt:${shortUa(ua)}:${err.compactForLog(120)}"
+                        logD(
+                            "image[$traceId] fail a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
+                                "url=${url.compactForLog(110)} referer=${referer.compactForLog(80)} err=$err"
+                        )
+                    }
                 }
             }
         }
 
+        if (errors.isNotEmpty()) {
+            logD("image[$traceId] fail-all summary=${errors.joinToString(" | ").compactForLog(720)}")
+        }
         if (lastError != null) throw lastError
         return null
     }
@@ -471,6 +574,7 @@ object GameKeeFetchHelper {
     ): Boolean {
         val normalized = mediaUrl.trim()
         if (normalized.isBlank()) return false
+        val traceId = "dl-${System.nanoTime().toString(16)}"
 
         val requestUrls = buildList {
             add(normalized)
@@ -485,11 +589,20 @@ object GameKeeFetchHelper {
         val uas = listOf(DESKTOP_UA, ANDROID_UA)
         val tempFile = File(targetFile.parentFile ?: return false, "${targetFile.name}.part")
         targetFile.parentFile?.mkdirs()
+        val totalAttempts = requestUrls.size * referers.size * uas.size
+        var attempt = 0
+        val errors = mutableListOf<String>()
+        logD(
+            "download[$traceId] start url=${normalized.compactForLog(140)} " +
+                "target=${targetFile.absolutePath.compactForLog(120)} attempts=$totalAttempts"
+        )
 
         var lastError: Throwable? = null
         requestUrls.forEach { url ->
             referers.forEach { referer ->
                 uas.forEach { ua ->
+                    attempt += 1
+                    val startMs = System.currentTimeMillis()
                     val req = Request.Builder()
                         .url(url)
                         .get()
@@ -501,7 +614,10 @@ object GameKeeFetchHelper {
 
                     val result = runCatching {
                         client.newCall(req).execute().use { resp ->
-                            if (!resp.isSuccessful) return@use false
+                            if (!resp.isSuccessful) {
+                                val contentType = resp.header("Content-Type").orEmpty()
+                                throw IOException("http=${resp.code} ct=${contentType.ifBlank { "-" }}")
+                            }
                             val body = resp.body
                             val total = body.contentLength()
                             body.byteStream().use { input ->
@@ -517,17 +633,39 @@ object GameKeeFetchHelper {
                                     }
                                 }
                             }
-                            true
+                            Unit
                         }
                     }
-                    if (result.isSuccess && result.getOrDefault(false)) {
+                    val elapsedMs = System.currentTimeMillis() - startMs
+                    if (result.isSuccess) {
                         if (targetFile.exists()) {
                             runCatching { targetFile.delete() }
                         }
-                        return tempFile.renameTo(targetFile)
+                        val renamed = tempFile.renameTo(targetFile)
+                        if (renamed) {
+                            val size = targetFile.length()
+                            logD(
+                                "download[$traceId] ok a$attempt/$totalAttempts ${shortUa(ua)} " +
+                                    "${elapsedMs}ms bytes=$size file=${targetFile.name}"
+                            )
+                            return true
+                        }
+                        val renameError = IOException("rename-failed ${tempFile.absolutePath} -> ${targetFile.absolutePath}")
+                        lastError = renameError
+                        errors += "a$attempt:${shortUa(ua)}:${renameError.toCompactLogMessage().compactForLog(120)}"
+                        logD(
+                            "download[$traceId] fail a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
+                                "url=${url.compactForLog(110)} err=${renameError.toCompactLogMessage()}"
+                        )
                     }
                     if (result.isFailure) {
                         lastError = result.exceptionOrNull()
+                        val err = lastError?.toCompactLogMessage().orEmpty()
+                        errors += "a$attempt:${shortUa(ua)}:${err.compactForLog(120)}"
+                        logD(
+                            "download[$traceId] fail a$attempt/$totalAttempts ${shortUa(ua)} ${elapsedMs}ms " +
+                                "url=${url.compactForLog(110)} referer=${referer.compactForLog(80)} err=$err"
+                        )
                     }
                     if (tempFile.exists()) {
                         runCatching { tempFile.delete() }
@@ -538,6 +676,9 @@ object GameKeeFetchHelper {
 
         if (tempFile.exists()) {
             runCatching { tempFile.delete() }
+        }
+        if (errors.isNotEmpty()) {
+            logD("download[$traceId] fail-all summary=${errors.joinToString(" | ").compactForLog(720)}")
         }
         if (lastError != null) throw lastError
         return false
