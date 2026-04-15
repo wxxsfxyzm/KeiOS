@@ -42,7 +42,11 @@ data class McpNotificationPayload(
 
     val shortText: String
         get() = if (running) {
-            if (isBlueArchiveAp) "${statusDot} $port/$clients" else "${statusDot} $clients"
+            if (isBlueArchiveAp) {
+                "${port.coerceAtLeast(0)}/${clients.coerceAtLeast(0)}"
+            } else {
+                "${statusDot} $clients"
+            }
         } else {
             "${statusDot} 0"
         }

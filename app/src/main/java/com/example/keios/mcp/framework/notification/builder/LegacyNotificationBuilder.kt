@@ -9,6 +9,11 @@ class LegacyNotificationBuilder(
     private val context: Context
 ) : InstallerNotificationBuilder {
 
+    private companion object {
+        private const val ICON_DEFAULT = R.drawable.ic_kei_logo_color
+        private const val ICON_AP = R.drawable.ic_kei_logo_island_ap_combo
+    }
+
     private data class LiveProgressState(
         val current: Int,
         val indeterminate: Boolean
@@ -18,8 +23,9 @@ class LegacyNotificationBuilder(
         val state = payload.state
         val isBlueArchiveAp = state.serverName.trim() == "BlueArchive AP"
         val progressState = computeProgressState(state = state, isBlueArchiveAp = isBlueArchiveAp)
+        val iconRes = if (isBlueArchiveAp) ICON_AP else ICON_DEFAULT
         val builder = NotificationCompat.Builder(context, payload.environment.channelId)
-            .setSmallIcon(R.drawable.ic_kei_logo_color)
+            .setSmallIcon(iconRes)
             .setContentTitle(state.title)
             .setContentText(state.content.ifBlank { " " })
             .setSubText(if (state.running) state.onlineText else "点击返回应用重新启动服务")

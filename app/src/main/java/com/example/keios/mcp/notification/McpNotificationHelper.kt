@@ -203,6 +203,26 @@ object McpNotificationHelper {
         path: String,
         clients: Int
     ) {
+        val isBlueArchiveAp = serverName.trim() == "BlueArchive AP"
+        if (isBlueArchiveAp) {
+            runCatching {
+                McpKeepAliveService.startOrUpdate(
+                    context = context,
+                    serverName = serverName,
+                    running = running,
+                    port = port,
+                    path = path,
+                    clients = clients,
+                    forceStart = true,
+                    notificationId = BA_AP_NOTIFICATION_ID,
+                    heartbeatEnabled = false
+                )
+            }.onSuccess {
+                return
+            }.onFailure {
+                Log.w(TAG, "AP notifyTest fallback to direct notify: ${it.message ?: it.javaClass.simpleName}")
+            }
+        }
         ensureChannel(context)
         val buildResult = buildForegroundNotificationResult(
             context = context,
@@ -225,7 +245,7 @@ object McpNotificationHelper {
             style = buildResult.style,
             useXiaomiMagic = buildResult.useXiaomiMagic
         )
-        val notificationId = if (serverName.trim() == "BlueArchive AP") {
+        val notificationId = if (isBlueArchiveAp) {
             BA_AP_NOTIFICATION_ID
         } else {
             TEST_NOTIFICATION_ID

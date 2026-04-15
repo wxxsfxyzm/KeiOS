@@ -25,13 +25,16 @@ class MiIslandNotificationBuilder(
         private const val TAG = "McpMiIslandBuilder"
         private const val HIGHLIGHT_BG_COLOR = "#006EFF"
         private const val HIGHLIGHT_TITLE_COLOR = "#FFFFFF"
-        private const val ISLAND_ICON_RES_ID = R.drawable.ic_kei_logo_color
+        private const val ISLAND_ICON_RES_ID_DEFAULT = R.drawable.ic_kei_logo_island
+        private const val ISLAND_ICON_RES_ID_AP = R.drawable.ic_kei_logo_island_ap_combo
     }
 
     override fun build(payload: NotificationPayload): Notification {
         val state = payload.state
+        val isBlueArchiveAp = state.serverName.trim() == "BlueArchive AP"
+        val islandIconResId = if (isBlueArchiveAp) ISLAND_ICON_RES_ID_AP else ISLAND_ICON_RES_ID_DEFAULT
         val builder = NotificationCompat.Builder(context, payload.environment.channelId)
-            .setSmallIcon(ISLAND_ICON_RES_ID)
+            .setSmallIcon(islandIconResId)
             .setContentTitle(state.title)
             .setContentText(state.content.ifBlank { " " })
             .setContentIntent(state.openPendingIntent)
@@ -42,14 +45,28 @@ class MiIslandNotificationBuilder(
             .setAutoCancel(false)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
 
-        buildFocusExtras(payload)?.let(builder::addExtras)
+        buildFocusExtras(payload, islandIconResId)?.let(builder::addExtras)
         return builder.build()
     }
 
-    private fun buildFocusExtras(payload: NotificationPayload) = runCatching {
+    private fun buildFocusExtras(payload: NotificationPayload, islandIconResId: Int) = runCatching {
         val state = payload.state
-        val lightLogoIcon = Icon.createWithResource(context, ISLAND_ICON_RES_ID).setTint(Color.BLACK)
-        val darkLogoIcon = Icon.createWithResource(context, ISLAND_ICON_RES_ID).setTint(Color.WHITE)
+        val isBlueArchiveAp = state.serverName.trim() == "BlueArchive AP"
+        val lightLogoIcon = if (isBlueArchiveAp) {
+            Icon.createWithResource(context, islandIconResId)
+        } else {
+            Icon.createWithResource(context, islandIconResId).setTint(Color.BLACK)
+        }
+        val darkLogoIcon = if (isBlueArchiveAp) {
+            Icon.createWithResource(context, islandIconResId)
+        } else {
+            Icon.createWithResource(context, islandIconResId).setTint(Color.WHITE)
+        }
+        val rightTitle = if (isBlueArchiveAp && state.running) {
+            "${state.port.coerceAtLeast(0)}/${state.clients.coerceAtLeast(0)}"
+        } else {
+            state.shortText.ifEmpty { state.title }
+        }
         val actions = mutableListOf(
             IslandAction(
                 key = "mcp_action_open",
@@ -97,7 +114,7 @@ class MiIslandNotificationBuilder(
                     imageTextInfoRight {
                         type = 3
                         textInfo {
-                            title = state.shortText.ifEmpty { state.title }
+                            title = rightTitle
                         }
                     }
                 }
@@ -137,7 +154,7 @@ class MiIslandNotificationBuilder(
                     actions.take(2).forEach { actionItem ->
                         addActionInfo {
                             val nativeAction = Notification.Action.Builder(
-                                Icon.createWithResource(context, ISLAND_ICON_RES_ID),
+                                Icon.createWithResource(context, islandIconResId),
                                 actionItem.title,
                                 actionItem.pendingIntent
                             ).build()

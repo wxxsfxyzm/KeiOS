@@ -17,6 +17,8 @@ class ModernNotificationBuilder(
     private companion object {
         private const val PROGRESS_ACTIVE_COLOR = 0xFF2E7D32.toInt()
         private const val PROGRESS_IDLE_COLOR = 0xFF64748B.toInt()
+        private const val ICON_DEFAULT = R.drawable.ic_kei_logo_color
+        private const val ICON_AP = R.drawable.ic_kei_logo_island_ap_combo
     }
 
     private val baseNotificationBuilder by lazy {
@@ -40,6 +42,8 @@ class ModernNotificationBuilder(
 
     private fun createBaseBuilder(state: McpNotificationPayload): NotificationCompat.Builder {
         val progress = computeProgress(state)
+        val isBlueArchiveAp = state.serverName.trim() == "BlueArchive AP"
+        val iconRes = if (isBlueArchiveAp) ICON_AP else ICON_DEFAULT
         val baseBuilder = baseNotificationBuilder
         baseBuilder
             .clearActions()
@@ -48,6 +52,7 @@ class ModernNotificationBuilder(
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setOngoing(state.running || state.ongoing)
+            .setSmallIcon(iconRes)
             .setContentIntent(state.openPendingIntent)
 
         val segmentColor = if (state.running) PROGRESS_ACTIVE_COLOR else PROGRESS_IDLE_COLOR
