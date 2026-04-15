@@ -1606,6 +1606,7 @@ fun GuideSkillCardItem(
     val levelOptions = card.levelOptions
     var selectedLevel by rememberSaveable(card.id) { mutableStateOf(card.defaultLevel) }
     var typeCapsuleHeightPx by remember(card.id, selectedLevel) { mutableStateOf(0) }
+    var skillNameLineCount by remember(card.id, selectedLevel) { mutableStateOf(1) }
     var descriptionLineCount by remember(card.id, selectedLevel) { mutableStateOf(1) }
     val density = LocalDensity.current
 
@@ -1625,10 +1626,20 @@ fun GuideSkillCardItem(
         card.type.isNotBlank() || skillCost.isNotBlank() || levelOptions.isNotEmpty()
     }
     val metaColumnShouldTopAlign = descriptionLineCount >= 3
-    val metaColumnAlignment = if (metaColumnShouldTopAlign) Alignment.Top else Alignment.CenterVertically
+    val skillNameTooLong = skillNameLineCount > 1
+    val typeAlignToTitleOffset = if (
+        card.type.isNotBlank() &&
+        !skillNameTooLong &&
+        skillTitleRowHeightPx > 0 &&
+        typeCapsuleHeightPx > 0
+    ) {
+        with(density) { ((skillTitleRowHeightPx - typeCapsuleHeightPx).coerceAtLeast(0) / 2).toDp() }
+    } else {
+        0.dp
+    }
     val descriptionTopOffsetDp = with(density) { skillTitleRowHeightPx.toDp() } + 8.dp
     val occupiedBeforeCostDp = if (card.type.isNotBlank()) {
-        with(density) { typeCapsuleHeightPx.toDp() } + 4.dp
+        typeAlignToTitleOffset + with(density) { typeCapsuleHeightPx.toDp() } + 4.dp
     } else {
         0.dp
     }
@@ -1651,7 +1662,7 @@ fun GuideSkillCardItem(
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = metaColumnAlignment
+            verticalAlignment = Alignment.Top
         ) {
             Column(
                 modifier = Modifier.weight(1f),
@@ -1679,7 +1690,13 @@ fun GuideSkillCardItem(
                             .alignBy { it.measuredHeight / 2 },
                         color = MiuixTheme.colorScheme.onBackground,
                         maxLines = if (isExSkill) 2 else 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { layoutResult ->
+                            val safeLineCount = layoutResult.lineCount.coerceAtLeast(1)
+                            if (skillNameLineCount != safeLineCount) {
+                                skillNameLineCount = safeLineCount
+                            }
+                        }
                     )
                 }
                 GuideSkillDescriptionText(
@@ -1703,6 +1720,9 @@ fun GuideSkillCardItem(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     if (card.type.isNotBlank()) {
+                        if (typeAlignToTitleOffset > 0.dp) {
+                            Spacer(modifier = Modifier.height(typeAlignToTitleOffset))
+                        }
                         Box(modifier = Modifier.onSizeChanged { typeCapsuleHeightPx = it.height }) {
                             GlassTextButton(
                                 backdrop = backdrop,
