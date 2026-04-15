@@ -36,7 +36,6 @@ import top.yukonga.miuix.kmp.icon.extended.Tune
 @Composable
 internal fun GitHubTopBarSection(
     backdrop: LayerBackdrop,
-    searchHostBackdrop: LayerBackdrop,
     topBarColor: Color,
     scrollBehavior: ScrollBehavior,
     enableSearchBar: Boolean,
@@ -126,7 +125,6 @@ internal fun GitHubTopBarSection(
             SearchBarHost(
                 visible = showSearchBar,
                 animationLabelPrefix = "githubSearchBar",
-                backdrop = searchHostBackdrop,
             ) {
                 Column {
                     GlassSearchField(

@@ -181,12 +181,6 @@ fun OsPage(
             drawContent()
         }
     }
-    val searchBarHostBackdrop: LayerBackdrop = key("os-search-host-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
     val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     val searchBarHideThresholdPx = remember(density) { with(density) { 28.dp.toPx() } }
     val searchBarScrollConnection = remember(searchBarHideThresholdPx) {
@@ -647,7 +641,6 @@ fun OsPage(
                     SearchBarHost(
                         visible = showSearchBar,
                         animationLabelPrefix = "osSearchBar",
-                        backdrop = searchBarHostBackdrop,
                     ) {
                         Column {
                             GlassSearchField(

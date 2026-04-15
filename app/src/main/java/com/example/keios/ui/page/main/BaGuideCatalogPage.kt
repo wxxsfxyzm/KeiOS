@@ -32,6 +32,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -43,6 +45,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -90,6 +93,7 @@ import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -137,19 +141,7 @@ fun BaGuideCatalogPage(
             drawContent()
         }
     }
-    val contentBackdrop: LayerBackdrop = key("catalog-content-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
     val bottomBarBackdrop: LayerBackdrop = key("catalog-bottom-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
-    val searchBarHostBackdrop: LayerBackdrop = key("catalog-search-host-$activationCount") {
         rememberLayerBackdrop {
             drawRect(surfaceColor)
             drawContent()
@@ -168,35 +160,15 @@ fun BaGuideCatalogPage(
     var showSortPopup by remember { mutableStateOf(false) }
 
     val tabs = BaGuideCatalogTab.entries
-    val activeTab = tabs.getOrElse(selectedTabIndex) { BaGuideCatalogTab.Student }
-    val currentEntries = remember(catalog, activeTab, sortMode) {
-        catalog.entries(activeTab).sortedByMode(sortMode)
-    }
-    val filteredEntries = remember(currentEntries, searchQuery) {
-        currentEntries.filterByQuery(searchQuery)
-    }
-
-    val listState = rememberLazyListState()
-    var visibleCount by rememberSaveable(activeTab, searchQuery) { mutableIntStateOf(0) }
-    LaunchedEffect(filteredEntries.size) {
-        visibleCount = minOf(filteredEntries.size, CATALOG_BATCH_SIZE)
-    }
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            val totalCount = listState.layoutInfo.totalItemsCount
-            visibleCount < filteredEntries.size &&
-                totalCount > 0 &&
-                lastVisible >= (totalCount - 1 - CATALOG_LOAD_MORE_THRESHOLD).coerceAtLeast(0)
+    val pagerState = rememberPagerState(
+        initialPage = selectedTabIndex.coerceIn(0, tabs.lastIndex.coerceAtLeast(0)),
+        pageCount = { tabs.size }
+    )
+    val pagerScope = rememberCoroutineScope()
+    LaunchedEffect(pagerState.currentPage) {
+        if (selectedTabIndex != pagerState.currentPage) {
+            selectedTabIndex = pagerState.currentPage
         }
-    }
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            visibleCount = minOf(visibleCount + CATALOG_BATCH_SIZE, filteredEntries.size)
-        }
-    }
-    val displayedEntries = remember(filteredEntries, visibleCount) {
-        filteredEntries.take(visibleCount)
     }
 
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -321,7 +293,6 @@ fun BaGuideCatalogPage(
                     SearchBarHost(
                         visible = showSearchBar,
                         animationLabelPrefix = "baGuideCatalogSearch",
-                        backdrop = searchBarHostBackdrop,
                     ) {
                         Column {
                             GlassSearchField(
@@ -331,7 +302,7 @@ fun BaGuideCatalogPage(
                                 value = searchQuery,
                                 onValueChange = { searchQuery = it },
                                 label = "搜索名称 / 别名 / ID",
-                                backdrop = topBarBackdrop,
+                                backdrop = null,
                                 variant = GlassVariant.Bar,
                                 singleLine = true
                             )
@@ -368,7 +339,13 @@ fun BaGuideCatalogPage(
                             ),
                         selectedIndex = { selectedTabIndex },
                         onSelected = { index ->
+                            if (index !in tabs.indices) return@FloatingBottomBar
                             selectedTabIndex = index
+                            if (pagerState.currentPage != index) {
+                                pagerScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            }
                             showSortPopup = false
                         },
                         backdrop = bottomBarBackdrop,
@@ -379,6 +356,11 @@ fun BaGuideCatalogPage(
                             FloatingBottomBarItem(
                                 onClick = {
                                     selectedTabIndex = index
+                                    if (pagerState.currentPage != index) {
+                                        pagerScope.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    }
                                     showSortPopup = false
                                 },
                                 modifier = Modifier.defaultMinSize(minWidth = 76.dp)
@@ -416,98 +398,166 @@ fun BaGuideCatalogPage(
             !error.isNullOrBlank() -> Color(0xFFEF4444)
             else -> Color(0xFF22C55E)
         }
-        LazyColumn(
-            state = listState,
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier
                 .fillMaxSize()
-                .layerBackdrop(contentBackdrop)
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
-                bottom = innerPadding.calculateBottomPadding() + 10.dp,
-                start = 16.dp,
-                end = 16.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
+                .layerBackdrop(bottomBarBackdrop),
+            beyondViewportPageCount = 0
+        ) { pageIndex ->
+            val pageTab = tabs.getOrElse(pageIndex) { BaGuideCatalogTab.Student }
+            CatalogTabContent(
+                tab = pageTab,
+                catalog = catalog,
+                sortMode = sortMode,
+                searchQuery = searchQuery,
+                loading = loading,
+                error = error,
+                progress = progress,
+                progressColor = progressColor,
+                accent = accent,
+                innerPadding = innerPadding,
+                nestedScrollConnection = scrollBehavior.nestedScrollConnection,
+                onOpenGuide = onOpenGuide
+            )
+        }
+    }
+}
+
+@Composable
+private fun CatalogTabContent(
+    tab: BaGuideCatalogTab,
+    catalog: BaGuideCatalogBundle,
+    sortMode: BaGuideCatalogSortMode,
+    searchQuery: String,
+    loading: Boolean,
+    error: String?,
+    progress: Float,
+    progressColor: Color,
+    accent: Color,
+    innerPadding: PaddingValues,
+    nestedScrollConnection: NestedScrollConnection,
+    onOpenGuide: (String) -> Unit,
+) {
+    val currentEntries = remember(catalog, tab, sortMode) {
+        catalog.entries(tab).sortedByMode(sortMode)
+    }
+    val filteredEntries = remember(currentEntries, searchQuery) {
+        currentEntries.filterByQuery(searchQuery)
+    }
+    val listState = rememberLazyListState()
+    var visibleCount by rememberSaveable(tab, searchQuery) { mutableIntStateOf(0) }
+    LaunchedEffect(filteredEntries.size) {
+        visibleCount = minOf(filteredEntries.size, CATALOG_BATCH_SIZE)
+    }
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalCount = listState.layoutInfo.totalItemsCount
+            visibleCount < filteredEntries.size &&
+                totalCount > 0 &&
+                lastVisible >= (totalCount - 1 - CATALOG_LOAD_MORE_THRESHOLD).coerceAtLeast(0)
+        }
+    }
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            visibleCount = minOf(visibleCount + CATALOG_BATCH_SIZE, filteredEntries.size)
+        }
+    }
+    val displayedEntries = remember(filteredEntries, visibleCount) {
+        filteredEntries.take(visibleCount)
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(nestedScrollConnection),
+        contentPadding = PaddingValues(
+            top = innerPadding.calculateTopPadding(),
+            bottom = innerPadding.calculateBottomPadding() + 10.dp,
+            start = 16.dp,
+            end = 16.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    SmallTitle("${tab.label}图鉴")
+                }
+                CircularProgressIndicator(
+                    progress = progress,
+                    size = 18.dp,
+                    strokeWidth = 2.dp,
+                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                        foregroundColor = progressColor,
+                        backgroundColor = progressColor.copy(alpha = 0.30f),
+                    ),
+                )
+            }
+        }
+
+        if (!error.isNullOrBlank()) {
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        SmallTitle("${activeTab.label}图鉴")
-                    }
-                    CircularProgressIndicator(
-                        progress = progress,
-                        size = 18.dp,
-                        strokeWidth = 2.dp,
-                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                            foregroundColor = progressColor,
-                            backgroundColor = progressColor.copy(alpha = 0.30f),
-                        ),
-                    )
-                }
+                FrostedBlock(
+                    backdrop = null,
+                    title = "同步状态",
+                    subtitle = error.orEmpty(),
+                    body = "可通过右上角刷新按钮重试",
+                    accent = Color(0xFFEF4444)
+                )
             }
+        }
 
-            if (!error.isNullOrBlank()) {
-                item {
-                    FrostedBlock(
-                        backdrop = null,
-                        title = "同步状态",
-                        subtitle = error.orEmpty(),
-                        body = "可通过右上角刷新按钮重试",
-                        accent = Color(0xFFEF4444)
-                    )
-                }
+        if (!loading && filteredEntries.isEmpty()) {
+            item {
+                FrostedBlock(
+                    backdrop = null,
+                    title = "暂无结果",
+                    subtitle = if (searchQuery.isBlank()) "当前分类没有可显示条目" else "未匹配到相关条目",
+                    accent = accent
+                )
             }
-
-            if (!loading && filteredEntries.isEmpty()) {
+        } else {
+            items(
+                items = displayedEntries,
+                key = { "${it.tab.name}-${it.entryId}-${it.contentId}" }
+            ) { entry ->
+                BaGuideCatalogEntryCard(
+                    entry = entry,
+                    onOpenGuide = onOpenGuide
+                )
+            }
+            if (visibleCount < filteredEntries.size) {
                 item {
-                    FrostedBlock(
-                        backdrop = null,
-                        title = "暂无结果",
-                        subtitle = if (searchQuery.isBlank()) "当前分类没有可显示条目" else "未匹配到相关条目",
-                        accent = accent
-                    )
-                }
-            } else {
-                items(
-                    items = displayedEntries,
-                    key = { "${it.tab.name}-${it.entryId}-${it.contentId}" }
-                ) { entry ->
-                    BaGuideCatalogEntryCard(
-                        entry = entry,
-                        onOpenGuide = onOpenGuide
-                    )
-                }
-                if (visibleCount < filteredEntries.size) {
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 10.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(
-                                progress = 0.3f,
-                                size = 16.dp,
-                                strokeWidth = 2.dp,
-                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                    foregroundColor = accent,
-                                    backgroundColor = accent.copy(alpha = 0.30f),
-                                ),
-                            )
-                            Text(
-                                text = " 继续加载更多条目…",
-                                color = MiuixTheme.colorScheme.onBackgroundVariant,
-                                fontSize = 12.sp
-                            )
-                        }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            progress = 0.3f,
+                            size = 16.dp,
+                            strokeWidth = 2.dp,
+                            colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                foregroundColor = accent,
+                                backgroundColor = accent.copy(alpha = 0.30f),
+                            ),
+                        )
+                        Text(
+                            text = " 继续加载更多条目…",
+                            color = MiuixTheme.colorScheme.onBackgroundVariant,
+                            fontSize = 12.sp
+                        )
                     }
                 }
             }

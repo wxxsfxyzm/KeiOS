@@ -450,7 +450,7 @@ private fun MainPagerLayout(
             state = pagerState,
             userScrollEnabled = pagerScrollEnabled,
             overscrollEffect = null,
-            beyondViewportPageCount = 1,
+            beyondViewportPageCount = 0,
             // CRITICAL FIX: NEVER conditionally unmount layerBackdrop.
             // If the node is visible (even during an exit animation), it MUST have the backdrop attached,
             // otherwise consumer composables will attempt to draw a detached Native pointer causing SIGSEGV.
