@@ -82,6 +82,10 @@ fun BaStudentGuideInfo.buildProfileMetaItems(): List<BaGuideMetaItem> {
 }
 
 fun BaStudentGuideInfo.buildCombatMetaItems(): List<BaGuideMetaItem> {
+    val rawWeaponTypeItem = buildMetaItem("武器类型", listOf("武器类型"))
+    val weaponTypeItem = rawWeaponTypeItem.copy(
+        value = normalizeWeaponTypeMetaValue(rawWeaponTypeItem.value)
+    )
     val mergedTacticalPosition = run {
         val rows = profileRowsForDisplay() + skillRowsForDisplay()
         val tacticalIcon = findFirstRowByKeywords(
@@ -105,7 +109,7 @@ fun BaStudentGuideInfo.buildCombatMetaItems(): List<BaGuideMetaItem> {
         mergedTacticalPosition,
         buildMetaItem("攻击类型", listOf("攻击类型")),
         buildMetaItem("防御类型", listOf("防御类型")),
-        buildMetaItem("武器类型", listOf("武器类型")),
+        weaponTypeItem,
         buildMetaItem("市街", listOf("市街")),
         buildMetaItem("屋外", listOf("屋外")),
         buildMetaItem("室内", listOf("屋内", "室内"))
@@ -142,4 +146,20 @@ private fun BaStudentGuideInfo.findGuideFieldValue(vararg keywords: String): Str
     }?.let { return it.second }
 
     return "-"
+}
+
+private fun normalizeWeaponTypeMetaValue(raw: String): String {
+    val value = raw.trim()
+    if (value.isBlank() || value == "-") return "原网站暂无该数据"
+    val compact = value.replace(" ", "")
+    val hasPlaceholderHints = compact.contains("这一行") ||
+        compact.contains("素材") ||
+        compact.contains("占位") ||
+        compact.contains("请填写") ||
+        compact.contains("暂无")
+    val looksSuspiciouslyLong = compact.length > 18
+    if (hasPlaceholderHints || looksSuspiciouslyLong) {
+        return "原网站暂无该数据"
+    }
+    return value
 }
