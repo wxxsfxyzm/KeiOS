@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -662,6 +663,11 @@ fun GuideGalleryExpressionCardItem(
     val optionLabels = remember(items) {
         items.mapIndexed { index, _ -> "角色表情${index + 1}" }
     }
+    val pickerMaxHeight = remember(optionLabels.size) {
+        val maxVisibleRows = 7
+        val visibleRows = optionLabels.size.coerceIn(1, maxVisibleRows)
+        8.dp + (46.dp * visibleRows)
+    }
     val canOpenMedia = selectedItem.mediaUrl.isNotBlank() && selectedItem.mediaUrl != selectedItem.imageUrl
     val isImageType = selectedItem.mediaType.lowercase() != "video"
     var showImageFullscreen by remember(displayImageUrl) { mutableStateOf(false) }
@@ -731,7 +737,9 @@ fun GuideGalleryExpressionCardItem(
                             onDismissRequest = { showPicker = false },
                             enableWindowDim = false
                         ) {
-                            LiquidDropdownColumn {
+                            LiquidDropdownColumn(
+                                modifier = Modifier.heightIn(max = pickerMaxHeight)
+                            ) {
                                 optionLabels.forEachIndexed { idx, option ->
                                     LiquidDropdownImpl(
                                         text = option,
