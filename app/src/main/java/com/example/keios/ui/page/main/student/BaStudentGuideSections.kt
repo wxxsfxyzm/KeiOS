@@ -1241,14 +1241,18 @@ private fun GuideRequestedOrientationEffect(requestedOrientation: Int) {
         if (activity == null || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
             onDispose { }
         } else {
-            val previousOrientation = activity.requestedOrientation
             val applied = runCatching {
-                activity.requestedOrientation = requestedOrientation
+                if (activity.requestedOrientation != requestedOrientation) {
+                    activity.requestedOrientation = requestedOrientation
+                }
             }.isSuccess
             onDispose {
-                if (applied) {
-                    runCatching {
-                        activity.requestedOrientation = previousOrientation
+                if (!applied) return@onDispose
+                // 配置变化重建过程中不要回写方向，避免 landscape/unspecified 循环抖动。
+                if (activity.isChangingConfigurations) return@onDispose
+                runCatching {
+                    if (activity.requestedOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+                        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                     }
                 }
             }
