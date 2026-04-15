@@ -2,6 +2,8 @@ package com.example.keios.ui.page.main.student.catalog
 
 import com.example.keios.R
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.json.JSONObject
 import java.util.Locale
 
@@ -9,7 +11,11 @@ private const val BA_GUIDE_SECOND_PAGE_ID = 23941
 private const val BA_GUIDE_STUDENT_PID = 49443
 private const val BA_GUIDE_NPC_SATELLITE_PID = 107619
 private const val BA_GUIDE_INDEX_REFERER_PATH = "/ba/second/$BA_GUIDE_SECOND_PAGE_ID"
+private const val BA_GUIDE_CATALOG_CACHE_TTL_MS = 2 * 60 * 1000L
 internal const val BA_GUIDE_INDEX_URL = "https://www.gamekee.com$BA_GUIDE_INDEX_REFERER_PATH"
+
+@Volatile
+private var cachedCatalogBundle: BaGuideCatalogBundle? = null
 
 internal enum class BaGuideCatalogTab(
     val label: String,
@@ -25,21 +31,13 @@ internal data class BaGuideCatalogEntry(
     val contentId: Long,
     val name: String,
     val alias: String,
+    val aliasDisplay: String,
     val iconUrl: String,
     val type: Int,
     val order: Int,
+    val detailUrl: String,
     val tab: BaGuideCatalogTab
-) {
-    val detailUrl: String
-        get() = "https://www.gamekee.com/ba/tj/$contentId.html"
-
-    val aliasDisplay: String
-        get() = alias
-            .split(",")
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .joinToString(" · ")
-}
+)
 
 internal data class BaGuideCatalogBundle(
     val entriesByTab: Map<BaGuideCatalogTab, List<BaGuideCatalogEntry>>,
@@ -68,9 +66,18 @@ private data class RawEntry(
     val order: Int
 )
 
-internal fun fetchBaGuideCatalogBundle(): BaGuideCatalogBundle {
-    val studentRaw = fetchRawEntriesByPid(BA_GUIDE_STUDENT_PID)
-    val npcSatelliteRaw = fetchRawEntriesByPid(BA_GUIDE_NPC_SATELLITE_PID)
+internal suspend fun fetchBaGuideCatalogBundle(forceRefresh: Boolean = false): BaGuideCatalogBundle {
+    val now = System.currentTimeMillis()
+    val cached = cachedCatalogBundle
+    if (!forceRefresh && cached != null && (now - cached.syncedAtMs) <= BA_GUIDE_CATALOG_CACHE_TTL_MS) {
+        return cached
+    }
+
+    val (studentRaw, npcSatelliteRaw) = coroutineScope {
+        val studentDeferred = async { fetchRawEntriesByPid(BA_GUIDE_STUDENT_PID) }
+        val npcSatelliteDeferred = async { fetchRawEntriesByPid(BA_GUIDE_NPC_SATELLITE_PID) }
+        studentDeferred.await() to npcSatelliteDeferred.await()
+    }
 
     val studentEntries = studentRaw.map { raw ->
         raw.toCatalogEntry(tab = BaGuideCatalogTab.Student)
@@ -80,13 +87,15 @@ internal fun fetchBaGuideCatalogBundle(): BaGuideCatalogBundle {
         raw.toCatalogEntry(tab = BaGuideCatalogTab.NpcSatellite)
     }
 
-    return BaGuideCatalogBundle(
+    val bundle = BaGuideCatalogBundle(
         entriesByTab = mapOf(
-            BaGuideCatalogTab.Student to studentEntries.sortedBy { it.order },
-            BaGuideCatalogTab.NpcSatellite to npcSatelliteEntries.sortedBy { it.order },
+            BaGuideCatalogTab.Student to studentEntries,
+            BaGuideCatalogTab.NpcSatellite to npcSatelliteEntries,
         ),
-        syncedAtMs = System.currentTimeMillis()
+        syncedAtMs = now
     )
+    cachedCatalogBundle = bundle
+    return bundle
 }
 
 internal fun List<BaGuideCatalogEntry>.filterByQuery(query: String): List<BaGuideCatalogEntry> {
@@ -143,11 +152,21 @@ private fun RawEntry.toCatalogEntry(tab: BaGuideCatalogTab): BaGuideCatalogEntry
         contentId = contentId,
         name = name,
         alias = alias,
+        aliasDisplay = formatAliasDisplay(alias),
         iconUrl = iconUrl,
         type = type,
         order = order,
+        detailUrl = "https://www.gamekee.com/ba/tj/$contentId.html",
         tab = tab
     )
+}
+
+private fun formatAliasDisplay(alias: String): String {
+    return alias
+        .split(",")
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .joinToString(" · ")
 }
 
 private fun normalizeCatalogImageUrl(raw: String): String {

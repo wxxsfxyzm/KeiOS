@@ -103,7 +103,8 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private const val CATALOG_BATCH_SIZE = 60
+private const val CATALOG_BATCH_SIZE = 20
+private const val CATALOG_LOAD_MORE_THRESHOLD = 10
 
 @Composable
 fun BaGuideCatalogPage(
@@ -150,8 +151,10 @@ fun BaGuideCatalogPage(
     val shouldLoadMore by remember {
         derivedStateOf {
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalCount = listState.layoutInfo.totalItemsCount
             visibleCount < filteredEntries.size &&
-                lastVisible >= (listState.layoutInfo.totalItemsCount - 4)
+                totalCount > 0 &&
+                lastVisible >= (totalCount - 1 - CATALOG_LOAD_MORE_THRESHOLD).coerceAtLeast(0)
         }
     }
     LaunchedEffect(shouldLoadMore) {
@@ -207,7 +210,9 @@ fun BaGuideCatalogPage(
 
     LaunchedEffect(refreshSignal) {
         loading = true
-        val result = withContext(Dispatchers.IO) { runCatching { fetchBaGuideCatalogBundle() } }
+        val result = withContext(Dispatchers.IO) {
+            runCatching { fetchBaGuideCatalogBundle(forceRefresh = refreshSignal > 0) }
+        }
         result.onSuccess { latest ->
             catalog = latest
             error = null
@@ -274,7 +279,7 @@ fun BaGuideCatalogPage(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
                             label = "搜索名称 / 别名 / ID",
-                            backdrop = backdrop,
+                            backdrop = null,
                             variant = GlassVariant.Bar,
                             singleLine = true
                         )
@@ -526,7 +531,7 @@ private fun BaGuideCatalogEntryCard(
                 }
             }
             GlassIconButton(
-                backdrop = backdrop,
+                backdrop = null,
                 icon = MiuixIcons.Regular.Back,
                 contentDescription = "进入图鉴",
                 onClick = { onOpenGuide(entry.detailUrl) },
