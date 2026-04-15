@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import com.example.keios.core.prefs.AppThemeMode
@@ -34,7 +36,6 @@ import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
 import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
-import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.example.keios.ui.page.main.widget.capturePopupAnchor
@@ -392,7 +393,7 @@ fun SettingsPage(
                             },
                             color = subtitleColor
                         )
-                        MiuixInfoItem(
+                        SettingsInfoItem(
                             key = "作用范围",
                             value = if (cacheDiagnosticsEnabled) {
                                 "设置页会读取 GitHub / MCP / 系统 / BA 等页面缓存摘要"
@@ -498,11 +499,39 @@ private fun SettingsSectionCard(
             )
         }
         if (!infoKey.isNullOrBlank() && !infoValue.isNullOrBlank()) {
-            MiuixInfoItem(
+            SettingsInfoItem(
                 key = infoKey,
                 value = infoValue
             )
         }
+    }
+}
+
+@Composable
+private fun SettingsInfoItem(
+    key: String,
+    value: String
+) {
+    val titleColor = MiuixTheme.colorScheme.onBackgroundVariant
+    val valueColor = MiuixTheme.colorScheme.onBackground
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = key,
+            color = titleColor,
+            modifier = Modifier.wrapContentWidth()
+        )
+        Text(
+            text = value.ifBlank { "N/A" },
+            color = valueColor,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 

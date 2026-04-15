@@ -58,7 +58,7 @@ object UiPrefs {
         kv().encode(KEY_HOME_ICON_HDR, value)
     }
 
-    fun isSuperIslandNotificationEnabled(defaultValue: Boolean = true): Boolean {
+    fun isSuperIslandNotificationEnabled(defaultValue: Boolean = false): Boolean {
         return kv().decodeBool(KEY_SUPER_ISLAND_NOTIFICATION, defaultValue)
     }
 
@@ -115,7 +115,7 @@ object UiPrefs {
             liquidBottomBarEnabled = true,
             cardPressFeedbackEnabled = true,
             homeIconHdrEnabled = true,
-            superIslandNotificationEnabled = true,
+            superIslandNotificationEnabled = false,
             superIslandBypassRestrictionEnabled = false,
             cacheDiagnosticsEnabled = true,
             appThemeMode = appThemeMode,
@@ -129,7 +129,7 @@ object UiPrefs {
             liquidBottomBarEnabled = store.decodeBool(KEY_LIQUID_BOTTOM_BAR, true),
             cardPressFeedbackEnabled = store.decodeBool(KEY_CARD_PRESS_FEEDBACK, true),
             homeIconHdrEnabled = store.decodeBool(KEY_HOME_ICON_HDR, true),
-            superIslandNotificationEnabled = store.decodeBool(KEY_SUPER_ISLAND_NOTIFICATION, true),
+            superIslandNotificationEnabled = store.decodeBool(KEY_SUPER_ISLAND_NOTIFICATION, false),
             superIslandBypassRestrictionEnabled = store.decodeBool(KEY_SUPER_ISLAND_BYPASS_RESTRICTION, false),
             cacheDiagnosticsEnabled = store.decodeBool(KEY_CACHE_DIAGNOSTICS, true),
             appThemeMode = getAppThemeMode(),

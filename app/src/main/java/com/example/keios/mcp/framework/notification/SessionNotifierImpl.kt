@@ -20,7 +20,7 @@ class SessionNotifierImpl(
     private val miIslandBuilder by lazy { MiIslandNotificationBuilder(helper.context) }
 
     override fun build(payload: McpNotificationPayload): SessionNotifier.NotificationBuildResult {
-        val preferSuperIsland = UiPrefs.isSuperIslandNotificationEnabled(defaultValue = true)
+        val preferSuperIsland = UiPrefs.isSuperIslandNotificationEnabled(defaultValue = false)
         val bypassRestriction = UiPrefs.isSuperIslandBypassRestrictionEnabled(defaultValue = false)
         val style = resolveStyle(preferSuperIsland = preferSuperIsland)
         val wrapped = NotificationPayload(

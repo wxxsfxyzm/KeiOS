@@ -176,7 +176,7 @@ object GitHubRefreshNotificationHelper {
         onlyAlertOnce: Boolean
     ): Notification {
         val helper = NotificationHelper(context)
-        val preferSuperIsland = UiPrefs.isSuperIslandNotificationEnabled(defaultValue = true)
+        val preferSuperIsland = UiPrefs.isSuperIslandNotificationEnabled(defaultValue = false)
         val style = if (preferSuperIsland && helper.isSupportMiIsland) {
             RenderStyle.MI_ISLAND
         } else {
