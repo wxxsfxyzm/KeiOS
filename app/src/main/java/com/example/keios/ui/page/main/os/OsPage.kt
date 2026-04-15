@@ -78,7 +78,6 @@ import com.example.keios.core.system.getAllSystemProperties
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -703,7 +702,6 @@ fun OsPage(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .layerBackdrop(backdrop)
                 .nestedScroll(searchBarScrollConnection)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
