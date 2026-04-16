@@ -2,12 +2,16 @@ package com.example.keios.ui.page.main.student
 
 import com.example.keios.ui.page.main.widget.GlassVariant
 import android.content.Context
+import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.hardware.display.DisplayManager
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.Display
+import android.view.OrientationEventListener
 import android.view.Surface
 import android.view.ViewGroup
 import android.widget.SeekBar
@@ -153,6 +157,71 @@ private fun currentDisplayRotationDegrees(context: Context): Int {
         Surface.ROTATION_270 -> 270
         else -> 0
     }
+}
+
+private fun normalizeRotationDegreesByOrientation(rawOrientation: Int): Int {
+    val orientation = ((rawOrientation % 360) + 360) % 360
+    return when {
+        orientation in 45..134 -> 90
+        orientation in 135..224 -> 180
+        orientation in 225..314 -> 270
+        else -> 0
+    }
+}
+
+@Composable
+private fun rememberSystemAutoRotateEnabled(active: Boolean): Boolean {
+    val context = LocalContext.current
+    var enabled by remember { mutableStateOf(isSystemAutoRotateEnabled(context)) }
+    DisposableEffect(context, active) {
+        if (!active) {
+            enabled = false
+            return@DisposableEffect onDispose { }
+        }
+        enabled = isSystemAutoRotateEnabled(context)
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                enabled = isSystemAutoRotateEnabled(context)
+            }
+        }
+        val uri = Settings.System.getUriFor(Settings.System.ACCELEROMETER_ROTATION)
+        context.contentResolver.registerContentObserver(uri, false, observer)
+        onDispose {
+            runCatching {
+                context.contentResolver.unregisterContentObserver(observer)
+            }
+        }
+    }
+    return enabled
+}
+
+@Composable
+private fun rememberDeviceRotationDegrees(active: Boolean): Int {
+    val context = LocalContext.current
+    var degrees by remember { mutableStateOf(0) }
+    DisposableEffect(context, active) {
+        if (!active) {
+            degrees = 0
+            return@DisposableEffect onDispose { }
+        }
+        degrees = currentDisplayRotationDegrees(context)
+        val listener = object : OrientationEventListener(context.applicationContext) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+                val nextDegrees = normalizeRotationDegreesByOrientation(orientation)
+                if (nextDegrees != degrees) {
+                    degrees = nextDegrees
+                }
+            }
+        }
+        if (listener.canDetectOrientation()) {
+            listener.enable()
+        }
+        onDispose {
+            listener.disable()
+        }
+    }
+    return degrees
 }
 
 private fun loadGuideBitmapSource(
@@ -1455,11 +1524,10 @@ private fun GuideImageFullscreenDialog(
 ) {
     val context = LocalContext.current
     val mediaAdaptiveRotationEnabled = remember { BASettingsStore.loadMediaAdaptiveRotationEnabled() }
-    val systemAutoRotateEnabled = remember(mediaAdaptiveRotationEnabled) {
-        if (mediaAdaptiveRotationEnabled) false else isSystemAutoRotateEnabled(context)
-    }
-    val systemRotationDegrees =
-        if (mediaAdaptiveRotationEnabled || !systemAutoRotateEnabled) 0 else currentDisplayRotationDegrees(context)
+    val systemAutoRotateEnabled = rememberSystemAutoRotateEnabled(active = !mediaAdaptiveRotationEnabled)
+    val systemRotationDegrees = rememberDeviceRotationDegrees(
+        active = !mediaAdaptiveRotationEnabled && systemAutoRotateEnabled
+    )
     val normalizedImageUrl = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
     if (normalizedImageUrl.isBlank()) return
     val isGifSource = remember(normalizedImageUrl) { isGifMediaSource(normalizedImageUrl) }
