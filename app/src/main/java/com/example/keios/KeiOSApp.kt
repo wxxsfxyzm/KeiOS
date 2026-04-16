@@ -1,10 +1,15 @@
 package com.example.keios
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.gif.AnimatedImageDecoder
 import com.example.keios.core.background.AppBackgroundScheduler
+import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.tencent.mmkv.MMKV
 
 class KeiOSApp : Application() {
@@ -14,6 +19,20 @@ class KeiOSApp : Application() {
 
         val appContext: Application
             get() = instance
+    }
+
+    private val packageChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_PACKAGE_ADDED,
+                Intent.ACTION_PACKAGE_REMOVED,
+                Intent.ACTION_PACKAGE_REPLACED,
+                Intent.ACTION_PACKAGE_CHANGED,
+                Intent.ACTION_PACKAGE_FULLY_REMOVED -> {
+                    GitHubVersionUtils.invalidateInstalledLaunchableAppsCache()
+                }
+            }
+        }
     }
 
     override fun onCreate() {
@@ -28,5 +47,18 @@ class KeiOSApp : Application() {
         }
         MMKV.initialize(this)
         AppBackgroundScheduler.scheduleAll(this)
+        registerPackageChangedReceiver()
+    }
+
+    private fun registerPackageChangedReceiver() {
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addAction(Intent.ACTION_PACKAGE_REPLACED)
+            addAction(Intent.ACTION_PACKAGE_CHANGED)
+            addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED)
+            addDataScheme("package")
+        }
+        registerReceiver(packageChangedReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
     }
 }
