@@ -1415,8 +1415,11 @@ private fun GuideImageFullscreenDialog(
     if (normalizedImageUrl.isBlank()) return
     val zoomState = rememberCoilZoomState()
     LaunchedEffect(zoomState) {
-        // Prevent edge-stuck single-finger accidental scaling.
-        zoomState.zoomable.setDisabledGestureTypes(GestureType.ONE_FINGER_SCALE)
+        // Keep fullscreen image interaction predictable:
+        // pinch zoom (two fingers) + one-finger drag + single-tap dismiss.
+        zoomState.zoomable.setDisabledGestureTypes(
+            GestureType.ONE_FINGER_SCALE or GestureType.DOUBLE_TAP_SCALE
+        )
     }
     var retryToken by rememberSaveable(normalizedImageUrl) { mutableStateOf(0) }
     var lastTransformActiveAtMs by rememberSaveable(normalizedImageUrl) { mutableStateOf(0L) }
