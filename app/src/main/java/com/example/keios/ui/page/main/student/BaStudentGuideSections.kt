@@ -376,6 +376,8 @@ fun GuideGalleryCardItem(
     val displayImageUrl = mediaUrlResolver(preferredImageRaw)
     val displayMediaUrl = mediaUrlResolver(item.mediaUrl.ifBlank { preferredImageRaw })
     val noteText = item.note.trim()
+    val noteLinks = remember(noteText) { extractGuideWebLinks(noteText) }
+    val notePlainText = remember(noteText) { stripGuideWebLinks(noteText) }
     val displayTitle = remember(item.title, normalizedMediaType) {
         normalizeGalleryDisplayTitle(item.title, normalizedMediaType)
     }
@@ -549,13 +551,33 @@ fun GuideGalleryCardItem(
                 }
             }
 
-            if (noteText.isNotBlank()) {
+            if (notePlainText.isNotBlank()) {
                 Text(
-                    text = noteText,
+                    text = notePlainText,
                     color = MiuixTheme.colorScheme.onBackgroundVariant,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+            if (noteLinks.isNotEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    noteLinks.forEach { link ->
+                        Text(
+                            text = link,
+                            color = Color(0xFF3B82F6),
+                            textAlign = TextAlign.End,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clickable {
+                                onOpenMedia(link)
+                            }
+                        )
+                    }
+                }
             }
 
             if (displayImageUrl.isNotBlank() && normalizedMediaType != "video" && normalizedMediaType != "audio") {

@@ -2,8 +2,50 @@ package com.example.keios.ui.page.main.student
 
 import android.net.Uri
 
+private val guideWebLinkRegex = Regex(
+    """(?i)((?:https?://|www\.)[^\s<>"'，。；;）)】]+)"""
+)
+
 internal fun normalizeGalleryTitle(raw: String): String {
     return raw.replace(Regex("\\s+"), "").trim()
+}
+
+internal fun normalizeGuideWebLinkForOpen(raw: String): String {
+    val value = raw.trim()
+        .trimEnd('。', '，', ',', ';', '；', '）', ')', '】', ']', '》', '>')
+    if (value.isBlank()) return ""
+    return when {
+        value.startsWith("http://", ignoreCase = true) -> value
+        value.startsWith("https://", ignoreCase = true) -> value
+        value.startsWith("//") -> "https:$value"
+        value.startsWith("www.", ignoreCase = true) -> "https://$value"
+        else -> value
+    }
+}
+
+internal fun extractGuideWebLinks(raw: String): List<String> {
+    if (raw.isBlank()) return emptyList()
+    return guideWebLinkRegex.findAll(raw)
+        .map { it.groupValues.getOrNull(1).orEmpty() }
+        .map(::normalizeGuideWebLinkForOpen)
+        .filter { link ->
+            link.startsWith("http://", ignoreCase = true) ||
+                link.startsWith("https://", ignoreCase = true)
+        }
+        .distinct()
+        .toList()
+}
+
+internal fun containsGuideWebLink(raw: String): Boolean {
+    return extractGuideWebLinks(raw).isNotEmpty()
+}
+
+internal fun stripGuideWebLinks(raw: String): String {
+    if (raw.isBlank()) return ""
+    val stripped = guideWebLinkRegex.replace(raw, " ")
+    return stripped
+        .replace(Regex("""\s+"""), " ")
+        .trim()
 }
 
 internal fun isPlaceholderGalleryToken(raw: String): Boolean {

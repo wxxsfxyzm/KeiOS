@@ -348,6 +348,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                 .filterNot(::isGrowthTitleVoiceRow)
                                 .filterNot(::isVoicePlaceholderRow)
                                 .filterNot(::isProfileSectionHeaderRow)
+                                .filterNot(::isGalleryRelatedProfileLinkRow)
                             val sameNameRoleRows = profileRowsBase.filter(::isSameNameRoleRow)
                             val sameNameRoleItems = buildSameNameRoleItems(sameNameRoleRows)
                             val sameNameRoleHint = sameNameRoleRows.firstNotNullOfOrNull { row ->
@@ -1069,6 +1070,12 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                 )
                             }
                             val cleanedGalleryItems = galleryItems.filterNot(::isMemoryHallFileGalleryItem)
+                            val galleryRelatedLinkRows = guide.profileRowsForDisplay()
+                                .filter(::isGalleryRelatedProfileLinkRow)
+                                .distinctBy { row ->
+                                    "${normalizeProfileFieldKey(row.key)}|${row.value.trim()}"
+                                }
+                                .take(10)
                             val memoryHallPreview = cleanedGalleryItems
                                 .firstOrNull {
                                     isMemoryHallGalleryItem(it) && isRenderableGalleryImageUrl(it.imageUrl)
@@ -1204,6 +1211,34 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                 var insertedUnlockLevel = false
                                 var insertedMemoryHallVideoNearGallery = false
                                 var insertedPvRoleAfterOfficial = false
+                                if (galleryRelatedLinkRows.isNotEmpty()) {
+                                    item {
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = CardDefaults.defaultColors(
+                                                color = Color(0x223B82F6),
+                                                contentColor = MiuixTheme.colorScheme.onBackground
+                                            ),
+                                            onClick = {}
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                GuideProfileSectionHeader(
+                                                    title = "影画相关链接"
+                                                )
+                                                GuideGalleryRelatedLinkRows(
+                                                    rows = galleryRelatedLinkRows,
+                                                    onOpenExternal = onOpenExternal
+                                                )
+                                            }
+                                        }
+                                    }
+                                    renderedCount += 1
+                                }
                                 displayGalleryItems.forEachIndexed { index, item ->
                                     val isExpression = isExpressionGalleryItem(item)
                                     if (isExpression && index != firstExpressionIndex) {
@@ -2840,6 +2875,80 @@ private fun GuideProfileRowsSection(
     }
 }
 
+@Composable
+private fun GuideGalleryRelatedLinkRows(
+    rows: List<BaGuideRow>,
+    onOpenExternal: (String) -> Unit
+) {
+    if (rows.isEmpty()) {
+        Text(
+            text = "暂无影画相关链接。",
+            color = MiuixTheme.colorScheme.onBackgroundVariant
+        )
+        return
+    }
+
+    rows.forEachIndexed { index, row ->
+        val links = extractGuideWebLinks(row.value)
+        if (links.isEmpty()) return@forEachIndexed
+        val noteText = stripGuideWebLinks(row.value)
+
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 1.dp)
+        ) {
+            val keyText = row.key.ifBlank { "影画链接" }
+            val keyMaxWidth = adaptiveProfileKeyMaxWidth(
+                key = keyText,
+                value = links.first(),
+                containerWidth = maxWidth
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = keyText,
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    modifier = Modifier.widthIn(min = 52.dp, max = keyMaxWidth),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    if (noteText.isNotBlank()) {
+                        Text(
+                            text = noteText,
+                            color = MiuixTheme.colorScheme.onBackground,
+                            textAlign = TextAlign.End,
+                            maxLines = Int.MAX_VALUE,
+                            overflow = TextOverflow.Clip
+                        )
+                    }
+                    links.forEach { link ->
+                        Text(
+                            text = link,
+                            color = Color(0xFF3B82F6),
+                            textAlign = TextAlign.End,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clickable { onOpenExternal(link) }
+                        )
+                    }
+                }
+            }
+        }
+        if (index < rows.lastIndex) {
+            Spacer(modifier = Modifier.height(2.dp))
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GuideGiftPreferenceGrid(
@@ -3168,6 +3277,29 @@ private fun buildSameNameRoleItems(rows: List<BaGuideRow>): List<SameNameRoleIte
 private fun isProfileSectionHeaderRow(row: BaGuideRow): Boolean {
     val key = normalizeProfileFieldKey(row.key)
     return key in profileSectionHeaderKeys
+}
+
+private val galleryRelatedProfileLinkKeyTokens = listOf(
+    "个人账号主页",
+    "账号主页",
+    "个人主页",
+    "主页链接",
+    "主页"
+).map(::normalizeProfileFieldKey)
+
+private fun isGalleryRelatedProfileLinkRow(row: BaGuideRow): Boolean {
+    val key = normalizeProfileFieldKey(row.key)
+    if (key.isBlank()) return false
+    val hasGalleryLinkKey = galleryRelatedProfileLinkKeyTokens.any { token ->
+        token.isNotBlank() && key.contains(token)
+    }
+    if (!hasGalleryLinkKey) return false
+    val linkSource = buildString {
+        append(row.value)
+        append(' ')
+        append(row.key)
+    }
+    return containsGuideWebLink(linkSource)
 }
 
 private fun extractProfileExternalLink(raw: String): String {
