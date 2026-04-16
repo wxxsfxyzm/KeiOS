@@ -104,6 +104,7 @@ import com.example.keios.ui.page.main.student.isRenderableGalleryAudioUrl
 import com.example.keios.ui.page.main.student.isRenderableGalleryImageUrl
 import com.example.keios.ui.page.main.student.isRenderableGalleryVideoUrl
 import com.example.keios.ui.page.main.student.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.extractGuideContentIdFromUrl
 import com.example.keios.ui.page.main.student.profileRowsForDisplay
 import com.example.keios.ui.page.main.student.renderBaStudentGuideTabContent
 import com.example.keios.ui.page.main.student.shouldHideMovedHeaderRow
@@ -653,7 +654,13 @@ fun BaStudentGuidePage(
     }
 
     fun openGuideInPage(rawUrl: String) {
-        val target = normalizeGuideUrl(rawUrl)
+        val normalized = normalizeGuideUrl(rawUrl)
+        val contentId = extractGuideContentIdFromUrl(normalized)
+        val target = if (contentId != null && contentId > 0L) {
+            "https://www.gamekee.com/ba/tj/$contentId.html"
+        } else {
+            normalized
+        }
         if (target.isBlank()) return
         if (target == sourceUrl) return
         manualRefreshRequested = false

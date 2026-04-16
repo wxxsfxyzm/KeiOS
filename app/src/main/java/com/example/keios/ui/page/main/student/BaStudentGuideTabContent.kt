@@ -3484,6 +3484,51 @@ private fun splitRoleRowTokens(raw: String): List<String> {
         .filter { it.isNotBlank() }
 }
 
+private val sameNameGuideEmbeddedLinkRegex = Regex("""https?://[^\s]+""", RegexOption.IGNORE_CASE)
+private val sameNameGuidePathPattern = Regex("""^/(?:ba/tj/\d+(?:\.html)?|ba/\d+(?:\.html)?|v1/content/detail/\d+)$""")
+
+private fun sanitizeSameNameLinkToken(raw: String): String {
+    return raw.trim().trimEnd(')', ']', '}', ',', '。', '，', ';', '；')
+}
+
+private fun extractSameNameGuideLink(raw: String): String {
+    val source = raw.trim()
+    if (source.isBlank()) return ""
+
+    val directCandidates = buildList {
+        val cleaned = sanitizeSameNameLinkToken(source)
+        if (cleaned.startsWith("http://", ignoreCase = true) || cleaned.startsWith("https://", ignoreCase = true)) {
+            add(cleaned)
+        } else if (cleaned.startsWith("www.", ignoreCase = true)) {
+            add("https://$cleaned")
+        } else if (cleaned.matches(Regex("""^\d{4,}$"""))) {
+            add("https://www.gamekee.com/ba/tj/$cleaned.html")
+        } else if (cleaned.startsWith("/") && sameNameGuidePathPattern.matches(cleaned)) {
+            add(normalizeGuideUrl(cleaned))
+        }
+        addAll(
+            sameNameGuideEmbeddedLinkRegex.findAll(source).map { match ->
+                sanitizeSameNameLinkToken(match.value)
+            }
+        )
+    }.distinct()
+
+    for (candidate in directCandidates) {
+        val normalized = normalizeGuideUrl(candidate)
+        if (normalized.isBlank()) continue
+        val uri = runCatching { Uri.parse(normalized) }.getOrNull() ?: continue
+        val host = uri.host.orEmpty().lowercase()
+        val path = uri.path.orEmpty()
+        val hostAccepted = host == "www.gamekee.com" || host == "gamekee.com"
+        val pathAccepted = sameNameGuidePathPattern.matches(path)
+        if (!hostAccepted || !pathAccepted) continue
+        val contentId = extractGuideContentIdFromUrl(normalized) ?: continue
+        if (contentId <= 0L) continue
+        return "https://www.gamekee.com/ba/tj/$contentId.html"
+    }
+    return ""
+}
+
 private val sameNameRoleHintKeywords = listOf(
     "暂无同名角色",
     "未填写",
@@ -3537,7 +3582,7 @@ private fun buildSameNameRoleItems(rows: List<BaGuideRow>): List<SameNameRoleIte
         val link = sequence<String> {
             tokens.forEach { yield(it) }
             yield(row.value)
-        }.map { token -> extractProfileExternalLink(token) }
+        }.map { token -> extractSameNameGuideLink(token) }
             .firstOrNull { it.isNotBlank() }
             .orEmpty()
         val name = tokens.firstOrNull { token ->
