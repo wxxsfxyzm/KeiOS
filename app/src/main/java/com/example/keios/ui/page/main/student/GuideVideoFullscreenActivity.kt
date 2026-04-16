@@ -15,7 +15,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -34,10 +33,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.keios.ui.page.main.ba.BASettingsStore
-import com.example.keios.ui.page.main.widget.GlassIconButton
-import com.example.keios.ui.page.main.widget.GlassVariant
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.basic.Text
 
 class GuideVideoFullscreenActivity : ComponentActivity() {
@@ -183,18 +178,5 @@ private fun GuideVideoFullscreenScreen(
             )
         }
 
-        GlassIconButton(
-            backdrop = null,
-            icon = MiuixIcons.Regular.Close,
-            contentDescription = "关闭",
-            variant = GlassVariant.Compact,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(top = 12.dp, end = 16.dp),
-            onClick = onClose,
-            width = 40.dp,
-            height = 40.dp
-        )
     }
 }

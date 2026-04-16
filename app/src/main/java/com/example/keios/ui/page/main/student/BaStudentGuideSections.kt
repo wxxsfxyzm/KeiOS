@@ -47,7 +47,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
@@ -106,7 +105,6 @@ import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import com.example.keios.R
 import com.example.keios.ui.page.main.ba.BASettingsStore
-import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.Backdrop
@@ -129,7 +127,6 @@ import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.ExpandLess
 import top.yukonga.miuix.kmp.icon.extended.ExpandMore
@@ -2411,20 +2408,6 @@ private fun GuideVideoFullscreenDialog(
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
-
-            GlassIconButton(
-                backdrop = null,
-                icon = MiuixIcons.Regular.Close,
-                contentDescription = "关闭",
-                variant = GlassVariant.Compact,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(top = 12.dp, end = 16.dp),
-                onClick = onDismiss,
-                width = 40.dp,
-                height = 40.dp
-            )
 
             loadError?.takeIf { it.isNotBlank() }?.let { err ->
                 Text(
