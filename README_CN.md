@@ -2,6 +2,12 @@
 
 [English Version](README.md)
 
+## 项目概览
+
+- 这是一个聚焦系统工具、GitHub 跟踪、BA 内容页的 Android 应用。
+- UI 技术栈：Compose + Miuix KMP + 液态玻璃风格组件。
+- 运行基线：`minSdk=35`、`targetSdk=37`、Java/Kotlin 工具链统一 Java 21。
+
 ## 本地构建说明（Local Build Notes）
 
 本项目有意将机器相关路径与密钥排除在版本控制之外。
@@ -55,6 +61,36 @@ JDK 兜底示例路径：
 
 # 运行单元测试
 ./gradlew :app:testDebugUnitTest
+```
+
+## 运行配置入口（最近变更）
+
+- `设置 > 视觉与交互`  
+  主题模式、ActionBar 分层样式、液态底栏、卡片按压反馈、主页图标 HDR 高光。
+- `设置 > 通知与兼容`  
+  超级岛通知样式开关、HyperOS 兼容绕过开关。
+- `设置 > 复制与文本选择`  
+  轻量条目复制模式、完整系统选区模式。
+- `设置 > 缓存`  
+  GitHub / MCP / OS / BA 等模块的缓存诊断摘要。
+- `BA 页面 > BA 配置`  
+  AP 设置、媒体设置、媒体自适应旋转、自定义媒体保存位置。
+- `GitHub 页面 > 检查与下载 / 跟踪编辑`  
+  刷新间隔、预发策略、下载器路由、最新发布下载行为。
+
+## GitHub Actions：Build-CI 自动构建调试包
+
+工作流路径：`.github/workflows/build-debug-on-message.yml`
+
+- 触发方式：`push` 事件中任一 commit message 包含 `Build-CI`。
+- 构建产物：自动构建并上传 Debug APK 到 GitHub Actions。
+- APK 文件名格式：`KeiOS-debug-YYYYMMDD-HHMMSS-<shortSha>.apk`（UTC 时间）。
+- Artifact 名称格式：`keiOS-debug-apk-<run_number>`。
+
+示例提交信息：
+
+```text
+chore: tune guide cache Build-CI
 ```
 
 ## GitHub 实时基准测试（GitHub Live Benchmark Test）

@@ -2,6 +2,12 @@
 
 [中文版本 (CN)](README_CN.md)
 
+## Project Snapshot
+
+- Android app focused on system utility + GitHub tracking + BA content pages.
+- UI stack: Compose + Miuix KMP + liquid glass style components.
+- Runtime baseline: `minSdk=35`, `targetSdk=37`, Java/Kotlin toolchain on Java 21.
+
 ## Local Build Notes
 
 This repo keeps machine-specific paths and secrets out of VCS on purpose.
@@ -56,6 +62,36 @@ JDK fallback examples:
 
 # unit tests
 ./gradlew :app:testDebugUnitTest
+```
+
+## Runtime Settings Map (Recent)
+
+- `Settings > Visual & Interaction`  
+  Theme mode, ActionBar layered style, liquid bottom bar, card press feedback, home icon HDR highlight.
+- `Settings > Notification & Compatibility`  
+  Super Island style toggle and HyperOS compatibility bypass toggle.
+- `Settings > Copy & Text Selection`  
+  Lightweight row copy mode and expanded system text-selection mode.
+- `Settings > Cache`  
+  Cache diagnostics summary for GitHub / MCP / OS / BA modules.
+- `BA Page > BA Config`  
+  AP settings, media settings, adaptive media rotation, custom media save location.
+- `GitHub Page > Check & Download / Track Sheet`  
+  Refresh interval, prerelease strategy, downloader routing, latest-release download behavior.
+
+## GitHub Actions: Build-CI Debug Artifact
+
+Workflow: `.github/workflows/build-debug-on-message.yml`
+
+- Trigger: `push` with any commit message containing `Build-CI`.
+- Job output: debug APK artifact uploaded to GitHub Actions.
+- APK file name format: `KeiOS-debug-YYYYMMDD-HHMMSS-<shortSha>.apk` (UTC).
+- Artifact name format: `keiOS-debug-apk-<run_number>`.
+
+Example commit message:
+
+```text
+chore: tune guide cache Build-CI
 ```
 
 ## GitHub Live Benchmark Test
