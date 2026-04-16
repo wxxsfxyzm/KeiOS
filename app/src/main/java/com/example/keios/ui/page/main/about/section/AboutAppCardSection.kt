@@ -24,7 +24,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Filter
 import top.yukonga.miuix.kmp.icon.extended.Info
-import top.yukonga.miuix.kmp.icon.extended.Layers
 import top.yukonga.miuix.kmp.icon.extended.Lock
 import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.icon.extended.Report
@@ -38,8 +37,7 @@ fun AboutAppCardSection(
     packageInfo: PackageInfo?,
     cardColor: Color,
     accent: Color,
-    subtitleColor: Color,
-    onOpenProjectUrl: (String) -> Unit
+    subtitleColor: Color
 ) {
     val context = LocalContext.current
     val unknown = stringResource(R.string.common_unknown)
@@ -60,8 +58,6 @@ fun AboutAppCardSection(
         ?: unknown
     val debugEnabled = (((applicationInfo?.flags ?: 0) and ApplicationInfo.FLAG_DEBUGGABLE) != 0)
     val testOnlyEnabled = (((applicationInfo?.flags ?: 0) and ApplicationInfo.FLAG_TEST_ONLY) != 0)
-    val projectUrl = stringResource(R.string.about_project_url)
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.defaultColors(
@@ -108,13 +104,6 @@ fun AboutAppCardSection(
                     title = stringResource(R.string.about_label_version),
                     value = versionText,
                     titleIcon = MiuixIcons.Regular.Update
-                )
-                AboutCompactInfoRow(
-                    title = stringResource(R.string.about_label_project_url),
-                    value = projectUrl,
-                    titleIcon = MiuixIcons.Regular.Layers,
-                    valueColor = accent,
-                    onClick = { onOpenProjectUrl(projectUrl) }
                 )
                 AboutCompactInfoRow(
                     title = stringResource(R.string.about_label_last_update),

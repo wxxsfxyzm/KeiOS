@@ -22,6 +22,7 @@ import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Layers
 import top.yukonga.miuix.kmp.icon.extended.ListView
 import top.yukonga.miuix.kmp.icon.extended.Lock
+import top.yukonga.miuix.kmp.icon.extended.Report
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Tune
@@ -146,7 +147,57 @@ fun AboutNetworkServiceCardSection(
     val rows = listOf(
         AboutInfoRow(R.string.about_row_mcp_sdk, BuildConfig.MCP_KOTLIN_SDK_VERSION, MiuixIcons.Regular.Info),
         AboutInfoRow(R.string.about_row_ktor, BuildConfig.KTOR_VERSION, MiuixIcons.Regular.Settings),
-        AboutInfoRow(R.string.about_row_okhttp, BuildConfig.OKHTTP_VERSION, MiuixIcons.Regular.Settings),
+        AboutInfoRow(R.string.about_row_okhttp, BuildConfig.OKHTTP_VERSION, MiuixIcons.Regular.Settings)
+    )
+    AboutSectionCard(
+        cardColor = cardColor,
+        title = stringResource(R.string.about_card_network_title),
+        subtitle = stringResource(R.string.about_card_network_subtitle),
+        titleColor = titleColor,
+        subtitleColor = subtitleColor,
+        sectionIcon = MiuixIcons.Regular.Settings,
+        collapsible = true,
+        expanded = expanded,
+        onExpandedChange = onExpandedChange
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            rows.forEach { row ->
+                AboutCompactInfoRow(
+                    title = stringResource(row.titleRes),
+                    value = row.value,
+                    titleIcon = row.icon
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AboutGitHubCardSection(
+    cardColor: Color,
+    accent: Color,
+    subtitleColor: Color,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onOpenProjectUrl: (String) -> Unit
+) {
+    val projectUrl = stringResource(R.string.about_project_url)
+    val rows = listOf(
+        AboutInfoRow(
+            R.string.about_row_github_strategy,
+            stringResource(R.string.about_value_github_strategy),
+            MiuixIcons.Regular.Filter
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_tracking,
+            stringResource(R.string.about_value_github_tracking),
+            MiuixIcons.Regular.Layers
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_notify,
+            stringResource(R.string.about_value_github_notify),
+            MiuixIcons.Regular.Report
+        ),
         AboutInfoRow(
             R.string.about_row_broadcast_handler,
             stringResource(R.string.about_value_broadcast_handler),
@@ -161,20 +212,32 @@ fun AboutNetworkServiceCardSection(
             R.string.about_row_background_jobs,
             stringResource(R.string.about_value_background_jobs),
             MiuixIcons.Regular.Tune
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_cache,
+            stringResource(R.string.about_value_github_cache),
+            MiuixIcons.Regular.Lock
         )
     )
     AboutSectionCard(
         cardColor = cardColor,
-        title = stringResource(R.string.about_card_network_title),
-        subtitle = stringResource(R.string.about_card_network_subtitle),
-        titleColor = titleColor,
+        title = stringResource(R.string.about_card_github_title),
+        subtitle = stringResource(R.string.about_card_github_subtitle),
+        titleColor = accent,
         subtitleColor = subtitleColor,
-        sectionIcon = MiuixIcons.Regular.Settings,
+        sectionIcon = MiuixIcons.Regular.Layers,
         collapsible = true,
         expanded = expanded,
         onExpandedChange = onExpandedChange
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            AboutCompactInfoRow(
+                title = stringResource(R.string.about_label_project_url),
+                value = projectUrl,
+                titleIcon = MiuixIcons.Regular.Layers,
+                valueColor = accent,
+                onClick = { onOpenProjectUrl(projectUrl) }
+            )
             rows.forEach { row ->
                 AboutCompactInfoRow(
                     title = stringResource(row.titleRes),

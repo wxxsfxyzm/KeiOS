@@ -26,8 +26,10 @@
     <string name="about_card_build_subtitle">Kotlin / Gradle / Java 与构建目标</string>
     <string name="about_card_ui_title">UI与框架</string>
     <string name="about_card_ui_subtitle">页面渲染、导航与材质能力</string>
+    <string name="about_card_github_title">GitHub</string>
+    <string name="about_card_github_subtitle">项目仓库、版本追踪、抓取策略与后台刷新链路</string>
     <string name="about_card_network_title">网络与服务</string>
-    <string name="about_card_network_subtitle">MCP、请求服务栈与广播调度</string>
+    <string name="about_card_network_subtitle">MCP 与请求服务栈</string>
     <string name="about_card_media_title">媒体与存储</string>
     <string name="about_card_media_subtitle">播放器、图像与本地存储能力</string>
 
@@ -55,12 +57,20 @@
     <string name="about_row_navigation">页面导航</string>
     <string name="about_row_glass_material">玻璃材质</string>
     <string name="about_row_permission_bridge">权限桥接</string>
+    <string name="about_row_github_strategy">抓取策略</string>
+    <string name="about_row_github_tracking">版本追踪</string>
+    <string name="about_row_github_notify">通知样式</string>
+    <string name="about_row_github_cache">缓存机制</string>
     <string name="about_row_mcp_sdk">MCP SDK</string>
     <string name="about_row_ktor">Ktor</string>
     <string name="about_row_okhttp">OkHttp</string>
     <string name="about_row_broadcast_handler">Broadcast Handler</string>
     <string name="about_row_foreground_info_handler">ForegroundInfo Handler</string>
-    <string name="about_value_broadcast_handler">AlarmManager 广播触发（OEM 兼容优先）</string>
+    <string name="about_value_github_strategy">Atom Feed / Releases API（可选 Token）</string>
+    <string name="about_value_github_tracking">Stable/Pre-release 对比、更新建议与资源入口</string>
+    <string name="about_value_github_notify">刷新进度通知 + Live Update / 超级岛样式</string>
+    <string name="about_value_github_cache">MMKV 跟踪配置与检查缓存 + Release 资源缓存</string>
+    <string name="about_value_broadcast_handler">GitHub/BA Tick 的 AlarmManager 广播触发（OEM 兼容优先）</string>
     <string name="about_value_foreground_info_handler">协程串行处理 GitHub/AP 任务并回写状态</string>
     <string name="about_row_background_jobs">后台任务</string>
     <string name="about_value_background_jobs">GitHub 定时刷新 / BA AP 阈值检查（Broadcast Tick）</string>

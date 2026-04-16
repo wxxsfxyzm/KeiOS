@@ -30,6 +30,7 @@ import com.example.keios.ui.page.main.about.model.loadPackageDetailInfo
 import com.example.keios.ui.page.main.about.section.AboutAppCardSection
 import com.example.keios.ui.page.main.about.section.AboutBuildSdkCardSection
 import com.example.keios.ui.page.main.about.section.AboutComponentCardSection
+import com.example.keios.ui.page.main.about.section.AboutGitHubCardSection
 import com.example.keios.ui.page.main.about.section.AboutMediaStorageCardSection
 import com.example.keios.ui.page.main.about.section.AboutNetworkServiceCardSection
 import com.example.keios.ui.page.main.about.section.AboutPermissionCardSection
@@ -81,6 +82,7 @@ fun AboutPage(
     var componentExpanded by rememberSaveable { mutableStateOf(false) }
     var buildExpanded by rememberSaveable { mutableStateOf(false) }
     var uiFrameworkExpanded by rememberSaveable { mutableStateOf(false) }
+    var githubExpanded by rememberSaveable { mutableStateOf(false) }
     var networkExpanded by rememberSaveable { mutableStateOf(false) }
     var mediaExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -148,7 +150,19 @@ fun AboutPage(
                     packageInfo = packageInfo,
                     cardColor = infoCardColor,
                     accent = accent,
+                    subtitleColor = subtitleColor
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(14.dp)) }
+
+            item {
+                AboutGitHubCardSection(
+                    cardColor = Color(0x2248A6FF),
+                    accent = accent,
                     subtitleColor = subtitleColor,
+                    expanded = githubExpanded,
+                    onExpandedChange = { githubExpanded = it },
                     onOpenProjectUrl = { url ->
                         if (!openExternalUrl(context, url)) {
                             Toast.makeText(context, openLinkFailed, Toast.LENGTH_SHORT).show()
