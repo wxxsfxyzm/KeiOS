@@ -4,6 +4,7 @@ import com.example.keios.ui.page.main.widget.GlassVariant
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.SystemClock
 import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.Toast
@@ -88,6 +89,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import com.github.panpf.zoomimage.CoilZoomAsyncImage
 import com.github.panpf.zoomimage.rememberCoilZoomState
+import com.github.panpf.zoomimage.zoom.ContinuousTransformType
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -105,6 +107,8 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.capturePopupAnchor
+
+private const val IMAGE_TAP_DISMISS_GESTURE_COOLDOWN_MS = 260L
 
 private fun normalizeGuideMediaSource(raw: String): String {
     val value = raw.trim()
@@ -1410,6 +1414,7 @@ private fun GuideImageFullscreenDialog(
     if (normalizedImageUrl.isBlank()) return
     val zoomState = rememberCoilZoomState()
     var retryToken by rememberSaveable(normalizedImageUrl) { mutableStateOf(0) }
+    var lastTransformActiveAtMs by rememberSaveable(normalizedImageUrl) { mutableStateOf(0L) }
     val sampledState by produceState(
         initialValue = GuideFullscreenImageState(loading = true),
         normalizedImageUrl,
@@ -1435,6 +1440,11 @@ private fun GuideImageFullscreenDialog(
         val width = sampledBitmap?.width ?: 0
         val height = sampledBitmap?.height ?: 0
         if (width > 0 && height > 0) width.toFloat() / height.toFloat() else 1f
+    }
+    LaunchedEffect(zoomState.zoomable.continuousTransformType) {
+        if (zoomState.zoomable.continuousTransformType != ContinuousTransformType.NONE) {
+            lastTransformActiveAtMs = SystemClock.elapsedRealtime()
+        }
     }
 
     Dialog(
@@ -1495,7 +1505,16 @@ private fun GuideImageFullscreenDialog(
                     contentScale = ContentScale.Fit,
                     zoomState = zoomState,
                     scrollBar = null,
-                    onTap = { onDismiss() }
+                    onTap = {
+                        if (zoomState.zoomable.continuousTransformType != ContinuousTransformType.NONE) {
+                            return@CoilZoomAsyncImage
+                        }
+                        val now = SystemClock.elapsedRealtime()
+                        if (now - lastTransformActiveAtMs < IMAGE_TAP_DISMISS_GESTURE_COOLDOWN_MS) {
+                            return@CoilZoomAsyncImage
+                        }
+                        onDismiss()
+                    }
                 )
 
                 if (sampledState.loading) {
@@ -1511,19 +1530,6 @@ private fun GuideImageFullscreenDialog(
                     )
                 }
             }
-            GlassIconButton(
-                backdrop = null,
-                icon = MiuixIcons.Regular.Close,
-                contentDescription = "关闭",
-                variant = GlassVariant.Compact,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(top = 12.dp, end = 16.dp),
-                onClick = onDismiss,
-                width = 40.dp,
-                height = 40.dp
-            )
             if (!sampledState.loading && sampledState.helperLoadFailed && sampledBitmap == null) {
                 Row(
                     modifier = Modifier
