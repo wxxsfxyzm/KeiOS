@@ -99,10 +99,7 @@ import com.example.keios.ui.page.main.student.fetchGuideInfo
 import com.example.keios.ui.page.main.student.growthRowsForDisplay
 import com.example.keios.ui.page.main.student.hasRenderableGalleryMedia
 import com.example.keios.ui.page.main.student.isMemoryHallFileGalleryItem
-import com.example.keios.ui.page.main.student.isInteractiveFurnitureAnimatedGalleryItem
-import com.example.keios.ui.page.main.student.isRenderableGalleryAudioUrl
-import com.example.keios.ui.page.main.student.isRenderableGalleryImageUrl
-import com.example.keios.ui.page.main.student.isRenderableGalleryVideoUrl
+import com.example.keios.ui.page.main.student.isRenderableGalleryStaticImageUrl
 import com.example.keios.ui.page.main.student.normalizeGuideUrl
 import com.example.keios.ui.page.main.student.extractGuideContentIdFromUrl
 import com.example.keios.ui.page.main.student.profileRowsForDisplay
@@ -164,6 +161,49 @@ private fun isGuideAudioPlaybackUrl(raw: String): Boolean {
     return scheme.equals("http", ignoreCase = true) ||
         scheme.equals("https", ignoreCase = true) ||
         scheme.equals("file", ignoreCase = true)
+}
+
+private const val GUIDE_STATIC_PREFETCH_INITIAL_COUNT = 5
+private const val GUIDE_STATIC_PREFETCH_GALLERY_EXTRA_COUNT = 10
+
+private fun collectGuideStaticImagePrefetchUrls(info: BaStudentGuideInfo): List<String> {
+    val orderedUrls = mutableListOf<String>()
+    val coverUrl = normalizeGuideUrl(info.imageUrl)
+    if (isRenderableGalleryStaticImageUrl(coverUrl)) {
+        orderedUrls += coverUrl
+    }
+
+    val galleryItems = if (info.galleryItems.isNotEmpty()) {
+        info.galleryItems
+            .filter(::hasRenderableGalleryMedia)
+            .filterNot(::isMemoryHallFileGalleryItem)
+            .distinctBy { "${it.mediaType}|${it.mediaUrl.ifBlank { it.imageUrl }}" }
+    } else {
+        listOfNotNull(
+            info.imageUrl.takeIf { it.isNotBlank() }?.let {
+                BaGuideGalleryItem(
+                    title = "立绘",
+                    imageUrl = it,
+                    mediaType = "image",
+                    mediaUrl = it
+                )
+            }
+        )
+    }
+
+    galleryItems.forEach { item ->
+        val imageUrl = normalizeGuideUrl(item.imageUrl)
+        if (isRenderableGalleryStaticImageUrl(imageUrl)) {
+            orderedUrls += imageUrl
+        }
+        val mediaUrl = normalizeGuideUrl(item.mediaUrl)
+        if (isRenderableGalleryStaticImageUrl(mediaUrl)) {
+            orderedUrls += mediaUrl
+        }
+    }
+    return orderedUrls
+        .filter { it.isNotBlank() }
+        .distinct()
 }
 
 private data class GuideMediaSaveRequest(
@@ -452,6 +492,7 @@ fun BaStudentGuidePage(
 
     var sourceUrl by rememberSaveable { mutableStateOf(BaStudentGuideStore.loadCurrentUrl()) }
     var info by remember(sourceUrl) { mutableStateOf<BaStudentGuideInfo?>(null) }
+    val guideSyncToken = info?.syncedAtMs ?: -1L
     var loading by remember(sourceUrl) { mutableStateOf(sourceUrl.isNotBlank()) }
     var error by remember { mutableStateOf<String?>(null) }
     var refreshSignal by remember { mutableStateOf(0) }
@@ -463,7 +504,8 @@ fun BaStudentGuidePage(
     var voicePlayProgress by remember(sourceUrl) { mutableFloatStateOf(0f) }
     var pendingCustomSaveRequest by remember { mutableStateOf<GuideMediaSaveRequest?>(null) }
     var pendingFixedSaveRequest by remember { mutableStateOf<GuideMediaSaveRequest?>(null) }
-    var galleryPrefetchRequested by rememberSaveable(sourceUrl) { mutableStateOf(false) }
+    var galleryPrefetchRequested by rememberSaveable(sourceUrl, guideSyncToken) { mutableStateOf(false) }
+    var staticImagePrefetchStage by rememberSaveable(sourceUrl, guideSyncToken) { mutableIntStateOf(0) }
     var galleryCacheRevision by remember(sourceUrl) { mutableIntStateOf(0) }
     val bottomTabs = GuideBottomTab.entries
     val pagerState = rememberPagerState(
@@ -853,36 +895,14 @@ fun BaStudentGuidePage(
         }
     }
 
-    LaunchedEffect(sourceUrl, galleryPrefetchRequested, info?.syncedAtMs) {
-        if (!galleryPrefetchRequested) return@LaunchedEffect
+    // 阶段1：进入学生图鉴后仅预加载少量静态图片，保证首屏顺滑并控制流量。
+    LaunchedEffect(sourceUrl, info?.syncedAtMs) {
+        if (staticImagePrefetchStage >= 1) return@LaunchedEffect
         val guide = info ?: return@LaunchedEffect
-        val galleryItemsForPrefetch = if (guide.galleryItems.isNotEmpty()) {
-            guide.galleryItems
-                .filter(::hasRenderableGalleryMedia)
-                .distinctBy { "${it.mediaType}|${it.mediaUrl.ifBlank { it.imageUrl }}" }
-        } else {
-            listOfNotNull(
-                guide.imageUrl.takeIf { it.isNotBlank() }?.let {
-                    BaGuideGalleryItem(
-                        title = "立绘",
-                        imageUrl = it,
-                        mediaType = "image",
-                        mediaUrl = it
-                    ).takeIf(::hasRenderableGalleryMedia)
-                }
-            )
-        }.filterNot(::isMemoryHallFileGalleryItem)
+        staticImagePrefetchStage = 1
 
-        val urls = galleryItemsForPrefetch
-            .flatMap { item -> listOf(item.imageUrl, item.mediaUrl) }
-            .filter {
-                it.isNotBlank() && (
-                    isRenderableGalleryImageUrl(it) ||
-                        isRenderableGalleryVideoUrl(it) ||
-                        isRenderableGalleryAudioUrl(it)
-                    )
-            }
-            .distinct()
+        val urls = collectGuideStaticImagePrefetchUrls(guide)
+            .take(GUIDE_STATIC_PREFETCH_INITIAL_COUNT)
         if (urls.isEmpty()) return@LaunchedEffect
 
         withContext(Dispatchers.IO) {
@@ -895,46 +915,23 @@ fun BaStudentGuidePage(
         galleryCacheRevision += 1
     }
 
-    // 预热语音资源，避免语音台词首次点播时重复走远端请求。
-    LaunchedEffect(sourceUrl, info?.syncedAtMs) {
+    // 阶段2：用户进入影画板块后，再补充一批静态图片；GIF/视频/音频保持按需加载。
+    LaunchedEffect(sourceUrl, galleryPrefetchRequested, info?.syncedAtMs) {
+        if (!galleryPrefetchRequested) return@LaunchedEffect
+        if (staticImagePrefetchStage >= 2) return@LaunchedEffect
         val guide = info ?: return@LaunchedEffect
-        val voiceAudioUrls = guide.voiceEntries
-            .asSequence()
-            .flatMap { entry ->
-                sequenceOf(entry.audioUrl) + entry.audioUrls.asSequence()
-            }
-            .map(::normalizeGuidePlaybackSource)
-            .filter(::isGuideAudioPlaybackUrl)
-            .distinct()
-            .toList()
-        if (voiceAudioUrls.isEmpty()) return@LaunchedEffect
-        withContext(Dispatchers.IO) {
-            BaGuideTempMediaCache.prefetchForGuide(
-                context = context,
-                sourceUrl = sourceUrl,
-                rawUrls = voiceAudioUrls
-            )
-        }
-        galleryCacheRevision += 1
-    }
+        staticImagePrefetchStage = 2
 
-    // 预热互动家具的动态媒体（如 1 2 / 2 2 ...），减少学生档案首次加载等待与失败率。
-    LaunchedEffect(sourceUrl, info?.syncedAtMs) {
-        val guide = info ?: return@LaunchedEffect
-        val furnitureGifUrls = guide.galleryItems
-            .asSequence()
-            .filter(::isInteractiveFurnitureAnimatedGalleryItem)
-            .map { item -> item.mediaUrl.ifBlank { item.imageUrl } }
-            .map(::normalizeGuideUrl)
-            .filter { it.isNotBlank() }
-            .distinct()
-            .toList()
-        if (furnitureGifUrls.isEmpty()) return@LaunchedEffect
+        val urls = collectGuideStaticImagePrefetchUrls(guide)
+            .drop(GUIDE_STATIC_PREFETCH_INITIAL_COUNT)
+            .take(GUIDE_STATIC_PREFETCH_GALLERY_EXTRA_COUNT)
+        if (urls.isEmpty()) return@LaunchedEffect
+
         withContext(Dispatchers.IO) {
             BaGuideTempMediaCache.prefetchForGuide(
                 context = context,
                 sourceUrl = sourceUrl,
-                rawUrls = furnitureGifUrls
+                rawUrls = urls
             )
         }
         galleryCacheRevision += 1

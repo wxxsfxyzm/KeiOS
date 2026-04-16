@@ -91,6 +91,23 @@ internal fun isRenderableGalleryImageUrl(raw: String): Boolean {
     return lower.contains("x-oss-process=image")
 }
 
+internal fun isRenderableGalleryGifUrl(raw: String): Boolean {
+    val value = raw.trim()
+    if (value.isBlank()) return false
+    if (isPlaceholderGalleryToken(value)) return false
+    if (value.startsWith("data:image/gif", ignoreCase = true)) return true
+    val normalized = if (value.startsWith("//")) "https:$value" else value
+    val lower = normalized.lowercase()
+    if (hasInvalidGameKeeMediaTail(normalized)) return false
+    if (Regex("""\.gif(\?.*)?(#.*)?$""").containsMatchIn(lower)) return true
+    return lower.contains("format=gif") || lower.contains("image/gif")
+}
+
+internal fun isRenderableGalleryStaticImageUrl(raw: String): Boolean {
+    if (!isRenderableGalleryImageUrl(raw)) return false
+    return !isRenderableGalleryGifUrl(raw)
+}
+
 internal fun isRenderableGalleryVideoUrl(raw: String): Boolean {
     val value = raw.trim()
     if (value.isBlank()) return false
