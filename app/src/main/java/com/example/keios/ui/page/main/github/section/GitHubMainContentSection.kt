@@ -431,7 +431,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                     VersionValueRow(
                         label = stringResource(R.string.github_item_label_updated_at),
                         value = appUpdatedAtLabel,
-                        valueColor = MiuixTheme.colorScheme.onBackgroundVariant
+                        valueColor = GitHubStatusPalette.Active
                     )
                     if (state.releaseHint.isNotBlank()) {
                         GitHubCompactInfoRow(
@@ -619,31 +619,63 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                 loadedReleaseTag.isNotBlank() ||
                                                 loadedReleaseUpdatedAt != null
                                         if (showLoadedReleaseMeta) {
-                                            FlowRow(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
+                                            val releaseNameLabel = loadedReleaseName.ifBlank {
+                                                stringResource(R.string.common_unknown)
+                                            }
+                                            val releaseTagLabel = loadedReleaseTag.ifBlank {
+                                                stringResource(R.string.common_unknown)
+                                            }
+                                            val releaseUpdatedLabel = loadedReleaseUpdatedAt
+                                                ?: stringResource(R.string.common_unknown)
+                                            val shouldStackReleaseMeta =
+                                                releaseNameLabel.length >= 24 ||
+                                                    releaseTagLabel.length >= 18
+                                            if (shouldStackReleaseMeta) {
                                                 StatusPill(
-                                                    label = loadedReleaseName.ifBlank {
-                                                        stringResource(R.string.common_unknown)
-                                                    },
+                                                    label = releaseNameLabel,
                                                     color = targetAccent,
-                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    contentPadding = PaddingValues(horizontal = 9.dp, vertical = 5.dp)
                                                 )
-                                                StatusPill(
-                                                    label = loadedReleaseTag.ifBlank {
-                                                        stringResource(R.string.common_unknown)
-                                                    },
-                                                    color = targetAccent,
-                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                                                )
-                                                StatusPill(
-                                                    label = loadedReleaseUpdatedAt
-                                                        ?: stringResource(R.string.common_unknown),
-                                                    color = targetAccent,
-                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                                                )
+                                                FlowRow(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    StatusPill(
+                                                        label = releaseTagLabel,
+                                                        color = targetAccent,
+                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                                    )
+                                                    StatusPill(
+                                                        label = releaseUpdatedLabel,
+                                                        color = targetAccent,
+                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                                    )
+                                                }
+                                            } else {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                                ) {
+                                                    StatusPill(
+                                                        label = releaseNameLabel,
+                                                        color = targetAccent,
+                                                        modifier = Modifier.weight(1f),
+                                                        contentPadding = PaddingValues(horizontal = 9.dp, vertical = 4.dp)
+                                                    )
+                                                    StatusPill(
+                                                        label = releaseTagLabel,
+                                                        color = targetAccent,
+                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                                    )
+                                                    StatusPill(
+                                                        label = releaseUpdatedLabel,
+                                                        color = targetAccent,
+                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                         Text(
