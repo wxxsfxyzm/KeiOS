@@ -14,6 +14,8 @@ import com.example.keios.ui.page.main.OsSectionCard
 import com.example.keios.ui.page.main.OsUiStateStore
 import com.example.keios.ui.page.main.student.BaGuideTempMediaCache
 import com.example.keios.ui.page.main.student.BaStudentGuideStore
+import com.example.keios.ui.page.main.student.clearGameKeeMediaPlaybackCache
+import com.example.keios.ui.page.main.student.loadGameKeeMediaCacheDiagnostics
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogStore
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogTab
 import com.example.keios.ui.page.main.student.catalog.clearBaGuideCatalogCache
@@ -51,6 +53,7 @@ internal object CacheStores {
             baStudentGuideSummary(context),
             osSummary(context),
             appIconSummary(),
+            baMediaPlaybackSummary(context),
             baTempMediaSummary(context),
             mcpSummary(context)
         )
@@ -76,6 +79,7 @@ internal object CacheStores {
             }
             "os_info" -> OsInfoCache.clearAll()
             "app_icon" -> AppIconCache.clear()
+            "ba_media_playback" -> clearGameKeeMediaPlaybackCache(context)
             "ba_temp_media" -> BaGuideTempMediaCache.clearAll(context)
             "mcp_prefs" -> McpServerManager.clearSavedCacheOnly()
         }
@@ -270,6 +274,35 @@ internal object CacheStores {
             cacheBytes = diskBytes,
             configBytes = 0L,
             diskBytes = diskBytes,
+            updatedAtMs = updatedAtMs,
+            clearedAtMs = clearedAtMs
+        )
+    }
+
+    private fun baMediaPlaybackSummary(context: Context): CacheEntrySummary {
+        val diagnostics = loadGameKeeMediaCacheDiagnostics(context)
+        val updatedAtMs = maxOf(
+            diagnostics.latestModifiedAtMs,
+            diagnostics.lastCleanupAtMs
+        ).takeIf { it > 0L } ?: 0L
+        val clearedAtMs = CacheEventStore.loadClearedAt("ba_media_playback")
+        val detail = buildString {
+            append("文件 ${diagnostics.fileCount} 个")
+            append(" · 清理运行 ${diagnostics.cleanupRunCount} 次")
+            append(" · 最近命中 ${diagnostics.lastRemovedResourceCount} 项")
+            append(" · 最近释放 ${formatBytes(diagnostics.lastRemovedBytes)}")
+        }
+        return CacheEntrySummary(
+            id = "ba_media_playback",
+            title = "图鉴播放缓存",
+            summary = "语音台词与媒体播放的 ExoPlayer 缓存",
+            detail = detail,
+            activity = formatActivity(updatedAtMs, clearedAtMs),
+            storage = "缓存估算 ${formatBytes(diagnostics.diskBytes)} · 配置估算 0 B · 磁盘占用 ${formatBytes(diagnostics.diskBytes)} · 累计扫描 ${diagnostics.scannedResourceCount} 项 · 累计命中 ${diagnostics.removedResourceCount} 项/${diagnostics.removedSpanCount} 片段/${formatBytes(diagnostics.removedBytes)}",
+            clearLabel = "清理",
+            cacheBytes = diagnostics.diskBytes,
+            configBytes = 0L,
+            diskBytes = diagnostics.diskBytes,
             updatedAtMs = updatedAtMs,
             clearedAtMs = clearedAtMs
         )
