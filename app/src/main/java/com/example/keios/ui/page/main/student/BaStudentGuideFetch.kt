@@ -61,6 +61,21 @@ private fun extractMeta(html: String, key: String): String {
     return ""
 }
 
+private fun isMeaningfulGuideRowValue(raw: String): Boolean {
+    val value = raw.trim()
+    if (value.isBlank()) return false
+    val compact = value
+        .replace(" ", "")
+        .replace("　", "")
+        .trim()
+    if (compact.isBlank()) return false
+    if (compact in setOf("-", "--", "—", "／", "/", "\\", "|", "｜")) return false
+    if (compact.matches(Regex("""^[\\/|｜／,，;；:：._\-—~·*]+$"""))) return false
+    val lower = compact.lowercase()
+    if (lower == "n" || lower == "null" || lower == "undefined" || lower == "nan") return false
+    return true
+}
+
 private fun normalizeImageUrl(sourceUrl: String, imageRaw: String): String {
     val img = imageRaw.trim()
     if (img.isBlank()) return ""
@@ -1954,6 +1969,7 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
                 imageUrl = imageUrl,
                 imageUrls = row.imageValues.distinct()
             )
+            val hasMeaningfulRowValue = isMeaningfulGuideRowValue(guideRow.value)
             val normalizedKey = key.ifBlank { value }
                 .replace("\n", " ")
                 .trim()
@@ -2119,7 +2135,7 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
                     }
                     if (row.imageValues.isEmpty() &&
                         row.videoValues.isEmpty() &&
-                        guideRow.value.isNotBlank() &&
+                        hasMeaningfulRowValue &&
                         !isPureMediaText
                     ) {
                         profileRows += guideRow
@@ -2128,13 +2144,13 @@ private fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): Gui
 
                 isProfile -> profileRows += guideRow
                 else -> {
-                    if (guideRow.key.isNotBlank() && guideRow.value.isNotBlank()) {
+                    if (guideRow.key.isNotBlank() && hasMeaningfulRowValue) {
                         profileRows += guideRow
                     }
                 }
             }
 
-            if (guideRow.key.isNotBlank() && guideRow.value.isNotBlank() && stats.none { it.first == guideRow.key }) {
+            if (guideRow.key.isNotBlank() && hasMeaningfulRowValue && stats.none { it.first == guideRow.key }) {
                 stats += guideRow.key to guideRow.value
                 if (summaryCandidates.size < 4) {
                     summaryCandidates += "${guideRow.key}：${guideRow.value}"

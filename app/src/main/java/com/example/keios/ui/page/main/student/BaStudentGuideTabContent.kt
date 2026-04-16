@@ -3056,9 +3056,12 @@ private fun GuideProfileRowsSection(
         .take(120)
         .mapNotNull { row ->
             val cleanedValue = sanitizeProfileFieldValue(row.key, row.value)
-            val instructionOnlyPlaceholder =
-                isProfileInstructionPlaceholder(row.value) && isProfileValuePlaceholder(cleanedValue)
-            if (instructionOnlyPlaceholder) {
+            val isPlaceholderValue = isProfileValuePlaceholder(cleanedValue)
+            val hasImage = row.imageUrl.isNotBlank() || row.imageUrls.any { it.isNotBlank() }
+            val shouldDropRow =
+                (isProfileInstructionPlaceholder(row.value) && isPlaceholderValue) ||
+                    (isPlaceholderValue && !hasImage)
+            if (shouldDropRow) {
                 null
             } else {
                 row.copy(value = cleanedValue)
@@ -3738,11 +3741,16 @@ private fun isProfileValuePlaceholder(value: String): Boolean {
         .replace("　", "")
         .lowercase()
     if (normalized.isBlank()) return true
+    if (compact.matches(Regex("""^[\\/|｜／,，;；:：._\-—~·*]+$"""))) return true
     return normalized == "-" ||
         normalized == "—" ||
         normalized == "--" ||
         normalized == "暂无" ||
-        normalized == "无"
+        normalized == "无" ||
+        compact == "n" ||
+        compact == "null" ||
+        compact == "undefined" ||
+        compact == "nan"
 }
 
 private val profileInstructionNoteRegex = Regex("""(?:<-|←)?\s*(?:这个|这里|此处|这条)?\s*不用写""")
