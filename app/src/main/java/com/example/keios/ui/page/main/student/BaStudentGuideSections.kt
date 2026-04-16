@@ -359,6 +359,9 @@ fun GuideGalleryCardItem(
     val isInteractiveFurnitureAnimated = remember(item.title, item.mediaUrl, item.imageUrl) {
         isInteractiveFurnitureAnimatedGalleryItem(item)
     }
+    val disableFullscreenAutoRotate = remember(item.title, item.mediaUrl, item.imageUrl, isInteractiveFurnitureAnimated) {
+        isInteractiveFurnitureGalleryItem(item) && !isInteractiveFurnitureAnimated
+    }
     val preferredImageRaw = remember(
         item.imageUrl,
         item.mediaUrl,
@@ -771,6 +774,7 @@ fun GuideGalleryCardItem(
     if (showImageFullscreen && isImageType && displayImageUrl.isNotBlank()) {
         GuideImageFullscreenDialog(
             imageUrl = displayImageUrl,
+            allowAutoRotate = !disableFullscreenAutoRotate,
             onDismiss = { showImageFullscreen = false }
         )
     }
@@ -1408,11 +1412,13 @@ private fun GuideInlineVideoPlayer(
 @Composable
 private fun GuideImageFullscreenDialog(
     imageUrl: String,
+    allowAutoRotate: Boolean = true,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val normalizedImageUrl = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
     if (normalizedImageUrl.isBlank()) return
+    val isGifSource = remember(normalizedImageUrl) { isGifMediaSource(normalizedImageUrl) }
     val zoomState = rememberCoilZoomState()
     LaunchedEffect(zoomState) {
         // Keep fullscreen image interaction predictable:
@@ -1424,10 +1430,19 @@ private fun GuideImageFullscreenDialog(
     var retryToken by rememberSaveable(normalizedImageUrl) { mutableStateOf(0) }
     var lastTransformActiveAtMs by rememberSaveable(normalizedImageUrl) { mutableStateOf(0L) }
     val sampledState by produceState(
-        initialValue = GuideFullscreenImageState(loading = true),
+        initialValue = GuideFullscreenImageState(loading = !isGifSource),
         normalizedImageUrl,
+        isGifSource,
         retryToken
     ) {
+        if (isGifSource) {
+            value = GuideFullscreenImageState(
+                sampledBitmap = null,
+                loading = false,
+                helperLoadFailed = false
+            )
+            return@produceState
+        }
         val bitmap = withContext(Dispatchers.IO) {
             runCatching {
                 loadGuideBitmapSource(
@@ -1444,10 +1459,17 @@ private fun GuideImageFullscreenDialog(
         )
     }
     val sampledBitmap = sampledState.sampledBitmap
-    val ratio = remember(sampledBitmap?.width, sampledBitmap?.height) {
+    val ratioFromUrl = remember(normalizedImageUrl) {
+        detectMediaRatioFromUrl(normalizedImageUrl)
+    }
+    val ratio = remember(sampledBitmap?.width, sampledBitmap?.height, ratioFromUrl) {
         val width = sampledBitmap?.width ?: 0
         val height = sampledBitmap?.height ?: 0
-        if (width > 0 && height > 0) width.toFloat() / height.toFloat() else 1f
+        when {
+            width > 0 && height > 0 -> width.toFloat() / height.toFloat()
+            ratioFromUrl != null -> ratioFromUrl
+            else -> 1f
+        }
     }
     LaunchedEffect(zoomState.zoomable.continuousTransformType) {
         if (zoomState.zoomable.continuousTransformType != ContinuousTransformType.NONE) {
@@ -1497,15 +1519,17 @@ private fun GuideImageFullscreenDialog(
                 val rotatedRatio = (1f / safeRatio).coerceAtLeast(0.1f)
                 val rotatedArea = fitArea(rotatedRatio)
                 val shouldRotate90 =
-                    safeRatio > 1.02f && rotatedArea > (normalArea * 1.12f)
+                    allowAutoRotate &&
+                        safeRatio > 1.02f &&
+                        rotatedArea > (normalArea * 1.12f)
 
-                LaunchedEffect(normalizedImageUrl, shouldRotate90) {
+                LaunchedEffect(normalizedImageUrl, shouldRotate90, allowAutoRotate) {
                     zoomState.zoomable.reset()
                     zoomState.zoomable.rotate(if (shouldRotate90) 90 else 0)
                 }
 
                 CoilZoomAsyncImage(
-                    model = sampledBitmap ?: normalizedImageUrl,
+                    model = if (isGifSource) normalizedImageUrl else sampledBitmap ?: normalizedImageUrl,
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
