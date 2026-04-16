@@ -14,6 +14,16 @@ import java.util.Locale
 import kotlin.math.abs
 
 object GitHubVersionUtils {
+    private const val INSTALLED_APPS_CACHE_TTL_MS = 5L * 60L * 1000L
+
+    @Volatile
+    private var installedAppsCache: CachedInstalledApps? = null
+
+    private data class CachedInstalledApps(
+        val updatedAtMs: Long,
+        val apps: List<InstalledAppItem>
+    )
+
     fun buildReleaseUrl(owner: String, repo: String): String {
         return "https://github.com/$owner/$repo/releases"
     }
@@ -42,7 +52,18 @@ object GitHubVersionUtils {
         return null
     }
 
-    fun queryInstalledLaunchableApps(context: Context): List<InstalledAppItem> {
+    fun queryInstalledLaunchableApps(
+        context: Context,
+        forceRefresh: Boolean = false,
+        ttlMs: Long = INSTALLED_APPS_CACHE_TTL_MS
+    ): List<InstalledAppItem> {
+        val now = System.currentTimeMillis()
+        if (!forceRefresh) {
+            installedAppsCache?.takeIf { cache ->
+                (now - cache.updatedAtMs).coerceAtLeast(0L) < ttlMs.coerceAtLeast(0L)
+            }?.let { return it.apps }
+        }
+
         val pm = context.packageManager
         val mainIntent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
         val activities = pm.queryIntentActivities(
@@ -51,13 +72,22 @@ object GitHubVersionUtils {
         )
         val packages = activities.map { it.activityInfo.packageName }.toSet()
 
-        return packages.mapNotNull { pkg ->
+        val apps = packages.mapNotNull { pkg ->
             runCatching {
                 val appInfo = pm.getApplicationInfo(pkg, PackageManager.ApplicationInfoFlags.of(0))
                 val label = pm.getApplicationLabel(appInfo).toString()
                 InstalledAppItem(label = label, packageName = pkg)
             }.getOrNull()
         }.sortedBy { it.label.lowercase(Locale.getDefault()) }
+        installedAppsCache = CachedInstalledApps(
+            updatedAtMs = now,
+            apps = apps
+        )
+        return apps
+    }
+
+    fun invalidateInstalledLaunchableAppsCache() {
+        installedAppsCache = null
     }
 
     fun localVersionName(context: Context, packageName: String): String {

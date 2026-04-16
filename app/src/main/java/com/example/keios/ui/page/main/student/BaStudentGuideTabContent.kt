@@ -992,17 +992,26 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                         headers = voiceLanguageHeaders,
                                         selectedHeader = selectedDubbingHeader
                                     )
-                                    val normalizedPlaybackUrl = normalizeGuideUrl(playbackUrl)
+                                    val directPlaybackUrl = normalizeGuidePlaybackSource(playbackUrl)
+                                    val resolvedCachedPlaybackUrl = galleryCacheRevision.let {
+                                        BaGuideTempMediaCache.resolveCachedUrl(
+                                            context = context,
+                                            sourceUrl = sourceUrl,
+                                            rawUrl = directPlaybackUrl
+                                        )
+                                    }
+                                    val normalizedPlaybackUrl = normalizeGuidePlaybackSource(resolvedCachedPlaybackUrl)
+                                    val isCurrentPlayback = normalizedPlaybackUrl.isNotBlank() &&
+                                        isVoicePlaying &&
+                                        (normalizedPlaybackUrl == playingVoiceUrl || directPlaybackUrl == playingVoiceUrl)
                                     item {
                                         GuideVoiceEntryCard(
                                             entry = entry,
                                             languageHeaders = voiceLanguageHeaders,
                                             backdrop = backdrop,
                                             playbackUrl = normalizedPlaybackUrl,
-                                            isPlaying = normalizedPlaybackUrl.isNotBlank() &&
-                                                normalizedPlaybackUrl == playingVoiceUrl &&
-                                                isVoicePlaying,
-                                            playProgress = if (normalizedPlaybackUrl.isNotBlank() && normalizedPlaybackUrl == playingVoiceUrl) {
+                                            isPlaying = isCurrentPlayback,
+                                            playProgress = if (isCurrentPlayback) {
                                                 voicePlayProgress
                                             } else {
                                                 0f
@@ -3522,6 +3531,17 @@ private fun resolveVoicePlaybackUrl(
         .orEmpty()
     if (fallbackAudio.isNotBlank()) return fallbackAudio
     return normalizeGuideUrl(entry.audioUrl)
+}
+
+private fun normalizeGuidePlaybackSource(raw: String): String {
+    val value = raw.trim()
+    if (value.isBlank()) return ""
+    val scheme = runCatching { Uri.parse(value).scheme.orEmpty() }.getOrDefault("")
+    return if (scheme.equals("file", ignoreCase = true)) {
+        value
+    } else {
+        normalizeGuideUrl(value)
+    }
 }
 
 private fun isGrowthTitleVoiceRow(row: BaGuideRow): Boolean {

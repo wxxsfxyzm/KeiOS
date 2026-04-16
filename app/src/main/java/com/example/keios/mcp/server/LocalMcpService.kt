@@ -3,6 +3,7 @@ package com.example.keios.mcp
 import android.content.Context
 import android.net.Uri
 import com.example.keios.core.system.ShizukuApiUtils
+import com.example.keios.feature.github.data.local.GitHubReleaseAssetCacheStore
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.domain.GitHubReleaseCheckService
@@ -370,6 +371,7 @@ class LocalMcpService(
             inputSchema = ToolSchema(properties = buildJsonObject { })
         ) { _ ->
             GitHubTrackStore.clearCheckCache()
+            GitHubReleaseAssetCacheStore.clearAll()
             callText("cleared=github_check_cache")
         }
 
@@ -1266,7 +1268,7 @@ class LocalMcpService(
             }
 
             "ba_guide_catalog" -> {
-                clearBaGuideCatalogCache()
+                clearBaGuideCatalogCache(appContext)
                 cleared += "ba_guide_catalog"
             }
 
@@ -1287,14 +1289,16 @@ class LocalMcpService(
 
             "github_check" -> {
                 GitHubTrackStore.clearCheckCache()
+                GitHubReleaseAssetCacheStore.clearAll()
                 cleared += "github_check"
             }
 
             else -> {
                 BASettingsStore.clearCalendarAndPoolCaches()
                 BaStudentGuideStore.clearAllCachedInfo()
-                clearBaGuideCatalogCache()
+                clearBaGuideCatalogCache(appContext)
                 GitHubTrackStore.clearCheckCache()
+                GitHubReleaseAssetCacheStore.clearAll()
                 cleared += "ba_calendar_pool"
                 cleared += "ba_guide_all"
                 cleared += "ba_guide_catalog"

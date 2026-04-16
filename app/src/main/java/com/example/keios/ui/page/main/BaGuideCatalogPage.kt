@@ -61,6 +61,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -138,6 +139,7 @@ fun BaGuideCatalogPage(
     liquidActionBarLayeredStyleEnabled: Boolean = true,
     enableSearchBar: Boolean = true,
 ) {
+    val context = LocalContext.current
     val pageTitle = "图鉴"
     val accent = MiuixTheme.colorScheme.primary
     val surfaceColor = MiuixTheme.colorScheme.surface
@@ -271,7 +273,7 @@ fun BaGuideCatalogPage(
 
         val shouldClearLocalCache = manualRefresh || (cachedBundle != null && (cacheExpired || !cacheComplete))
         if (shouldClearLocalCache) {
-            withContext(Dispatchers.IO) { clearBaGuideCatalogCache() }
+            withContext(Dispatchers.IO) { clearBaGuideCatalogCache(context) }
         }
 
         val result = withContext(Dispatchers.IO) {
@@ -757,8 +759,9 @@ private fun CatalogAvatarImage(
     imageUrl: String,
     fallbackRes: Int
 ) {
+    val context = LocalContext.current
     val bitmap by produceState<Bitmap?>(initialValue = BaGuideCatalogIconCache.get(imageUrl), imageUrl) {
-        value = withContext(Dispatchers.IO) { BaGuideCatalogIconCache.getOrLoad(imageUrl) }
+        value = withContext(Dispatchers.IO) { BaGuideCatalogIconCache.getOrLoad(context, imageUrl) }
     }
     val rendered = bitmap
     if (rendered == null) {

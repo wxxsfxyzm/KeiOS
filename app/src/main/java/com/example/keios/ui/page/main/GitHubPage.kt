@@ -100,6 +100,7 @@ import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.page.main.widget.StatusLabelText
 import com.example.keios.ui.page.main.widget.capturePopupAnchor
 import com.example.keios.feature.github.data.local.AppIconCache
+import com.example.keios.feature.github.data.local.GitHubReleaseAssetCacheStore
 import com.example.keios.feature.github.data.local.GitHubTrackSnapshot
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.remote.GitHubApiTokenReleaseStrategy
@@ -475,9 +476,12 @@ fun GitHubPage(
         showCheckLogicSheet = false
     }
 
-    suspend fun reloadApps() {
+    suspend fun reloadApps(forceRefresh: Boolean = false) {
         appList = withContext(Dispatchers.IO) {
-            GitHubVersionUtils.queryInstalledLaunchableApps(context)
+            GitHubVersionUtils.queryInstalledLaunchableApps(
+                context = context,
+                forceRefresh = forceRefresh
+            )
         }
         withContext(Dispatchers.IO) {
             AppIconCache.preload(context, appList.map { it.packageName })
@@ -954,6 +958,43 @@ fun GitHubPage(
         apkAssetErrors.remove(item.id)
         scope.launch {
             val preferHtml = lookupConfig.selectedStrategy == GitHubLookupStrategyOption.AtomFeed
+            val refreshIntervalHours = GitHubTrackStore.loadRefreshIntervalHours()
+            val assetCacheKey = GitHubReleaseAssetCacheStore.buildCacheKey(
+                owner = item.owner,
+                repo = item.repo,
+                rawTag = target.rawTag,
+                releaseUrl = target.releaseUrl,
+                preferHtml = preferHtml,
+                aggressiveFiltering = lookupConfig.aggressiveApkFiltering,
+                includeAllAssets = includeAllAssets,
+                hasApiToken = lookupConfig.apiToken.isNotBlank()
+            )
+            val persistedBundle = withContext(Dispatchers.IO) {
+                GitHubReleaseAssetCacheStore.load(
+                    cacheKey = assetCacheKey,
+                    refreshIntervalHours = refreshIntervalHours
+                )
+            }
+            if (persistedBundle != null) {
+                apkAssetLoading[item.id] = false
+                apkAssetBundles[item.id] = persistedBundle
+                apkAssetErrors[item.id] = if (persistedBundle.assets.isEmpty()) {
+                    if (includeAllAssets) {
+                        context.getString(
+                            R.string.github_msg_assets_no_downloadable_except_source,
+                            target.label
+                        )
+                    } else {
+                        context.getString(
+                            R.string.github_msg_assets_no_downloadable,
+                            target.label
+                        )
+                    }
+                } else {
+                    ""
+                }
+                return@launch
+            }
             val result = withContext(Dispatchers.IO) {
                 GitHubReleaseAssetRepository.fetchApkAssets(
                     owner = item.owner,
@@ -969,6 +1010,12 @@ fun GitHubPage(
             apkAssetLoading[item.id] = false
             result.onSuccess { bundle ->
                 apkAssetBundles[item.id] = bundle
+                scope.launch(Dispatchers.IO) {
+                    GitHubReleaseAssetCacheStore.save(
+                        cacheKey = assetCacheKey,
+                        bundle = bundle
+                    )
+                }
                 apkAssetErrors[item.id] = if (bundle.assets.isEmpty()) {
                     if (includeAllAssets) {
                         context.getString(
@@ -1092,12 +1139,12 @@ fun GitHubPage(
 
     val appListPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            scope.launch { reloadApps() }
+            scope.launch { reloadApps(forceRefresh = true) }
         }
 
     LaunchedEffect(Unit) {
         AppBackgroundScheduler.scheduleGitHubRefresh(context)
-        reloadApps()
+        reloadApps(forceRefresh = false)
         val hasTracked = trackedItems.isNotEmpty()
         val hasCachedForTracked = trackedItems.any { item ->
             checkStates.containsKey(item.id)

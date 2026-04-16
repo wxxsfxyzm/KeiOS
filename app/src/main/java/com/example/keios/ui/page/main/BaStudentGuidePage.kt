@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -89,6 +90,7 @@ import com.example.keios.ui.page.main.student.growthRowsForDisplay
 import com.example.keios.ui.page.main.student.hasRenderableGalleryMedia
 import com.example.keios.ui.page.main.student.isMemoryHallFileGalleryItem
 import com.example.keios.ui.page.main.student.isInteractiveFurnitureGalleryItem
+import com.example.keios.ui.page.main.student.isRenderableGalleryAudioUrl
 import com.example.keios.ui.page.main.student.isRenderableGalleryImageUrl
 import com.example.keios.ui.page.main.student.isRenderableGalleryVideoUrl
 import com.example.keios.ui.page.main.student.normalizeGuideUrl
@@ -131,6 +133,26 @@ import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+private fun normalizeGuidePlaybackSource(raw: String): String {
+    val value = raw.trim()
+    if (value.isBlank()) return ""
+    val scheme = runCatching { Uri.parse(value).scheme.orEmpty() }.getOrDefault("")
+    return if (scheme.equals("file", ignoreCase = true)) {
+        value
+    } else {
+        normalizeGuideUrl(value)
+    }
+}
+
+private fun isGuideAudioPlaybackUrl(raw: String): Boolean {
+    val normalized = normalizeGuidePlaybackSource(raw)
+    if (normalized.isBlank()) return false
+    val scheme = runCatching { Uri.parse(normalized).scheme.orEmpty() }.getOrDefault("")
+    return scheme.equals("http", ignoreCase = true) ||
+        scheme.equals("https", ignoreCase = true) ||
+        scheme.equals("file", ignoreCase = true)
+}
 
 @Composable
 fun BaStudentGuidePage(
@@ -185,6 +207,7 @@ fun BaStudentGuidePage(
     val activeBottomTab = bottomTabs.getOrElse(pagerState.currentPage) { GuideBottomTab.Archive }
     val pageScope = rememberCoroutineScope()
     var tabJumpJob by remember { mutableStateOf<Job?>(null) }
+    val syncProgress = rememberGuideSyncProgress(loading = loading)
     val ignoreStringInput: (String) -> Unit = remember { { _: String -> } }
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
@@ -311,7 +334,7 @@ fun BaStudentGuidePage(
     }
 
     fun toggleVoicePlayback(rawAudioUrl: String) {
-        val target = normalizeGuideUrl(rawAudioUrl)
+        val target = normalizeGuidePlaybackSource(rawAudioUrl)
         if (target.isBlank()) return
         runCatching {
             if (playingVoiceUrl == target) {
@@ -452,7 +475,13 @@ fun BaStudentGuidePage(
 
         val urls = galleryItemsForPrefetch
             .flatMap { item -> listOf(item.imageUrl, item.mediaUrl) }
-            .filter { it.isNotBlank() && (isRenderableGalleryImageUrl(it) || isRenderableGalleryVideoUrl(it)) }
+            .filter {
+                it.isNotBlank() && (
+                    isRenderableGalleryImageUrl(it) ||
+                        isRenderableGalleryVideoUrl(it) ||
+                        isRenderableGalleryAudioUrl(it)
+                    )
+            }
             .distinct()
         if (urls.isEmpty()) return@LaunchedEffect
 
@@ -461,6 +490,29 @@ fun BaStudentGuidePage(
                 context = context,
                 sourceUrl = sourceUrl,
                 rawUrls = urls
+            )
+        }
+        galleryCacheRevision += 1
+    }
+
+    // 预热语音资源，避免语音台词首次点播时重复走远端请求。
+    LaunchedEffect(sourceUrl, info?.syncedAtMs) {
+        val guide = info ?: return@LaunchedEffect
+        val voiceAudioUrls = guide.voiceEntries
+            .asSequence()
+            .flatMap { entry ->
+                sequenceOf(entry.audioUrl) + entry.audioUrls.asSequence()
+            }
+            .map(::normalizeGuidePlaybackSource)
+            .filter(::isGuideAudioPlaybackUrl)
+            .distinct()
+            .toList()
+        if (voiceAudioUrls.isEmpty()) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            BaGuideTempMediaCache.prefetchForGuide(
+                context = context,
+                sourceUrl = sourceUrl,
+                rawUrls = voiceAudioUrls
             )
         }
         galleryCacheRevision += 1
@@ -682,7 +734,7 @@ fun BaStudentGuidePage(
             state = pagerState,
             key = { index -> bottomTabs[index].name },
             overscrollEffect = null,
-            beyondViewportPageCount = 0,
+            beyondViewportPageCount = 1,
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = farJumpAlpha.value }
@@ -691,6 +743,13 @@ fun BaStudentGuidePage(
             val pageBottomTab = bottomTabs.getOrElse(pageIndex) { GuideBottomTab.Archive }
             val isVoiceTab = pageBottomTab == GuideBottomTab.Voice
             val isGalleryTab = pageBottomTab == GuideBottomTab.Gallery
+            val pageListState = rememberSaveable(
+                sourceUrl,
+                pageBottomTab.name,
+                saver = LazyListState.Saver
+            ) {
+                LazyListState()
+            }
             // Each guide page owns an isolated backdrop instance.
             val pageBackdrop: LayerBackdrop = key("page-$activationCount-$sourceUrl-$pageIndex") {
                 rememberLayerBackdrop {
@@ -699,6 +758,7 @@ fun BaStudentGuidePage(
                 }
             }
             LazyColumn(
+                state = pageListState,
                 modifier = Modifier
                     .fillMaxSize()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -721,14 +781,13 @@ fun BaStudentGuidePage(
                             SmallTitle(pageBottomTab.label)
                         }
                         if (sourceUrl.isNotBlank()) {
-                            val progress = rememberGuideSyncProgress(loading = loading)
                             val foregroundColor = when {
                                 loading -> Color(0xFF3B82F6)
                                 !error.isNullOrBlank() -> Color(0xFFEF4444)
                                 else -> Color(0xFF22C55E)
                             }
                             CircularProgressIndicator(
-                                progress = progress,
+                                progress = syncProgress,
                                 size = 18.dp,
                                 strokeWidth = 2.dp,
                                 colors = ProgressIndicatorDefaults.progressIndicatorColors(
@@ -759,7 +818,7 @@ fun BaStudentGuidePage(
                         accent = accent,
                         context = context,
                         sourceUrl = sourceUrl,
-                        galleryCacheRevision = if (isGalleryTab) galleryCacheRevision else 0,
+                        galleryCacheRevision = galleryCacheRevision,
                         playingVoiceUrl = if (isVoiceTab) playingVoiceUrl else "",
                         isVoicePlaying = isVoiceTab && isVoicePlaying,
                         voicePlayProgress = if (isVoiceTab) voicePlayProgress else 0f,

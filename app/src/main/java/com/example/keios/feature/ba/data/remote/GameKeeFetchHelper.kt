@@ -3,6 +3,8 @@ package com.example.keios.feature.ba.data.remote
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import com.example.keios.KeiOSApp
+import okhttp3.Cache
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
@@ -27,6 +29,8 @@ object GameKeeFetchHelper {
     private const val ACCEPT_IMAGE = "image/*,*/*"
     private const val ACCEPT_LANGUAGE = "zh-CN"
     private const val DEFAULT_MAX_DECODE_EDGE = 2560
+    private const val HTTP_CACHE_DIR = "ba_gamekee_http_cache"
+    private const val HTTP_CACHE_SIZE_BYTES = 64L * 1024L * 1024L
     private const val REFERER_HOME_PATH = "/"
     private const val REFERER_BA_PATH = "/ba"
     private const val REFERER_ACTIVITY_PATH = "/ba/huodong/15"
@@ -105,7 +109,15 @@ object GameKeeFetchHelper {
         .followRedirects(true)
         .followSslRedirects(true)
         .cookieJar(InMemoryCookieJar())
+        .cache(resolveHttpCache())
         .build()
+
+    private fun resolveHttpCache(): Cache? {
+        return runCatching {
+            val cacheRoot = File(KeiOSApp.appContext.cacheDir, HTTP_CACHE_DIR).apply { mkdirs() }
+            Cache(cacheRoot, HTTP_CACHE_SIZE_BYTES)
+        }.getOrNull()
+    }
 
     private fun normalizeUrl(base: String, pathOrUrl: String): String {
         val raw = pathOrUrl.trim()

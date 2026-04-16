@@ -3,7 +3,6 @@ package com.example.keios.ui.page.main.student
 import com.example.keios.ui.page.main.widget.GlassVariant
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.ViewGroup
 import android.widget.Toast
@@ -77,7 +76,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
-import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.example.keios.R
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
@@ -119,45 +117,18 @@ private fun normalizeGuideMediaSource(raw: String): String {
 }
 
 private fun loadGuideBitmapSource(
+    context: Context,
     source: String,
     maxDecodeDimension: Int = 2048,
     onProgress: ((downloadedBytes: Long, totalBytes: Long) -> Unit)? = null
 ): Bitmap? {
     if (source.isBlank()) return null
-    val uri = runCatching { Uri.parse(source) }.getOrNull()
-    if (uri?.scheme.equals("file", ignoreCase = true)) {
-        val path = uri?.path.orEmpty().ifBlank { Uri.decode(uri?.encodedPath.orEmpty()) }
-        if (path.isBlank()) return null
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(path, bounds)
-        val srcWidth = bounds.outWidth
-        val srcHeight = bounds.outHeight
-        if (srcWidth <= 0 || srcHeight <= 0) {
-            return BitmapFactory.decodeFile(path)
-        }
-        var sample = 1
-        val safeMax = maxDecodeDimension.coerceAtLeast(512)
-        while ((srcWidth / sample) > safeMax || (srcHeight / sample) > safeMax) {
-            sample *= 2
-        }
-        val decodeOptions = BitmapFactory.Options().apply {
-            inSampleSize = sample.coerceAtLeast(1)
-            inPreferredConfig = Bitmap.Config.ARGB_8888
-        }
-        return BitmapFactory.decodeFile(path, decodeOptions)
-    }
-    return if (onProgress != null) {
-        GameKeeFetchHelper.fetchImageWithProgress(
-            imageUrl = source,
-            onProgress = onProgress,
-            maxDecodeDimension = maxDecodeDimension
-        )
-    } else {
-        GameKeeFetchHelper.fetchImage(
-            imageUrl = source,
-            maxDecodeDimension = maxDecodeDimension
-        )
-    }
+    return BaGuideImageCache.loadBitmap(
+        context = context,
+        source = source,
+        maxDecodeDimension = maxDecodeDimension,
+        onProgress = onProgress
+    )
 }
 
 private fun normalizeGalleryDisplayTitle(title: String, mediaType: String): String {
@@ -177,11 +148,18 @@ fun GuideRemoteImage(
     imageHeight: androidx.compose.ui.unit.Dp = 220.dp,
     maxDecodeDimension: Int = 1920
 ) {
+    val context = LocalContext.current
     val target = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
     if (target.isBlank()) return
     val bitmap by produceState<Bitmap?>(initialValue = null, target) {
         value = withContext(Dispatchers.IO) {
-            runCatching { loadGuideBitmapSource(target, maxDecodeDimension = maxDecodeDimension) }.getOrNull()
+            runCatching {
+                loadGuideBitmapSource(
+                    context = context,
+                    source = target,
+                    maxDecodeDimension = maxDecodeDimension
+                )
+            }.getOrNull()
         }
     }
     val rendered = bitmap ?: return
@@ -204,6 +182,7 @@ fun GuideRemoteImageAdaptive(
     progressState: MutableStateFlow<Float>? = null,
     onLoadingChanged: ((Boolean) -> Unit)? = null
 ) {
+    val context = LocalContext.current
     val target = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
     if (target.isBlank()) {
         progressState?.value = 1f
@@ -232,6 +211,7 @@ fun GuideRemoteImageAdaptive(
         value = withContext(Dispatchers.IO) {
             runCatching {
                 loadGuideBitmapSource(
+                    context = context,
                     source = target,
                     maxDecodeDimension = maxDecodeDimension
                 ) { downloadedBytes, totalBytes ->
@@ -303,11 +283,17 @@ fun GuideRemoteIcon(
     iconWidth: androidx.compose.ui.unit.Dp = 20.dp,
     iconHeight: androidx.compose.ui.unit.Dp = iconWidth
 ) {
+    val context = LocalContext.current
     val target = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
     if (target.isBlank()) return
     val bitmap by produceState<Bitmap?>(initialValue = null, target) {
         value = withContext(Dispatchers.IO) {
-            runCatching { loadGuideBitmapSource(target) }.getOrNull()
+            runCatching {
+                loadGuideBitmapSource(
+                    context = context,
+                    source = target
+                )
+            }.getOrNull()
         }
     }
     val rendered = bitmap ?: return
@@ -1240,6 +1226,7 @@ private fun GuideImageFullscreenDialog(
     imageUrl: String,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     val normalizedImageUrl = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
     if (normalizedImageUrl.isBlank()) return
     val zoomState = rememberCoilZoomState()
@@ -1247,6 +1234,7 @@ private fun GuideImageFullscreenDialog(
         value = withContext(Dispatchers.IO) {
             runCatching {
                 loadGuideBitmapSource(
+                    context = context,
                     source = normalizedImageUrl,
                     maxDecodeDimension = 2048
                 )
@@ -1949,7 +1937,7 @@ fun GuideVoiceEntryCard(
     modifier: Modifier = Modifier
 ) {
     val voiceLines = buildVoiceLinePairsForCard(entry, languageHeaders)
-    val normalizedPlaybackUrl = normalizeGuideUrl(playbackUrl)
+    val normalizedPlaybackUrl = normalizeGuideMediaSource(playbackUrl)
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.defaultColors(

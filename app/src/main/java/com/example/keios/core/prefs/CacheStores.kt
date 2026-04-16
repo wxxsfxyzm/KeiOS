@@ -2,6 +2,7 @@ package com.example.keios.core.prefs
 
 import android.content.Context
 import com.example.keios.feature.github.data.local.AppIconCache
+import com.example.keios.feature.github.data.local.GitHubReleaseAssetCacheStore
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.remote.GitHubReleaseStrategyRegistry
 import com.example.keios.mcp.McpServerManager
@@ -61,6 +62,7 @@ internal object CacheStores {
             "github" -> {
                 GitHubReleaseStrategyRegistry.clearAllCaches()
                 GitHubTrackStore.clearCheckCache()
+                GitHubReleaseAssetCacheStore.clearAll()
                 AppIconCache.clear()
                 CacheEventStore.markCleared("app_icon")
             }
@@ -70,7 +72,7 @@ internal object CacheStores {
             }
             "ba_student_guide" -> {
                 BaStudentGuideStore.clearAllCachedInfo()
-                clearBaGuideCatalogCache()
+                clearBaGuideCatalogCache(context)
             }
             "os_info" -> OsInfoCache.clearAll()
             "app_icon" -> AppIconCache.clear()
@@ -112,9 +114,11 @@ internal object CacheStores {
             ?: mmkvLastModified(context, "github_track_store")
         val clearedAtMs = CacheEventStore.loadClearedAt("github")
         val iconMemory = AppIconCache.estimatedMemoryBytes()
+        val assetCacheCount = GitHubReleaseAssetCacheStore.cachedEntryCount()
         val detail = buildString {
             append("跟踪 ${snapshot.items.size} 项")
             append(" · 检查缓存 ${snapshot.checkCache.size} 项")
+            append(" · 资产缓存 ${assetCacheCount} 项")
             if (snapshot.lastRefreshMs > 0L) append(" · 已有刷新记录") else append(" · 暂无刷新记录")
         }
         return CacheEntrySummary(

@@ -1,5 +1,6 @@
 package com.example.keios.ui.page.main.student.catalog
 
+import android.content.Context
 import com.example.keios.R
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import kotlinx.coroutines.async
@@ -98,10 +99,10 @@ internal fun isBaGuideCatalogCacheExpired(
     return (nowMs - bundle.syncedAtMs).coerceAtLeast(0L) >= intervalMs
 }
 
-internal fun clearBaGuideCatalogCache() {
+internal fun clearBaGuideCatalogCache(context: Context? = null) {
     cachedCatalogBundle = null
     BaGuideCatalogStore.clearCache()
-    BaGuideCatalogIconCache.clear()
+    BaGuideCatalogIconCache.clear(context)
 }
 
 internal suspend fun fetchBaGuideCatalogBundle(forceRefresh: Boolean = false): BaGuideCatalogBundle {
