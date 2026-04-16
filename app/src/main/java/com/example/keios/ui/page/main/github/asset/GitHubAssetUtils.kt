@@ -20,7 +20,7 @@ internal data class ApkAssetTarget(
 )
 
 private val releaseUpdatedAtFormatter: DateTimeFormatter = DateTimeFormatter
-    .ofPattern("yy-M-d H:mm", Locale.getDefault())
+    .ofPattern("yy-MM-dd HH:mm", Locale.getDefault())
     .withZone(ZoneId.systemDefault())
 
 private data class LatestReleaseCandidate(
