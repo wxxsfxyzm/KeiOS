@@ -2936,7 +2936,16 @@ private fun GuideProfileRowsSection(
     }
     val visibleRows = rows
         .take(120)
-        .filterNot { row -> isProfileInstructionPlaceholder(row.value) }
+        .mapNotNull { row ->
+            val cleanedValue = sanitizeProfileFieldValue(row.key, row.value)
+            val instructionOnlyPlaceholder =
+                isProfileInstructionPlaceholder(row.value) && isProfileValuePlaceholder(cleanedValue)
+            if (instructionOnlyPlaceholder) {
+                null
+            } else {
+                row.copy(value = cleanedValue)
+            }
+        }
     if (visibleRows.isEmpty()) {
         Text(emptyText, color = MiuixTheme.colorScheme.onBackgroundVariant)
         return
@@ -3485,7 +3494,6 @@ private fun isProfileValuePlaceholder(value: String): Boolean {
         .replace("　", "")
         .lowercase()
     if (normalized.isBlank()) return true
-    if (isProfileInstructionPlaceholder(normalized)) return true
     return normalized == "-" ||
         normalized == "—" ||
         normalized == "--" ||
@@ -3493,20 +3501,37 @@ private fun isProfileValuePlaceholder(value: String): Boolean {
         normalized == "无"
 }
 
+private val profileInstructionNoteRegex = Regex("""(?:<-|←)?\s*(?:这个|这里|此处|这条)?\s*不用写""")
+
+private fun stripProfileInstructionNotes(raw: String): String {
+    if (raw.isBlank()) return ""
+    if (!profileInstructionNoteRegex.containsMatchIn(raw)) return raw.trim()
+
+    val segments = raw
+        .split(Regex("""\s*(?:/|／|\||｜|,|，|\n)\s*"""))
+        .map { segment ->
+            profileInstructionNoteRegex
+                .replace(segment, "")
+                .trim()
+                .trim(' ', '/', '／', '|', '｜', ',', '，', ';', '；')
+                .trim()
+        }
+        .filter { it.isNotBlank() }
+    if (segments.isNotEmpty()) {
+        return segments.joinToString(" / ").trim()
+    }
+    return profileInstructionNoteRegex
+        .replace(raw, "")
+        .trim(' ', '/', '／', '|', '｜', ',', '，', ';', '；')
+        .trim()
+}
+
 private fun isProfileInstructionPlaceholder(value: String): Boolean {
     if (value.isBlank()) return false
-    val normalized = value
-        .trim()
-        .trim('。', '.', ',', '，', ';', '；', '!', '！', '?', '？')
-    val compact = normalized
-        .replace(" ", "")
-        .replace("　", "")
-        .lowercase()
-    return compact == "不用写" ||
-        compact == "这个不用写" ||
-        compact == "这里不用写" ||
-        compact == "此处不用写" ||
-        compact == "这条不用写"
+    val normalized = value.trim()
+    if (!profileInstructionNoteRegex.containsMatchIn(normalized)) return false
+    val stripped = stripProfileInstructionNotes(normalized)
+    return isProfileValuePlaceholder(stripped)
 }
 
 private fun stripProfileCopyHint(raw: String): String {
@@ -3546,6 +3571,7 @@ private fun sanitizeProfileFieldValue(key: String, value: String): String {
     if (normalizedKey in profileInlineNoteStripFieldKeys) {
         cleaned = stripGuideInlineNotes(cleaned)
     }
+    cleaned = stripProfileInstructionNotes(cleaned)
     cleaned = cleaned
         .trim(' ', '/', '／', '|', '｜', ',', '，', ';', '；')
         .trim()
@@ -3567,7 +3593,7 @@ private fun buildProfileCardRows(rows: List<BaGuideRow>, specs: List<ProfileFiel
                 isProfileRowAliasMatch(row, spec.aliases)
             } ?: return@forEach
             val normalizedValue = sanitizeProfileFieldValue(spec.title, matched.value)
-            if (isProfileInstructionPlaceholder(normalizedValue)) {
+            if (isProfileInstructionPlaceholder(matched.value) && isProfileValuePlaceholder(normalizedValue)) {
                 return@forEach
             }
             if (spec.hideWhenEmpty && isProfileValuePlaceholder(normalizedValue)) {
