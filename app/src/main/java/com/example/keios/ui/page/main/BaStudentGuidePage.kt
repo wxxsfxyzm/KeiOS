@@ -793,16 +793,14 @@ fun BaStudentGuidePage(
                 fromIndex = fromIndex,
                 targetIndex = index,
                 onFarJumpBefore = {
-                    farJumpAlpha.snapTo(1f)
-                    farJumpAlpha.animateTo(
-                        targetValue = 0.92f,
-                        animationSpec = tween(durationMillis = 70)
-                    )
+                    // Keep far jump immediate: dim instantly, jump, then fade in.
+                    // This avoids lingering on the previous tab for an extra frame.
+                    farJumpAlpha.snapTo(0.94f)
                 },
                 onFarJumpAfter = {
                     farJumpAlpha.animateTo(
                         targetValue = 1f,
-                        animationSpec = tween(durationMillis = 120)
+                        animationSpec = tween(durationMillis = 130, easing = FastOutSlowInEasing)
                     )
                 }
             )
@@ -1138,7 +1136,9 @@ fun BaStudentGuidePage(
             val pageBottomTab = bottomTabs.getOrElse(pageIndex) { GuideBottomTab.Archive }
             val isVoiceTab = pageBottomTab == GuideBottomTab.Voice
             val shouldRenderHeavyContent =
-                pageIndex == pagerState.currentPage || pageIndex == pagerState.settledPage
+                pageIndex == pagerState.currentPage ||
+                    pageIndex == pagerState.targetPage ||
+                    pageIndex == pagerState.settledPage
             val pageListState = rememberSaveable(
                 sourceUrl,
                 pageBottomTab.name,
@@ -1234,23 +1234,7 @@ fun BaStudentGuidePage(
                         }
                     }
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(
-                                top = innerPadding.calculateTopPadding(),
-                                bottom = innerPadding.calculateBottomPadding(),
-                                start = 20.dp,
-                                end = 20.dp
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = pageBottomTab.label,
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
-                            fontSize = 13.sp
-                        )
-                    }
+                    Spacer(modifier = Modifier.fillMaxSize())
                 }
                 if (shouldRenderHeavyContent && sourceUrl.isNotBlank() && loading && info == null) {
                     Box(
