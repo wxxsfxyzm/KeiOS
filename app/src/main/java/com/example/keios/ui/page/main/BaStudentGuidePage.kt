@@ -18,6 +18,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -129,8 +130,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -1236,49 +1235,21 @@ fun BaStudentGuidePage(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .defaultMinSize(minHeight = 84.dp),
-                            cornerRadius = 18.dp,
-                            colors = CardDefaults.defaultColors(
-                                color = MiuixTheme.colorScheme.surface.copy(alpha = 0.84f)
-                            )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Row(
+                            Image(
+                                painter = painterResource(R.drawable.q_862c2944),
+                                contentDescription = null,
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CircularProgressIndicator(
-                                    progress = syncProgress.coerceIn(0.12f, 0.92f),
-                                    size = 24.dp,
-                                    strokeWidth = 2.5.dp,
-                                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                        foregroundColor = Color(0xFF3B82F6),
-                                        backgroundColor = Color(0xFF3B82F6).copy(alpha = 0.24f),
-                                    ),
-                                )
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.guide_loading_title),
-                                        color = MiuixTheme.colorScheme.onSurface,
-                                        fontSize = 14.sp
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.guide_loading_summary),
-                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                        fontSize = 12.sp,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
+                                    .size(112.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.guide_loading_title),
+                                color = MiuixTheme.colorScheme.onBackground,
+                                fontSize = 14.sp
+                            )
                         }
                     }
                 }
