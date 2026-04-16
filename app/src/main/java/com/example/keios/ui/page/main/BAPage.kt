@@ -259,6 +259,7 @@ fun BAPage(
         },
         onMediaAdaptiveRotationEnabledChange = { ui.sheetMediaAdaptiveRotationEnabled = it },
         onMediaSaveCustomEnabledChange = { ui.sheetMediaSaveCustomEnabled = it },
+        onMediaSaveFixedTreeUriChange = { ui.sheetMediaSaveFixedTreeUri = it },
         onShowEndedActivitiesChange = { ui.sheetShowEndedActivities = it },
         onShowEndedPoolsChange = { ui.sheetShowEndedPools = it },
         onShowCalendarPoolImagesChange = { ui.sheetShowCalendarPoolImages = it },

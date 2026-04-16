@@ -67,6 +67,7 @@
     <string name="about_row_media3">Media3</string>
     <string name="about_row_zoomimage">ZoomImage</string>
     <string name="about_row_coil3">Coil3</string>
+    <string name="about_row_documentfile">DocumentFile</string>
     <string name="about_row_mmkv">MMKV</string>
 
     <string name="about_runtime_label_notification_permission">通知权限</string>

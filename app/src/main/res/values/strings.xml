@@ -425,8 +425,13 @@
     <string name="ba_settings_summary_ap_threshold">建议 0-%1$d</string>
     <string name="ba_settings_label_media_adaptive_rotation">媒体自适应旋转</string>
     <string name="ba_settings_summary_media_adaptive_rotation">开启：沿用当前图鉴媒体旋转逻辑；关闭：系统锁定旋转时保持不旋转，系统允许旋转时跟随屏幕方向。</string>
-    <string name="ba_settings_label_media_save_custom">媒体保存自定义</string>
-    <string name="ba_settings_summary_media_save_custom">开启：每次保存时自定义保存位置；关闭：先通过 SAF 选择固定目录，后续保存默认写入该目录。</string>
+    <string name="ba_settings_label_media_save_custom">自定义媒体保存位置</string>
+    <string name="ba_settings_summary_media_save_custom">关闭：每次保存都通过 SAF 选择位置；开启：使用固定保存目录，可通过 SAF 选择或手动粘贴目录 URI。</string>
+    <string name="ba_settings_label_media_save_fixed_uri">固定保存目录 URI</string>
+    <string name="ba_settings_summary_media_save_fixed_uri_empty">当前未设置目录，点击“选择目录”或粘贴目录 URI。</string>
+    <string name="ba_settings_summary_media_save_fixed_uri_ready">当前目录已设置，后续保存默认写入该目录。</string>
+    <string name="ba_settings_action_pick_media_save_location">选择目录</string>
+    <string name="ba_settings_hint_media_save_fixed_uri">content://.../tree/...</string>
     <string name="guide_media_save_success">已保存：%1$s</string>
     <string name="guide_media_save_failed">保存失败</string>
     <string name="guide_media_save_empty">无可保存的媒体</string>

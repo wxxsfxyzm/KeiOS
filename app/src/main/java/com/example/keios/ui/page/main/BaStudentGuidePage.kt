@@ -557,8 +557,8 @@ fun BaStudentGuidePage(
             Toast.makeText(context, context.getString(R.string.guide_media_save_empty), Toast.LENGTH_SHORT).show()
             return
         }
-        val customMode = BASettingsStore.loadMediaSaveCustomEnabled()
-        if (customMode) {
+        val useFixedSaveLocation = BASettingsStore.loadMediaSaveCustomEnabled()
+        if (!useFixedSaveLocation) {
             pendingCustomSaveRequest = request
             val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)

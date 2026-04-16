@@ -34,6 +34,7 @@ internal data class BaPageUiState(
     val showCalendarPoolImages: Boolean,
     val mediaAdaptiveRotationEnabled: Boolean,
     val mediaSaveCustomEnabled: Boolean,
+    val mediaSaveFixedTreeUri: String,
     val calendarRefreshIntervalHours: Int,
     val calendarHydrationReady: Boolean,
     val poolHydrationReady: Boolean,
@@ -42,6 +43,7 @@ internal data class BaPageUiState(
     val sheetApNotifyThresholdText: String,
     val sheetMediaAdaptiveRotationEnabled: Boolean,
     val sheetMediaSaveCustomEnabled: Boolean,
+    val sheetMediaSaveFixedTreeUri: String,
     val sheetShowEndedPools: Boolean,
     val sheetShowEndedActivities: Boolean,
     val sheetShowCalendarPoolImages: Boolean,
@@ -72,6 +74,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
     var showCalendarPoolImages by mutableStateOf(snapshot.showCalendarPoolImages)
     var mediaAdaptiveRotationEnabled by mutableStateOf(snapshot.mediaAdaptiveRotationEnabled)
     var mediaSaveCustomEnabled by mutableStateOf(snapshot.mediaSaveCustomEnabled)
+    var mediaSaveFixedTreeUri by mutableStateOf(snapshot.mediaSaveFixedTreeUri)
     var calendarRefreshIntervalHours by mutableIntStateOf(snapshot.calendarRefreshIntervalHours)
     var calendarHydrationReady by mutableStateOf(false)
     var poolHydrationReady by mutableStateOf(false)
@@ -80,6 +83,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
     var sheetApNotifyThresholdText by mutableStateOf(snapshot.apNotifyThreshold.toString())
     var sheetMediaAdaptiveRotationEnabled by mutableStateOf(snapshot.mediaAdaptiveRotationEnabled)
     var sheetMediaSaveCustomEnabled by mutableStateOf(snapshot.mediaSaveCustomEnabled)
+    var sheetMediaSaveFixedTreeUri by mutableStateOf(snapshot.mediaSaveFixedTreeUri)
     var sheetShowEndedPools by mutableStateOf(snapshot.showEndedPools)
     var sheetShowEndedActivities by mutableStateOf(snapshot.showEndedActivities)
     var sheetShowCalendarPoolImages by mutableStateOf(snapshot.showCalendarPoolImages)
@@ -109,6 +113,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
             showCalendarPoolImages = showCalendarPoolImages,
             mediaAdaptiveRotationEnabled = mediaAdaptiveRotationEnabled,
             mediaSaveCustomEnabled = mediaSaveCustomEnabled,
+            mediaSaveFixedTreeUri = mediaSaveFixedTreeUri,
             calendarRefreshIntervalHours = calendarRefreshIntervalHours,
             calendarHydrationReady = calendarHydrationReady,
             poolHydrationReady = poolHydrationReady,
@@ -117,6 +122,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
             sheetApNotifyThresholdText = sheetApNotifyThresholdText,
             sheetMediaAdaptiveRotationEnabled = sheetMediaAdaptiveRotationEnabled,
             sheetMediaSaveCustomEnabled = sheetMediaSaveCustomEnabled,
+            sheetMediaSaveFixedTreeUri = sheetMediaSaveFixedTreeUri,
             sheetShowEndedPools = sheetShowEndedPools,
             sheetShowEndedActivities = sheetShowEndedActivities,
             sheetShowCalendarPoolImages = sheetShowCalendarPoolImages,
@@ -140,6 +146,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
         sheetApNotifyThresholdText = office.apNotifyThreshold.toString()
         sheetMediaAdaptiveRotationEnabled = mediaAdaptiveRotationEnabled
         sheetMediaSaveCustomEnabled = mediaSaveCustomEnabled
+        sheetMediaSaveFixedTreeUri = mediaSaveFixedTreeUri
         sheetShowEndedPools = showEndedPools
         sheetShowEndedActivities = showEndedActivities
         sheetShowCalendarPoolImages = showCalendarPoolImages
@@ -154,6 +161,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
         sheetApNotifyThresholdText = office.apNotifyThreshold.toString()
         sheetMediaAdaptiveRotationEnabled = mediaAdaptiveRotationEnabled
         sheetMediaSaveCustomEnabled = mediaSaveCustomEnabled
+        sheetMediaSaveFixedTreeUri = mediaSaveFixedTreeUri
         sheetShowEndedPools = showEndedPools
         sheetShowEndedActivities = showEndedActivities
         sheetShowCalendarPoolImages = showCalendarPoolImages

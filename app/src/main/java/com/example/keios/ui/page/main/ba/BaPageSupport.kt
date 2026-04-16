@@ -64,6 +64,7 @@ internal data class BaPageSnapshot(
     val showCalendarPoolImages: Boolean = true,
     val mediaAdaptiveRotationEnabled: Boolean = true,
     val mediaSaveCustomEnabled: Boolean = false,
+    val mediaSaveFixedTreeUri: String = "",
     val calendarRefreshIntervalHours: Int = 12
 )
 
@@ -1086,6 +1087,7 @@ internal object BASettingsStore {
             showCalendarPoolImages = store.decodeBool(KEY_SHOW_CALENDAR_POOL_IMAGES, true),
             mediaAdaptiveRotationEnabled = store.decodeBool(KEY_MEDIA_ADAPTIVE_ROTATION_ENABLED, true),
             mediaSaveCustomEnabled = store.decodeBool(KEY_MEDIA_SAVE_CUSTOM_ENABLED, false),
+            mediaSaveFixedTreeUri = store.decodeString(KEY_MEDIA_SAVE_FIXED_TREE_URI, "").orEmpty().trim(),
             calendarRefreshIntervalHours = refreshHours
         )
     }
