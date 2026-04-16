@@ -117,9 +117,9 @@ import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Album
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Download
+import top.yukonga.miuix.kmp.icon.extended.ExpandLess
 import top.yukonga.miuix.kmp.icon.extended.ExpandMore
 import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Play
@@ -132,6 +132,10 @@ import com.example.keios.ui.page.main.widget.capturePopupAnchor
 import java.util.concurrent.ConcurrentHashMap
 
 private const val IMAGE_TAP_DISMISS_GESTURE_COOLDOWN_MS = 260L
+
+private enum class GuideVideoControlAction {
+    TogglePlayPause
+}
 
 private object GuideBgmLoopStore {
     private val loopByScopedAudio = ConcurrentHashMap<String, Boolean>()
@@ -611,6 +615,8 @@ fun GuideGalleryCardItem(
     val canOpenMedia = item.mediaUrl.isNotBlank() &&
         normalizeGuideMediaSource(displayMediaUrl) != normalizeGuideMediaSource(displayImageUrl)
     var videoInlineExpanded by remember(displayMediaUrl, normalizedMediaType) { mutableStateOf(false) }
+    var videoInlinePlaying by remember(displayMediaUrl, normalizedMediaType) { mutableStateOf(false) }
+    var videoControlRequestId by remember(displayMediaUrl, normalizedMediaType) { mutableIntStateOf(0) }
     var showImageFullscreen by remember(displayImageUrl, normalizedMediaType) { mutableStateOf(false) }
     val audioTargetUrl = remember(normalizedMediaType, displayMediaUrl) {
         if (normalizedMediaType == "audio") normalizeGuideMediaSource(displayMediaUrl) else ""
@@ -791,21 +797,29 @@ fun GuideGalleryCardItem(
                     GlassTextButton(
                         backdrop = backdrop,
                         text = "",
-                        leadingIcon = MiuixIcons.Regular.Play,
+                        leadingIcon = if (videoInlineExpanded && videoInlinePlaying) {
+                            MiuixIcons.Regular.Pause
+                        } else {
+                            MiuixIcons.Regular.Play
+                        },
                         textColor = Color(0xFF3B82F6),
                         variant = GlassVariant.Compact,
                         onClick = {
                             if (normalizeGuideMediaSource(displayMediaUrl).isBlank()) {
                                 Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
                             } else {
-                                videoInlineExpanded = true
+                                if (!videoInlineExpanded) {
+                                    videoInlineExpanded = true
+                                } else {
+                                    videoControlRequestId += 1
+                                }
                             }
                         }
                     )
                     GlassTextButton(
                         backdrop = backdrop,
                         text = "",
-                        leadingIcon = MiuixIcons.Regular.Album,
+                        leadingIcon = MiuixIcons.Regular.ExpandMore,
                         textColor = Color(0xFF3B82F6),
                         variant = GlassVariant.Compact,
                         onClick = {
@@ -1018,7 +1032,10 @@ fun GuideGalleryCardItem(
                             previewImageUrl = displayImageUrl,
                             backdrop = backdrop,
                             expanded = videoInlineExpanded,
-                            onExpandedChange = { expanded -> videoInlineExpanded = expanded }
+                            onExpandedChange = { expanded -> videoInlineExpanded = expanded },
+                            controlAction = GuideVideoControlAction.TogglePlayPause,
+                            controlActionToken = videoControlRequestId,
+                            onIsPlayingChange = { playing -> videoInlinePlaying = playing }
                         )
                     }
 
@@ -1178,6 +1195,8 @@ fun GuideGalleryExpressionCardItem(
     val isImageType = selectedItem.mediaType.lowercase() != "video"
     val isVideoType = selectedItem.mediaType.lowercase() == "video"
     var videoInlineExpanded by remember(displayMediaUrl, selectedItem.mediaType) { mutableStateOf(false) }
+    var videoInlinePlaying by remember(displayMediaUrl, selectedItem.mediaType) { mutableStateOf(false) }
+    var videoControlRequestId by remember(displayMediaUrl, selectedItem.mediaType) { mutableIntStateOf(0) }
     var showImageFullscreen by remember(displayImageUrl) { mutableStateOf(false) }
     val canSwipeExpressions = optionLabels.size > 1
     val swipeThresholdPx = with(LocalDensity.current) { 56.dp.toPx() }
@@ -1260,21 +1279,29 @@ fun GuideGalleryExpressionCardItem(
                     GlassTextButton(
                         backdrop = backdrop,
                         text = "",
-                        leadingIcon = MiuixIcons.Regular.Play,
+                        leadingIcon = if (videoInlineExpanded && videoInlinePlaying) {
+                            MiuixIcons.Regular.Pause
+                        } else {
+                            MiuixIcons.Regular.Play
+                        },
                         textColor = Color(0xFF3B82F6),
                         variant = GlassVariant.Compact,
                         onClick = {
                             if (normalizeGuideMediaSource(displayMediaUrl).isBlank()) {
                                 Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
                             } else {
-                                videoInlineExpanded = true
+                                if (!videoInlineExpanded) {
+                                    videoInlineExpanded = true
+                                } else {
+                                    videoControlRequestId += 1
+                                }
                             }
                         }
                     )
                     GlassTextButton(
                         backdrop = backdrop,
                         text = "",
-                        leadingIcon = MiuixIcons.Regular.Album,
+                        leadingIcon = MiuixIcons.Regular.ExpandMore,
                         textColor = Color(0xFF3B82F6),
                         variant = GlassVariant.Compact,
                         onClick = {
@@ -1368,7 +1395,10 @@ fun GuideGalleryExpressionCardItem(
                         previewImageUrl = displayImageUrl,
                         backdrop = backdrop,
                         expanded = videoInlineExpanded,
-                        onExpandedChange = { expanded -> videoInlineExpanded = expanded }
+                        onExpandedChange = { expanded -> videoInlineExpanded = expanded },
+                        controlAction = GuideVideoControlAction.TogglePlayPause,
+                        controlActionToken = videoControlRequestId,
+                        onIsPlayingChange = { playing -> videoInlinePlaying = playing }
                     )
                 } else {
                     GlassTextButton(
@@ -1419,6 +1449,8 @@ fun GuideGalleryVideoGroupCardItem(
         displayMediaUrl.ifBlank { displayPreviewUrl }
     }
     var videoInlineExpanded by remember(displayMediaUrl) { mutableStateOf(false) }
+    var videoInlinePlaying by remember(displayMediaUrl) { mutableStateOf(false) }
+    var videoControlRequestId by remember(displayMediaUrl) { mutableIntStateOf(0) }
     val noteText = selectedItem.note.trim()
     val optionLabels = remember(title, items) {
         if (items.size <= 1) {
@@ -1500,21 +1532,29 @@ fun GuideGalleryVideoGroupCardItem(
                     GlassTextButton(
                         backdrop = backdrop,
                         text = "",
-                        leadingIcon = MiuixIcons.Regular.Play,
+                        leadingIcon = if (videoInlineExpanded && videoInlinePlaying) {
+                            MiuixIcons.Regular.Pause
+                        } else {
+                            MiuixIcons.Regular.Play
+                        },
                         textColor = Color(0xFF3B82F6),
                         variant = GlassVariant.Compact,
                         onClick = {
                             if (normalizeGuideMediaSource(displayMediaUrl).isBlank()) {
                                 Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
                             } else {
-                                videoInlineExpanded = true
+                                if (!videoInlineExpanded) {
+                                    videoInlineExpanded = true
+                                } else {
+                                    videoControlRequestId += 1
+                                }
                             }
                         }
                     )
                     GlassTextButton(
                         backdrop = backdrop,
                         text = "",
-                        leadingIcon = MiuixIcons.Regular.Album,
+                        leadingIcon = MiuixIcons.Regular.ExpandMore,
                         textColor = Color(0xFF3B82F6),
                         variant = GlassVariant.Compact,
                         onClick = {
@@ -1566,7 +1606,10 @@ fun GuideGalleryVideoGroupCardItem(
                     previewImageUrl = displayPreviewUrl,
                     backdrop = backdrop,
                     expanded = videoInlineExpanded,
-                    onExpandedChange = { expanded -> videoInlineExpanded = expanded }
+                    onExpandedChange = { expanded -> videoInlineExpanded = expanded },
+                    controlAction = GuideVideoControlAction.TogglePlayPause,
+                    controlActionToken = videoControlRequestId,
+                    onIsPlayingChange = { playing -> videoInlinePlaying = playing }
                 )
             }
         }
@@ -1620,14 +1663,19 @@ private fun GuideInlineVideoPlayer(
     previewImageUrl: String = "",
     backdrop: Backdrop?,
     expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit
+    onExpandedChange: (Boolean) -> Unit,
+    controlAction: GuideVideoControlAction? = null,
+    controlActionToken: Int = 0,
+    onIsPlayingChange: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val normalizedUrl = remember(mediaUrl) { normalizeGuideMediaSource(mediaUrl) }
     val normalizedPreviewUrl = remember(previewImageUrl) { normalizeGuideMediaSource(previewImageUrl) }
     var videoRatio by remember(normalizedUrl) { mutableStateOf(16f / 9f) }
     var isBuffering by remember(normalizedUrl) { mutableStateOf(false) }
+    var isPlaying by remember(normalizedUrl) { mutableStateOf(false) }
     var loadError by remember(normalizedUrl) { mutableStateOf<String?>(null) }
+    var loopEnabled by remember(normalizedUrl) { mutableStateOf(false) }
     val openFullscreen = remember(context, normalizedUrl) {
         {
             if (normalizedUrl.isBlank()) {
@@ -1682,6 +1730,11 @@ private fun GuideInlineVideoPlayer(
                 isBuffering = playbackState == Player.STATE_BUFFERING
             }
 
+            override fun onIsPlayingChanged(isPlayingNow: Boolean) {
+                isPlaying = isPlayingNow
+                onIsPlayingChange(isPlayingNow)
+            }
+
             override fun onPlayerError(error: PlaybackException) {
                 isBuffering = false
                 loadError = error.errorCodeName
@@ -1692,16 +1745,40 @@ private fun GuideInlineVideoPlayer(
             boundPlayer.removeListener(listener)
             runCatching { boundPlayer.release() }
             isBuffering = false
+            isPlaying = false
+            onIsPlayingChange(false)
+        }
+    }
+
+    LaunchedEffect(player, loopEnabled) {
+        player?.repeatMode = if (loopEnabled) {
+            Player.REPEAT_MODE_ONE
+        } else {
+            Player.REPEAT_MODE_OFF
         }
     }
 
     val activePlayer = player
     if (activePlayer == null) {
+        onIsPlayingChange(false)
         Text(
             text = "视频暂不可用",
             color = MiuixTheme.colorScheme.onBackgroundVariant
         )
         return
+    }
+
+    LaunchedEffect(controlActionToken, controlAction, activePlayer) {
+        if (controlActionToken <= 0 || controlAction == null) return@LaunchedEffect
+        when (controlAction) {
+            GuideVideoControlAction.TogglePlayPause -> {
+                if (activePlayer.isPlaying) {
+                    activePlayer.pause()
+                } else {
+                    activePlayer.play()
+                }
+            }
+        }
     }
 
     AndroidView(
@@ -1734,7 +1811,15 @@ private fun GuideInlineVideoPlayer(
         GlassTextButton(
             backdrop = backdrop,
             text = "",
-            leadingIcon = MiuixIcons.Regular.ExpandMore,
+            leadingIcon = MiuixIcons.Regular.Replace,
+            textColor = if (loopEnabled) Color(0xFF34C759) else Color(0xFF3B82F6),
+            variant = GlassVariant.Compact,
+            onClick = { loopEnabled = !loopEnabled }
+        )
+        GlassTextButton(
+            backdrop = backdrop,
+            text = "",
+            leadingIcon = MiuixIcons.Regular.ExpandLess,
             textColor = Color(0xFF3B82F6),
             variant = GlassVariant.Compact,
             onClick = { onExpandedChange(false) }
