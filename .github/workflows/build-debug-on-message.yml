@@ -38,13 +38,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          SDKMANAGER="$(command -v sdkmanager)"
+          echo "Using sdkmanager: ${SDKMANAGER}"
 
-          yes | "${SDKMANAGER}" --channel=3 "build-tools;37.0.0"
-          if yes | "${SDKMANAGER}" --channel=3 "platforms;android-37.0"; then
+          "${SDKMANAGER}" --channel=3 "build-tools;37.0.0"
+          if "${SDKMANAGER}" --channel=3 "platforms;android-37.0"; then
             echo "Installed SDK platform: android-37.0"
           else
-            yes | "${SDKMANAGER}" --channel=3 "platforms;android-37"
+            "${SDKMANAGER}" --channel=3 "platforms;android-37"
             echo "Installed SDK platform: android-37"
           fi
 
