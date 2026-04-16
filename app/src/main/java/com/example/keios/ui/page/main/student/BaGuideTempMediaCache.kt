@@ -1,6 +1,7 @@
 package com.example.keios.ui.page.main.student
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.tencent.mmkv.MMKV
@@ -54,6 +55,36 @@ object BaGuideTempMediaCache {
         return lower.contains("format=gif") || lower.contains("image/gif")
     }
 
+    private fun looksLikeVideoUrl(url: String): Boolean {
+        val normalized = url.trim()
+        if (normalized.isBlank()) return false
+        val lower = normalized.lowercase()
+        return lower.endsWith(".mp4") ||
+            lower.endsWith(".webm") ||
+            lower.endsWith(".mov") ||
+            lower.endsWith(".m3u8") ||
+            lower.contains(".mp4?") ||
+            lower.contains(".webm?") ||
+            lower.contains(".mov?") ||
+            lower.contains(".m3u8?")
+    }
+
+    private fun looksLikeAudioUrl(url: String): Boolean {
+        val normalized = url.trim()
+        if (normalized.isBlank()) return false
+        val lower = normalized.lowercase()
+        return lower.endsWith(".mp3") ||
+            lower.endsWith(".ogg") ||
+            lower.endsWith(".wav") ||
+            lower.endsWith(".m4a") ||
+            lower.endsWith(".aac") ||
+            lower.contains(".mp3?") ||
+            lower.contains(".ogg?") ||
+            lower.contains(".wav?") ||
+            lower.contains(".m4a?") ||
+            lower.contains(".aac?")
+    }
+
     private fun hasGifHeader(file: File): Boolean {
         if (!file.exists() || file.length() < 6L) return false
         return runCatching {
@@ -66,11 +97,22 @@ object BaGuideTempMediaCache {
         }.getOrDefault(false)
     }
 
+    private fun hasDecodableImageBounds(file: File): Boolean {
+        if (!file.exists() || file.length() <= 0L) return false
+        return runCatching {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, options)
+            options.outWidth > 0 && options.outHeight > 0
+        }.getOrDefault(false)
+    }
+
     private fun isUsableCachedMedia(url: String, file: File): Boolean {
         if (!file.exists() || file.length() <= 0L) return false
         val strictGif = looksLikeGifUrl(url) || file.extension.equals("gif", ignoreCase = true)
-        if (!strictGif) return true
-        return hasGifHeader(file)
+        if (strictGif) return hasGifHeader(file)
+        val mediaIsVideoOrAudio = looksLikeVideoUrl(url) || looksLikeAudioUrl(url)
+        if (mediaIsVideoOrAudio) return true
+        return hasDecodableImageBounds(file)
     }
 
     private fun fileExtFromUrl(url: String): String {

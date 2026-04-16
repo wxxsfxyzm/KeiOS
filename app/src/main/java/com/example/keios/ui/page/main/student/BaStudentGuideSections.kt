@@ -1237,8 +1237,13 @@ private fun GuideImageFullscreenDialog(
     val normalizedImageUrl = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
     if (normalizedImageUrl.isBlank()) return
     val zoomState = rememberCoilZoomState()
-    val sampledBitmap by produceState<Bitmap?>(initialValue = null, normalizedImageUrl) {
-        value = withContext(Dispatchers.IO) {
+    var retryToken by rememberSaveable(normalizedImageUrl) { mutableStateOf(0) }
+    val sampledState by produceState(
+        initialValue = GuideFullscreenImageState(loading = true),
+        normalizedImageUrl,
+        retryToken
+    ) {
+        val bitmap = withContext(Dispatchers.IO) {
             runCatching {
                 loadGuideBitmapSource(
                     context = context,
@@ -1247,7 +1252,13 @@ private fun GuideImageFullscreenDialog(
                 )
             }.getOrNull()
         }
+        value = GuideFullscreenImageState(
+            sampledBitmap = bitmap,
+            loading = false,
+            helperLoadFailed = bitmap == null
+        )
     }
+    val sampledBitmap = sampledState.sampledBitmap
     val ratio = remember(sampledBitmap?.width, sampledBitmap?.height) {
         val width = sampledBitmap?.width ?: 0
         val height = sampledBitmap?.height ?: 0
@@ -1304,7 +1315,7 @@ private fun GuideImageFullscreenDialog(
                 }
 
                 CoilZoomAsyncImage(
-                    model = normalizedImageUrl,
+                    model = sampledBitmap ?: normalizedImageUrl,
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
@@ -1314,6 +1325,19 @@ private fun GuideImageFullscreenDialog(
                     scrollBar = null,
                     onTap = { onDismiss() }
                 )
+
+                if (sampledState.loading) {
+                    CircularProgressIndicator(
+                        progress = 0.28f,
+                        size = 24.dp,
+                        strokeWidth = 2.dp,
+                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                            foregroundColor = Color(0xFF60A5FA),
+                            backgroundColor = Color(0x3360A5FA)
+                        ),
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
             }
             GlassIconButton(
                 backdrop = null,
@@ -1328,9 +1352,37 @@ private fun GuideImageFullscreenDialog(
                 width = 40.dp,
                 height = 40.dp
             )
+            if (!sampledState.loading && sampledState.helperLoadFailed && sampledBitmap == null) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "图片加载异常",
+                        color = Color(0xFFBFDBFE)
+                    )
+                    GlassTextButton(
+                        backdrop = null,
+                        text = "重试",
+                        leadingIcon = MiuixIcons.Regular.Refresh,
+                        textColor = Color(0xFF60A5FA),
+                        variant = GlassVariant.Compact,
+                        onClick = { retryToken += 1 }
+                    )
+                }
+            }
         }
     }
 }
+
+private data class GuideFullscreenImageState(
+    val sampledBitmap: Bitmap? = null,
+    val loading: Boolean = false,
+    val helperLoadFailed: Boolean = false
+)
 
 @Composable
 private fun GuideVideoFullscreenDialog(
