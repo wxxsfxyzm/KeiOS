@@ -63,6 +63,7 @@ internal data class BaPageSnapshot(
     val showEndedActivities: Boolean = false,
     val showCalendarPoolImages: Boolean = true,
     val mediaAdaptiveRotationEnabled: Boolean = true,
+    val mediaSaveCustomEnabled: Boolean = false,
     val calendarRefreshIntervalHours: Int = 12
 )
 
@@ -906,6 +907,8 @@ internal object BASettingsStore {
     private const val KEY_ACTIVITY_SHOW_ENDED = "activity_show_ended"
     private const val KEY_SHOW_CALENDAR_POOL_IMAGES = "show_calendar_pool_images"
     private const val KEY_MEDIA_ADAPTIVE_ROTATION_ENABLED = "media_adaptive_rotation_enabled"
+    private const val KEY_MEDIA_SAVE_CUSTOM_ENABLED = "media_save_custom_enabled"
+    private const val KEY_MEDIA_SAVE_FIXED_TREE_URI = "media_save_fixed_tree_uri"
     private const val KEY_COFFEE_HEADPAT_MS = "coffee_headpat_ms"
     private const val KEY_COFFEE_INVITE1_USED_MS = "coffee_invite1_used_ms"
     private const val KEY_COFFEE_INVITE2_USED_MS = "coffee_invite2_used_ms"
@@ -1001,6 +1004,20 @@ internal object BASettingsStore {
         kv().encode(KEY_MEDIA_ADAPTIVE_ROTATION_ENABLED, enabled)
     }
 
+    fun loadMediaSaveCustomEnabled(): Boolean =
+        kv().decodeBool(KEY_MEDIA_SAVE_CUSTOM_ENABLED, false)
+
+    fun saveMediaSaveCustomEnabled(enabled: Boolean) {
+        kv().encode(KEY_MEDIA_SAVE_CUSTOM_ENABLED, enabled)
+    }
+
+    fun loadMediaSaveFixedTreeUri(): String =
+        kv().decodeString(KEY_MEDIA_SAVE_FIXED_TREE_URI, "").orEmpty().trim()
+
+    fun saveMediaSaveFixedTreeUri(uri: String) {
+        kv().encode(KEY_MEDIA_SAVE_FIXED_TREE_URI, uri.trim())
+    }
+
     fun loadCalendarRefreshIntervalHours(): Int {
         val raw = kv().decodeInt(
             KEY_CALENDAR_REFRESH_INTERVAL_HOURS,
@@ -1068,6 +1085,7 @@ internal object BASettingsStore {
             showEndedActivities = store.decodeBool(KEY_ACTIVITY_SHOW_ENDED, false),
             showCalendarPoolImages = store.decodeBool(KEY_SHOW_CALENDAR_POOL_IMAGES, true),
             mediaAdaptiveRotationEnabled = store.decodeBool(KEY_MEDIA_ADAPTIVE_ROTATION_ENABLED, true),
+            mediaSaveCustomEnabled = store.decodeBool(KEY_MEDIA_SAVE_CUSTOM_ENABLED, false),
             calendarRefreshIntervalHours = refreshHours
         )
     }

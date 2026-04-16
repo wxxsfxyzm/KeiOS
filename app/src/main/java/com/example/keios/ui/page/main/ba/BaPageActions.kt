@@ -17,6 +17,7 @@ internal data class BaSettingsPersistenceResult(
     val showEndedActivities: Boolean,
     val showCalendarPoolImages: Boolean,
     val mediaAdaptiveRotationEnabled: Boolean,
+    val mediaSaveCustomEnabled: Boolean,
     val turningEndedActivitiesOn: Boolean,
     val turningImagesOn: Boolean,
 )
@@ -89,6 +90,7 @@ internal fun persistBaSettingsDraft(
     BASettingsStore.saveActivityShowEnded(sheetState.showEndedActivities)
     BASettingsStore.saveShowCalendarPoolImages(sheetState.showCalendarPoolImages)
     BASettingsStore.saveMediaAdaptiveRotationEnabled(sheetState.mediaAdaptiveRotationEnabled)
+    BASettingsStore.saveMediaSaveCustomEnabled(sheetState.mediaSaveCustomEnabled)
 
     return BaSettingsPersistenceResult(
         savedCafeLevel = savedCafeLevel,
@@ -97,6 +99,7 @@ internal fun persistBaSettingsDraft(
         showEndedActivities = sheetState.showEndedActivities,
         showCalendarPoolImages = sheetState.showCalendarPoolImages,
         mediaAdaptiveRotationEnabled = sheetState.mediaAdaptiveRotationEnabled,
+        mediaSaveCustomEnabled = sheetState.mediaSaveCustomEnabled,
         turningEndedActivitiesOn = !currentShowEndedActivities && sheetState.showEndedActivities,
         turningImagesOn = !currentShowCalendarPoolImages && sheetState.showCalendarPoolImages,
     )

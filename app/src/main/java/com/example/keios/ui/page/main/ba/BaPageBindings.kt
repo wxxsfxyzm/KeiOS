@@ -12,6 +12,7 @@ internal fun buildBaSettingsSheetState(
         apNotifyEnabled = ui.sheetApNotifyEnabled,
         apNotifyThresholdText = ui.sheetApNotifyThresholdText,
         mediaAdaptiveRotationEnabled = ui.sheetMediaAdaptiveRotationEnabled,
+        mediaSaveCustomEnabled = ui.sheetMediaSaveCustomEnabled,
         showEndedActivities = ui.sheetShowEndedActivities,
         showEndedPools = ui.sheetShowEndedPools,
         showCalendarPoolImages = ui.sheetShowCalendarPoolImages,
@@ -80,6 +81,7 @@ internal fun saveBaPageSettings(
     ui.showEndedActivities = persisted.showEndedActivities
     ui.showCalendarPoolImages = persisted.showCalendarPoolImages
     ui.mediaAdaptiveRotationEnabled = persisted.mediaAdaptiveRotationEnabled
+    ui.mediaSaveCustomEnabled = persisted.mediaSaveCustomEnabled
 
     if (persisted.turningEndedActivitiesOn) {
         val (calendarCacheRaw, _) = BASettingsStore.loadCalendarCache(ui.serverIndex)

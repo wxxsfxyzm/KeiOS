@@ -33,6 +33,7 @@ internal data class BaPageUiState(
     val showEndedActivities: Boolean,
     val showCalendarPoolImages: Boolean,
     val mediaAdaptiveRotationEnabled: Boolean,
+    val mediaSaveCustomEnabled: Boolean,
     val calendarRefreshIntervalHours: Int,
     val calendarHydrationReady: Boolean,
     val poolHydrationReady: Boolean,
@@ -40,6 +41,7 @@ internal data class BaPageUiState(
     val sheetApNotifyEnabled: Boolean,
     val sheetApNotifyThresholdText: String,
     val sheetMediaAdaptiveRotationEnabled: Boolean,
+    val sheetMediaSaveCustomEnabled: Boolean,
     val sheetShowEndedPools: Boolean,
     val sheetShowEndedActivities: Boolean,
     val sheetShowCalendarPoolImages: Boolean,
@@ -69,6 +71,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
     var showEndedActivities by mutableStateOf(snapshot.showEndedActivities)
     var showCalendarPoolImages by mutableStateOf(snapshot.showCalendarPoolImages)
     var mediaAdaptiveRotationEnabled by mutableStateOf(snapshot.mediaAdaptiveRotationEnabled)
+    var mediaSaveCustomEnabled by mutableStateOf(snapshot.mediaSaveCustomEnabled)
     var calendarRefreshIntervalHours by mutableIntStateOf(snapshot.calendarRefreshIntervalHours)
     var calendarHydrationReady by mutableStateOf(false)
     var poolHydrationReady by mutableStateOf(false)
@@ -76,6 +79,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
     var sheetApNotifyEnabled by mutableStateOf(snapshot.apNotifyEnabled)
     var sheetApNotifyThresholdText by mutableStateOf(snapshot.apNotifyThreshold.toString())
     var sheetMediaAdaptiveRotationEnabled by mutableStateOf(snapshot.mediaAdaptiveRotationEnabled)
+    var sheetMediaSaveCustomEnabled by mutableStateOf(snapshot.mediaSaveCustomEnabled)
     var sheetShowEndedPools by mutableStateOf(snapshot.showEndedPools)
     var sheetShowEndedActivities by mutableStateOf(snapshot.showEndedActivities)
     var sheetShowCalendarPoolImages by mutableStateOf(snapshot.showCalendarPoolImages)
@@ -104,6 +108,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
             showEndedActivities = showEndedActivities,
             showCalendarPoolImages = showCalendarPoolImages,
             mediaAdaptiveRotationEnabled = mediaAdaptiveRotationEnabled,
+            mediaSaveCustomEnabled = mediaSaveCustomEnabled,
             calendarRefreshIntervalHours = calendarRefreshIntervalHours,
             calendarHydrationReady = calendarHydrationReady,
             poolHydrationReady = poolHydrationReady,
@@ -111,6 +116,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
             sheetApNotifyEnabled = sheetApNotifyEnabled,
             sheetApNotifyThresholdText = sheetApNotifyThresholdText,
             sheetMediaAdaptiveRotationEnabled = sheetMediaAdaptiveRotationEnabled,
+            sheetMediaSaveCustomEnabled = sheetMediaSaveCustomEnabled,
             sheetShowEndedPools = sheetShowEndedPools,
             sheetShowEndedActivities = sheetShowEndedActivities,
             sheetShowCalendarPoolImages = sheetShowCalendarPoolImages,
@@ -133,6 +139,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
         sheetApNotifyEnabled = office.apNotifyEnabled
         sheetApNotifyThresholdText = office.apNotifyThreshold.toString()
         sheetMediaAdaptiveRotationEnabled = mediaAdaptiveRotationEnabled
+        sheetMediaSaveCustomEnabled = mediaSaveCustomEnabled
         sheetShowEndedPools = showEndedPools
         sheetShowEndedActivities = showEndedActivities
         sheetShowCalendarPoolImages = showCalendarPoolImages
@@ -146,6 +153,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
         sheetApNotifyEnabled = office.apNotifyEnabled
         sheetApNotifyThresholdText = office.apNotifyThreshold.toString()
         sheetMediaAdaptiveRotationEnabled = mediaAdaptiveRotationEnabled
+        sheetMediaSaveCustomEnabled = mediaSaveCustomEnabled
         sheetShowEndedPools = showEndedPools
         sheetShowEndedActivities = showEndedActivities
         sheetShowCalendarPoolImages = showCalendarPoolImages

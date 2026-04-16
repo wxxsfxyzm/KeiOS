@@ -118,6 +118,7 @@ import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.icon.extended.Replace
@@ -538,6 +539,7 @@ fun GuideGalleryCardItem(
     item: BaGuideGalleryItem,
     backdrop: Backdrop?,
     onOpenMedia: (String) -> Unit,
+    onSaveMedia: (url: String, title: String) -> Unit = { _, _ -> },
     audioLoopScopeKey: String = "",
     mediaUrlResolver: (String) -> String = { it },
     embedded: Boolean = false,
@@ -585,6 +587,24 @@ fun GuideGalleryCardItem(
     val displayTitle = remember(item.title, normalizedMediaType) {
         normalizeGalleryDisplayTitle(item.title, normalizedMediaType)
     }
+    val saveTargetUrl = remember(
+        normalizedMediaType,
+        displayImageUrl,
+        displayMediaUrl,
+        isInteractiveFurnitureAnimated
+    ) {
+        when (normalizedMediaType) {
+            "video", "audio" -> displayMediaUrl.ifBlank { displayImageUrl }
+            else -> {
+                if (isInteractiveFurnitureAnimated && displayMediaUrl.isNotBlank()) {
+                    displayMediaUrl
+                } else {
+                    displayImageUrl.ifBlank { displayMediaUrl }
+                }
+            }
+        }
+    }
+    val canSaveMedia = saveTargetUrl.isNotBlank()
     val isImageType = normalizedMediaType != "video" && normalizedMediaType != "audio"
     val canOpenMedia = item.mediaUrl.isNotBlank() &&
         normalizeGuideMediaSource(displayMediaUrl) != normalizeGuideMediaSource(displayImageUrl)
@@ -776,6 +796,16 @@ fun GuideGalleryCardItem(
                         textColor = Color(0xFF3B82F6),
                         variant = GlassVariant.Compact,
                         onClick = {}
+                    )
+                }
+                if (canSaveMedia) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Download,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = { onSaveMedia(saveTargetUrl, displayTitle) }
                     )
                 }
                 if (normalizedMediaType == "audio" && audioTargetUrl.isNotBlank()) {
@@ -1077,6 +1107,7 @@ fun GuideGalleryExpressionCardItem(
     items: List<BaGuideGalleryItem>,
     backdrop: Backdrop?,
     onOpenMedia: (String) -> Unit,
+    onSaveMedia: (url: String, title: String) -> Unit = { _, _ -> },
     mediaUrlResolver: (String) -> String = { it },
     modifier: Modifier = Modifier
 ) {
@@ -1089,6 +1120,13 @@ fun GuideGalleryExpressionCardItem(
     val selectedItem = items.getOrElse(selectedIndex) { items.first() }
     val displayImageUrl = mediaUrlResolver(selectedItem.imageUrl)
     val displayMediaUrl = mediaUrlResolver(selectedItem.mediaUrl)
+    val saveTargetUrl = remember(selectedItem.mediaType, displayImageUrl, displayMediaUrl) {
+        if (selectedItem.mediaType.lowercase() == "video") {
+            displayMediaUrl.ifBlank { displayImageUrl }
+        } else {
+            displayImageUrl.ifBlank { displayMediaUrl }
+        }
+    }
     val optionLabels = remember(items) {
         items.mapIndexed { index, _ -> "角色表情${index + 1}" }
     }
@@ -1191,6 +1229,21 @@ fun GuideGalleryExpressionCardItem(
                         }
                     }
                 }
+                if (saveTargetUrl.isNotBlank()) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Download,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            onSaveMedia(
+                                saveTargetUrl,
+                                optionLabels.getOrElse(selectedIndex) { title }
+                            )
+                        }
+                    )
+                }
             }
 
             if (displayImageUrl.isNotBlank() && selectedItem.mediaType.lowercase() != "video") {
@@ -1270,6 +1323,7 @@ fun GuideGalleryVideoGroupCardItem(
     previewFallbackUrl: String = "",
     backdrop: Backdrop?,
     onOpenMedia: (String) -> Unit,
+    onSaveMedia: (url: String, title: String) -> Unit = { _, _ -> },
     mediaUrlResolver: (String) -> String = { it },
     modifier: Modifier = Modifier
 ) {
@@ -1284,6 +1338,9 @@ fun GuideGalleryVideoGroupCardItem(
     val displayPreviewUrl = mediaUrlResolver(
         selectedItem.imageUrl.ifBlank { previewFallbackUrl }
     )
+    val saveTargetUrl = remember(displayMediaUrl, displayPreviewUrl) {
+        displayMediaUrl.ifBlank { displayPreviewUrl }
+    }
     val noteText = selectedItem.note.trim()
     val optionLabels = remember(title, items) {
         if (items.size <= 1) {
@@ -1369,6 +1426,21 @@ fun GuideGalleryVideoGroupCardItem(
                     variant = GlassVariant.Compact,
                     onClick = {}
                 )
+                if (saveTargetUrl.isNotBlank()) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Download,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            onSaveMedia(
+                                saveTargetUrl,
+                                optionLabels.getOrElse(selectedIndex) { title }
+                            )
+                        }
+                    )
+                }
             }
 
             if (displayMediaUrl.isBlank()) {

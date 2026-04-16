@@ -29,6 +29,7 @@ internal data class BaSettingsSheetState(
     val apNotifyEnabled: Boolean,
     val apNotifyThresholdText: String,
     val mediaAdaptiveRotationEnabled: Boolean,
+    val mediaSaveCustomEnabled: Boolean,
     val showEndedActivities: Boolean,
     val showEndedPools: Boolean,
     val showCalendarPoolImages: Boolean,
@@ -43,6 +44,7 @@ internal fun BaSettingsSheet(
     onApNotifyThresholdTextChange: (String) -> Unit,
     onApNotifyThresholdDone: () -> Unit,
     onMediaAdaptiveRotationEnabledChange: (Boolean) -> Unit,
+    onMediaSaveCustomEnabledChange: (Boolean) -> Unit,
     onShowEndedActivitiesChange: (Boolean) -> Unit,
     onShowEndedPoolsChange: (Boolean) -> Unit,
     onShowCalendarPoolImagesChange: (Boolean) -> Unit,
@@ -120,6 +122,15 @@ internal fun BaSettingsSheet(
                     Switch(
                         checked = state.mediaAdaptiveRotationEnabled,
                         onCheckedChange = onMediaAdaptiveRotationEnabledChange,
+                    )
+                }
+                SheetControlRow(
+                    label = stringResource(R.string.ba_settings_label_media_save_custom),
+                    summary = stringResource(R.string.ba_settings_summary_media_save_custom),
+                ) {
+                    Switch(
+                        checked = state.mediaSaveCustomEnabled,
+                        onCheckedChange = onMediaSaveCustomEnabledChange,
                     )
                 }
             }

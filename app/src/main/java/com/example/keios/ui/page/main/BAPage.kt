@@ -258,6 +258,7 @@ fun BAPage(
             ui.sheetApNotifyThresholdText = normalized.toString()
         },
         onMediaAdaptiveRotationEnabledChange = { ui.sheetMediaAdaptiveRotationEnabled = it },
+        onMediaSaveCustomEnabledChange = { ui.sheetMediaSaveCustomEnabled = it },
         onShowEndedActivitiesChange = { ui.sheetShowEndedActivities = it },
         onShowEndedPoolsChange = { ui.sheetShowEndedPools = it },
         onShowCalendarPoolImagesChange = { ui.sheetShowCalendarPoolImages = it },

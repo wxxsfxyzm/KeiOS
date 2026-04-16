@@ -1,8 +1,14 @@
 package com.example.keios.ui.page.main
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
+import android.webkit.MimeTypeMap
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.documentfile.provider.DocumentFile
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -65,6 +71,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.keios.R
+import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.example.keios.ui.page.main.ba.BASettingsStore
 import com.example.keios.ui.page.main.student.BaStudentGuideInfo
 import com.example.keios.ui.page.main.student.BaGuideGalleryItem
@@ -118,6 +126,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -153,6 +162,154 @@ private fun isGuideAudioPlaybackUrl(raw: String): Boolean {
     return scheme.equals("http", ignoreCase = true) ||
         scheme.equals("https", ignoreCase = true) ||
         scheme.equals("file", ignoreCase = true)
+}
+
+private data class GuideMediaSaveRequest(
+    val sourceUrl: String,
+    val title: String,
+    val fileName: String,
+    val mimeType: String
+)
+
+private fun sanitizeGuideMediaTitle(raw: String): String {
+    val cleaned = raw
+        .replace(Regex("""[\\/:*?"<>|]"""), " ")
+        .replace(Regex("""\s+"""), " ")
+        .trim()
+    return cleaned.ifBlank { "BA_media" }.take(64)
+}
+
+private fun guessGuideMediaExt(rawSourceUrl: String): String {
+    val normalized = normalizeGuidePlaybackSource(rawSourceUrl)
+    val source = normalized.substringBefore('#').substringBefore('?')
+    val ext = source.substringAfterLast('.', "").lowercase()
+    return when {
+        ext in setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "mp4", "webm", "mkv", "mov", "ogg", "mp3", "wav", "flac", "aac", "m4a") -> ext
+        else -> "bin"
+    }
+}
+
+private fun mimeTypeFromGuideExt(ext: String): String {
+    val normalizedExt = ext.lowercase()
+    val mapMime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(normalizedExt).orEmpty()
+    if (mapMime.isNotBlank()) return mapMime
+    return when (normalizedExt) {
+        "jpg", "jpeg" -> "image/jpeg"
+        "png" -> "image/png"
+        "webp" -> "image/webp"
+        "gif" -> "image/gif"
+        "bmp" -> "image/bmp"
+        "mp4" -> "video/mp4"
+        "webm" -> "video/webm"
+        "mkv" -> "video/x-matroska"
+        "mov" -> "video/quicktime"
+        "ogg" -> "audio/ogg"
+        "mp3" -> "audio/mpeg"
+        "wav" -> "audio/wav"
+        "flac" -> "audio/flac"
+        "aac" -> "audio/aac"
+        "m4a" -> "audio/mp4"
+        else -> "application/octet-stream"
+    }
+}
+
+private fun buildGuideMediaSaveRequest(rawUrl: String, rawTitle: String): GuideMediaSaveRequest? {
+    val source = normalizeGuidePlaybackSource(rawUrl)
+    if (source.isBlank()) return null
+    val ext = guessGuideMediaExt(source)
+    val mime = mimeTypeFromGuideExt(ext)
+    val title = sanitizeGuideMediaTitle(rawTitle)
+    val fileName = if (title.endsWith(".$ext", ignoreCase = true)) {
+        title
+    } else {
+        "$title.$ext"
+    }
+    return GuideMediaSaveRequest(
+        sourceUrl = source,
+        title = title,
+        fileName = fileName,
+        mimeType = mime
+    )
+}
+
+private fun copyGuideMediaToUri(
+    context: android.content.Context,
+    sourceUrl: String,
+    outputUri: Uri
+): Boolean {
+    return runCatching {
+        val normalized = normalizeGuidePlaybackSource(sourceUrl)
+        if (normalized.isBlank()) {
+            false
+        } else {
+            val output = context.contentResolver.openOutputStream(outputUri) ?: return@runCatching false
+            output.use { out ->
+                val sourceUri = runCatching { Uri.parse(normalized) }.getOrNull()
+                val scheme = sourceUri?.scheme.orEmpty().lowercase()
+                when {
+                    scheme == "file" -> {
+                        val path = sourceUri?.path.orEmpty()
+                        if (path.isBlank()) {
+                            false
+                        } else {
+                            File(path).inputStream().use { input -> input.copyTo(out) }
+                            true
+                        }
+                    }
+                    scheme == "content" -> {
+                        val parsedUri = sourceUri
+                        val input = parsedUri?.let { context.contentResolver.openInputStream(it) }
+                        if (input == null) {
+                            false
+                        } else {
+                            input.use { stream -> stream.copyTo(out) }
+                            true
+                        }
+                    }
+                    scheme == "http" || scheme == "https" || normalized.startsWith("//") -> {
+                        val tempDir = File(context.cacheDir, "guide_media_save")
+                        if (!tempDir.exists()) tempDir.mkdirs()
+                        val tempFile = File(tempDir, "tmp_${System.nanoTime().toString(16)}")
+                        try {
+                            val downloaded = GameKeeFetchHelper.downloadToFile(normalized, tempFile)
+                            if (!downloaded || !tempFile.exists() || tempFile.length() <= 0L) {
+                                false
+                            } else {
+                                tempFile.inputStream().use { input -> input.copyTo(out) }
+                                true
+                            }
+                        } finally {
+                            runCatching { tempFile.delete() }
+                        }
+                    }
+                    else -> false
+                }
+            }
+        }
+    }.getOrDefault(false)
+}
+
+private fun createUniqueDocumentInTree(
+    tree: DocumentFile,
+    mimeType: String,
+    fileName: String
+): DocumentFile? {
+    val base = fileName.substringBeforeLast('.', fileName).ifBlank { "BA_media" }
+    val ext = fileName.substringAfterLast('.', "")
+    val normalizedExt = ext.takeIf { it.isNotBlank() }?.let { ".$it" }.orEmpty()
+    val maxAttempts = 120
+    for (index in 0 until maxAttempts) {
+        val candidate = if (index == 0) {
+            "$base$normalizedExt"
+        } else {
+            "$base ($index)$normalizedExt"
+        }
+        val exists = tree.findFile(candidate)
+        if (exists == null) {
+            return tree.createFile(mimeType, candidate)
+        }
+    }
+    return null
 }
 
 @Composable
@@ -198,6 +355,8 @@ fun BaStudentGuidePage(
     var playingVoiceUrl by rememberSaveable(sourceUrl) { mutableStateOf("") }
     var isVoicePlaying by remember(sourceUrl) { mutableStateOf(false) }
     var voicePlayProgress by remember(sourceUrl) { mutableFloatStateOf(0f) }
+    var pendingCustomSaveRequest by remember { mutableStateOf<GuideMediaSaveRequest?>(null) }
+    var pendingFixedSaveRequest by remember { mutableStateOf<GuideMediaSaveRequest?>(null) }
     var galleryPrefetchRequested by rememberSaveable(sourceUrl) { mutableStateOf(false) }
     var galleryCacheRevision by remember(sourceUrl) { mutableIntStateOf(0) }
     val bottomTabs = GuideBottomTab.entries
@@ -228,6 +387,71 @@ fun BaStudentGuidePage(
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(createGameKeeMediaSourceFactory(context))
             .build()
+    }
+    val customSaveLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val request = pendingCustomSaveRequest
+        pendingCustomSaveRequest = null
+        val targetUri = result.data?.data
+        if (result.resultCode != Activity.RESULT_OK || request == null || targetUri == null) {
+            return@rememberLauncherForActivityResult
+        }
+        pageScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                copyGuideMediaToUri(context, request.sourceUrl, targetUri)
+            }
+            if (success) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.guide_media_save_success, request.fileName),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                Toast.makeText(context, context.getString(R.string.guide_media_save_failed), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    val fixedFolderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val request = pendingFixedSaveRequest
+        if (result.resultCode != Activity.RESULT_OK) {
+            pendingFixedSaveRequest = null
+            return@rememberLauncherForActivityResult
+        }
+        val treeUri = result.data?.data
+        if (request == null || treeUri == null) {
+            pendingFixedSaveRequest = null
+            return@rememberLauncherForActivityResult
+        }
+        runCatching {
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            context.contentResolver.takePersistableUriPermission(treeUri, flags)
+        }
+        BASettingsStore.saveMediaSaveFixedTreeUri(treeUri.toString())
+        pendingFixedSaveRequest = null
+        pageScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                val treeDoc = DocumentFile.fromTreeUri(context, treeUri) ?: return@withContext false
+                val targetDoc = createUniqueDocumentInTree(
+                    tree = treeDoc,
+                    mimeType = request.mimeType,
+                    fileName = request.fileName
+                ) ?: return@withContext false
+                copyGuideMediaToUri(context, request.sourceUrl, targetDoc.uri)
+            }
+            if (success) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.guide_media_save_success, request.fileName),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                Toast.makeText(context, context.getString(R.string.guide_media_save_failed), Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     DisposableEffect(voicePlayer) {
@@ -325,6 +549,76 @@ fun BaStudentGuidePage(
         sourceUrl = target
         error = null
         refreshSignal += 1
+    }
+
+    fun saveGuideMedia(rawMediaUrl: String, rawTitle: String) {
+        val request = buildGuideMediaSaveRequest(rawMediaUrl, rawTitle)
+        if (request == null) {
+            Toast.makeText(context, context.getString(R.string.guide_media_save_empty), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val customMode = BASettingsStore.loadMediaSaveCustomEnabled()
+        if (customMode) {
+            pendingCustomSaveRequest = request
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = request.mimeType
+                putExtra(Intent.EXTRA_TITLE, request.fileName)
+            }
+            customSaveLauncher.launch(intent)
+            return
+        }
+
+        val fixedTreeUriRaw = BASettingsStore.loadMediaSaveFixedTreeUri()
+        val fixedTreeUri = fixedTreeUriRaw.takeIf { it.isNotBlank() }?.let { raw ->
+            runCatching { Uri.parse(raw) }.getOrNull()
+        }
+        if (fixedTreeUri != null) {
+            pageScope.launch {
+                val success = withContext(Dispatchers.IO) {
+                    val treeDoc = DocumentFile.fromTreeUri(context, fixedTreeUri)
+                        ?: return@withContext false
+                    val targetDoc = createUniqueDocumentInTree(
+                        tree = treeDoc,
+                        mimeType = request.mimeType,
+                        fileName = request.fileName
+                    ) ?: return@withContext false
+                    copyGuideMediaToUri(context, request.sourceUrl, targetDoc.uri)
+                }
+                if (success) {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.guide_media_save_success, request.fileName),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    BASettingsStore.saveMediaSaveFixedTreeUri("")
+                    pendingFixedSaveRequest = request
+                    val pickerIntent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                        addFlags(
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                        )
+                    }
+                    fixedFolderLauncher.launch(pickerIntent)
+                }
+            }
+            return
+        }
+
+        pendingFixedSaveRequest = request
+        val pickerIntent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+            )
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                putExtra(DocumentsContract.EXTRA_INITIAL_URI, Uri.parse("content://com.android.externalstorage.documents/tree/primary%3ADownload"))
+            }
+        }
+        fixedFolderLauncher.launch(pickerIntent)
     }
 
     LaunchedEffect(Unit) {
@@ -806,6 +1100,7 @@ fun BaStudentGuidePage(
                             selectedVoiceLanguage = if (isVoiceTab) selectedVoiceLanguage else "",
                             onOpenExternal = ::openExternal,
                             onOpenGuide = ::openGuideInPage,
+                            onSaveMedia = ::saveGuideMedia,
                             onToggleVoicePlayback = if (isVoiceTab) ::toggleVoicePlayback else ignoreStringInput,
                             onSelectedVoiceLanguageChange = if (isVoiceTab) {
                                 { selectedVoiceLanguage = it }

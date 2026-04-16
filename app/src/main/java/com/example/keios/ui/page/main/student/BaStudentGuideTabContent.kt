@@ -71,6 +71,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
     selectedVoiceLanguage: String,
     onOpenExternal: (String) -> Unit,
     onOpenGuide: (String) -> Unit,
+    onSaveMedia: (url: String, title: String) -> Unit,
     onToggleVoicePlayback: (String) -> Unit,
     onSelectedVoiceLanguageChange: (String) -> Unit
 ) {
@@ -791,6 +792,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                     item = chocolateItem,
                                                     backdrop = backdrop,
                                                     onOpenMedia = onOpenExternal,
+                                                    onSaveMedia = onSaveMedia,
                                                     audioLoopScopeKey = sourceUrl,
                                                     mediaUrlResolver = { raw ->
                                                         galleryCacheRevision.let {
@@ -846,6 +848,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                     item = furnitureItem,
                                                     backdrop = backdrop,
                                                     onOpenMedia = onOpenExternal,
+                                                    onSaveMedia = onSaveMedia,
                                                     audioLoopScopeKey = sourceUrl,
                                                     mediaUrlResolver = { raw ->
                                                         galleryCacheRevision.let {
@@ -1245,6 +1248,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                 items = expressionItems,
                                                 backdrop = backdrop,
                                                 onOpenMedia = onOpenExternal,
+                                                onSaveMedia = onSaveMedia,
                                                 mediaUrlResolver = { raw ->
                                                     galleryCacheRevision.let {
                                                         BaGuideTempMediaCache.resolveCachedUrl(
@@ -1260,6 +1264,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                 item = item,
                                                 backdrop = backdrop,
                                                 onOpenMedia = onOpenExternal,
+                                                onSaveMedia = onSaveMedia,
                                                 audioLoopScopeKey = sourceUrl,
                                                 mediaUrlResolver = { raw ->
                                                     galleryCacheRevision.let {
@@ -1290,6 +1295,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                     previewFallbackUrl = "",
                                                     backdrop = backdrop,
                                                     onOpenMedia = onOpenExternal,
+                                                    onSaveMedia = onSaveMedia,
                                                     mediaUrlResolver = { raw ->
                                                         galleryCacheRevision.let {
                                                             BaGuideTempMediaCache.resolveCachedUrl(
@@ -1352,6 +1358,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                 previewFallbackUrl = memoryHallPreview,
                                                 backdrop = backdrop,
                                                 onOpenMedia = onOpenExternal,
+                                                onSaveMedia = onSaveMedia,
                                                 mediaUrlResolver = { raw ->
                                                     galleryCacheRevision.let {
                                                         BaGuideTempMediaCache.resolveCachedUrl(
@@ -1396,6 +1403,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                             previewFallbackUrl = memoryHallPreview,
                                             backdrop = backdrop,
                                             onOpenMedia = onOpenExternal,
+                                            onSaveMedia = onSaveMedia,
                                             mediaUrlResolver = { raw ->
                                                 galleryCacheRevision.let {
                                                     BaGuideTempMediaCache.resolveCachedUrl(
@@ -1422,6 +1430,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                 previewFallbackUrl = "",
                                                 backdrop = backdrop,
                                                 onOpenMedia = onOpenExternal,
+                                                onSaveMedia = onSaveMedia,
                                                 mediaUrlResolver = { raw ->
                                                     galleryCacheRevision.let {
                                                         BaGuideTempMediaCache.resolveCachedUrl(
@@ -1481,6 +1490,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                             previewFallbackUrl = "",
                                             backdrop = backdrop,
                                             onOpenMedia = onOpenExternal,
+                                            onSaveMedia = onSaveMedia,
                                             mediaUrlResolver = { raw ->
                                                 galleryCacheRevision.let {
                                                     BaGuideTempMediaCache.resolveCachedUrl(
