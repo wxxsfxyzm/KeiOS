@@ -353,11 +353,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                             val sameNameRoleRows = profileRowsBase.filter(::isSameNameRoleRow)
                             val sameNameRoleItems = buildSameNameRoleItems(sameNameRoleRows)
                             val sameNameRoleHint = sameNameRoleRows.firstNotNullOfOrNull { row ->
-                                if (normalizeProfileFieldKey(row.key) != relatedSameNameRoleHeaderKey) return@firstNotNullOfOrNull null
-                                row.value
-                                    .trim()
-                                    .trim('*')
-                                    .takeIf { it.isNotBlank() }
+                                extractSameNameRoleHint(row)
                             }.orEmpty()
                             val hasTopDataHeader = profileRowsBase.any { row ->
                                 normalizeProfileFieldKey(row.key) == normalizeProfileFieldKey("顶级数据")
@@ -3335,15 +3331,60 @@ private fun buildGiftPreferenceItems(rows: List<BaGuideRow>): List<GiftPreferenc
 private fun splitRoleRowTokens(raw: String): List<String> {
     if (raw.isBlank()) return emptyList()
     return raw
-        .split(Regex("""\s+/\s+"""))
+        .split(Regex("""\s*(?:/|／|\||｜|\n)\s*"""))
         .map { it.trim() }
         .filter { it.isNotBlank() }
+}
+
+private val sameNameRoleHintKeywords = listOf(
+    "暂无同名角色",
+    "未填写",
+    "占位",
+    "说明",
+    "备注",
+    "复制",
+    "不用写",
+    "暂时没",
+    "待补充"
+)
+
+private fun isSameNameRoleHintText(raw: String): Boolean {
+    val value = raw.trim()
+    if (value.isBlank()) return false
+    val compact = value
+        .replace(" ", "")
+        .replace("　", "")
+        .lowercase()
+    if (compact.length >= 20) return true
+    return sameNameRoleHintKeywords.any { keyword ->
+        compact.contains(keyword.lowercase())
+    }
+}
+
+private fun extractSameNameRoleHint(row: BaGuideRow): String? {
+    if (normalizeProfileFieldKey(row.key) != relatedSameNameRoleHeaderKey) return null
+    val rawValue = row.value.trim().trim('*')
+    if (rawValue.isBlank()) return null
+    if (isProfileValuePlaceholder(rawValue)) return null
+    val hasLink = extractProfileExternalLink(rawValue).isNotBlank()
+    val hasImage = buildList {
+        add(row.imageUrl.trim())
+        addAll(row.imageUrls.map { it.trim() })
+    }.any { candidate ->
+        candidate.isNotBlank() && isRenderableGalleryImageUrl(candidate)
+    }
+    if (hasLink || hasImage) return null
+    if (!isSameNameRoleHintText(rawValue)) return null
+    return rawValue
 }
 
 private fun buildSameNameRoleItems(rows: List<BaGuideRow>): List<SameNameRoleItem> {
     if (rows.isEmpty()) return emptyList()
     val items = rows.mapNotNull { row ->
-        if (normalizeProfileFieldKey(row.key) != sameNameRoleNameRowKey) return@mapNotNull null
+        val normalizedKey = normalizeProfileFieldKey(row.key)
+        if (normalizedKey != sameNameRoleNameRowKey && normalizedKey != relatedSameNameRoleHeaderKey) {
+            return@mapNotNull null
+        }
         val tokens = splitRoleRowTokens(row.value)
         val link = sequence<String> {
             tokens.forEach { yield(it) }
@@ -3352,7 +3393,10 @@ private fun buildSameNameRoleItems(rows: List<BaGuideRow>): List<SameNameRoleIte
             .firstOrNull { it.isNotBlank() }
             .orEmpty()
         val name = tokens.firstOrNull { token ->
-            token.isNotBlank() && extractProfileExternalLink(token).isBlank()
+            token.isNotBlank() &&
+                !isProfileValuePlaceholder(token) &&
+                extractProfileExternalLink(token).isBlank() &&
+                !isSameNameRoleHintText(token)
         }.orEmpty()
         val image = (row.imageUrls + row.imageUrl)
             .firstOrNull { candidate -> isRenderableGalleryImageUrl(candidate) }
@@ -3360,8 +3404,15 @@ private fun buildSameNameRoleItems(rows: List<BaGuideRow>): List<SameNameRoleIte
         if (name.isBlank() && link.isBlank() && image.isBlank()) {
             return@mapNotNull null
         }
+        if (name.isBlank() && link.isBlank() && isSameNameRoleHintText(row.value)) {
+            return@mapNotNull null
+        }
+        val fallbackName = when {
+            link.isNotBlank() -> fallbackProfileLinkTitle(link)
+            else -> "同名角色"
+        }
         SameNameRoleItem(
-            name = name.ifBlank { fallbackProfileLinkTitle(link) },
+            name = name.ifBlank { fallbackName },
             linkUrl = link,
             imageUrl = image
         )
