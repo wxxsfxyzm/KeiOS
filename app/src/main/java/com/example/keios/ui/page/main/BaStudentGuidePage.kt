@@ -378,7 +378,8 @@ fun BaStudentGuidePage(
                 BaGuideTempMediaCache.prefetchForGuide(
                     context = context,
                     sourceUrl = currentSource,
-                    rawUrls = listOf(target)
+                    rawUrls = listOf(target),
+                    forceReDownload = true
                 )
             }
             galleryCacheRevision += 1

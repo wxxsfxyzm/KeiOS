@@ -37,6 +37,15 @@ object BaGuideTempMediaCache {
         return normalizeGuideUrl(raw.trim()).trim()
     }
 
+    private fun withForceNetworkQuery(url: String): String {
+        val value = url.trim()
+        if (value.isBlank()) return value
+        if (!value.startsWith("http://") && !value.startsWith("https://")) return value
+        val mark = "__keios_force_ts=${System.currentTimeMillis()}"
+        val suffix = if (value.contains("?")) "&$mark" else "?$mark"
+        return value + suffix
+    }
+
     private fun looksLikeGifUrl(url: String): Boolean {
         val normalized = url.trim()
         if (normalized.isBlank()) return false
@@ -85,7 +94,8 @@ object BaGuideTempMediaCache {
     suspend fun prefetchForGuide(
         context: Context,
         sourceUrl: String,
-        rawUrls: List<String>
+        rawUrls: List<String>,
+        forceReDownload: Boolean = false
     ) = withContext(Dispatchers.IO) {
         val dir = sessionDir(context, sourceUrl)
         dir.mkdirs()
@@ -102,19 +112,21 @@ object BaGuideTempMediaCache {
                     semaphore.withPermit {
                         ensureActive()
                         val file = targetFile(context, sourceUrl, url)
-                        if (isUsableCachedMedia(url, file)) return@withPermit
+                        if (!forceReDownload && isUsableCachedMedia(url, file)) return@withPermit
                         if (file.exists()) {
                             runCatching { file.delete() }
                         }
                         val strictGif = looksLikeGifUrl(url) || file.extension.equals("gif", ignoreCase = true)
+                        val firstRequestUrl = if (forceReDownload) withForceNetworkQuery(url) else url
                         val firstAttemptOk = runCatching {
-                            GameKeeFetchHelper.downloadToFile(url, file)
+                            GameKeeFetchHelper.downloadToFile(firstRequestUrl, file)
                         }.getOrDefault(false)
                         if (firstAttemptOk && isUsableCachedMedia(url, file)) return@withPermit
                         runCatching { file.delete() }
                         if (strictGif) {
+                            val retryRequestUrl = if (forceReDownload) withForceNetworkQuery(url) else url
                             val retryOk = runCatching {
-                                GameKeeFetchHelper.downloadToFile(url, file)
+                                GameKeeFetchHelper.downloadToFile(retryRequestUrl, file)
                             }.getOrDefault(false)
                             if (!retryOk || !isUsableCachedMedia(url, file)) {
                                 runCatching { file.delete() }
