@@ -28,6 +28,7 @@ fun readLocalPropertyOrNull(key: String): String? {
 val baseVersionName = "1.0"
 val gitCommitCount = runGitCommandOrNull("rev-list", "--count", "HEAD")?.toIntOrNull() ?: 1
 val gitShortHash = runGitCommandOrNull("rev-parse", "--short", "HEAD") ?: "nogit"
+val gitBranchName = runGitCommandOrNull("rev-parse", "--abbrev-ref", "HEAD") ?: "unknown"
 val gitDirty = runGitCommandOrNull("status", "--porcelain").isNullOrBlank().not()
 val autoVersionCode = 10_000 + gitCommitCount
 val autoVersionName = buildString {
@@ -109,6 +110,11 @@ android {
         buildConfigField("String", "METRICS_PERFORMANCE_VERSION", "\"$metricsPerformanceVersion\"")
         buildConfigField("String", "DOCUMENTFILE_VERSION", "\"$documentFileVersion\"")
         buildConfigField("String", "GRADLE_VERSION", "\"$projectGradleVersion\"")
+        buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
+        buildConfigField("int", "GIT_COMMIT_COUNT", gitCommitCount.toString())
+        buildConfigField("String", "GIT_SHORT_HASH", "\"$gitShortHash\"")
+        buildConfigField("String", "GIT_BRANCH_NAME", "\"$gitBranchName\"")
+        buildConfigField("boolean", "GIT_WORKTREE_DIRTY", gitDirty.toString())
         buildConfigField("int", "COMPILE_SDK_VERSION", projectCompileSdk.toString())
         buildConfigField("int", "MIN_SDK_VERSION", projectMinSdk.toString())
         buildConfigField("int", "TARGET_SDK_VERSION", projectTargetSdk.toString())

@@ -22,10 +22,12 @@ import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Layers
 import top.yukonga.miuix.kmp.icon.extended.ListView
 import top.yukonga.miuix.kmp.icon.extended.Lock
+import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.icon.extended.Report
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Tune
+import top.yukonga.miuix.kmp.icon.extended.Update
 
 private data class AboutInfoRow(
     @StringRes val titleRes: Int,
@@ -182,7 +184,67 @@ fun AboutGitHubCardSection(
     onOpenProjectUrl: (String) -> Unit
 ) {
     val projectUrl = stringResource(R.string.about_project_url)
+    val repoId = parseGitHubRepoId(projectUrl)
+    val dirtySuffix = if (BuildConfig.GIT_WORKTREE_DIRTY) "-dirty" else ""
+    val worktreeState = if (BuildConfig.GIT_WORKTREE_DIRTY) {
+        stringResource(R.string.about_value_github_worktree_dirty)
+    } else {
+        stringResource(R.string.about_value_github_worktree_clean)
+    }
+    val buildVersionText = stringResource(
+        R.string.about_value_version_format,
+        BuildConfig.VERSION_NAME,
+        BuildConfig.VERSION_CODE
+    )
+    val versionSourceText = stringResource(
+        R.string.about_value_github_version_source,
+        BuildConfig.BASE_VERSION_NAME,
+        BuildConfig.GIT_COMMIT_COUNT,
+        BuildConfig.GIT_SHORT_HASH,
+        dirtySuffix,
+        BuildConfig.VERSION_CODE
+    )
     val rows = listOf(
+        AboutInfoRow(
+            R.string.about_row_github_repo_id,
+            repoId,
+            MiuixIcons.Regular.Layers
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_build_version,
+            buildVersionText,
+            MiuixIcons.Regular.Update
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_branch,
+            BuildConfig.GIT_BRANCH_NAME,
+            MiuixIcons.Regular.GridView
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_commit_count,
+            BuildConfig.GIT_COMMIT_COUNT.toString(),
+            MiuixIcons.Regular.ListView
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_commit_hash,
+            BuildConfig.GIT_SHORT_HASH,
+            MiuixIcons.Regular.Notes
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_worktree,
+            worktreeState,
+            MiuixIcons.Regular.Report
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_data_source,
+            stringResource(R.string.about_value_github_data_source),
+            MiuixIcons.Regular.Info
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_version_source,
+            versionSourceText,
+            MiuixIcons.Regular.Tune
+        ),
         AboutInfoRow(
             R.string.about_row_github_strategy,
             stringResource(R.string.about_value_github_strategy),
@@ -247,6 +309,16 @@ fun AboutGitHubCardSection(
             }
         }
     }
+}
+
+private fun parseGitHubRepoId(projectUrl: String): String {
+    val trimmed = projectUrl.trim().removeSuffix("/")
+    val marker = "github.com/"
+    val index = trimmed.indexOf(marker)
+    if (index < 0) return trimmed
+    val path = trimmed.substring(index + marker.length)
+    if (path.isBlank()) return trimmed
+    return path
 }
 
 @Composable

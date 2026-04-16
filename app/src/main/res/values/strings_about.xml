@@ -58,6 +58,14 @@
     <string name="about_row_glass_material">玻璃材质</string>
     <string name="about_row_permission_bridge">权限桥接</string>
     <string name="about_row_github_strategy">抓取策略</string>
+    <string name="about_row_github_repo_id">仓库标识</string>
+    <string name="about_row_github_build_version">当前构建版本</string>
+    <string name="about_row_github_branch">构建分支</string>
+    <string name="about_row_github_commit_count">本地提交总数</string>
+    <string name="about_row_github_commit_hash">当前提交哈希</string>
+    <string name="about_row_github_worktree">工作区状态</string>
+    <string name="about_row_github_data_source">Git 数据来源</string>
+    <string name="about_row_github_version_source">版本号来源</string>
     <string name="about_row_github_tracking">版本追踪</string>
     <string name="about_row_github_notify">通知样式</string>
     <string name="about_row_github_cache">缓存机制</string>
@@ -67,6 +75,10 @@
     <string name="about_row_broadcast_handler">Broadcast Handler</string>
     <string name="about_row_foreground_info_handler">ForegroundInfo Handler</string>
     <string name="about_value_github_strategy">Atom Feed / Releases API（可选 Token）</string>
+    <string name="about_value_github_worktree_clean">clean</string>
+    <string name="about_value_github_worktree_dirty">dirty</string>
+    <string name="about_value_github_data_source">git rev-list --count HEAD / git rev-parse --short HEAD / git rev-parse --abbrev-ref HEAD</string>
+    <string name="about_value_github_version_source">VersionName: %1$s.%2$d-%3$s%4$s · VersionCode: 10000 + %2$d = %5$d</string>
     <string name="about_value_github_tracking">Stable/Pre-release 对比、更新建议与资源入口</string>
     <string name="about_value_github_notify">刷新进度通知 + Live Update / 超级岛样式</string>
     <string name="about_value_github_cache">MMKV 跟踪配置与检查缓存 + Release 资源缓存</string>
