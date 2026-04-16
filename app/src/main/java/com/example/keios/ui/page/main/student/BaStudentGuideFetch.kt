@@ -822,8 +822,11 @@ private fun parseSimulateRowsFromBaseData(
                 }
                 val slotIcon = supplementIcons.equipmentSlotIcons[currentEquipmentSlot].orEmpty()
                 if (slotIcon.isNotBlank() && patched.imageUrl.isBlank()) {
+                    val keyAsMediaUrl = normalizeMediaUrl(sourceUrl, patched.key)
+                    val keyLooksLikeMedia = looksLikeImageUrl(keyAsMediaUrl) || looksLikeVideoUrl(keyAsMediaUrl)
                     val shouldAttachSlotIcon =
-                        slot.isNotBlank() || !isTopDataStatKey(patched.key)
+                        (slot.isNotBlank() || !isTopDataStatKey(patched.key)) &&
+                            !keyLooksLikeMedia
                     if (shouldAttachSlotIcon) {
                         patched = patched.copy(
                             imageUrl = slotIcon,
