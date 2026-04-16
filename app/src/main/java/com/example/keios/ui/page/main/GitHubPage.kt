@@ -923,6 +923,43 @@ fun GitHubPage(
         apkAssetBundles.remove(itemId)
     }
 
+    fun clearApkAssetCache(item: GitHubTrackedApp, state: VersionCheckUi) {
+        val target = state.apkAssetTarget(
+            owner = item.owner,
+            repo = item.repo,
+            context = context,
+            alwaysLatestRelease = item.alwaysShowLatestReleaseDownloadButton
+        ) ?: return
+        val preferHtml = lookupConfig.selectedStrategy == GitHubLookupStrategyOption.AtomFeed
+        val hasApiToken = lookupConfig.apiToken.isNotBlank()
+        val releaseUrl = target.releaseUrl
+        val normalizedRawTag = target.rawTag
+        val cacheKeyDefault = GitHubReleaseAssetCacheStore.buildCacheKey(
+            owner = item.owner,
+            repo = item.repo,
+            rawTag = normalizedRawTag,
+            releaseUrl = releaseUrl,
+            preferHtml = preferHtml,
+            aggressiveFiltering = lookupConfig.aggressiveApkFiltering,
+            includeAllAssets = false,
+            hasApiToken = hasApiToken
+        )
+        val cacheKeyAllAssets = GitHubReleaseAssetCacheStore.buildCacheKey(
+            owner = item.owner,
+            repo = item.repo,
+            rawTag = normalizedRawTag,
+            releaseUrl = releaseUrl,
+            preferHtml = preferHtml,
+            aggressiveFiltering = lookupConfig.aggressiveApkFiltering,
+            includeAllAssets = true,
+            hasApiToken = hasApiToken
+        )
+        scope.launch(Dispatchers.IO) {
+            GitHubReleaseAssetCacheStore.clear(cacheKeyDefault)
+            GitHubReleaseAssetCacheStore.clear(cacheKeyAllAssets)
+        }
+    }
+
     fun loadApkAssets(
         item: GitHubTrackedApp,
         state: VersionCheckUi,
@@ -1285,6 +1322,10 @@ fun GitHubPage(
         onOpenTrackSheetForAdd = { openTrackSheetForAdd() },
         onOpenTrackSheetForEdit = { openTrackSheetForEdit(it) },
         onClearApkAssetUiState = { clearApkAssetUiState(it) },
+        onCollapseApkAssetPanel = { item, state ->
+            clearApkAssetUiState(item.id)
+            clearApkAssetCache(item, state)
+        },
         onLoadApkAssets = { item, state, toggleOnlyWhenCached, includeAllAssets ->
             loadApkAssets(
                 item = item,

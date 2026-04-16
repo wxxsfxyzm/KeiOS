@@ -119,6 +119,14 @@ internal object GitHubReleaseAssetCacheStore {
         kv.trim()
     }
 
+    fun clear(cacheKey: String) {
+        val normalizedKey = cacheKey.trim()
+        if (normalizedKey.isBlank()) return
+        val id = keyId(normalizedKey)
+        kv().removeValueForKey(entryStoreKey(id))
+        removeIndex(id)
+    }
+
     fun cachedEntryCount(): Int = loadIndex().size
 
     private fun encodeBundle(bundle: GitHubReleaseAssetBundle): JSONObject {

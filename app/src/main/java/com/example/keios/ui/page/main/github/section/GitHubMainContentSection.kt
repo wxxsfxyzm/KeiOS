@@ -144,6 +144,7 @@ internal fun GitHubMainContent(
     onOpenTrackSheetForAdd: () -> Unit,
     onOpenTrackSheetForEdit: (GitHubTrackedApp) -> Unit,
     onClearApkAssetUiState: (String) -> Unit,
+    onCollapseApkAssetPanel: (GitHubTrackedApp, VersionCheckUi) -> Unit,
     onLoadApkAssets: (GitHubTrackedApp, VersionCheckUi, Boolean, Boolean) -> Unit,
     onOpenExternalUrl: (String) -> Unit,
     onOpenApkInDownloader: (GitHubReleaseAssetFile) -> Unit,
@@ -222,6 +223,7 @@ internal fun GitHubMainContent(
                     apkAssetExpanded = apkAssetExpanded,
                     onOpenTrackSheetForEdit = onOpenTrackSheetForEdit,
                     onClearApkAssetUiState = onClearApkAssetUiState,
+                    onCollapseApkAssetPanel = onCollapseApkAssetPanel,
                     onLoadApkAssets = onLoadApkAssets,
                     onOpenExternalUrl = onOpenExternalUrl,
                     onOpenApkInDownloader = onOpenApkInDownloader,
@@ -272,6 +274,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
     apkAssetExpanded: SnapshotStateMap<String, Boolean>,
     onOpenTrackSheetForEdit: (GitHubTrackedApp) -> Unit,
     onClearApkAssetUiState: (String) -> Unit,
+    onCollapseApkAssetPanel: (GitHubTrackedApp, VersionCheckUi) -> Unit,
     onLoadApkAssets: (GitHubTrackedApp, VersionCheckUi, Boolean, Boolean) -> Unit,
     onOpenExternalUrl: (String) -> Unit,
     onOpenApkInDownloader: (GitHubReleaseAssetFile) -> Unit,
@@ -303,7 +306,12 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                 onExpandedChange = {
                     expanded = it
                     if (!it) {
-                        onClearApkAssetUiState(item.id)
+                        val collapseState = checkStates[item.id] ?: VersionCheckUi()
+                        if (apkAssetExpanded[item.id] == true) {
+                            onCollapseApkAssetPanel(item, collapseState)
+                        } else {
+                            onClearApkAssetUiState(item.id)
+                        }
                     }
                 },
                 headerStartAction = {
@@ -340,7 +348,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                         Modifier.clickable {
                             if (canLoadApkAssets) {
                                 if (isAssetPanelExpanded) {
-                                    apkAssetExpanded[item.id] = false
+                                    onCollapseApkAssetPanel(item, state)
                                 } else {
                                     onLoadApkAssets(item, state, true, false)
                                 }
