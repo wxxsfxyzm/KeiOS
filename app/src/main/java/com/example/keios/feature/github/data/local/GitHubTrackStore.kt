@@ -117,11 +117,13 @@ object GitHubTrackStore {
                             },
                             latestStableRawTag = item.optString("latestStableRawTag"),
                             latestStableUrl = item.optString("latestStableUrl"),
+                            latestStableUpdatedAtMillis = item.optLong("latestStableUpdatedAtMillis", -1L),
                             latestPreName = item.optString("latestPreName").ifBlank {
                                 item.optString("preReleaseInfo")
                             },
                             latestPreRawTag = item.optString("latestPreRawTag"),
                             latestPreUrl = item.optString("latestPreUrl"),
+                            latestPreUpdatedAtMillis = item.optLong("latestPreUpdatedAtMillis", -1L),
                             hasStableRelease = if (item.has("hasStableRelease")) {
                                 item.optBoolean("hasStableRelease", true)
                             } else {
@@ -168,9 +170,11 @@ object GitHubTrackStore {
                     .put("latestStableName", state.latestStableName)
                     .put("latestStableRawTag", state.latestStableRawTag)
                     .put("latestStableUrl", state.latestStableUrl)
+                    .put("latestStableUpdatedAtMillis", state.latestStableUpdatedAtMillis)
                     .put("latestPreName", state.latestPreName)
                     .put("latestPreRawTag", state.latestPreRawTag)
                     .put("latestPreUrl", state.latestPreUrl)
+                    .put("latestPreUpdatedAtMillis", state.latestPreUpdatedAtMillis)
                     .put("hasStableRelease", state.hasStableRelease)
                     .put("hasUpdate", state.hasUpdate)
                     .put("message", state.message)

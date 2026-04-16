@@ -160,9 +160,11 @@ object GitHubReleaseCheckService {
             latestStableName = stableRelease?.rawName.orEmpty(),
             latestStableRawTag = stableRelease?.rawTag.orEmpty(),
             latestStableUrl = stableRelease?.link.orEmpty(),
+            latestStableUpdatedAtMillis = stableRelease?.updatedAtMillis ?: -1L,
             latestPreName = preRelease?.rawName.orEmpty(),
             latestPreRawTag = preRelease?.rawTag.orEmpty(),
             latestPreUrl = preRelease?.link.orEmpty(),
+            latestPreUpdatedAtMillis = preRelease?.updatedAtMillis ?: -1L,
             hasStableRelease = hasStableRelease,
             hasUpdate = hasUpdate,
             message = message,
@@ -191,7 +193,8 @@ object GitHubReleaseCheckService {
                     displayVersion = it.latestStableName.ifBlank { it.latestTag.ifBlank { it.latestStableRawTag } },
                     rawTag = it.latestStableRawTag.ifBlank { it.latestTag },
                     rawName = it.latestStableName.ifBlank { it.latestTag.ifBlank { it.latestStableRawTag } },
-                    link = entry.latestStableUrl
+                    link = entry.latestStableUrl,
+                    updatedAtMillis = entry.latestStableUpdatedAtMillis.takeIf { ts -> ts > 0L }
                 )
             },
             preRelease = entry
@@ -201,7 +204,8 @@ object GitHubReleaseCheckService {
                     displayVersion = it.latestPreName.ifBlank { it.preReleaseInfo.ifBlank { it.latestPreRawTag } },
                     rawTag = it.latestPreRawTag.ifBlank { it.preReleaseInfo },
                     rawName = it.latestPreName.ifBlank { it.preReleaseInfo.ifBlank { it.latestPreRawTag } },
-                    link = entry.latestPreUrl
+                    link = entry.latestPreUrl,
+                    updatedAtMillis = entry.latestPreUpdatedAtMillis.takeIf { ts -> ts > 0L }
                 )
             },
             hasStableRelease = entry.hasStableRelease,

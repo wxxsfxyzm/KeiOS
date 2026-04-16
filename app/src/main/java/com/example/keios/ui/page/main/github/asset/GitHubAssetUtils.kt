@@ -15,6 +15,14 @@ internal data class ApkAssetTarget(
     val label: String
 )
 
+private data class LatestReleaseCandidate(
+    val rawTag: String,
+    val releaseUrl: String,
+    val publishedAtMillis: Long?
+) {
+    fun hasTarget(): Boolean = rawTag.isNotBlank() || releaseUrl.isNotBlank()
+}
+
 internal fun VersionCheckUi.apkAssetTarget(
     owner: String,
     repo: String,
@@ -28,30 +36,33 @@ internal fun VersionCheckUi.apkAssetTarget(
         GitHubReleaseAssetRepository.parseReleaseTagFromUrl(latestPreUrl)
     }
     if (alwaysLatestRelease) {
-        val latestStableTagCandidate = stableTag.trim()
-        val latestVersionTagCandidate = latestTag.trim()
-        val latestPreTagCandidate = preTag.trim()
-        val latestReleaseTag = when {
-            latestStableTagCandidate.isNotBlank() -> latestStableTagCandidate
-            latestVersionTagCandidate.isNotBlank() -> latestVersionTagCandidate
-            latestPreTagCandidate.isNotBlank() -> latestPreTagCandidate
-            else -> ""
-        }
-        val latestReleaseUrl = when {
-            latestStableUrl.isNotBlank() -> latestStableUrl.trim()
-            latestReleaseTag.isNotBlank() ->
-                GitHubVersionUtils.buildReleaseTagUrl(owner, repo, latestReleaseTag)
-            latestPreUrl.isNotBlank() -> latestPreUrl.trim()
-            else -> ""
-        }
-        if (latestReleaseTag.isBlank() && latestReleaseUrl.isBlank()) return null
-        val targetTag = latestReleaseTag.ifBlank {
-            GitHubReleaseAssetRepository.parseReleaseTagFromUrl(latestReleaseUrl)
+        val stableCandidate = LatestReleaseCandidate(
+            rawTag = stableTag.trim().ifBlank { latestTag.trim() },
+            releaseUrl = latestStableUrl.trim(),
+            publishedAtMillis = latestStableUpdatedAtMillis.takeIf { it > 0L }
+        )
+        val preCandidate = LatestReleaseCandidate(
+            rawTag = preTag.trim(),
+            releaseUrl = latestPreUrl.trim(),
+            publishedAtMillis = latestPreUpdatedAtMillis.takeIf { it > 0L }
+        )
+        val latestByDate = listOf(stableCandidate, preCandidate)
+            .filter { it.hasTarget() && it.publishedAtMillis != null }
+            .maxByOrNull { it.publishedAtMillis ?: Long.MIN_VALUE }
+        val selected = latestByDate
+            ?: stableCandidate.takeIf { it.hasTarget() }
+            ?: preCandidate.takeIf { it.hasTarget() }
+            ?: return null
+        val targetTag = selected.rawTag.ifBlank {
+            GitHubReleaseAssetRepository.parseReleaseTagFromUrl(selected.releaseUrl)
         }
         if (targetTag.isBlank()) return null
+        val releaseUrl = selected.releaseUrl.ifBlank {
+            GitHubVersionUtils.buildReleaseTagUrl(owner, repo, targetTag)
+        }
         return ApkAssetTarget(
             rawTag = targetTag,
-            releaseUrl = latestReleaseUrl.ifBlank { GitHubVersionUtils.buildReleaseTagUrl(owner, repo, targetTag) },
+            releaseUrl = releaseUrl,
             label = context.getString(R.string.github_asset_target_latest)
         )
     }
