@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -734,81 +735,83 @@ fun BaStudentGuidePage(
                     drawContent()
                 }
             }
-            LazyColumn(
-                state = pageListState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = innerPadding.calculateBottomPadding() + 16.dp,
-                    start = 16.dp,
-                    end = 16.dp
-                )
-            ) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            SmallTitle(pageBottomTab.label)
-                        }
-                        if (sourceUrl.isNotBlank()) {
-                            val foregroundColor = when {
-                                loading -> Color(0xFF3B82F6)
-                                !error.isNullOrBlank() -> Color(0xFFEF4444)
-                                else -> Color(0xFF22C55E)
+            SelectionContainer {
+                LazyColumn(
+                    state = pageListState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = PaddingValues(
+                        top = innerPadding.calculateTopPadding(),
+                        bottom = innerPadding.calculateBottomPadding() + 16.dp,
+                        start = 16.dp,
+                        end = 16.dp
+                    )
+                ) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                SmallTitle(pageBottomTab.label)
                             }
-                            CircularProgressIndicator(
-                                progress = syncProgress,
-                                size = 18.dp,
-                                strokeWidth = 2.dp,
-                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                    foregroundColor = foregroundColor,
-                                    backgroundColor = foregroundColor.copy(alpha = 0.30f),
-                                ),
+                            if (sourceUrl.isNotBlank()) {
+                                val foregroundColor = when {
+                                    loading -> Color(0xFF3B82F6)
+                                    !error.isNullOrBlank() -> Color(0xFFEF4444)
+                                    else -> Color(0xFF22C55E)
+                                }
+                                CircularProgressIndicator(
+                                    progress = syncProgress,
+                                    size = 18.dp,
+                                    strokeWidth = 2.dp,
+                                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                        foregroundColor = foregroundColor,
+                                        backgroundColor = foregroundColor.copy(alpha = 0.30f),
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                    item { Spacer(modifier = Modifier.height(12.dp)) }
+
+                    if (sourceUrl.isBlank()) {
+                        item {
+                            FrostedBlock(
+                                backdrop = pageBackdrop,
+                                title = "未选择学生",
+                                subtitle = "请从 BA 卡池信息中点击对应卡池进入",
+                                accent = accent
                             )
                         }
-                    }
-                }
-                item { Spacer(modifier = Modifier.height(12.dp)) }
-
-                if (sourceUrl.isBlank()) {
-                    item {
-                        FrostedBlock(
+                    } else {
+                        renderBaStudentGuideTabContent(
+                            activeBottomTab = pageBottomTab,
+                            info = info,
+                            error = error,
                             backdrop = pageBackdrop,
-                            title = "未选择学生",
-                            subtitle = "请从 BA 卡池信息中点击对应卡池进入",
-                            accent = accent
+                            accent = accent,
+                            context = context,
+                            sourceUrl = sourceUrl,
+                            galleryCacheRevision = galleryCacheRevision,
+                            playingVoiceUrl = if (isVoiceTab) playingVoiceUrl else "",
+                            isVoicePlaying = isVoiceTab && isVoicePlaying,
+                            voicePlayProgress = if (isVoiceTab) voicePlayProgress else 0f,
+                            selectedVoiceLanguage = if (isVoiceTab) selectedVoiceLanguage else "",
+                            onOpenExternal = ::openExternal,
+                            onOpenGuide = ::openGuideInPage,
+                            onToggleVoicePlayback = if (isVoiceTab) ::toggleVoicePlayback else ignoreStringInput,
+                            onSelectedVoiceLanguageChange = if (isVoiceTab) {
+                                { selectedVoiceLanguage = it }
+                            } else {
+                                ignoreStringInput
+                            }
                         )
                     }
-                } else {
-                    renderBaStudentGuideTabContent(
-                        activeBottomTab = pageBottomTab,
-                        info = info,
-                        error = error,
-                        backdrop = pageBackdrop,
-                        accent = accent,
-                        context = context,
-                        sourceUrl = sourceUrl,
-                        galleryCacheRevision = galleryCacheRevision,
-                        playingVoiceUrl = if (isVoiceTab) playingVoiceUrl else "",
-                        isVoicePlaying = isVoiceTab && isVoicePlaying,
-                        voicePlayProgress = if (isVoiceTab) voicePlayProgress else 0f,
-                        selectedVoiceLanguage = if (isVoiceTab) selectedVoiceLanguage else "",
-                        onOpenExternal = ::openExternal,
-                        onOpenGuide = ::openGuideInPage,
-                        onToggleVoicePlayback = if (isVoiceTab) ::toggleVoicePlayback else ignoreStringInput,
-                        onSelectedVoiceLanguageChange = if (isVoiceTab) {
-                            { selectedVoiceLanguage = it }
-                        } else {
-                            ignoreStringInput
-                        }
-                    )
                 }
             }
         }

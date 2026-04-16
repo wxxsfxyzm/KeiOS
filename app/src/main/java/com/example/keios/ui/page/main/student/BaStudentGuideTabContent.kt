@@ -1211,34 +1211,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                 var insertedUnlockLevel = false
                                 var insertedMemoryHallVideoNearGallery = false
                                 var insertedPvRoleAfterOfficial = false
-                                if (galleryRelatedLinkRows.isNotEmpty()) {
-                                    item {
-                                        Card(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            colors = CardDefaults.defaultColors(
-                                                color = Color(0x223B82F6),
-                                                contentColor = MiuixTheme.colorScheme.onBackground
-                                            ),
-                                            onClick = {}
-                                        ) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                GuideProfileSectionHeader(
-                                                    title = "影画相关链接"
-                                                )
-                                                GuideGalleryRelatedLinkRows(
-                                                    rows = galleryRelatedLinkRows,
-                                                    onOpenExternal = onOpenExternal
-                                                )
-                                            }
-                                        }
-                                    }
-                                    renderedCount += 1
-                                }
+                                var insertedGalleryRelatedLinks = false
                                 displayGalleryItems.forEachIndexed { index, item ->
                                     val isExpression = isExpressionGalleryItem(item)
                                     if (isExpression && index != firstExpressionIndex) {
@@ -1328,6 +1301,39 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                             renderedCount += 1
                                         }
                                         insertedPvRoleAfterOfficial = true
+
+                                        if (!insertedGalleryRelatedLinks && galleryRelatedLinkRows.isNotEmpty()) {
+                                            if (renderedCount > 0) {
+                                                item { Spacer(modifier = Modifier.height(10.dp)) }
+                                            }
+                                            item {
+                                                Card(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    colors = CardDefaults.defaultColors(
+                                                        color = Color(0x223B82F6),
+                                                        contentColor = MiuixTheme.colorScheme.onBackground
+                                                    ),
+                                                    onClick = {}
+                                                ) {
+                                                    Column(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                                    ) {
+                                                        GuideProfileSectionHeader(
+                                                            title = "影画相关链接"
+                                                        )
+                                                        GuideGalleryRelatedLinkRows(
+                                                            rows = galleryRelatedLinkRows,
+                                                            onOpenExternal = onOpenExternal
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            renderedCount += 1
+                                            insertedGalleryRelatedLinks = true
+                                        }
                                     }
 
                                     // 将“回忆大厅视频”紧贴“回忆大厅”条目展示。
@@ -1426,6 +1432,39 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                         }
                                         renderedCount += 1
                                     }
+                                    insertedPvRoleAfterOfficial = pvAndRoleVideoGroups.isNotEmpty()
+                                    if (!insertedGalleryRelatedLinks && galleryRelatedLinkRows.isNotEmpty()) {
+                                        if (renderedCount > 0) {
+                                            item { Spacer(modifier = Modifier.height(10.dp)) }
+                                        }
+                                        item {
+                                            Card(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = CardDefaults.defaultColors(
+                                                    color = Color(0x223B82F6),
+                                                    contentColor = MiuixTheme.colorScheme.onBackground
+                                                ),
+                                                onClick = {}
+                                            ) {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    GuideProfileSectionHeader(
+                                                        title = "影画相关链接"
+                                                    )
+                                                    GuideGalleryRelatedLinkRows(
+                                                        rows = galleryRelatedLinkRows,
+                                                        onOpenExternal = onOpenExternal
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        renderedCount += 1
+                                        insertedGalleryRelatedLinks = true
+                                    }
                                 }
 
                                 otherTrailingVideoGroups.forEach { (title, items) ->
@@ -1451,6 +1490,37 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                         )
                                     }
                                     renderedCount += 1
+                                }
+
+                                if (!insertedGalleryRelatedLinks && galleryRelatedLinkRows.isNotEmpty()) {
+                                    if (renderedCount > 0) {
+                                        item { Spacer(modifier = Modifier.height(10.dp)) }
+                                    }
+                                    item {
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = CardDefaults.defaultColors(
+                                                color = Color(0x223B82F6),
+                                                contentColor = MiuixTheme.colorScheme.onBackground
+                                            ),
+                                            onClick = {}
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                GuideProfileSectionHeader(
+                                                    title = "影画相关链接"
+                                                )
+                                                GuideGalleryRelatedLinkRows(
+                                                    rows = galleryRelatedLinkRows,
+                                                    onOpenExternal = onOpenExternal
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             } else {
                                 item {

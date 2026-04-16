@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -541,96 +542,98 @@ private fun CatalogTabContent(
         }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(nestedScrollConnection),
-        contentPadding = PaddingValues(
-            top = innerPadding.calculateTopPadding(),
-            bottom = innerPadding.calculateBottomPadding() + 10.dp,
-            start = 16.dp,
-            end = 16.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    SmallTitle("${tab.label}图鉴")
+    SelectionContainer {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(nestedScrollConnection),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                bottom = innerPadding.calculateBottomPadding() + 10.dp,
+                start = 16.dp,
+                end = 16.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        SmallTitle("${tab.label}图鉴")
+                    }
+                    CircularProgressIndicator(
+                        progress = progress,
+                        size = 18.dp,
+                        strokeWidth = 2.dp,
+                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                            foregroundColor = progressColor,
+                            backgroundColor = progressColor.copy(alpha = 0.30f),
+                        ),
+                    )
                 }
-                CircularProgressIndicator(
-                    progress = progress,
-                    size = 18.dp,
-                    strokeWidth = 2.dp,
-                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                        foregroundColor = progressColor,
-                        backgroundColor = progressColor.copy(alpha = 0.30f),
-                    ),
-                )
             }
-        }
 
-        if (!error.isNullOrBlank()) {
-            item {
-                FrostedBlock(
-                    backdrop = null,
-                    title = "同步状态",
-                    subtitle = error.orEmpty(),
-                    body = "可通过右上角刷新按钮重试",
-                    accent = Color(0xFFEF4444)
-                )
-            }
-        }
-
-        if (!loading && filteredEntries.isEmpty()) {
-            item {
-                FrostedBlock(
-                    backdrop = null,
-                    title = "暂无结果",
-                    subtitle = if (searchQuery.isBlank()) "当前分类没有可显示条目" else "未匹配到相关条目",
-                    accent = accent
-                )
-            }
-        } else {
-            items(
-                items = displayedEntries,
-                key = { "${it.tab.name}-${it.entryId}-${it.contentId}" }
-            ) { entry ->
-                BaGuideCatalogEntryCard(
-                    entry = entry,
-                    onOpenGuide = onOpenGuide
-                )
-            }
-            if (visibleCount < filteredEntries.size) {
+            if (!error.isNullOrBlank()) {
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator(
-                            progress = 0.3f,
-                            size = 16.dp,
-                            strokeWidth = 2.dp,
-                            colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                foregroundColor = accent,
-                                backgroundColor = accent.copy(alpha = 0.30f),
-                            ),
-                        )
-                        Text(
-                            text = " 继续加载更多条目…",
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
-                            fontSize = 12.sp
-                        )
+                    FrostedBlock(
+                        backdrop = null,
+                        title = "同步状态",
+                        subtitle = error.orEmpty(),
+                        body = "可通过右上角刷新按钮重试",
+                        accent = Color(0xFFEF4444)
+                    )
+                }
+            }
+
+            if (!loading && filteredEntries.isEmpty()) {
+                item {
+                    FrostedBlock(
+                        backdrop = null,
+                        title = "暂无结果",
+                        subtitle = if (searchQuery.isBlank()) "当前分类没有可显示条目" else "未匹配到相关条目",
+                        accent = accent
+                    )
+                }
+            } else {
+                items(
+                    items = displayedEntries,
+                    key = { "${it.tab.name}-${it.entryId}-${it.contentId}" }
+                ) { entry ->
+                    BaGuideCatalogEntryCard(
+                        entry = entry,
+                        onOpenGuide = onOpenGuide
+                    )
+                }
+                if (visibleCount < filteredEntries.size) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator(
+                                progress = 0.3f,
+                                size = 16.dp,
+                                strokeWidth = 2.dp,
+                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                    foregroundColor = accent,
+                                    backgroundColor = accent.copy(alpha = 0.30f),
+                                ),
+                            )
+                            Text(
+                                text = " 继续加载更多条目…",
+                                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
             }
