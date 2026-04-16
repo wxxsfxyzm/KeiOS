@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -121,6 +122,11 @@ fun SettingsPage(
         value = null
         value = withContext(Dispatchers.IO) { CacheStores.list(context) }
     }
+    val uiGroupActive = liquidActionBarLayeredStyleEnabled ||
+        liquidBottomBarEnabled ||
+        cardPressFeedbackEnabled ||
+        homeIconHdrEnabled
+    val notifyGroupActive = superIslandNotificationEnabled || superIslandBypassRestrictionEnabled
 
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -161,52 +167,103 @@ fun SettingsPage(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.defaultColors(
-                        color = enabledCardColor,
+                        color = if (uiGroupActive) enabledCardColor else disabledCardColor,
                         contentColor = titleColor
                     ),
                     onClick = {}
                 ) {
-                    SettingsSectionCard(
-                        header = stringResource(R.string.settings_theme_mode_header),
-                        title = stringResource(R.string.settings_theme_mode_title),
-                        summary = themeSummary
+                    SettingsGroupCard(
+                        header = stringResource(R.string.settings_group_visual_header),
+                        title = stringResource(R.string.settings_group_visual_title),
+                        summary = stringResource(R.string.settings_group_visual_summary)
                     ) {
-                        Box(
-                            modifier = Modifier.capturePopupAnchor { themePopupAnchorBounds = it }
+                        SettingsActionItem(
+                            title = stringResource(R.string.settings_theme_mode_title),
+                            summary = themeSummary
                         ) {
-                            GlassTextButton(
-                                backdrop = null,
-                                variant = GlassVariant.SheetAction,
-                                text = currentThemeLabel,
-                                onClick = { showThemeModePopup = !showThemeModePopup }
-                            )
-                            if (showThemeModePopup) {
-                                SnapshotWindowListPopup(
-                                    show = showThemeModePopup,
-                                    alignment = PopupPositionProvider.Align.BottomEnd,
-                                    anchorBounds = themePopupAnchorBounds,
-                                    placement = SnapshotPopupPlacement.ButtonEnd,
-                                    onDismissRequest = { showThemeModePopup = false },
-                                    enableWindowDim = false
-                                ) {
-                                    LiquidDropdownColumn {
-                                        themeModeOptions.forEachIndexed { index, option ->
-                                            val (mode, label) = option
-                                            LiquidDropdownImpl(
-                                                text = label,
-                                                optionSize = themeModeOptions.size,
-                                                isSelected = appThemeMode == mode,
-                                                index = index,
-                                                onSelectedIndexChange = { selectedIndex ->
-                                                    onAppThemeModeChanged(themeModeOptions[selectedIndex].first)
-                                                    showThemeModePopup = false
-                                                }
-                                            )
+                            Box(
+                                modifier = Modifier.capturePopupAnchor { themePopupAnchorBounds = it }
+                            ) {
+                                GlassTextButton(
+                                    backdrop = null,
+                                    variant = GlassVariant.SheetAction,
+                                    text = currentThemeLabel,
+                                    onClick = { showThemeModePopup = !showThemeModePopup }
+                                )
+                                if (showThemeModePopup) {
+                                    SnapshotWindowListPopup(
+                                        show = showThemeModePopup,
+                                        alignment = PopupPositionProvider.Align.BottomEnd,
+                                        anchorBounds = themePopupAnchorBounds,
+                                        placement = SnapshotPopupPlacement.ButtonEnd,
+                                        onDismissRequest = { showThemeModePopup = false },
+                                        enableWindowDim = false
+                                    ) {
+                                        LiquidDropdownColumn {
+                                            themeModeOptions.forEachIndexed { index, option ->
+                                                val (mode, label) = option
+                                                LiquidDropdownImpl(
+                                                    text = label,
+                                                    optionSize = themeModeOptions.size,
+                                                    isSelected = appThemeMode == mode,
+                                                    index = index,
+                                                    onSelectedIndexChange = { selectedIndex ->
+                                                        onAppThemeModeChanged(themeModeOptions[selectedIndex].first)
+                                                        showThemeModePopup = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+
+                        SettingsToggleItem(
+                            title = stringResource(R.string.settings_actionbar_style_title),
+                            summary = if (liquidActionBarLayeredStyleEnabled) {
+                                stringResource(R.string.settings_actionbar_style_summary_enabled)
+                            } else {
+                                stringResource(R.string.settings_actionbar_style_summary_disabled)
+                            },
+                            checked = liquidActionBarLayeredStyleEnabled,
+                            onCheckedChange = onLiquidActionBarLayeredStyleChanged,
+                            infoKey = stringResource(R.string.common_scope),
+                            infoValue = stringResource(R.string.settings_actionbar_style_scope)
+                        )
+
+                        SettingsToggleItem(
+                            title = stringResource(R.string.settings_bottom_bar_title),
+                            summary = stringResource(R.string.settings_bottom_bar_summary),
+                            checked = liquidBottomBarEnabled,
+                            onCheckedChange = onLiquidBottomBarChanged
+                        )
+
+                        SettingsToggleItem(
+                            title = stringResource(R.string.settings_card_feedback_title),
+                            summary = if (cardPressFeedbackEnabled) {
+                                stringResource(R.string.settings_card_feedback_summary_enabled)
+                            } else {
+                                stringResource(R.string.settings_card_feedback_summary_disabled)
+                            },
+                            checked = cardPressFeedbackEnabled,
+                            onCheckedChange = onCardPressFeedbackChanged,
+                            infoKey = stringResource(R.string.common_scope),
+                            infoValue = stringResource(R.string.settings_card_feedback_scope)
+                        )
+
+                        SettingsToggleItem(
+                            title = stringResource(R.string.settings_home_shine_title),
+                            summary = if (homeIconHdrEnabled) {
+                                stringResource(R.string.settings_home_shine_summary_enabled)
+                            } else {
+                                stringResource(R.string.settings_home_shine_summary_disabled)
+                            },
+                            checked = homeIconHdrEnabled,
+                            onCheckedChange = onHomeIconHdrChanged,
+                            infoKey = stringResource(R.string.common_scope),
+                            infoValue = stringResource(R.string.settings_home_shine_scope)
+                        )
                     }
                 }
             }
@@ -217,29 +274,42 @@ fun SettingsPage(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.defaultColors(
-                        color = if (liquidActionBarLayeredStyleEnabled) enabledCardColor else disabledCardColor,
+                        color = if (notifyGroupActive) enabledCardColor else disabledCardColor,
                         contentColor = titleColor
                     ),
                     onClick = {}
                 ) {
-                    SettingsSectionCard(
-                        header = stringResource(R.string.settings_actionbar_style_header),
-                        title = stringResource(R.string.settings_actionbar_style_title),
-                        summary = if (liquidActionBarLayeredStyleEnabled) {
-                            stringResource(R.string.settings_actionbar_style_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_actionbar_style_summary_disabled)
-                        },
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_actionbar_style_scope),
-                        trailing = {
-                            Switch(
-                                checked = liquidActionBarLayeredStyleEnabled,
-                                onCheckedChange = { checked -> onLiquidActionBarLayeredStyleChanged(checked) }
-                            )
-                        },
-                        onClick = { onLiquidActionBarLayeredStyleChanged(!liquidActionBarLayeredStyleEnabled) }
-                    )
+                    SettingsGroupCard(
+                        header = stringResource(R.string.settings_group_notify_header),
+                        title = stringResource(R.string.settings_group_notify_title),
+                        summary = stringResource(R.string.settings_group_notify_summary)
+                    ) {
+                        SettingsToggleItem(
+                            title = stringResource(R.string.settings_super_island_style_title),
+                            summary = if (superIslandNotificationEnabled) {
+                                stringResource(R.string.settings_super_island_style_summary_enabled)
+                            } else {
+                                stringResource(R.string.settings_super_island_style_summary_disabled)
+                            },
+                            checked = superIslandNotificationEnabled,
+                            onCheckedChange = onSuperIslandNotificationChanged,
+                            infoKey = stringResource(R.string.common_scope),
+                            infoValue = stringResource(R.string.settings_super_island_style_scope)
+                        )
+
+                        SettingsToggleItem(
+                            title = stringResource(R.string.settings_super_island_bypass_title),
+                            summary = if (superIslandBypassRestrictionEnabled) {
+                                stringResource(R.string.settings_super_island_bypass_summary_enabled)
+                            } else {
+                                stringResource(R.string.settings_super_island_bypass_summary_disabled)
+                            },
+                            checked = superIslandBypassRestrictionEnabled,
+                            onCheckedChange = onSuperIslandBypassRestrictionChanged,
+                            infoKey = stringResource(R.string.common_note),
+                            infoValue = stringResource(R.string.settings_super_island_bypass_note)
+                        )
+                    }
                 }
             }
 
@@ -254,182 +324,28 @@ fun SettingsPage(
                     ),
                     onClick = {}
                 ) {
-                    SettingsSectionCard(
-                        header = stringResource(R.string.settings_copy_capability_header),
-                        title = stringResource(R.string.settings_copy_capability_title),
-                        summary = if (textCopyCapabilityExpanded) {
-                            stringResource(R.string.settings_copy_capability_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_copy_capability_summary_disabled)
-                        },
-                        infoKey = stringResource(R.string.common_note),
-                        infoValue = if (textCopyCapabilityExpanded) {
-                            stringResource(R.string.settings_copy_capability_note_enabled)
-                        } else {
-                            stringResource(R.string.settings_copy_capability_note_disabled)
-                        },
-                        trailing = {
-                            Switch(
-                                checked = textCopyCapabilityExpanded,
-                                onCheckedChange = { checked -> onTextCopyCapabilityExpandedChanged(checked) }
-                            )
-                        },
-                        onClick = { onTextCopyCapabilityExpandedChanged(!textCopyCapabilityExpanded) }
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(10.dp)) }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.defaultColors(
-                        color = if (liquidBottomBarEnabled) enabledCardColor else disabledCardColor,
-                        contentColor = titleColor
-                    ),
-                    onClick = {}
-                ) {
-                    SettingsSectionCard(
-                        header = stringResource(R.string.settings_bottom_bar_header),
-                        title = stringResource(R.string.settings_bottom_bar_title),
-                        summary = stringResource(R.string.settings_bottom_bar_summary),
-                        trailing = {
-                            Switch(
-                                checked = liquidBottomBarEnabled,
-                                onCheckedChange = { checked -> onLiquidBottomBarChanged(checked) }
-                            )
-                        },
-                        onClick = { onLiquidBottomBarChanged(!liquidBottomBarEnabled) }
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(10.dp)) }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.defaultColors(
-                        color = if (cardPressFeedbackEnabled) enabledCardColor else disabledCardColor,
-                        contentColor = titleColor
-                    ),
-                    onClick = {}
-                ) {
-                    SettingsSectionCard(
-                        header = stringResource(R.string.settings_card_feedback_header),
-                        title = stringResource(R.string.settings_card_feedback_title),
-                        summary = if (cardPressFeedbackEnabled) {
-                            stringResource(R.string.settings_card_feedback_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_card_feedback_summary_disabled)
-                        },
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_card_feedback_scope),
-                        trailing = {
-                            Switch(
-                                checked = cardPressFeedbackEnabled,
-                                onCheckedChange = { checked -> onCardPressFeedbackChanged(checked) }
-                            )
-                        },
-                        onClick = { onCardPressFeedbackChanged(!cardPressFeedbackEnabled) }
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(10.dp)) }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.defaultColors(
-                        color = if (homeIconHdrEnabled) enabledCardColor else disabledCardColor,
-                        contentColor = titleColor
-                    ),
-                    onClick = {}
-                ) {
-                    SettingsSectionCard(
-                        header = stringResource(R.string.settings_home_shine_header),
-                        title = stringResource(R.string.settings_home_shine_title),
-                        summary = if (homeIconHdrEnabled) {
-                            stringResource(R.string.settings_home_shine_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_home_shine_summary_disabled)
-                        },
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_home_shine_scope),
-                        trailing = {
-                            Switch(
-                                checked = homeIconHdrEnabled,
-                                onCheckedChange = { checked -> onHomeIconHdrChanged(checked) }
-                            )
-                        },
-                        onClick = { onHomeIconHdrChanged(!homeIconHdrEnabled) }
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(10.dp)) }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.defaultColors(
-                        color = if (superIslandBypassRestrictionEnabled) enabledCardColor else disabledCardColor,
-                        contentColor = titleColor
-                    ),
-                    onClick = {}
-                ) {
-                    SettingsSectionCard(
-                        header = stringResource(R.string.settings_mcp_notify_header),
-                        title = stringResource(R.string.settings_super_island_bypass_title),
-                        summary = if (superIslandBypassRestrictionEnabled) {
-                            stringResource(R.string.settings_super_island_bypass_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_super_island_bypass_summary_disabled)
-                        },
-                        infoKey = stringResource(R.string.common_note),
-                        infoValue = stringResource(R.string.settings_super_island_bypass_note),
-                        trailing = {
-                            Switch(
-                                checked = superIslandBypassRestrictionEnabled,
-                                onCheckedChange = { checked -> onSuperIslandBypassRestrictionChanged(checked) }
-                            )
-                        },
-                        onClick = { onSuperIslandBypassRestrictionChanged(!superIslandBypassRestrictionEnabled) }
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(10.dp)) }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.defaultColors(
-                        color = if (superIslandNotificationEnabled) enabledCardColor else disabledCardColor,
-                        contentColor = titleColor
-                    ),
-                    onClick = {}
-                ) {
-                    SettingsSectionCard(
-                        header = stringResource(R.string.settings_mcp_notify_header),
-                        title = stringResource(R.string.settings_super_island_style_title),
-                        summary = if (superIslandNotificationEnabled) {
-                            stringResource(R.string.settings_super_island_style_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_super_island_style_summary_disabled)
-                        },
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_super_island_style_scope),
-                        trailing = {
-                            Switch(
-                                checked = superIslandNotificationEnabled,
-                                onCheckedChange = { checked -> onSuperIslandNotificationChanged(checked) }
-                            )
-                        },
-                        onClick = { onSuperIslandNotificationChanged(!superIslandNotificationEnabled) }
-                    )
+                    SettingsGroupCard(
+                        header = stringResource(R.string.settings_group_copy_header),
+                        title = stringResource(R.string.settings_group_copy_title),
+                        summary = stringResource(R.string.settings_group_copy_summary)
+                    ) {
+                        SettingsToggleItem(
+                            title = stringResource(R.string.settings_copy_capability_title),
+                            summary = if (textCopyCapabilityExpanded) {
+                                stringResource(R.string.settings_copy_capability_summary_enabled)
+                            } else {
+                                stringResource(R.string.settings_copy_capability_summary_disabled)
+                            },
+                            checked = textCopyCapabilityExpanded,
+                            onCheckedChange = onTextCopyCapabilityExpandedChanged,
+                            infoKey = stringResource(R.string.common_note),
+                            infoValue = if (textCopyCapabilityExpanded) {
+                                stringResource(R.string.settings_copy_capability_note_enabled)
+                            } else {
+                                stringResource(R.string.settings_copy_capability_note_disabled)
+                            }
+                        )
+                    }
                 }
             }
 
@@ -540,8 +456,29 @@ fun SettingsPage(
 }
 
 @Composable
-private fun SettingsSectionCard(
+private fun SettingsGroupCard(
     header: String,
+    title: String,
+    summary: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val titleColor = MiuixTheme.colorScheme.onBackground
+    val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(text = header, color = titleColor)
+        Text(text = title, color = titleColor)
+        Text(text = summary, color = subtitleColor)
+        content()
+    }
+}
+
+@Composable
+private fun SettingsActionItem(
     title: String,
     summary: String,
     infoKey: String? = null,
@@ -554,33 +491,25 @@ private fun SettingsSectionCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .let { base -> if (onClick != null) base.clickable { onClick() } else base },
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(header, color = titleColor)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .let { base -> if (onClick != null) base.clickable { onClick() } else base },
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = title,
-                    color = titleColor,
-                    modifier = Modifier.weight(1f)
-                )
-                trailing()
-            }
             Text(
-                text = summary,
-                color = subtitleColor
+                text = title,
+                color = titleColor,
+                modifier = Modifier.weight(1f)
             )
+            trailing()
         }
+        Text(
+            text = summary,
+            color = subtitleColor
+        )
         if (!infoKey.isNullOrBlank() && !infoValue.isNullOrBlank()) {
             SettingsInfoItem(
                 key = infoKey,
@@ -588,6 +517,30 @@ private fun SettingsSectionCard(
             )
         }
     }
+}
+
+@Composable
+private fun SettingsToggleItem(
+    title: String,
+    summary: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    infoKey: String? = null,
+    infoValue: String? = null
+) {
+    SettingsActionItem(
+        title = title,
+        summary = summary,
+        infoKey = infoKey,
+        infoValue = infoValue,
+        onClick = { onCheckedChange(!checked) },
+        trailing = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        }
+    )
 }
 
 @Composable
