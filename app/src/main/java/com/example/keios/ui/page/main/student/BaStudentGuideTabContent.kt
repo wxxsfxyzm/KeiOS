@@ -36,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
@@ -92,6 +93,20 @@ private fun rememberGuideCopyAction(copyPayload: String): () -> Unit {
             Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
         }
     }
+}
+
+private fun Modifier.guideCopyable(
+    copyPayload: String,
+    onClick: (() -> Unit)? = null
+): Modifier = composed {
+    if (copyPayload.isBlank()) return@composed this
+    val rowCopyAction = rememberGuideCopyAction(copyPayload)
+    this.combinedClickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+        onClick = { onClick?.invoke() },
+        onLongClick = rowCopyAction
+    )
 }
 
 internal fun LazyListScope.renderBaStudentGuideTabContent(
@@ -677,6 +692,9 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                             Text(
                                                 text = hint,
                                                 color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                                modifier = Modifier.guideCopyable(
+                                                    buildGuideCopyPayload("相关同名角色", hint)
+                                                ),
                                                 maxLines = 2,
                                                 overflow = TextOverflow.Ellipsis
                                             )
@@ -692,8 +710,22 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                 if (index > 0) {
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                 }
+                                                val roleCopyPayload = buildString {
+                                                    append(role.name.ifBlank { "同名角色" })
+                                                    role.linkUrl.trim().takeIf { it.isNotBlank() }?.let { link ->
+                                                        append('\n')
+                                                        append(link)
+                                                    }
+                                                }
                                                 Row(
-                                                    modifier = Modifier.fillMaxWidth(),
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .guideCopyable(
+                                                            buildGuideCopyPayload(
+                                                                "同名角色",
+                                                                roleCopyPayload
+                                                            )
+                                                        ),
                                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
@@ -1878,7 +1910,10 @@ private fun GuideSimulateAbilityCard(
                 Text(
                     text = hint.trim('*').trim(),
                     color = Color(0xFF60A5FA),
-                    style = MiuixTheme.textStyles.body2
+                    style = MiuixTheme.textStyles.body2,
+                    modifier = Modifier.guideCopyable(
+                        buildGuideCopyPayload("角色能力说明", hint)
+                    )
                 )
             }
             if (selectedRows.isNotEmpty()) {
@@ -2095,8 +2130,17 @@ private fun GuideSimulateEquipmentCard(
 
             if (groups.isNotEmpty()) {
                 groups.forEach { group ->
+                    val groupCopyPayload = buildGuideCopyPayload(
+                        group.slotLabel.ifBlank { "装备" },
+                        listOf(group.itemName.trim(), group.tierText.trim())
+                            .filter { it.isNotBlank() }
+                            .joinToString(" · ")
+                            .ifBlank { "-" }
+                    )
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .guideCopyable(groupCopyPayload),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -2337,8 +2381,14 @@ private fun GuideSimulateBondCard(
 
             if (groups.isNotEmpty()) {
                 groups.forEach { group ->
+                    val groupCopyPayload = buildGuideCopyPayload(
+                        "羁绊角色",
+                        group.roleLabel.ifBlank { "羁绊角色" }
+                    )
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .guideCopyable(groupCopyPayload),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.Top
                     ) {
@@ -2509,8 +2559,13 @@ private fun GuideSimulateCardTitleRow(
     capsule: String,
     backdrop: LayerBackdrop
 ) {
+    val copyPayload = remember(title, capsule) {
+        buildGuideCopyPayload(title, capsule.ifBlank { "-" })
+    }
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .guideCopyable(copyPayload),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -3230,7 +3285,9 @@ private fun GuideGiftPreferenceGrid(
         ) {
             items.forEach { item ->
                 Column(
-                    modifier = Modifier.width(cardWidth),
+                    modifier = Modifier
+                        .width(cardWidth)
+                        .guideCopyable(buildGuideCopyPayload("礼物", item.label)),
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {

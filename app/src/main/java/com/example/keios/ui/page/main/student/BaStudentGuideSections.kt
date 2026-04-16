@@ -79,6 +79,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -1769,6 +1770,9 @@ fun GuideGalleryUnlockLevelCardItem(
     modifier: Modifier = Modifier
 ) {
     if (level.isBlank()) return
+    val rowCopyPayload = remember(level) {
+        buildGuideCopyPayload("回忆大厅解锁等级", level)
+    }
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.defaultColors(
@@ -1780,6 +1784,7 @@ fun GuideGalleryUnlockLevelCardItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .guideCopyable(rowCopyPayload)
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -2450,6 +2455,82 @@ private fun buildGuideCopyPayload(key: String, value: String): String {
     return "$title：$content"
 }
 
+private fun buildGuideSkillCopyPayload(
+    name: String,
+    skillType: String,
+    level: String,
+    cost: String,
+    desc: String,
+    stateTags: List<String>,
+    variantBadge: String?
+): String {
+    val headerParts = buildList {
+        add(name.ifBlank { "技能" })
+        skillType.trim().takeIf { it.isNotBlank() }?.let(::add)
+        variantBadge?.trim()?.takeIf { it.isNotBlank() }?.let(::add)
+        level.trim().takeIf { it.isNotBlank() }?.let(::add)
+        cost.trim().takeIf { it.isNotBlank() }?.let { add("COST:$it") }
+    }
+    val stateText = stateTags
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .distinct()
+        .joinToString(" / ")
+    return buildString {
+        append(headerParts.joinToString(" · ").ifBlank { "技能" })
+        if (stateText.isNotBlank()) {
+            append('\n')
+            append("状态：")
+            append(stateText)
+        }
+        if (desc.isNotBlank()) {
+            append('\n')
+            append(desc.trim())
+        }
+    }
+}
+
+private fun buildGuideVoiceEntryCopyPayload(
+    section: String,
+    title: String,
+    voiceLines: List<Pair<String, String>>
+): String {
+    val header = buildString {
+        append(section.trim().ifBlank { "语音" })
+        append(" · ")
+        append(title.trim().ifBlank { "语音条目" })
+    }
+    val lines = voiceLines
+        .mapNotNull { (label, text) ->
+            val lineText = text.trim()
+            if (lineText.isBlank()) null else "${label.trim().ifBlank { "台词" }}：$lineText"
+        }
+    if (lines.isEmpty()) return header
+    return buildString {
+        append(header)
+        append('\n')
+        append(lines.joinToString("\n"))
+    }
+}
+
+private fun buildGuideWeaponCopyPayload(
+    name: String,
+    level: String,
+    desc: String
+): String {
+    return buildString {
+        append(name.trim().ifBlank { "专属武器" })
+        level.trim().takeIf { it.isNotBlank() }?.let {
+            append(" · ")
+            append(it)
+        }
+        if (desc.isNotBlank()) {
+            append('\n')
+            append(desc.trim())
+        }
+    }
+}
+
 @Composable
 private fun rememberGuideCopyAction(copyPayload: String): () -> Unit {
     val clipboard = LocalClipboardManager.current
@@ -2461,6 +2542,20 @@ private fun rememberGuideCopyAction(copyPayload: String): () -> Unit {
             Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
         }
     }
+}
+
+private fun Modifier.guideCopyable(
+    copyPayload: String,
+    onClick: (() -> Unit)? = null
+): Modifier = composed {
+    if (copyPayload.isBlank()) return@composed this
+    val rowCopyAction = rememberGuideCopyAction(copyPayload)
+    this.combinedClickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+        onClick = { onClick?.invoke() },
+        onLongClick = rowCopyAction
+    )
 }
 
 @Composable
@@ -2751,6 +2846,25 @@ fun GuideSkillCardItem(
     } else {
         0.dp
     }
+    val skillCopyPayload = remember(
+        card.name,
+        displaySkillType,
+        displayLevel,
+        skillCost,
+        skillDesc,
+        skillTypeStateTags,
+        skillTypeVariantBadge
+    ) {
+        buildGuideSkillCopyPayload(
+            name = card.name,
+            skillType = displaySkillType,
+            level = displayLevel,
+            cost = skillCost,
+            desc = skillDesc,
+            stateTags = skillTypeStateTags,
+            variantBadge = skillTypeVariantBadge
+        )
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -2763,6 +2877,7 @@ fun GuideSkillCardItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .guideCopyable(skillCopyPayload)
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top
@@ -3100,6 +3215,10 @@ fun GuideVoiceLanguageCard(
         .filter { it.isNotBlank() }
         .distinct()
         .ifEmpty { listOf("日配", "中配") }
+    val voiceHeaderCopyPayload = remember(visibleHeaders, selectedHeader) {
+        val current = selectedHeader.trim().ifBlank { visibleHeaders.firstOrNull().orEmpty() }
+        buildGuideCopyPayload("配音", current.ifBlank { visibleHeaders.joinToString(" / ") })
+    }
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.defaultColors(
@@ -3111,6 +3230,7 @@ fun GuideVoiceLanguageCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .guideCopyable(voiceHeaderCopyPayload)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -3153,6 +3273,13 @@ fun GuideVoiceEntryCard(
     modifier: Modifier = Modifier
 ) {
     val voiceLines = buildVoiceLinePairsForCard(entry, languageHeaders)
+    val entryCopyPayload = remember(entry.section, entry.title, voiceLines) {
+        buildGuideVoiceEntryCopyPayload(
+            section = entry.section,
+            title = entry.title,
+            voiceLines = voiceLines
+        )
+    }
     val normalizedPlaybackUrl = normalizeGuideMediaSource(playbackUrl)
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -3165,6 +3292,7 @@ fun GuideVoiceEntryCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .guideCopyable(entryCopyPayload)
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -3217,10 +3345,15 @@ fun GuideVoiceEntryCard(
             }
 
             voiceLines.forEach { (label, text) ->
+                val lineCopyPayload = remember(label, text) {
+                    buildGuideCopyPayload(label, text)
+                }
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val labelMaxWidth = (maxWidth * 0.28f).coerceIn(52.dp, 92.dp)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .guideCopyable(lineCopyPayload),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.Top
                     ) {
@@ -3337,6 +3470,13 @@ fun GuideWeaponCardItem(
         val index = levelOptions.indexOf(selectedLevel).coerceAtLeast(0)
         return row.values.getOrNull(index) ?: row.values.last()
     }
+    val weaponCopyPayload = remember(card.name, selectedLevel, card.description) {
+        buildGuideWeaponCopyPayload(
+            name = card.name,
+            level = selectedLevel,
+            desc = card.description
+        )
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -3349,6 +3489,7 @@ fun GuideWeaponCardItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .guideCopyable(weaponCopyPayload)
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -3454,7 +3595,9 @@ fun GuideWeaponCardItem(
                             val valueMaxLines = adaptiveValueMaxLines(valueText, valueCharBudget)
 
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .guideCopyable(buildGuideCopyPayload(stat.title, valueText)),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -3562,11 +3705,39 @@ private fun GuideWeaponStarEffectItem(
     }
 
     val desc = effect.descriptionFor(selectedLevel).trim()
+    val effectCopyPayload = remember(
+        effect.starLabel,
+        effect.name,
+        effect.roleTag,
+        selectedLevel,
+        desc
+    ) {
+        buildString {
+            append(effect.starLabel.ifBlank { "★" })
+            append(" · ")
+            append(effect.name.ifBlank { "效果" })
+            effect.roleTag.trim().takeIf { it.isNotBlank() }?.let {
+                append('\n')
+                append("分类：")
+                append(it)
+            }
+            selectedLevel.trim().takeIf { it.isNotBlank() }?.let {
+                append('\n')
+                append("等级：")
+                append(it)
+            }
+            if (desc.isNotBlank()) {
+                append('\n')
+                append(desc)
+            }
+        }
+    }
 
     if (effect.starLabel == "★2") {
         GuideWeaponTwoStarEffectItem(
             effect = effect,
             desc = desc,
+            copyPayload = effectCopyPayload,
             glossaryIcons = glossaryIcons,
             backdrop = backdrop,
             levelOptions = levelOptions,
@@ -3585,6 +3756,7 @@ private fun GuideWeaponStarEffectItem(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .guideCopyable(effectCopyPayload)
             .clip(RoundedCornerShape(12.dp))
             .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.28f))
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -3648,6 +3820,7 @@ private fun GuideWeaponStarEffectItem(
 private fun GuideWeaponTwoStarEffectItem(
     effect: GuideWeaponStarEffect,
     desc: String,
+    copyPayload: String,
     glossaryIcons: Map<String, String>,
     backdrop: Backdrop?,
     levelOptions: List<String>,
@@ -3660,6 +3833,7 @@ private fun GuideWeaponTwoStarEffectItem(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .guideCopyable(copyPayload)
             .clip(RoundedCornerShape(12.dp))
             .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.34f))
             .padding(horizontal = 10.dp, vertical = 8.dp),
