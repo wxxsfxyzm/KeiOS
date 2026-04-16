@@ -1,6 +1,11 @@
 package com.example.keios.ui.page.main.about.ui
 
-import androidx.compose.foundation.clickable
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -11,10 +16,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow.Companion.Clip
@@ -36,10 +43,17 @@ fun AboutCompactRow(
     modifier: Modifier = Modifier,
     titleIcon: ImageVector? = null,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     valueContent: @Composable RowScope.() -> Unit
 ) {
-    val clickableModifier = if (onClick != null) {
-        Modifier.clickable(onClick = onClick)
+    val clickableModifier = if (onClick != null || onLongClick != null) {
+        val interactionSource = remember { MutableInteractionSource() }
+        Modifier.combinedClickable(
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = { onClick?.invoke() },
+            onLongClick = onLongClick
+        )
     } else {
         Modifier
     }
@@ -91,16 +105,28 @@ fun AboutCompactInfoRow(
     modifier: Modifier = Modifier,
     titleIcon: ImageVector? = null,
     valueColor: Color = MiuixTheme.colorScheme.onBackground,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    enableLongPressCopy: Boolean = true,
+    onLongClick: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val copiedToast = stringResource(R.string.guide_toast_item_copied)
+    val displayValue = value.ifBlank { stringResource(R.string.common_na) }
+    val copyAction = remember(context, title, displayValue, copiedToast) {
+        {
+            copyAboutRowToClipboard(context, title, displayValue)
+            Toast.makeText(context, copiedToast, Toast.LENGTH_SHORT).show()
+        }
+    }
     AboutCompactRow(
         title = title,
         modifier = modifier,
         titleIcon = titleIcon,
-        onClick = onClick
+        onClick = onClick,
+        onLongClick = onLongClick ?: if (enableLongPressCopy) copyAction else null
     ) {
         Text(
-            text = value,
+            text = displayValue,
             color = valueColor,
             maxLines = Int.MAX_VALUE,
             overflow = Clip,
@@ -128,6 +154,16 @@ fun AboutCompactPillRow(
             color = color
         )
     }
+}
+
+private fun copyAboutRowToClipboard(context: Context, title: String, value: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+    val copiedText = buildString {
+        append(title)
+        append("：")
+        append(value)
+    }
+    clipboard.setPrimaryClip(ClipData.newPlainText("about-item", copiedText))
 }
 
 @Composable
