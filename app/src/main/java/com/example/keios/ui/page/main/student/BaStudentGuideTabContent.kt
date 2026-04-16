@@ -3507,6 +3507,13 @@ private fun stripProfileCopyHint(raw: String): String {
         .trim()
 }
 
+private val profileInlineNoteStripFieldKeys = setOf(
+    "角色考据",
+    "设计",
+    "MomoTalk解锁等级",
+    "Momotalk解锁等级"
+).map(::normalizeProfileFieldKey).toSet()
+
 private fun sanitizeProfileFieldValue(key: String, value: String): String {
     if (value.isBlank()) return ""
     val normalizedKey = normalizeProfileFieldKey(key)
@@ -3514,6 +3521,12 @@ private fun sanitizeProfileFieldValue(key: String, value: String): String {
     if (normalizedKey == normalizeProfileFieldKey("声优")) {
         cleaned = stripProfileCopyHint(cleaned)
     }
+    if (normalizedKey in profileInlineNoteStripFieldKeys) {
+        cleaned = stripGuideInlineNotes(cleaned)
+    }
+    cleaned = cleaned
+        .trim(' ', '/', '／', '|', '｜', ',', '，', ';', '；')
+        .trim()
     return cleaned
 }
 
