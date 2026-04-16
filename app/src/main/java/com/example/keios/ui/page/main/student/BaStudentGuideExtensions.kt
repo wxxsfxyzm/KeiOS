@@ -1,5 +1,81 @@
 package com.example.keios.ui.page.main.student
 
+private val guideInlineNoteKeywords = listOf(
+    "可以用", "后面的", "后面", "图标", "替换", "占位",
+    "备注", "说明", "注释", "样式", "不用写", "待补",
+    "todo", "tbd"
+)
+
+private val guideSkillPlaceholderKeywords = listOf(
+    "名字", "名称", "技能名", "技能名称", "同上", "..."
+)
+
+private fun splitGuideSlashSegments(raw: String): List<String> {
+    if (raw.isBlank()) return emptyList()
+    return raw
+        .replace("／", "/")
+        .replace("|", "/")
+        .replace("｜", "/")
+        .split("/")
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+}
+
+private fun isLikelyGuideNoteSegment(raw: String): Boolean {
+    val value = raw.trim()
+    if (value.isBlank()) return true
+    val compact = value.replace(" ", "").lowercase()
+    if (compact == "-" || compact == "—" || compact == "--") return true
+    if (compact == "…" || compact == "...") return true
+    return guideInlineNoteKeywords.any { keyword ->
+        compact.contains(keyword.lowercase())
+    }
+}
+
+internal fun stripGuideInlineNotes(raw: String): String {
+    if (raw.isBlank()) return ""
+    val beforeArrow = raw
+        .substringBefore("<-")
+        .substringBefore("←")
+        .trim()
+    return beforeArrow
+        .trim(' ', '/', '／', '|', '｜', ',', '，', ';', '；')
+        .trim()
+}
+
+internal fun sanitizeGuideMetaValueForDisplay(title: String, raw: String): String {
+    val cleaned = stripGuideInlineNotes(raw)
+    if (cleaned.isBlank()) return ""
+    val targetTitle = title.trim()
+    val requiresSlashCleanup = targetTitle in setOf("稀有度", "学院", "战术位置作用")
+    if (!requiresSlashCleanup) return cleaned
+    val segments = splitGuideSlashSegments(cleaned)
+    if (segments.isEmpty()) return cleaned
+    val first = segments.first().trim()
+    if (segments.drop(1).any(::isLikelyGuideNoteSegment)) {
+        return first
+    }
+    return first
+}
+
+internal fun sanitizeGuideSkillLabelForDisplay(raw: String): String {
+    val cleaned = stripGuideInlineNotes(raw)
+    if (cleaned.isBlank()) return ""
+    val segments = splitGuideSlashSegments(cleaned)
+    if (segments.size <= 1) return cleaned
+    val first = segments.first().trim()
+    val tailHasPlaceholder = segments.drop(1).any { segment ->
+        val compact = segment.replace(" ", "")
+        compact.isBlank() ||
+            compact == "…" ||
+            compact == "..." ||
+            compact.length <= 2 ||
+            guideSkillPlaceholderKeywords.any { keyword -> compact.contains(keyword) } ||
+            isLikelyGuideNoteSegment(segment)
+    }
+    return if (tailHasPlaceholder) first else cleaned
+}
+
 fun BaStudentGuideInfo.bottomTabIconUrl(tab: GuideBottomTab): String {
     fun List<BaGuideRow>.firstImage(): String = firstOrNull { it.imageUrl.isNotBlank() }?.imageUrl.orEmpty()
     return when (tab) {
@@ -65,7 +141,10 @@ private fun BaStudentGuideInfo.buildMetaItem(
 ): BaGuideMetaItem {
     val rows = profileRowsForDisplay() + skillRowsForDisplay()
     val iconRow = findFirstRowByKeywords(rows, imageKeywords, requireImage = true)
-    val value = findGuideFieldValue(*valueKeywords.toTypedArray()).ifBlank { "-" }
+    val value = sanitizeGuideMetaValueForDisplay(
+        title = title,
+        raw = findGuideFieldValue(*valueKeywords.toTypedArray())
+    ).ifBlank { "-" }
     return BaGuideMetaItem(
         title = title,
         value = value,
@@ -100,7 +179,10 @@ fun BaStudentGuideInfo.buildCombatMetaItems(): List<BaGuideMetaItem> {
         )?.imageUrl.orEmpty()
         BaGuideMetaItem(
             title = "战术位置作用",
-            value = findGuideFieldValue("战术作用", "作用").ifBlank { "-" },
+            value = sanitizeGuideMetaValueForDisplay(
+                title = "战术位置作用",
+                raw = findGuideFieldValue("战术作用", "作用")
+            ).ifBlank { "-" },
             imageUrl = tacticalIcon,
             extraImageUrl = positionIcon
         )

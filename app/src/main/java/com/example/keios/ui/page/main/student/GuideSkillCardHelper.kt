@@ -84,7 +84,7 @@ private fun parseBaseSkillDrafts(rows: List<BaGuideRow>): List<SkillDraft> {
             if (value.isBlank()) return@forEach
             enteredSkillBlocks = true
             commitDraft()
-            draft = SkillDraft(type = value)
+            draft = SkillDraft(type = sanitizeGuideSkillLabelForDisplay(value))
             currentLevelKey = null
             return@forEach
         }
@@ -98,7 +98,9 @@ private fun parseBaseSkillDrafts(rows: List<BaGuideRow>): List<SkillDraft> {
 
         val active = draft ?: return@forEach
         when {
-            key.contains("技能名称") && !key.contains("★") -> if (value.isNotBlank()) active.name = value
+            key.contains("技能名称") && !key.contains("★") -> if (value.isNotBlank()) {
+                active.name = sanitizeGuideSkillLabelForDisplay(value)
+            }
             key == "技能图标" -> if (image.isNotBlank()) active.iconUrl = image
             key == "技能描述" -> {
                 if (value.isNotBlank()) active.fallbackDescription = value
