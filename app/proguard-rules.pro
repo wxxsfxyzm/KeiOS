@@ -8,8 +8,15 @@
 -keepnames class com.example.keios.feature.notification.NotificationActionReceiver
 -keepnames class com.example.keios.core.background.AppBackgroundTickReceiver
 
-# ShizukuApiUtils uses reflection on Shizuku method names.
--keep class rikka.shizuku.Shizuku { *; }
+# ShizukuApiUtils reflects these no-arg static method names.
+# Keep only the reflective surface so the rest can still be optimized/shrunk.
+-keepclassmembers class rikka.shizuku.Shizuku {
+    public static *** getUid(...);
+    public static *** getVersion(...);
+    public static *** getServerPatchVersion(...);
+    public static *** getSELinuxContext(...);
+    public static *** getLatestServiceVersion(...);
+}
 
 # Keep annotation/signature metadata used by Kotlin + library runtime features.
 -keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*
