@@ -134,9 +134,12 @@ internal fun bundleCommitLabel(bundle: GitHubReleaseAssetBundle?): String? {
 
 internal fun bundleReleaseUpdatedAtMillis(bundle: GitHubReleaseAssetBundle?): Long? {
     bundle ?: return null
-    return bundle.releaseUpdatedAtMillis?.takeIf { it > 0L }
-        ?: bundle.assets.maxOfOrNull { it.updatedAtMillis ?: Long.MIN_VALUE }
-            ?.takeIf { it > 0L }
+    val releaseUpdatedAt = bundle.releaseUpdatedAtMillis?.takeIf { it > 0L } ?: Long.MIN_VALUE
+    val assetsUpdatedAt = bundle.assets
+        .maxOfOrNull { it.updatedAtMillis ?: Long.MIN_VALUE }
+        ?.takeIf { it > 0L } ?: Long.MIN_VALUE
+    val latestUpdatedAt = maxOf(releaseUpdatedAt, assetsUpdatedAt)
+    return latestUpdatedAt.takeIf { it > 0L }
 }
 
 internal fun formatReleaseUpdatedAtCompact(updatedAtMillis: Long?): String? {
