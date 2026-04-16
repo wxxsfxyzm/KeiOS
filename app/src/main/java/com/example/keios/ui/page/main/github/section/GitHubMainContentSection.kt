@@ -129,6 +129,7 @@ internal fun GitHubMainContent(
     trackedItems: List<GitHubTrackedApp>,
     filteredTracked: List<GitHubTrackedApp>,
     sortedTracked: List<GitHubTrackedApp>,
+    appLastUpdatedAtByPackage: Map<String, Long>,
     checkStates: SnapshotStateMap<String, VersionCheckUi>,
     apkAssetBundles: SnapshotStateMap<String, GitHubReleaseAssetBundle>,
     apkAssetLoading: SnapshotStateMap<String, Boolean>,
@@ -211,6 +212,7 @@ internal fun GitHubMainContent(
                     trackedItems = trackedItems,
                     filteredTracked = filteredTracked,
                     sortedTracked = sortedTracked,
+                    appLastUpdatedAtByPackage = appLastUpdatedAtByPackage,
                     checkStates = checkStates,
                     contentBackdrop = contentBackdrop,
                     isDark = isDark,
@@ -260,6 +262,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
     trackedItems: List<GitHubTrackedApp>,
     filteredTracked: List<GitHubTrackedApp>,
     sortedTracked: List<GitHubTrackedApp>,
+    appLastUpdatedAtByPackage: Map<String, Long>,
     checkStates: SnapshotStateMap<String, VersionCheckUi>,
     contentBackdrop: LayerBackdrop,
     isDark: Boolean,
@@ -422,6 +425,14 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                             emphasized = state.recommendsPreRelease || state.hasPreReleaseUpdate
                         )
                     }
+                    val appUpdatedAtLabel = formatReleaseUpdatedAtCompact(
+                        appLastUpdatedAtByPackage[item.packageName]?.takeIf { it > 0L }
+                    ) ?: stringResource(R.string.common_unknown)
+                    VersionValueRow(
+                        label = stringResource(R.string.github_item_label_updated_at),
+                        value = appUpdatedAtLabel,
+                        valueColor = MiuixTheme.colorScheme.onBackgroundVariant
+                    )
                     if (state.releaseHint.isNotBlank()) {
                         GitHubCompactInfoRow(
                             label = stringResource(R.string.github_item_label_hint),
@@ -614,31 +625,22 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                                             ) {
                                                 StatusPill(
-                                                    label = stringResource(
-                                                        R.string.github_asset_loaded_release_name,
-                                                        loadedReleaseName.ifBlank {
-                                                            stringResource(R.string.common_unknown)
-                                                        }
-                                                    ),
+                                                    label = loadedReleaseName.ifBlank {
+                                                        stringResource(R.string.common_unknown)
+                                                    },
                                                     color = targetAccent,
                                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                                 )
                                                 StatusPill(
-                                                    label = stringResource(
-                                                        R.string.github_asset_loaded_release_tag,
-                                                        loadedReleaseTag.ifBlank {
-                                                            stringResource(R.string.common_unknown)
-                                                        }
-                                                    ),
+                                                    label = loadedReleaseTag.ifBlank {
+                                                        stringResource(R.string.common_unknown)
+                                                    },
                                                     color = targetAccent,
                                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                                 )
                                                 StatusPill(
-                                                    label = stringResource(
-                                                        R.string.github_asset_loaded_release_updated_at,
-                                                        loadedReleaseUpdatedAt
-                                                            ?: stringResource(R.string.common_unknown)
-                                                    ),
+                                                    label = loadedReleaseUpdatedAt
+                                                        ?: stringResource(R.string.common_unknown),
                                                     color = targetAccent,
                                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                                 )

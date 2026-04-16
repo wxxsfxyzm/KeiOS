@@ -1206,6 +1206,11 @@ fun GitHubPage(
             item.appLabel.contains(trackedSearch, ignoreCase = true) ||
             item.packageName.contains(trackedSearch, ignoreCase = true)
     }
+    val appLastUpdatedAtByPackage = remember(appListLoaded, appList) {
+        appList
+            .filter { it.packageName.isNotBlank() && it.lastUpdateTimeMs > 0L }
+            .associate { it.packageName to it.lastUpdateTimeMs }
+    }
     val isSortUpdatable: (GitHubTrackedApp) -> Boolean = { item ->
         item.alwaysShowLatestReleaseDownloadButton || checkStates[item.id]?.hasUpdate == true
     }
@@ -1265,6 +1270,7 @@ fun GitHubPage(
         trackedItems = trackedItems,
         filteredTracked = filteredTracked,
         sortedTracked = sortedTracked,
+        appLastUpdatedAtByPackage = appLastUpdatedAtByPackage,
         checkStates = checkStates,
         apkAssetBundles = apkAssetBundles,
         apkAssetLoading = apkAssetLoading,

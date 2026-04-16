@@ -76,7 +76,12 @@ object GitHubVersionUtils {
             runCatching {
                 val appInfo = pm.getApplicationInfo(pkg, PackageManager.ApplicationInfoFlags.of(0))
                 val label = pm.getApplicationLabel(appInfo).toString()
-                InstalledAppItem(label = label, packageName = pkg)
+                val pkgInfo = pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0))
+                InstalledAppItem(
+                    label = label,
+                    packageName = pkg,
+                    lastUpdateTimeMs = pkgInfo.lastUpdateTime
+                )
             }.getOrNull()
         }.sortedBy { it.label.lowercase(Locale.getDefault()) }
         installedAppsCache = CachedInstalledApps(

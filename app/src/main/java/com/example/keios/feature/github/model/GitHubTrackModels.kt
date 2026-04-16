@@ -15,7 +15,8 @@ data class GitHubTrackedApp(
 
 data class InstalledAppItem(
     val label: String,
-    val packageName: String
+    val packageName: String,
+    val lastUpdateTimeMs: Long = -1L
 )
 
 data class GitHubCheckCacheEntry(
