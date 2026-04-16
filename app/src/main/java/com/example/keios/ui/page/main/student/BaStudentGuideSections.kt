@@ -186,6 +186,44 @@ internal fun clearGuideBgmLoopScope(scopeKey: String) {
     GuideBgmLoopStore.clearScope(scopeKey)
 }
 
+private object GuideBgmPlayerStore {
+    private val playerByScopedAudio = ConcurrentHashMap<String, ExoPlayer>()
+
+    private fun scopedKey(scopeKey: String, audioUrl: String): String {
+        if (scopeKey.isBlank() || audioUrl.isBlank()) return ""
+        return "$scopeKey|$audioUrl"
+    }
+
+    fun getOrCreate(context: Context, scopeKey: String, audioUrl: String): ExoPlayer? {
+        val key = scopedKey(scopeKey, audioUrl)
+        if (key.isBlank()) return null
+        return playerByScopedAudio[key] ?: synchronized(this) {
+            playerByScopedAudio[key] ?: ExoPlayer.Builder(context)
+                .setMediaSourceFactory(createGameKeeMediaSourceFactory(context))
+                .build()
+                .also { created ->
+                    playerByScopedAudio[key] = created
+                }
+        }
+    }
+
+    fun clearScope(scopeKey: String) {
+        if (scopeKey.isBlank()) return
+        val prefix = "$scopeKey|"
+        val releaseKeys = playerByScopedAudio.keys.filter { key -> key.startsWith(prefix) }
+        releaseKeys.forEach { key ->
+            playerByScopedAudio.remove(key)?.let { player ->
+                runCatching { player.stop() }
+                runCatching { player.release() }
+            }
+        }
+    }
+}
+
+internal fun clearGuideBgmPlaybackScope(scopeKey: String) {
+    GuideBgmPlayerStore.clearScope(scopeKey)
+}
+
 private fun normalizeGuideMediaSource(raw: String): String {
     val value = raw.trim()
     if (value.isBlank()) return ""
@@ -641,19 +679,12 @@ fun GuideGalleryCardItem(
     var audioLoopEnabled by remember(audioLoopScopeKey, audioTargetUrl) {
         mutableStateOf(GuideBgmLoopStore.isEnabled(audioLoopScopeKey, audioTargetUrl))
     }
-    val audioPlayer = remember(context, audioTargetUrl) {
-        if (audioTargetUrl.isNotBlank()) {
-            ExoPlayer.Builder(context)
-                .setMediaSourceFactory(createGameKeeMediaSourceFactory(context))
-                .build()
-        } else {
-            null
-        }
-    }
-    DisposableEffect(audioPlayer) {
-        onDispose {
-            runCatching { audioPlayer?.release() }
-        }
+    val audioPlayer = remember(context, audioLoopScopeKey, audioTargetUrl) {
+        GuideBgmPlayerStore.getOrCreate(
+            context = context,
+            scopeKey = audioLoopScopeKey,
+            audioUrl = audioTargetUrl
+        )
     }
     LaunchedEffect(audioPlayer, audioLoopEnabled) {
         audioPlayer?.repeatMode = if (audioLoopEnabled) {
@@ -664,6 +695,22 @@ fun GuideGalleryCardItem(
     }
     DisposableEffect(audioPlayer, audioTargetUrl, audioLoopEnabled) {
         val player = audioPlayer ?: return@DisposableEffect onDispose { }
+        audioIsPlaying = player.isPlaying
+        val initialDuration = player.duration
+        if (initialDuration > 0L) {
+            audioDurationMs = initialDuration
+        }
+        val initialPosition = player.currentPosition.coerceAtLeast(0L)
+        audioPositionMs = if (audioDurationMs > 0L) {
+            initialPosition.coerceAtMost(audioDurationMs)
+        } else {
+            initialPosition
+        }
+        audioPlayProgress = if (audioDurationMs > 0L) {
+            (audioPositionMs.toFloat() / audioDurationMs.toFloat()).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlayingNow: Boolean) {
                 audioIsPlaying = isPlayingNow

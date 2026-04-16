@@ -109,6 +109,7 @@ import com.example.keios.ui.page.main.student.shouldHideMovedHeaderRow
 import com.example.keios.ui.page.main.student.skillCardsForDisplay
 import com.example.keios.ui.page.main.student.weaponCardForDisplay
 import com.example.keios.ui.page.main.student.clearGuideBgmLoopScope
+import com.example.keios.ui.page.main.student.clearGuideBgmPlaybackScope
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.FrostedBlock
@@ -483,6 +484,7 @@ fun BaStudentGuidePage(
     DisposableEffect(sourceUrl) {
         onDispose {
             clearGuideBgmLoopScope(sourceUrl)
+            clearGuideBgmPlaybackScope(sourceUrl)
             BaGuideTempMediaCache.clearGuideCache(context, sourceUrl)
         }
     }
