@@ -18,6 +18,7 @@ import android.widget.SeekBar
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -44,6 +45,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -132,6 +134,12 @@ import com.example.keios.ui.page.main.widget.capturePopupAnchor
 import java.util.concurrent.ConcurrentHashMap
 
 private const val IMAGE_TAP_DISMISS_GESTURE_COOLDOWN_MS = 260L
+private val guideCircledNumbers = listOf(
+    "①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩",
+    "⑪", "⑫", "⑬", "⑭", "⑮", "⑯", "⑰", "⑱", "⑲", "⑳"
+)
+private val guideSkillTypeNumericSuffixPattern = Regex("""^(.*?)[\s\-_]*(\d{1,2})$""")
+private val guideSkillTypeCircledSuffixPattern = Regex("""^(.*?)([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳])$""")
 
 private enum class GuideVideoControlAction {
     TogglePlayPause
@@ -2447,6 +2455,7 @@ fun GuideSkillCardItem(
     val levelOptions = card.levelOptions
     var selectedLevel by rememberSaveable(card.id) { mutableStateOf(card.defaultLevel) }
     var typeCapsuleHeightPx by remember(card.id, selectedLevel) { mutableStateOf(0) }
+    var typeSubRowHeightPx by remember(card.id, selectedLevel) { mutableStateOf(0) }
     var skillNameLineCount by remember(card.id, selectedLevel) { mutableStateOf(1) }
     var descriptionLineCount by remember(card.id, selectedLevel) { mutableStateOf(1) }
     val density = LocalDensity.current
@@ -2462,14 +2471,18 @@ fun GuideSkillCardItem(
     val skillDesc = card.descriptionFor(selectedLevel)
     val skillCost = card.costFor(selectedLevel)
     val displayLevel = selectedLevel.ifBlank { card.defaultLevel }
+    val parsedSkillType = remember(card.type) { parseGuideSkillTypeMeta(card.type) }
+    val displaySkillType = parsedSkillType.baseType
+    val skillTypeVariantBadge = parsedSkillType.variantIndex?.let(::toGuideCircledNumber)
+    val hasTypeSubRow = skillTypeVariantBadge != null || levelOptions.isNotEmpty()
     val isExSkill = remember(card.type) { card.type.contains("EX", ignoreCase = true) }
-    val hasSkillMetaColumn = remember(card.type, skillCost, levelOptions) {
-        card.type.isNotBlank() || skillCost.isNotBlank() || levelOptions.isNotEmpty()
+    val hasSkillMetaColumn = remember(displaySkillType, skillCost, levelOptions, skillTypeVariantBadge) {
+        displaySkillType.isNotBlank() || skillCost.isNotBlank() || levelOptions.isNotEmpty() || skillTypeVariantBadge != null
     }
     val metaColumnShouldTopAlign = descriptionLineCount >= 3
     val skillNameTooLong = skillNameLineCount > 1
     val typeAlignToTitleOffset = if (
-        card.type.isNotBlank() &&
+        displaySkillType.isNotBlank() &&
         !skillNameTooLong &&
         skillTitleRowHeightPx > 0 &&
         typeCapsuleHeightPx > 0
@@ -2479,10 +2492,26 @@ fun GuideSkillCardItem(
         0.dp
     }
     val descriptionTopOffsetDp = with(density) { skillTitleRowHeightPx.toDp() } + 8.dp
-    val occupiedBeforeCostDp = if (card.type.isNotBlank()) {
-        typeAlignToTitleOffset + with(density) { typeCapsuleHeightPx.toDp() } + 4.dp
+    val subRowHeightDp = if (hasTypeSubRow) {
+        if (typeSubRowHeightPx > 0) {
+            with(density) { typeSubRowHeightPx.toDp() }
+        } else {
+            30.dp
+        }
     } else {
         0.dp
+    }
+    val occupiedBeforeCostDp = when {
+        displaySkillType.isNotBlank() -> {
+            val typeBottomSpacing = if (hasTypeSubRow) {
+                4.dp + subRowHeightDp + 4.dp
+            } else {
+                4.dp
+            }
+            typeAlignToTitleOffset + with(density) { typeCapsuleHeightPx.toDp() } + typeBottomSpacing
+        }
+        hasTypeSubRow -> subRowHeightDp + 4.dp
+        else -> 0.dp
     }
     val costAlignToDescriptionOffset = if (metaColumnShouldTopAlign) {
         (descriptionTopOffsetDp - occupiedBeforeCostDp).coerceAtLeast(0.dp)
@@ -2560,14 +2589,14 @@ fun GuideSkillCardItem(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    if (card.type.isNotBlank()) {
+                    if (displaySkillType.isNotBlank()) {
                         if (typeAlignToTitleOffset > 0.dp) {
                             Spacer(modifier = Modifier.height(typeAlignToTitleOffset))
                         }
                         Box(modifier = Modifier.onSizeChanged { typeCapsuleHeightPx = it.height }) {
                             GlassTextButton(
                                 backdrop = backdrop,
-                                text = card.type,
+                                text = displaySkillType,
                                 enabled = false,
                                 textColor = Color(0xFF3B82F6),
                                 variant = GlassVariant.Compact,
@@ -2578,7 +2607,62 @@ fun GuideSkillCardItem(
                             )
                         }
                     }
-                    if (costAlignToDescriptionOffset > 0.dp && (skillCost.isNotBlank() || levelOptions.isNotEmpty())) {
+                    if (hasTypeSubRow) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onSizeChanged { typeSubRowHeightPx = it.height },
+                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (skillTypeVariantBadge != null) {
+                                GuideSkillVariantBadge(
+                                    label = skillTypeVariantBadge
+                                )
+                            }
+                            if (levelOptions.isNotEmpty()) {
+                                Box(
+                                    modifier = Modifier.capturePopupAnchor { levelPopupAnchorBounds = it }
+                                ) {
+                                    GlassTextButton(
+                                        backdrop = backdrop,
+                                        text = displayLevel,
+                                        variant = GlassVariant.Compact,
+                                        minHeight = 30.dp,
+                                        horizontalPadding = 10.dp,
+                                        verticalPadding = 6.dp,
+                                        onClick = { showLevelPopup = !showLevelPopup }
+                                    )
+                                    if (showLevelPopup) {
+                                        SnapshotWindowListPopup(
+                                            show = showLevelPopup,
+                                            alignment = PopupPositionProvider.Align.BottomEnd,
+                                            anchorBounds = levelPopupAnchorBounds,
+                                            placement = SnapshotPopupPlacement.ButtonEnd,
+                                            onDismissRequest = { showLevelPopup = false },
+                                            enableWindowDim = false
+                                        ) {
+                                            LiquidDropdownColumn {
+                                                levelOptions.forEachIndexed { index, option ->
+                                                    LiquidDropdownImpl(
+                                                        text = option,
+                                                        optionSize = levelOptions.size,
+                                                        isSelected = selectedLevel == option,
+                                                        index = index,
+                                                        onSelectedIndexChange = { selected ->
+                                                            selectedLevel = levelOptions[selected]
+                                                            showLevelPopup = false
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (costAlignToDescriptionOffset > 0.dp && skillCost.isNotBlank()) {
                         Spacer(modifier = Modifier.height(costAlignToDescriptionOffset))
                     }
                     if (skillCost.isNotBlank()) {
@@ -2594,49 +2678,71 @@ fun GuideSkillCardItem(
                             onClick = {}
                         )
                     }
-                    if (levelOptions.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier.capturePopupAnchor { levelPopupAnchorBounds = it }
-                        ) {
-                            GlassTextButton(
-                                backdrop = backdrop,
-                                text = displayLevel,
-                                variant = GlassVariant.Compact,
-                                minHeight = 30.dp,
-                                horizontalPadding = 10.dp,
-                                verticalPadding = 6.dp,
-                                onClick = { showLevelPopup = !showLevelPopup }
-                            )
-                            if (showLevelPopup) {
-                                SnapshotWindowListPopup(
-                                    show = showLevelPopup,
-                                    alignment = PopupPositionProvider.Align.BottomEnd,
-                                    anchorBounds = levelPopupAnchorBounds,
-                                    placement = SnapshotPopupPlacement.ButtonEnd,
-                                    onDismissRequest = { showLevelPopup = false },
-                                    enableWindowDim = false
-                                ) {
-                                    LiquidDropdownColumn {
-                                        levelOptions.forEachIndexed { index, option ->
-                                            LiquidDropdownImpl(
-                                                text = option,
-                                                optionSize = levelOptions.size,
-                                                isSelected = selectedLevel == option,
-                                                index = index,
-                                                onSelectedIndexChange = { selected ->
-                                                    selectedLevel = levelOptions[selected]
-                                                    showLevelPopup = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
+    }
+}
+
+private data class GuideSkillTypeMeta(
+    val baseType: String,
+    val variantIndex: Int? = null
+)
+
+private fun parseGuideSkillTypeMeta(raw: String): GuideSkillTypeMeta {
+    val cleaned = sanitizeGuideSkillLabelForDisplay(raw).trim()
+    if (cleaned.isBlank()) return GuideSkillTypeMeta(baseType = "")
+
+    val circledMatch = guideSkillTypeCircledSuffixPattern.matchEntire(cleaned)
+    if (circledMatch != null) {
+        val base = circledMatch.groupValues[1].trim()
+        val circled = circledMatch.groupValues[2]
+        val index = guideCircledNumbers.indexOf(circled).takeIf { it >= 0 }?.plus(1)
+        return GuideSkillTypeMeta(
+            baseType = if (base.isBlank()) cleaned else base,
+            variantIndex = index
+        )
+    }
+
+    val numericMatch = guideSkillTypeNumericSuffixPattern.matchEntire(cleaned)
+    if (numericMatch != null) {
+        val base = numericMatch.groupValues[1].trim()
+        val index = numericMatch.groupValues[2].toIntOrNull()?.takeIf { it > 0 }
+        if (index != null) {
+            return GuideSkillTypeMeta(
+                baseType = if (base.isBlank()) cleaned else base,
+                variantIndex = index
+            )
+        }
+    }
+
+    return GuideSkillTypeMeta(baseType = cleaned)
+}
+
+private fun toGuideCircledNumber(index: Int): String {
+    return guideCircledNumbers.getOrNull(index - 1) ?: index.toString()
+}
+
+@Composable
+private fun GuideSkillVariantBadge(
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(26.dp)
+            .clip(CircleShape)
+            .background(Color(0x223B82F6))
+            .border(width = 1.dp, color = Color(0x663B82F6), shape = CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = Color(0xFF3B82F6),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
     }
 }
 

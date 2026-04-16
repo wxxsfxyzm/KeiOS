@@ -758,7 +758,8 @@ private fun BaGuideCatalogEntryCard(
                 onClick = { onToggleFavorite(entry.contentId) },
                 width = 34.dp,
                 height = 34.dp,
-                variant = GlassVariant.Bar
+                variant = GlassVariant.Bar,
+                iconTint = if (isFavorite) Color(0xFFEC4899) else MiuixTheme.colorScheme.onBackgroundVariant
             )
         }
     }

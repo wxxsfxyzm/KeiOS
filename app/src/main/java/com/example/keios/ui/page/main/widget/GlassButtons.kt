@@ -53,10 +53,10 @@ fun GlassIconButton(
     height: Dp = 40.dp,
     shape: Shape = ContinuousCapsule,
     blurRadius: Dp? = null,
-    variant: GlassVariant = GlassVariant.Content
+    variant: GlassVariant = GlassVariant.Content,
+    iconTint: Color = MiuixTheme.colorScheme.primary
 ) {
     val isDark = isSystemInDarkTheme()
-    val iconTint = MiuixTheme.colorScheme.primary
     GlassIconButtonContainer(
         backdrop = backdrop,
         onClick = onClick,
