@@ -1,5 +1,13 @@
 package com.example.keios.ui.page.main.widget
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
@@ -55,6 +63,8 @@ fun SnapshotWindowListPopup(
     val density = LocalDensity.current
     val explicitAnchorBounds = anchorBounds
     var wasVisible by remember { mutableStateOf(false) }
+    var popupRender by remember { mutableStateOf(show) }
+    val popupVisibilityState = remember { MutableTransitionState(false) }
     val composePopupPositionProvider = remember(
         density,
         popupPositionProvider,
@@ -104,16 +114,37 @@ fun SnapshotWindowListPopup(
         }
     }
 
-    LaunchedEffect(show, onDismissFinished) {
+    LaunchedEffect(show) {
         if (show) {
             wasVisible = true
-        } else if (wasVisible) {
-            wasVisible = false
-            onDismissFinished?.invoke()
+            popupRender = true
+            popupVisibilityState.targetState = true
+        } else {
+            popupVisibilityState.targetState = false
         }
     }
 
-    if (show) {
+    LaunchedEffect(
+        show,
+        popupRender,
+        popupVisibilityState.currentState,
+        popupVisibilityState.targetState,
+        onDismissFinished
+    ) {
+        if (!show &&
+            popupRender &&
+            !popupVisibilityState.currentState &&
+            !popupVisibilityState.targetState
+        ) {
+            popupRender = false
+            if (wasVisible) {
+                wasVisible = false
+                onDismissFinished?.invoke()
+            }
+        }
+    }
+
+    if (popupRender) {
         Popup(
             popupPositionProvider = composePopupPositionProvider,
             onDismissRequest = onDismissRequest,
@@ -124,12 +155,28 @@ fun SnapshotWindowListPopup(
                 clippingEnabled = false
             )
         ) {
-            Box(
-                modifier = popupModifier
-                    .defaultMinSize(minWidth = minWidth)
-                    .then(if (maxHeight != null) Modifier.heightIn(max = maxHeight) else Modifier)
+            AnimatedVisibility(
+                visibleState = popupVisibilityState,
+                enter = fadeIn(
+                    animationSpec = tween(durationMillis = 140)
+                ) + scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
+                ),
+                exit = fadeOut(
+                    animationSpec = tween(durationMillis = 100)
+                ) + scaleOut(
+                    targetScale = 0.96f,
+                    animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing)
+                )
             ) {
-                content()
+                Box(
+                    modifier = popupModifier
+                        .defaultMinSize(minWidth = minWidth)
+                        .then(if (maxHeight != null) Modifier.heightIn(max = maxHeight) else Modifier)
+                ) {
+                    content()
+                }
             }
         }
     }
