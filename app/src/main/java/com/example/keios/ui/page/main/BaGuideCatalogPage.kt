@@ -759,7 +759,7 @@ private fun BaGuideCatalogEntryCard(
                 width = 34.dp,
                 height = 34.dp,
                 variant = GlassVariant.Bar,
-                iconTint = if (isFavorite) Color(0xFFEC4899) else MiuixTheme.colorScheme.onBackgroundVariant
+                iconTint = if (isFavorite) Color(0xFFEC4899) else Color(0xFF3B82F6)
             )
         }
     }
