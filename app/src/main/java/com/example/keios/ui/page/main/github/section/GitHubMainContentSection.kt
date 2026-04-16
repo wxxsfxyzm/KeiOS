@@ -81,6 +81,7 @@ import com.example.keios.ui.page.main.github.asset.bundleReleaseUpdatedAtMillis
 import com.example.keios.ui.page.main.github.asset.bundleCommitLabel
 import com.example.keios.ui.page.main.github.asset.bundleTransportLabel
 import com.example.keios.ui.page.main.github.asset.formatReleaseUpdatedAtCompact
+import com.example.keios.ui.page.main.github.asset.formatReleaseUpdatedAtNoYear
 import com.example.keios.ui.page.main.github.asset.formatAssetSize
 import com.example.keios.ui.page.main.github.asset.prefersApiAssetTransport
 import com.kyant.backdrop.backdrops.LayerBackdrop
@@ -621,7 +622,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                 else -> null
                                             }
                                         val loadedReleaseUpdatedAt =
-                                            formatReleaseUpdatedAtCompact(loadedReleaseUpdatedAtMillis)
+                                            formatReleaseUpdatedAtNoYear(loadedReleaseUpdatedAtMillis)
                                         val showLoadedReleaseMeta =
                                             loadedReleaseName.isNotBlank() ||
                                                 loadedReleaseTag.isNotBlank() ||

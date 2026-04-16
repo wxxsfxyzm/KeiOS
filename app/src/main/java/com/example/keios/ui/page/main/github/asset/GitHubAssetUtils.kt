@@ -23,6 +23,10 @@ private val releaseUpdatedAtFormatter: DateTimeFormatter = DateTimeFormatter
     .ofPattern("yy-MM-dd HH:mm", Locale.getDefault())
     .withZone(ZoneId.systemDefault())
 
+private val releaseUpdatedAtNoYearFormatter: DateTimeFormatter = DateTimeFormatter
+    .ofPattern("MM-dd HH:mm", Locale.getDefault())
+    .withZone(ZoneId.systemDefault())
+
 private data class LatestReleaseCandidate(
     val rawTag: String,
     val releaseUrl: String,
@@ -139,6 +143,13 @@ internal fun formatReleaseUpdatedAtCompact(updatedAtMillis: Long?): String? {
     val millis = updatedAtMillis?.takeIf { it > 0L } ?: return null
     return runCatching {
         releaseUpdatedAtFormatter.format(Instant.ofEpochMilli(millis))
+    }.getOrNull()
+}
+
+internal fun formatReleaseUpdatedAtNoYear(updatedAtMillis: Long?): String? {
+    val millis = updatedAtMillis?.takeIf { it > 0L } ?: return null
+    return runCatching {
+        releaseUpdatedAtNoYearFormatter.format(Instant.ofEpochMilli(millis))
     }.getOrNull()
 }
 
