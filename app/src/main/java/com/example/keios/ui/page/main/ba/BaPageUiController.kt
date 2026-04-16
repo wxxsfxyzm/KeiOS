@@ -32,12 +32,14 @@ internal data class BaPageUiState(
     val showEndedPools: Boolean,
     val showEndedActivities: Boolean,
     val showCalendarPoolImages: Boolean,
+    val mediaAdaptiveRotationEnabled: Boolean,
     val calendarRefreshIntervalHours: Int,
     val calendarHydrationReady: Boolean,
     val poolHydrationReady: Boolean,
     val sheetCafeLevel: Int,
     val sheetApNotifyEnabled: Boolean,
     val sheetApNotifyThresholdText: String,
+    val sheetMediaAdaptiveRotationEnabled: Boolean,
     val sheetShowEndedPools: Boolean,
     val sheetShowEndedActivities: Boolean,
     val sheetShowCalendarPoolImages: Boolean,
@@ -66,12 +68,14 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
     var showEndedPools by mutableStateOf(snapshot.showEndedPools)
     var showEndedActivities by mutableStateOf(snapshot.showEndedActivities)
     var showCalendarPoolImages by mutableStateOf(snapshot.showCalendarPoolImages)
+    var mediaAdaptiveRotationEnabled by mutableStateOf(snapshot.mediaAdaptiveRotationEnabled)
     var calendarRefreshIntervalHours by mutableIntStateOf(snapshot.calendarRefreshIntervalHours)
     var calendarHydrationReady by mutableStateOf(false)
     var poolHydrationReady by mutableStateOf(false)
     var sheetCafeLevel by mutableIntStateOf(snapshot.cafeLevel)
     var sheetApNotifyEnabled by mutableStateOf(snapshot.apNotifyEnabled)
     var sheetApNotifyThresholdText by mutableStateOf(snapshot.apNotifyThreshold.toString())
+    var sheetMediaAdaptiveRotationEnabled by mutableStateOf(snapshot.mediaAdaptiveRotationEnabled)
     var sheetShowEndedPools by mutableStateOf(snapshot.showEndedPools)
     var sheetShowEndedActivities by mutableStateOf(snapshot.showEndedActivities)
     var sheetShowCalendarPoolImages by mutableStateOf(snapshot.showCalendarPoolImages)
@@ -99,12 +103,14 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
             showEndedPools = showEndedPools,
             showEndedActivities = showEndedActivities,
             showCalendarPoolImages = showCalendarPoolImages,
+            mediaAdaptiveRotationEnabled = mediaAdaptiveRotationEnabled,
             calendarRefreshIntervalHours = calendarRefreshIntervalHours,
             calendarHydrationReady = calendarHydrationReady,
             poolHydrationReady = poolHydrationReady,
             sheetCafeLevel = sheetCafeLevel,
             sheetApNotifyEnabled = sheetApNotifyEnabled,
             sheetApNotifyThresholdText = sheetApNotifyThresholdText,
+            sheetMediaAdaptiveRotationEnabled = sheetMediaAdaptiveRotationEnabled,
             sheetShowEndedPools = sheetShowEndedPools,
             sheetShowEndedActivities = sheetShowEndedActivities,
             sheetShowCalendarPoolImages = sheetShowCalendarPoolImages,
@@ -126,6 +132,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
         sheetCafeLevel = office.cafeLevel
         sheetApNotifyEnabled = office.apNotifyEnabled
         sheetApNotifyThresholdText = office.apNotifyThreshold.toString()
+        sheetMediaAdaptiveRotationEnabled = mediaAdaptiveRotationEnabled
         sheetShowEndedPools = showEndedPools
         sheetShowEndedActivities = showEndedActivities
         sheetShowCalendarPoolImages = showCalendarPoolImages
@@ -138,6 +145,7 @@ internal class BaPageUiController(snapshot: BaPageSnapshot) {
         sheetCafeLevel = office.cafeLevel
         sheetApNotifyEnabled = office.apNotifyEnabled
         sheetApNotifyThresholdText = office.apNotifyThreshold.toString()
+        sheetMediaAdaptiveRotationEnabled = mediaAdaptiveRotationEnabled
         sheetShowEndedPools = showEndedPools
         sheetShowEndedActivities = showEndedActivities
         sheetShowCalendarPoolImages = showCalendarPoolImages

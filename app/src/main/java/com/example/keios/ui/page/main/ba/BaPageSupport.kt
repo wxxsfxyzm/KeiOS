@@ -62,6 +62,7 @@ internal data class BaPageSnapshot(
     val showEndedPools: Boolean = false,
     val showEndedActivities: Boolean = false,
     val showCalendarPoolImages: Boolean = true,
+    val mediaAdaptiveRotationEnabled: Boolean = true,
     val calendarRefreshIntervalHours: Int = 12
 )
 
@@ -904,6 +905,7 @@ internal object BASettingsStore {
     private const val KEY_POOL_SHOW_ENDED = "pool_show_ended"
     private const val KEY_ACTIVITY_SHOW_ENDED = "activity_show_ended"
     private const val KEY_SHOW_CALENDAR_POOL_IMAGES = "show_calendar_pool_images"
+    private const val KEY_MEDIA_ADAPTIVE_ROTATION_ENABLED = "media_adaptive_rotation_enabled"
     private const val KEY_COFFEE_HEADPAT_MS = "coffee_headpat_ms"
     private const val KEY_COFFEE_INVITE1_USED_MS = "coffee_invite1_used_ms"
     private const val KEY_COFFEE_INVITE2_USED_MS = "coffee_invite2_used_ms"
@@ -992,6 +994,13 @@ internal object BASettingsStore {
         kv().encode(KEY_SHOW_CALENDAR_POOL_IMAGES, enabled)
     }
 
+    fun loadMediaAdaptiveRotationEnabled(): Boolean =
+        kv().decodeBool(KEY_MEDIA_ADAPTIVE_ROTATION_ENABLED, true)
+
+    fun saveMediaAdaptiveRotationEnabled(enabled: Boolean) {
+        kv().encode(KEY_MEDIA_ADAPTIVE_ROTATION_ENABLED, enabled)
+    }
+
     fun loadCalendarRefreshIntervalHours(): Int {
         val raw = kv().decodeInt(
             KEY_CALENDAR_REFRESH_INTERVAL_HOURS,
@@ -1058,6 +1067,7 @@ internal object BASettingsStore {
             showEndedPools = store.decodeBool(KEY_POOL_SHOW_ENDED, false),
             showEndedActivities = store.decodeBool(KEY_ACTIVITY_SHOW_ENDED, false),
             showCalendarPoolImages = store.decodeBool(KEY_SHOW_CALENDAR_POOL_IMAGES, true),
+            mediaAdaptiveRotationEnabled = store.decodeBool(KEY_MEDIA_ADAPTIVE_ROTATION_ENABLED, true),
             calendarRefreshIntervalHours = refreshHours
         )
     }

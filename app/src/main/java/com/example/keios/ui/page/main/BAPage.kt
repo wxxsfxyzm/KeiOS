@@ -257,6 +257,7 @@ fun BAPage(
             val normalized = ui.sheetApNotifyThresholdText.toIntOrNull()?.coerceIn(0, BA_AP_MAX) ?: 120
             ui.sheetApNotifyThresholdText = normalized.toString()
         },
+        onMediaAdaptiveRotationEnabledChange = { ui.sheetMediaAdaptiveRotationEnabled = it },
         onShowEndedActivitiesChange = { ui.sheetShowEndedActivities = it },
         onShowEndedPoolsChange = { ui.sheetShowEndedPools = it },
         onShowCalendarPoolImagesChange = { ui.sheetShowCalendarPoolImages = it },

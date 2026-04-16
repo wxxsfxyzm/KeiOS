@@ -3,8 +3,10 @@ package com.example.keios.ui.page.main.student
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -31,6 +33,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.example.keios.ui.page.main.ba.BASettingsStore
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -41,6 +44,7 @@ class GuideVideoFullscreenActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedOrientation = resolveVideoFullscreenOrientation()
         enableEdgeToEdge()
 
         val normalizedUrl = normalizeGuideMediaSource(
@@ -52,6 +56,25 @@ class GuideVideoFullscreenActivity : ComponentActivity() {
                 mediaUrl = normalizedUrl,
                 onClose = { finish() }
             )
+        }
+    }
+
+    private fun resolveVideoFullscreenOrientation(): Int {
+        val mediaAdaptiveRotationEnabled = BASettingsStore.loadMediaAdaptiveRotationEnabled()
+        if (mediaAdaptiveRotationEnabled) {
+            return ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
+        val systemAutoRotateEnabled = runCatching {
+            Settings.System.getInt(
+                contentResolver,
+                Settings.System.ACCELEROMETER_ROTATION,
+                0
+            ) == 1
+        }.getOrDefault(false)
+        return if (systemAutoRotateEnabled) {
+            ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_LOCKED
         }
     }
 

@@ -28,6 +28,7 @@ internal data class BaSettingsSheetState(
     val cafeLevel: Int,
     val apNotifyEnabled: Boolean,
     val apNotifyThresholdText: String,
+    val mediaAdaptiveRotationEnabled: Boolean,
     val showEndedActivities: Boolean,
     val showEndedPools: Boolean,
     val showCalendarPoolImages: Boolean,
@@ -41,6 +42,7 @@ internal fun BaSettingsSheet(
     onApNotifyEnabledChange: (Boolean) -> Unit,
     onApNotifyThresholdTextChange: (String) -> Unit,
     onApNotifyThresholdDone: () -> Unit,
+    onMediaAdaptiveRotationEnabledChange: (Boolean) -> Unit,
     onShowEndedActivitiesChange: (Boolean) -> Unit,
     onShowEndedPoolsChange: (Boolean) -> Unit,
     onShowCalendarPoolImagesChange: (Boolean) -> Unit,
@@ -110,6 +112,15 @@ internal fun BaSettingsSheet(
                             textColor = Color(0xFF22C55E),
                         )
                     }
+                }
+                SheetControlRow(
+                    label = stringResource(R.string.ba_settings_label_media_adaptive_rotation),
+                    summary = stringResource(R.string.ba_settings_summary_media_adaptive_rotation),
+                ) {
+                    Switch(
+                        checked = state.mediaAdaptiveRotationEnabled,
+                        onCheckedChange = onMediaAdaptiveRotationEnabledChange,
+                    )
                 }
             }
             SheetSectionTitle(stringResource(R.string.ba_settings_section_content))

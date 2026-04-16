@@ -423,6 +423,8 @@
     <string name="ba_settings_label_ap_notify">AP 通知</string>
     <string name="ba_settings_label_ap_threshold">AP 提醒阈值</string>
     <string name="ba_settings_summary_ap_threshold">建议 0-%1$d</string>
+    <string name="ba_settings_label_media_adaptive_rotation">媒体自适应旋转</string>
+    <string name="ba_settings_summary_media_adaptive_rotation">开启：沿用当前图鉴媒体旋转逻辑；关闭：系统锁定旋转时保持不旋转，系统允许旋转时跟随屏幕方向。</string>
     <string name="ba_settings_label_show_ended_activity">显示已结束活动</string>
     <string name="ba_settings_label_show_ended_pool">显示已结束卡池</string>
     <string name="ba_settings_label_show_images">显示活动/卡池图片</string>

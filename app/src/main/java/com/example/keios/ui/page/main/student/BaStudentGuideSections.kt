@@ -3,8 +3,12 @@ package com.example.keios.ui.page.main.student
 import com.example.keios.ui.page.main.widget.GlassVariant
 import android.content.Context
 import android.graphics.Bitmap
+import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.SystemClock
+import android.provider.Settings
+import android.view.Display
+import android.view.Surface
 import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.Toast
@@ -79,6 +83,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import com.example.keios.R
+import com.example.keios.ui.page.main.ba.BASettingsStore
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
@@ -119,6 +124,34 @@ private fun normalizeGuideMediaSource(raw: String): String {
         value
     } else {
         normalizeGuideUrl(value)
+    }
+}
+
+private fun isSystemAutoRotateEnabled(context: Context): Boolean {
+    return runCatching {
+        Settings.System.getInt(
+            context.contentResolver,
+            Settings.System.ACCELEROMETER_ROTATION,
+            0
+        ) == 1
+    }.getOrDefault(false)
+}
+
+private fun currentDisplayRotationDegrees(context: Context): Int {
+    val rotation = runCatching { context.display.rotation }
+        .getOrElse {
+            runCatching {
+                context.getSystemService(DisplayManager::class.java)
+                    ?.getDisplay(Display.DEFAULT_DISPLAY)
+                    ?.rotation
+                    ?: Surface.ROTATION_0
+            }.getOrDefault(Surface.ROTATION_0)
+        }
+    return when (rotation) {
+        Surface.ROTATION_90 -> 90
+        Surface.ROTATION_180 -> 180
+        Surface.ROTATION_270 -> 270
+        else -> 0
     }
 }
 
@@ -359,8 +392,13 @@ fun GuideGalleryCardItem(
     val isInteractiveFurnitureAnimated = remember(item.title, item.mediaUrl, item.imageUrl) {
         isInteractiveFurnitureAnimatedGalleryItem(item)
     }
-    val disableFullscreenAutoRotate = remember(item.title, item.mediaUrl, item.imageUrl) {
-        isInteractiveFurnitureGalleryItem(item)
+    val disableFullscreenAutoRotate = remember(
+        item.title,
+        item.mediaUrl,
+        item.imageUrl,
+        isInteractiveFurnitureAnimated
+    ) {
+        isInteractiveFurnitureGalleryItem(item) && !isInteractiveFurnitureAnimated
     }
     val preferredImageRaw = remember(
         item.imageUrl,
@@ -1416,6 +1454,12 @@ private fun GuideImageFullscreenDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val mediaAdaptiveRotationEnabled = remember { BASettingsStore.loadMediaAdaptiveRotationEnabled() }
+    val systemAutoRotateEnabled = remember(mediaAdaptiveRotationEnabled) {
+        if (mediaAdaptiveRotationEnabled) false else isSystemAutoRotateEnabled(context)
+    }
+    val systemRotationDegrees =
+        if (mediaAdaptiveRotationEnabled || !systemAutoRotateEnabled) 0 else currentDisplayRotationDegrees(context)
     val normalizedImageUrl = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
     if (normalizedImageUrl.isBlank()) return
     val isGifSource = remember(normalizedImageUrl) { isGifMediaSource(normalizedImageUrl) }
@@ -1518,15 +1562,16 @@ private fun GuideImageFullscreenDialog(
                 val normalArea = fitArea(safeRatio)
                 val rotatedRatio = (1f / safeRatio).coerceAtLeast(0.1f)
                 val rotatedArea = fitArea(rotatedRatio)
-                val shouldRotate90 =
-                    allowAutoRotate &&
-                        !isGifSource &&
-                        safeRatio > 1.02f &&
-                        rotatedArea > (normalArea * 1.12f)
+                val shouldRotate90 = safeRatio > 1.02f && rotatedArea > (normalArea * 1.12f)
+                val targetRotation = if (mediaAdaptiveRotationEnabled) {
+                    if (allowAutoRotate && shouldRotate90) 90 else 0
+                } else {
+                    if (systemAutoRotateEnabled) systemRotationDegrees else 0
+                }
 
-                LaunchedEffect(normalizedImageUrl, shouldRotate90, allowAutoRotate) {
+                LaunchedEffect(normalizedImageUrl, targetRotation) {
                     zoomState.zoomable.reset()
-                    zoomState.zoomable.rotate(if (shouldRotate90) 90 else 0)
+                    zoomState.zoomable.rotate(targetRotation)
                 }
 
                 CoilZoomAsyncImage(
