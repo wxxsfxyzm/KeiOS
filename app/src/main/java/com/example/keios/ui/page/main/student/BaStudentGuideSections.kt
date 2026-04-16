@@ -117,6 +117,7 @@ import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Album
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.ExpandMore
@@ -609,6 +610,7 @@ fun GuideGalleryCardItem(
     val isImageType = normalizedMediaType != "video" && normalizedMediaType != "audio"
     val canOpenMedia = item.mediaUrl.isNotBlank() &&
         normalizeGuideMediaSource(displayMediaUrl) != normalizeGuideMediaSource(displayImageUrl)
+    var videoInlineExpanded by remember(displayMediaUrl, normalizedMediaType) { mutableStateOf(false) }
     var showImageFullscreen by remember(displayImageUrl, normalizedMediaType) { mutableStateOf(false) }
     val audioTargetUrl = remember(normalizedMediaType, displayMediaUrl) {
         if (normalizedMediaType == "audio") normalizeGuideMediaSource(displayMediaUrl) else ""
@@ -783,6 +785,40 @@ fun GuideGalleryCardItem(
                         textColor = Color(0xFF3B82F6),
                         variant = GlassVariant.Compact,
                         onClick = {}
+                    )
+                }
+                if (normalizedMediaType == "video" && displayMediaUrl.isNotBlank()) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Play,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            if (normalizeGuideMediaSource(displayMediaUrl).isBlank()) {
+                                Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                            } else {
+                                videoInlineExpanded = true
+                            }
+                        }
+                    )
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Album,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            val normalized = normalizeGuideMediaSource(displayMediaUrl)
+                            if (normalized.isBlank()) {
+                                Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                            } else {
+                                GuideVideoFullscreenActivity.launch(
+                                    context = context,
+                                    mediaUrl = normalized
+                                )
+                            }
+                        }
                     )
                 }
                 if (canSaveMedia) {
@@ -980,7 +1016,9 @@ fun GuideGalleryCardItem(
                         GuideInlineVideoPlayer(
                             mediaUrl = displayMediaUrl,
                             previewImageUrl = displayImageUrl,
-                            backdrop = backdrop
+                            backdrop = backdrop,
+                            expanded = videoInlineExpanded,
+                            onExpandedChange = { expanded -> videoInlineExpanded = expanded }
                         )
                     }
 
@@ -1112,6 +1150,7 @@ fun GuideGalleryExpressionCardItem(
     modifier: Modifier = Modifier
 ) {
     if (items.isEmpty()) return
+    val context = LocalContext.current
     var showPicker by remember(title, items.size) { mutableStateOf(false) }
     var selectedIndex by rememberSaveable(title, items.size) { mutableStateOf(0) }
     LaunchedEffect(items.size) {
@@ -1137,6 +1176,8 @@ fun GuideGalleryExpressionCardItem(
     }
     val canOpenMedia = selectedItem.mediaUrl.isNotBlank() && selectedItem.mediaUrl != selectedItem.imageUrl
     val isImageType = selectedItem.mediaType.lowercase() != "video"
+    val isVideoType = selectedItem.mediaType.lowercase() == "video"
+    var videoInlineExpanded by remember(displayMediaUrl, selectedItem.mediaType) { mutableStateOf(false) }
     var showImageFullscreen by remember(displayImageUrl) { mutableStateOf(false) }
     val canSwipeExpressions = optionLabels.size > 1
     val swipeThresholdPx = with(LocalDensity.current) { 56.dp.toPx() }
@@ -1215,6 +1256,40 @@ fun GuideGalleryExpressionCardItem(
                         }
                     }
                 }
+                if (isVideoType && displayMediaUrl.isNotBlank()) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Play,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            if (normalizeGuideMediaSource(displayMediaUrl).isBlank()) {
+                                Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                            } else {
+                                videoInlineExpanded = true
+                            }
+                        }
+                    )
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Album,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            val normalized = normalizeGuideMediaSource(displayMediaUrl)
+                            if (normalized.isBlank()) {
+                                Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                            } else {
+                                GuideVideoFullscreenActivity.launch(
+                                    context = context,
+                                    mediaUrl = normalized
+                                )
+                            }
+                        }
+                    )
+                }
                 if (saveTargetUrl.isNotBlank()) {
                     GlassTextButton(
                         backdrop = backdrop,
@@ -1291,7 +1366,9 @@ fun GuideGalleryExpressionCardItem(
                     GuideInlineVideoPlayer(
                         mediaUrl = displayMediaUrl,
                         previewImageUrl = displayImageUrl,
-                        backdrop = backdrop
+                        backdrop = backdrop,
+                        expanded = videoInlineExpanded,
+                        onExpandedChange = { expanded -> videoInlineExpanded = expanded }
                     )
                 } else {
                     GlassTextButton(
@@ -1327,6 +1404,7 @@ fun GuideGalleryVideoGroupCardItem(
     modifier: Modifier = Modifier
 ) {
     if (items.isEmpty()) return
+    val context = LocalContext.current
     var showPicker by remember(title, items.size) { mutableStateOf(false) }
     var selectedIndex by rememberSaveable(title, items.size) { mutableStateOf(0) }
     LaunchedEffect(items.size) {
@@ -1340,6 +1418,7 @@ fun GuideGalleryVideoGroupCardItem(
     val saveTargetUrl = remember(displayMediaUrl, displayPreviewUrl) {
         displayMediaUrl.ifBlank { displayPreviewUrl }
     }
+    var videoInlineExpanded by remember(displayMediaUrl) { mutableStateOf(false) }
     val noteText = selectedItem.note.trim()
     val optionLabels = remember(title, items) {
         if (items.size <= 1) {
@@ -1417,6 +1496,40 @@ fun GuideGalleryVideoGroupCardItem(
                         }
                     }
                 }
+                if (displayMediaUrl.isNotBlank()) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Play,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            if (normalizeGuideMediaSource(displayMediaUrl).isBlank()) {
+                                Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                            } else {
+                                videoInlineExpanded = true
+                            }
+                        }
+                    )
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Album,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            val normalized = normalizeGuideMediaSource(displayMediaUrl)
+                            if (normalized.isBlank()) {
+                                Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                            } else {
+                                GuideVideoFullscreenActivity.launch(
+                                    context = context,
+                                    mediaUrl = normalized
+                                )
+                            }
+                        }
+                    )
+                }
                 if (saveTargetUrl.isNotBlank()) {
                     GlassTextButton(
                         backdrop = backdrop,
@@ -1451,7 +1564,9 @@ fun GuideGalleryVideoGroupCardItem(
                 GuideInlineVideoPlayer(
                     mediaUrl = displayMediaUrl,
                     previewImageUrl = displayPreviewUrl,
-                    backdrop = backdrop
+                    backdrop = backdrop,
+                    expanded = videoInlineExpanded,
+                    onExpandedChange = { expanded -> videoInlineExpanded = expanded }
                 )
             }
         }
@@ -1503,15 +1618,15 @@ fun GuideGalleryUnlockLevelCardItem(
 private fun GuideInlineVideoPlayer(
     mediaUrl: String,
     previewImageUrl: String = "",
-    backdrop: Backdrop?
+    backdrop: Backdrop?,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    var expanded by remember(mediaUrl) { mutableStateOf(false) }
     val normalizedUrl = remember(mediaUrl) { normalizeGuideMediaSource(mediaUrl) }
     val normalizedPreviewUrl = remember(previewImageUrl) { normalizeGuideMediaSource(previewImageUrl) }
     var videoRatio by remember(normalizedUrl) { mutableStateOf(16f / 9f) }
     var isBuffering by remember(normalizedUrl) { mutableStateOf(false) }
-    var isPlaying by remember(normalizedUrl) { mutableStateOf(false) }
     var loadError by remember(normalizedUrl) { mutableStateOf<String?>(null) }
     val openFullscreen = remember(context, normalizedUrl) {
         {
@@ -1530,7 +1645,7 @@ private fun GuideInlineVideoPlayer(
         if (normalizedPreviewUrl.isNotBlank()) {
             Box(
                 modifier = Modifier.clickable {
-                    expanded = false
+                    onExpandedChange(false)
                     openFullscreen()
                 }
             ) {
@@ -1538,37 +1653,6 @@ private fun GuideInlineVideoPlayer(
                     imageUrl = normalizedPreviewUrl
                 )
             }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            GlassTextButton(
-                backdrop = backdrop,
-                text = "播放",
-                leadingIcon = MiuixIcons.Regular.Play,
-                textColor = Color(0xFF3B82F6),
-                variant = GlassVariant.Compact,
-                onClick = {
-                    if (normalizedUrl.isBlank()) {
-                        Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
-                        return@GlassTextButton
-                    }
-                    loadError = null
-                    expanded = true
-                }
-            )
-            GlassTextButton(
-                backdrop = backdrop,
-                text = "全屏",
-                textColor = Color(0xFF3B82F6),
-                variant = GlassVariant.Compact,
-                onClick = {
-                    expanded = false
-                    openFullscreen()
-                }
-            )
         }
         return
     }
@@ -1598,13 +1682,8 @@ private fun GuideInlineVideoPlayer(
                 isBuffering = playbackState == Player.STATE_BUFFERING
             }
 
-            override fun onIsPlayingChanged(isPlayingNow: Boolean) {
-                isPlaying = isPlayingNow
-            }
-
             override fun onPlayerError(error: PlaybackException) {
                 isBuffering = false
-                isPlaying = false
                 loadError = error.errorCodeName
             }
         }
@@ -1613,7 +1692,6 @@ private fun GuideInlineVideoPlayer(
             boundPlayer.removeListener(listener)
             runCatching { boundPlayer.release() }
             isBuffering = false
-            isPlaying = false
         }
     }
 
@@ -1656,34 +1734,10 @@ private fun GuideInlineVideoPlayer(
         GlassTextButton(
             backdrop = backdrop,
             text = "",
-            leadingIcon = if (isPlaying) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
-            textColor = Color(0xFF3B82F6),
-            variant = GlassVariant.Compact,
-            onClick = {
-                if (isPlaying) {
-                    activePlayer.pause()
-                } else {
-                    activePlayer.play()
-                }
-            }
-        )
-        GlassTextButton(
-            backdrop = backdrop,
-            text = "全屏",
-            textColor = Color(0xFF3B82F6),
-            variant = GlassVariant.Compact,
-            onClick = {
-                expanded = false
-                openFullscreen()
-            }
-        )
-        GlassTextButton(
-            backdrop = backdrop,
-            text = "",
             leadingIcon = MiuixIcons.Regular.ExpandMore,
             textColor = Color(0xFF3B82F6),
             variant = GlassVariant.Compact,
-            onClick = { expanded = false }
+            onClick = { onExpandedChange(false) }
         )
     }
 
