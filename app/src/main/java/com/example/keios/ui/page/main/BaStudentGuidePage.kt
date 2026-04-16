@@ -64,6 +64,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1142,83 +1143,143 @@ fun BaStudentGuidePage(
                     drawContent()
                 }
             }
-            SelectionContainer {
-                LazyColumn(
-                    state = pageListState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                    contentPadding = PaddingValues(
-                        top = innerPadding.calculateTopPadding(),
-                        bottom = innerPadding.calculateBottomPadding() + 16.dp,
-                        start = 16.dp,
-                        end = 16.dp
-                    )
-                ) {
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                SmallTitle(pageBottomTab.label)
-                            }
-                            if (sourceUrl.isNotBlank()) {
-                                val foregroundColor = when {
-                                    loading -> Color(0xFF3B82F6)
-                                    !error.isNullOrBlank() -> Color(0xFFEF4444)
-                                    else -> Color(0xFF22C55E)
+            Box(modifier = Modifier.fillMaxSize()) {
+                SelectionContainer {
+                    LazyColumn(
+                        state = pageListState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        contentPadding = PaddingValues(
+                            top = innerPadding.calculateTopPadding(),
+                            bottom = innerPadding.calculateBottomPadding() + 16.dp,
+                            start = 16.dp,
+                            end = 16.dp
+                        )
+                    ) {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    SmallTitle(pageBottomTab.label)
                                 }
-                                CircularProgressIndicator(
-                                    progress = syncProgress,
-                                    size = 18.dp,
-                                    strokeWidth = 2.dp,
-                                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                        foregroundColor = foregroundColor,
-                                        backgroundColor = foregroundColor.copy(alpha = 0.30f),
-                                    ),
+                                if (sourceUrl.isNotBlank()) {
+                                    val foregroundColor = when {
+                                        loading -> Color(0xFF3B82F6)
+                                        !error.isNullOrBlank() -> Color(0xFFEF4444)
+                                        else -> Color(0xFF22C55E)
+                                    }
+                                    CircularProgressIndicator(
+                                        progress = syncProgress,
+                                        size = 18.dp,
+                                        strokeWidth = 2.dp,
+                                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                            foregroundColor = foregroundColor,
+                                            backgroundColor = foregroundColor.copy(alpha = 0.30f),
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                        item { Spacer(modifier = Modifier.height(12.dp)) }
+
+                        if (sourceUrl.isBlank()) {
+                            item {
+                                FrostedBlock(
+                                    backdrop = pageBackdrop,
+                                    title = "未选择学生",
+                                    subtitle = "请从 BA 卡池信息中点击对应卡池进入",
+                                    accent = accent
                                 )
                             }
-                        }
-                    }
-                    item { Spacer(modifier = Modifier.height(12.dp)) }
-
-                    if (sourceUrl.isBlank()) {
-                        item {
-                            FrostedBlock(
+                        } else {
+                            renderBaStudentGuideTabContent(
+                                activeBottomTab = pageBottomTab,
+                                info = info,
+                                error = error,
                                 backdrop = pageBackdrop,
-                                title = "未选择学生",
-                                subtitle = "请从 BA 卡池信息中点击对应卡池进入",
-                                accent = accent
+                                accent = accent,
+                                context = context,
+                                sourceUrl = sourceUrl,
+                                galleryCacheRevision = galleryCacheRevision,
+                                playingVoiceUrl = if (isVoiceTab) playingVoiceUrl else "",
+                                isVoicePlaying = isVoiceTab && isVoicePlaying,
+                                voicePlayProgress = if (isVoiceTab) voicePlayProgress else 0f,
+                                selectedVoiceLanguage = if (isVoiceTab) selectedVoiceLanguage else "",
+                                onOpenExternal = ::openExternal,
+                                onOpenGuide = ::openGuideInPage,
+                                onSaveMedia = ::saveGuideMedia,
+                                onToggleVoicePlayback = if (isVoiceTab) ::toggleVoicePlayback else ignoreStringInput,
+                                onSelectedVoiceLanguageChange = if (isVoiceTab) {
+                                    { selectedVoiceLanguage = it }
+                                } else {
+                                    ignoreStringInput
+                                }
                             )
                         }
-                    } else {
-                        renderBaStudentGuideTabContent(
-                            activeBottomTab = pageBottomTab,
-                            info = info,
-                            error = error,
-                            backdrop = pageBackdrop,
-                            accent = accent,
-                            context = context,
-                            sourceUrl = sourceUrl,
-                            galleryCacheRevision = galleryCacheRevision,
-                            playingVoiceUrl = if (isVoiceTab) playingVoiceUrl else "",
-                            isVoicePlaying = isVoiceTab && isVoicePlaying,
-                            voicePlayProgress = if (isVoiceTab) voicePlayProgress else 0f,
-                            selectedVoiceLanguage = if (isVoiceTab) selectedVoiceLanguage else "",
-                            onOpenExternal = ::openExternal,
-                            onOpenGuide = ::openGuideInPage,
-                            onSaveMedia = ::saveGuideMedia,
-                            onToggleVoicePlayback = if (isVoiceTab) ::toggleVoicePlayback else ignoreStringInput,
-                            onSelectedVoiceLanguageChange = if (isVoiceTab) {
-                                { selectedVoiceLanguage = it }
-                            } else {
-                                ignoreStringInput
+                    }
+                }
+                if (sourceUrl.isNotBlank() && loading && info == null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                top = innerPadding.calculateTopPadding(),
+                                bottom = innerPadding.calculateBottomPadding(),
+                                start = 20.dp,
+                                end = 20.dp
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .defaultMinSize(minHeight = 84.dp),
+                            cornerRadius = 18.dp,
+                            colors = CardDefaults.defaultColors(
+                                color = MiuixTheme.colorScheme.surface.copy(alpha = 0.84f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CircularProgressIndicator(
+                                    progress = syncProgress.coerceIn(0.12f, 0.92f),
+                                    size = 24.dp,
+                                    strokeWidth = 2.5.dp,
+                                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                        foregroundColor = Color(0xFF3B82F6),
+                                        backgroundColor = Color(0xFF3B82F6).copy(alpha = 0.24f),
+                                    ),
+                                )
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.guide_loading_title),
+                                        color = MiuixTheme.colorScheme.onSurface,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.guide_loading_summary),
+                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                        fontSize = 12.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
-                        )
+                        }
                     }
                 }
             }
