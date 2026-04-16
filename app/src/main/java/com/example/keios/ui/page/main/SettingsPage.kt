@@ -38,9 +38,12 @@ import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
 import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
+import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
 import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
+import com.example.keios.ui.page.main.widget.buildTextCopyPayload
 import com.example.keios.ui.page.main.widget.capturePopupAnchor
+import com.example.keios.ui.page.main.widget.copyModeAwareRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,6 +76,8 @@ fun SettingsPage(
     onSuperIslandNotificationChanged: (Boolean) -> Unit,
     superIslandBypassRestrictionEnabled: Boolean,
     onSuperIslandBypassRestrictionChanged: (Boolean) -> Unit,
+    textCopyCapabilityExpanded: Boolean,
+    onTextCopyCapabilityExpandedChanged: (Boolean) -> Unit,
     cacheDiagnosticsEnabled: Boolean,
     onCacheDiagnosticsChanged: (Boolean) -> Unit,
     appThemeMode: AppThemeMode,
@@ -234,6 +239,42 @@ fun SettingsPage(
                             )
                         },
                         onClick = { onLiquidActionBarLayeredStyleChanged(!liquidActionBarLayeredStyleEnabled) }
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(10.dp)) }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.defaultColors(
+                        color = if (textCopyCapabilityExpanded) enabledCardColor else disabledCardColor,
+                        contentColor = titleColor
+                    ),
+                    onClick = {}
+                ) {
+                    SettingsSectionCard(
+                        header = stringResource(R.string.settings_copy_capability_header),
+                        title = stringResource(R.string.settings_copy_capability_title),
+                        summary = if (textCopyCapabilityExpanded) {
+                            stringResource(R.string.settings_copy_capability_summary_enabled)
+                        } else {
+                            stringResource(R.string.settings_copy_capability_summary_disabled)
+                        },
+                        infoKey = stringResource(R.string.common_note),
+                        infoValue = if (textCopyCapabilityExpanded) {
+                            stringResource(R.string.settings_copy_capability_note_enabled)
+                        } else {
+                            stringResource(R.string.settings_copy_capability_note_disabled)
+                        },
+                        trailing = {
+                            Switch(
+                                checked = textCopyCapabilityExpanded,
+                                onCheckedChange = { checked -> onTextCopyCapabilityExpandedChanged(checked) }
+                            )
+                        },
+                        onClick = { onTextCopyCapabilityExpandedChanged(!textCopyCapabilityExpanded) }
                     )
                 }
             }
@@ -556,24 +597,29 @@ private fun SettingsInfoItem(
 ) {
     val titleColor = MiuixTheme.colorScheme.onBackgroundVariant
     val valueColor = MiuixTheme.colorScheme.onBackground
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = key,
-            color = titleColor,
-            modifier = Modifier.wrapContentWidth()
-        )
-        Text(
-            text = value.ifBlank { stringResource(R.string.common_na) },
-            color = valueColor,
-            textAlign = TextAlign.End,
-            modifier = Modifier.weight(1f)
-        )
+    val displayValue = value.ifBlank { stringResource(R.string.common_na) }
+    val copyPayload = remember(key, displayValue) { buildTextCopyPayload(key, displayValue) }
+    CopyModeSelectionContainer {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .copyModeAwareRow(copyPayload = copyPayload)
+                .padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                text = key,
+                color = titleColor,
+                modifier = Modifier.wrapContentWidth()
+            )
+            Text(
+                text = displayValue,
+                color = valueColor,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 

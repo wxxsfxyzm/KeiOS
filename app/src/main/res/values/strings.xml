@@ -70,6 +70,12 @@
     <string name="settings_super_island_style_summary_enabled">启用超级岛模板（Hyper Focus）。关闭后改用 AOSP Live Update 实时通知。</string>
     <string name="settings_super_island_style_summary_disabled">当前使用 AOSP Live Update 实时通知样式。开启后恢复超级岛模板。</string>
     <string name="settings_super_island_style_scope">影响 MCP 常驻通知与 BA AP 通知的样式呈现</string>
+    <string name="settings_copy_capability_header">Text Copy</string>
+    <string name="settings_copy_capability_title">复制能力扩展</string>
+    <string name="settings_copy_capability_summary_enabled">完整复制模式：文本支持长按选区、拖动、全选与系统文本菜单联动，适合深度检索与引用。</string>
+    <string name="settings_copy_capability_summary_disabled">轻量复制模式：长按条目立即复制“标题：值”，滚动与交互开销更低，适合日常快速查看。</string>
+    <string name="settings_copy_capability_note_enabled">开启后会在文字条目启用系统选区能力。该模式功能更完整，触控链路更重；长列表场景建议按需开启。</string>
+    <string name="settings_copy_capability_note_disabled">关闭后统一使用轻量复制逻辑，保持流畅优先；如需拖拽选区与全选，请临时开启本选项。</string>
     <string name="settings_cache_header">Cache</string>
     <string name="settings_cache_diagnostics_title">缓存诊断</string>
     <string name="settings_cache_diagnostics_summary_enabled">统计各页面缓存条数、占用空间与最近活动时间。</string>

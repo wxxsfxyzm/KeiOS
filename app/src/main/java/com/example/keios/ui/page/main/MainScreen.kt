@@ -139,6 +139,9 @@ fun MainScreen(
     var superIslandBypassRestrictionEnabled by remember(uiPrefsSnapshot) {
         mutableStateOf(uiPrefsSnapshot.superIslandBypassRestrictionEnabled)
     }
+    var textCopyCapabilityExpanded by remember(uiPrefsSnapshot) {
+        mutableStateOf(uiPrefsSnapshot.textCopyCapabilityExpanded)
+    }
     var cacheDiagnosticsEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.cacheDiagnosticsEnabled) }
     var visibleBottomPageNames by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.visibleBottomPageNames) }
     val view = LocalView.current
@@ -230,6 +233,11 @@ fun MainScreen(
                         UiPrefs.setSuperIslandBypassRestrictionEnabled(it)
                         mcpServerManager.refreshNotificationNow()
                         McpNotificationHelper.refreshCurrentNotificationStyle(view.context.applicationContext)
+                    },
+                    textCopyCapabilityExpanded = textCopyCapabilityExpanded,
+                    onTextCopyCapabilityExpandedChanged = {
+                        textCopyCapabilityExpanded = it
+                        UiPrefs.setTextCopyCapabilityExpanded(it)
                     },
                     cacheDiagnosticsEnabled = cacheDiagnosticsEnabled,
                     onCacheDiagnosticsChanged = {

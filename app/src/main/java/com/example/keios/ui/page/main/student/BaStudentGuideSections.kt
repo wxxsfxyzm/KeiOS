@@ -80,7 +80,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.composed
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -112,6 +111,10 @@ import com.example.keios.R
 import com.example.keios.ui.page.main.ba.BASettingsStore
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
+import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
+import com.example.keios.ui.page.main.widget.buildTextCopyPayload
+import com.example.keios.ui.page.main.widget.copyModeAwareRow
+import com.example.keios.ui.page.main.widget.rememberLightTextCopyAction
 import com.kyant.backdrop.Backdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
@@ -1781,29 +1784,31 @@ fun GuideGalleryUnlockLevelCardItem(
         ),
         onClick = {}
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .guideCopyable(rowCopyPayload)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "回忆大厅解锁等级",
-                color = MiuixTheme.colorScheme.onBackground,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            GlassTextButton(
-                backdrop = backdrop,
-                text = level,
-                enabled = false,
-                textColor = Color(0xFF3B82F6),
-                variant = GlassVariant.Compact,
-                onClick = {}
-            )
+        CopyModeSelectionContainer {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .guideCopyable(rowCopyPayload)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "回忆大厅解锁等级",
+                    color = MiuixTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                GlassTextButton(
+                    backdrop = backdrop,
+                    text = level,
+                    enabled = false,
+                    textColor = Color(0xFF3B82F6),
+                    variant = GlassVariant.Compact,
+                    onClick = {}
+                )
+            }
         }
     }
 }
@@ -2450,9 +2455,7 @@ private fun adaptiveValueMaxLines(value: String, lineCharBudget: Int): Int {
 }
 
 private fun buildGuideCopyPayload(key: String, value: String): String {
-    val title = key.trim().ifBlank { "信息" }
-    val content = value.trim().ifBlank { "-" }
-    return "$title：$content"
+    return buildTextCopyPayload(key, value)
 }
 
 private fun buildGuideSkillCopyPayload(
@@ -2533,14 +2536,9 @@ private fun buildGuideWeaponCopyPayload(
 
 @Composable
 private fun rememberGuideCopyAction(copyPayload: String): () -> Unit {
-    val clipboard = LocalClipboardManager.current
-    val context = LocalContext.current
-    val toastText = stringResource(R.string.guide_toast_item_copied)
-    return remember(clipboard, context, copyPayload, toastText) {
-        {
-            clipboard.setText(AnnotatedString(copyPayload))
-            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
-        }
+    val quickCopyAction = rememberLightTextCopyAction(copyPayload)
+    return remember(quickCopyAction) {
+        { quickCopyAction?.invoke() }
     }
 }
 
@@ -2548,13 +2546,9 @@ private fun Modifier.guideCopyable(
     copyPayload: String,
     onClick: (() -> Unit)? = null
 ): Modifier = composed {
-    if (copyPayload.isBlank()) return@composed this
-    val rowCopyAction = rememberGuideCopyAction(copyPayload)
-    this.combinedClickable(
-        interactionSource = remember { MutableInteractionSource() },
-        indication = null,
-        onClick = { onClick?.invoke() },
-        onLongClick = rowCopyAction
+    this.copyModeAwareRow(
+        copyPayload = copyPayload,
+        onClick = onClick
     )
 }
 
@@ -2584,60 +2578,31 @@ fun GuideProfileMetaLine(item: BaGuideMetaItem) {
             (maxWidth * 0.42f).coerceIn(80.dp, 176.dp)
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null,
-                    onClick = {},
-                    onLongClick = rowCopyAction
-                ),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            if (inlineTitleIcon) {
-                Row(
-                    modifier = Modifier.widthIn(max = titleMaxWidth),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = item.title,
-                        color = MiuixTheme.colorScheme.onBackgroundVariant,
-                        modifier = Modifier.weight(1f, fill = false),
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip
-                    )
-                    if (item.imageUrl.isNotBlank()) {
-                        GuideRemoteIcon(
-                            imageUrl = item.imageUrl,
-                            iconWidth = iconWidth,
-                            iconHeight = iconHeight
+        CopyModeSelectionContainer {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .copyModeAwareRow(
+                        copyPayload = buildGuideCopyPayload(item.title, summary),
+                        onLongClick = rowCopyAction
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                if (inlineTitleIcon) {
+                    Row(
+                        modifier = Modifier.widthIn(max = titleMaxWidth),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = item.title,
+                            color = MiuixTheme.colorScheme.onBackgroundVariant,
+                            modifier = Modifier.weight(1f, fill = false),
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip
                         )
-                    }
-                }
-            } else {
-                val hasLeadingIcon = item.imageUrl.isNotBlank()
-                Row(
-                    modifier = Modifier.widthIn(max = titleMaxWidth),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = item.title,
-                        color = MiuixTheme.colorScheme.onBackgroundVariant,
-                        modifier = Modifier.weight(1f, fill = false),
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip
-                    )
-                    if (hasLeadingIcon) {
-                        Box(
-                            modifier = Modifier
-                                .width(iconSlotWidth)
-                                .height(iconSlotHeight),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        if (item.imageUrl.isNotBlank()) {
                             GuideRemoteIcon(
                                 imageUrl = item.imageUrl,
                                 iconWidth = iconWidth,
@@ -2645,22 +2610,51 @@ fun GuideProfileMetaLine(item: BaGuideMetaItem) {
                             )
                         }
                     }
+                } else {
+                    val hasLeadingIcon = item.imageUrl.isNotBlank()
+                    Row(
+                        modifier = Modifier.widthIn(max = titleMaxWidth),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = item.title,
+                            color = MiuixTheme.colorScheme.onBackgroundVariant,
+                            modifier = Modifier.weight(1f, fill = false),
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip
+                        )
+                        if (hasLeadingIcon) {
+                            Box(
+                                modifier = Modifier
+                                    .width(iconSlotWidth)
+                                    .height(iconSlotHeight),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                GuideRemoteIcon(
+                                    imageUrl = item.imageUrl,
+                                    iconWidth = iconWidth,
+                                    iconHeight = iconHeight
+                                )
+                            }
+                        }
+                    }
                 }
-            }
-            if (!isPosition) {
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.TopStart
-                ) {
-                    Text(
-                        text = summary,
-                        color = MiuixTheme.colorScheme.onBackground,
-                        textAlign = TextAlign.Start,
-                        overflow = TextOverflow.Clip
-                    )
+                if (!isPosition) {
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.TopStart
+                    ) {
+                        Text(
+                            text = summary,
+                            color = MiuixTheme.colorScheme.onBackground,
+                            textAlign = TextAlign.Start,
+                            overflow = TextOverflow.Clip
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
-            } else {
-                Spacer(modifier = Modifier.weight(1f))
             }
         }
     }
@@ -2683,10 +2677,8 @@ fun GuideCombatMetaTile(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .combinedClickable(
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication = null,
-                onClick = {},
+            .copyModeAwareRow(
+                copyPayload = buildGuideCopyPayload(item.title, value),
                 onLongClick = rowCopyAction
             )
             .clip(RoundedCornerShape(12.dp))
@@ -2701,51 +2693,53 @@ fun GuideCombatMetaTile(
             .coerceAtLeast(10)
         val valueMaxLines = adaptiveValueMaxLines(value, valueCharBudget)
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = item.title,
-                color = MiuixTheme.colorScheme.onBackgroundVariant,
-                modifier = Modifier.widthIn(max = titleMaxWidth),
-                maxLines = 2,
-                overflow = TextOverflow.Clip
-            )
-            Text(
-                text = value,
-                color = MiuixTheme.colorScheme.onBackground,
-                modifier = Modifier.weight(1f),
-                maxLines = valueMaxLines,
-                overflow = TextOverflow.Ellipsis
-            )
-            Box(
-                modifier = Modifier
-                    .width(iconSlotWidth)
-                    .height(iconSlotHeight),
-                contentAlignment = Alignment.Center
+        CopyModeSelectionContainer {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (item.imageUrl.isNotBlank()) {
-                    GuideRemoteIcon(
-                        imageUrl = item.imageUrl,
-                        iconWidth = iconWidth,
-                        iconHeight = iconHeight
-                    )
-                }
-            }
-            if (item.extraImageUrl.isNotBlank()) {
+                Text(
+                    text = item.title,
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    modifier = Modifier.widthIn(max = titleMaxWidth),
+                    maxLines = 2,
+                    overflow = TextOverflow.Clip
+                )
+                Text(
+                    text = value,
+                    color = MiuixTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f),
+                    maxLines = valueMaxLines,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Box(
                     modifier = Modifier
                         .width(iconSlotWidth)
                         .height(iconSlotHeight),
                     contentAlignment = Alignment.Center
                 ) {
-                    GuideRemoteIcon(
-                        imageUrl = item.extraImageUrl,
-                        iconWidth = extraIconWidth,
-                        iconHeight = extraIconHeight
-                    )
+                    if (item.imageUrl.isNotBlank()) {
+                        GuideRemoteIcon(
+                            imageUrl = item.imageUrl,
+                            iconWidth = iconWidth,
+                            iconHeight = iconHeight
+                        )
+                    }
+                }
+                if (item.extraImageUrl.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .width(iconSlotWidth)
+                            .height(iconSlotHeight),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        GuideRemoteIcon(
+                            imageUrl = item.extraImageUrl,
+                            iconWidth = extraIconWidth,
+                            iconHeight = extraIconHeight
+                        )
+                    }
                 }
             }
         }
@@ -2874,77 +2868,166 @@ fun GuideSkillCardItem(
         ),
         onClick = {}
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .guideCopyable(skillCopyPayload)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+        CopyModeSelectionContainer {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .guideCopyable(skillCopyPayload)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onSizeChanged { skillTitleRowHeightPx = it.height },
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (card.iconUrl.isNotBlank()) {
-                        GuideRemoteIcon(
-                            imageUrl = card.iconUrl,
-                            modifier = Modifier.alignBy { it.measuredHeight / 2 },
-                            iconWidth = 34.dp,
-                            iconHeight = 34.dp
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onSizeChanged { skillTitleRowHeightPx = it.height },
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (card.iconUrl.isNotBlank()) {
+                            GuideRemoteIcon(
+                                imageUrl = card.iconUrl,
+                                modifier = Modifier.alignBy { it.measuredHeight / 2 },
+                                iconWidth = 34.dp,
+                                iconHeight = 34.dp
+                            )
+                        }
+                        Text(
+                            text = card.name,
+                            modifier = Modifier
+                                .weight(1f)
+                                .alignBy { it.measuredHeight / 2 },
+                            color = MiuixTheme.colorScheme.onBackground,
+                            maxLines = if (isExSkill) 2 else 1,
+                            overflow = TextOverflow.Ellipsis,
+                            onTextLayout = { layoutResult ->
+                                val safeLineCount = layoutResult.lineCount.coerceAtLeast(1)
+                                if (skillNameLineCount != safeLineCount) {
+                                    skillNameLineCount = safeLineCount
+                                }
+                            }
                         )
                     }
-                    Text(
-                        text = card.name,
-                        modifier = Modifier
-                            .weight(1f)
-                            .alignBy { it.measuredHeight / 2 },
-                        color = MiuixTheme.colorScheme.onBackground,
-                        maxLines = if (isExSkill) 2 else 1,
-                        overflow = TextOverflow.Ellipsis,
-                        onTextLayout = { layoutResult ->
-                            val safeLineCount = layoutResult.lineCount.coerceAtLeast(1)
-                            if (skillNameLineCount != safeLineCount) {
-                                skillNameLineCount = safeLineCount
+                    GuideSkillDescriptionText(
+                        description = skillDesc.ifBlank { "暂未解析到技能描述。" },
+                        glossaryIcons = card.glossaryIcons,
+                        descriptionIcons = card.descriptionIconsFor(selectedLevel),
+                        onLineCountChanged = { lineCount ->
+                            val safeLineCount = lineCount.coerceAtLeast(1)
+                            if (descriptionLineCount != safeLineCount) {
+                                descriptionLineCount = safeLineCount
                             }
-                        }
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-                GuideSkillDescriptionText(
-                    description = skillDesc.ifBlank { "暂未解析到技能描述。" },
-                    glossaryIcons = card.glossaryIcons,
-                    descriptionIcons = card.descriptionIconsFor(selectedLevel),
-                    onLineCountChanged = { lineCount ->
-                        val safeLineCount = lineCount.coerceAtLeast(1)
-                        if (descriptionLineCount != safeLineCount) {
-                            descriptionLineCount = safeLineCount
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
 
-            if (hasSkillMetaColumn) {
-                Column(
-                    modifier = Modifier.widthIn(min = 68.dp, max = 90.dp),
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    if (displaySkillType.isNotBlank()) {
-                        if (typeAlignToTitleOffset > 0.dp) {
-                            Spacer(modifier = Modifier.height(typeAlignToTitleOffset))
+                if (hasSkillMetaColumn) {
+                    Column(
+                        modifier = Modifier.widthIn(min = 68.dp, max = 90.dp),
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (displaySkillType.isNotBlank()) {
+                            if (typeAlignToTitleOffset > 0.dp) {
+                                Spacer(modifier = Modifier.height(typeAlignToTitleOffset))
+                            }
+                            Box(modifier = Modifier.onSizeChanged { typeCapsuleHeightPx = it.height }) {
+                                GlassTextButton(
+                                    backdrop = backdrop,
+                                    text = displaySkillType,
+                                    enabled = false,
+                                    textColor = Color(0xFF3B82F6),
+                                    variant = GlassVariant.Compact,
+                                    minHeight = 30.dp,
+                                    horizontalPadding = 10.dp,
+                                    verticalPadding = 6.dp,
+                                    onClick = {}
+                                )
+                            }
                         }
-                        Box(modifier = Modifier.onSizeChanged { typeCapsuleHeightPx = it.height }) {
+                        if (hasTypeStateBlock) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onSizeChanged { typeStateBlockHeightPx = it.height },
+                                horizontalAlignment = Alignment.End,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                skillTypeStateTags.forEach { stateTag ->
+                                    GuideSkillStateTagButton(
+                                        label = stateTag,
+                                        backdrop = backdrop
+                                    )
+                                }
+                            }
+                        }
+                        if (hasTypeSubRow) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onSizeChanged { typeSubRowHeightPx = it.height },
+                                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (skillTypeVariantBadge != null) {
+                                    GuideSkillVariantBadge(
+                                        label = skillTypeVariantBadge
+                                    )
+                                }
+                                if (levelOptions.isNotEmpty()) {
+                                    Box(
+                                        modifier = Modifier.capturePopupAnchor { levelPopupAnchorBounds = it }
+                                    ) {
+                                        GlassTextButton(
+                                            backdrop = backdrop,
+                                            text = displayLevel,
+                                            variant = GlassVariant.Compact,
+                                            minHeight = 30.dp,
+                                            horizontalPadding = 10.dp,
+                                            verticalPadding = 6.dp,
+                                            onClick = { showLevelPopup = !showLevelPopup }
+                                        )
+                                        if (showLevelPopup) {
+                                            SnapshotWindowListPopup(
+                                                show = showLevelPopup,
+                                                alignment = PopupPositionProvider.Align.BottomEnd,
+                                                anchorBounds = levelPopupAnchorBounds,
+                                                placement = SnapshotPopupPlacement.ButtonEnd,
+                                                onDismissRequest = { showLevelPopup = false },
+                                                enableWindowDim = false
+                                            ) {
+                                                LiquidDropdownColumn {
+                                                    levelOptions.forEachIndexed { index, option ->
+                                                        LiquidDropdownImpl(
+                                                            text = option,
+                                                            optionSize = levelOptions.size,
+                                                            isSelected = selectedLevel == option,
+                                                            index = index,
+                                                            onSelectedIndexChange = { selected ->
+                                                                selectedLevel = levelOptions[selected]
+                                                                showLevelPopup = false
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (costAlignToDescriptionOffset > 0.dp && skillCost.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(costAlignToDescriptionOffset))
+                        }
+                        if (skillCost.isNotBlank()) {
                             GlassTextButton(
                                 backdrop = backdrop,
-                                text = displaySkillType,
+                                text = "COST:$skillCost",
                                 enabled = false,
                                 textColor = Color(0xFF3B82F6),
                                 variant = GlassVariant.Compact,
@@ -2954,93 +3037,6 @@ fun GuideSkillCardItem(
                                 onClick = {}
                             )
                         }
-                    }
-                    if (hasTypeStateBlock) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .onSizeChanged { typeStateBlockHeightPx = it.height },
-                            horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            skillTypeStateTags.forEach { stateTag ->
-                                GuideSkillStateTagButton(
-                                    label = stateTag,
-                                    backdrop = backdrop
-                                )
-                            }
-                        }
-                    }
-                    if (hasTypeSubRow) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .onSizeChanged { typeSubRowHeightPx = it.height },
-                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (skillTypeVariantBadge != null) {
-                                GuideSkillVariantBadge(
-                                    label = skillTypeVariantBadge
-                                )
-                            }
-                            if (levelOptions.isNotEmpty()) {
-                                Box(
-                                    modifier = Modifier.capturePopupAnchor { levelPopupAnchorBounds = it }
-                                ) {
-                                    GlassTextButton(
-                                        backdrop = backdrop,
-                                        text = displayLevel,
-                                        variant = GlassVariant.Compact,
-                                        minHeight = 30.dp,
-                                        horizontalPadding = 10.dp,
-                                        verticalPadding = 6.dp,
-                                        onClick = { showLevelPopup = !showLevelPopup }
-                                    )
-                                    if (showLevelPopup) {
-                                        SnapshotWindowListPopup(
-                                            show = showLevelPopup,
-                                            alignment = PopupPositionProvider.Align.BottomEnd,
-                                            anchorBounds = levelPopupAnchorBounds,
-                                            placement = SnapshotPopupPlacement.ButtonEnd,
-                                            onDismissRequest = { showLevelPopup = false },
-                                            enableWindowDim = false
-                                        ) {
-                                            LiquidDropdownColumn {
-                                                levelOptions.forEachIndexed { index, option ->
-                                                    LiquidDropdownImpl(
-                                                        text = option,
-                                                        optionSize = levelOptions.size,
-                                                        isSelected = selectedLevel == option,
-                                                        index = index,
-                                                        onSelectedIndexChange = { selected ->
-                                                            selectedLevel = levelOptions[selected]
-                                                            showLevelPopup = false
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (costAlignToDescriptionOffset > 0.dp && skillCost.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(costAlignToDescriptionOffset))
-                    }
-                    if (skillCost.isNotBlank()) {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            text = "COST:$skillCost",
-                            enabled = false,
-                            textColor = Color(0xFF3B82F6),
-                            variant = GlassVariant.Compact,
-                            minHeight = 30.dp,
-                            horizontalPadding = 10.dp,
-                            verticalPadding = 6.dp,
-                            onClick = {}
-                        )
                     }
                 }
             }
@@ -3227,34 +3223,36 @@ fun GuideVoiceLanguageCard(
         ),
         onClick = {}
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .guideCopyable(voiceHeaderCopyPayload)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "配音",
-                color = MiuixTheme.colorScheme.onBackgroundVariant,
-                modifier = Modifier.widthIn(min = 34.dp)
-            )
-            FlowRow(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+        CopyModeSelectionContainer {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .guideCopyable(voiceHeaderCopyPayload)
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                visibleHeaders.forEach { header ->
-                    val selected = header.equals(selectedHeader.trim(), ignoreCase = true)
-                    GlassTextButton(
-                        backdrop = backdrop,
-                        text = header,
-                        textColor = if (selected) Color(0xFF2563EB) else MiuixTheme.colorScheme.onBackgroundVariant,
-                        containerColor = if (selected) Color(0x443B82F6) else null,
-                        variant = GlassVariant.Compact,
-                        onClick = { onSelected(header) }
-                    )
+                Text(
+                    text = "配音",
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    modifier = Modifier.widthIn(min = 34.dp)
+                )
+                FlowRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    visibleHeaders.forEach { header ->
+                        val selected = header.equals(selectedHeader.trim(), ignoreCase = true)
+                        GlassTextButton(
+                            backdrop = backdrop,
+                            text = header,
+                            textColor = if (selected) Color(0xFF2563EB) else MiuixTheme.colorScheme.onBackgroundVariant,
+                            containerColor = if (selected) Color(0x443B82F6) else null,
+                            variant = GlassVariant.Compact,
+                            onClick = { onSelected(header) }
+                        )
+                    }
                 }
             }
         }
@@ -3289,87 +3287,89 @@ fun GuideVoiceEntryCard(
         ),
         onClick = {}
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .guideCopyable(entryCopyPayload)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+        CopyModeSelectionContainer {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .guideCopyable(entryCopyPayload)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (entry.section.isNotBlank()) {
-                    GlassTextButton(
-                        backdrop = backdrop,
-                        text = entry.section,
-                        enabled = false,
-                        textColor = Color(0xFF3B82F6),
-                        variant = GlassVariant.Compact,
-                        onClick = {}
-                    )
-                }
-                Text(
-                    text = entry.title.ifBlank { "语音条目" },
-                    color = MiuixTheme.colorScheme.onBackground,
-                    modifier = Modifier.weight(1f)
-                )
-                if (normalizedPlaybackUrl.isNotBlank()) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (isPlaying) {
-                            CircularProgressIndicator(
-                                progress = playProgress.coerceIn(0f, 1f),
-                                size = 18.dp,
-                                strokeWidth = 2.dp,
-                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                    foregroundColor = Color(0xFF3B82F6),
-                                    backgroundColor = Color(0x553B82F6)
-                                )
-                            )
-                        }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (entry.section.isNotBlank()) {
                         GlassTextButton(
                             backdrop = backdrop,
-                            text = "",
-                            leadingIcon = if (isPlaying) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
+                            text = entry.section,
+                            enabled = false,
                             textColor = Color(0xFF3B82F6),
                             variant = GlassVariant.Compact,
-                            onClick = { onTogglePlay(normalizedPlaybackUrl) }
+                            onClick = {}
                         )
                     }
+                    Text(
+                        text = entry.title.ifBlank { "语音条目" },
+                        color = MiuixTheme.colorScheme.onBackground,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (normalizedPlaybackUrl.isNotBlank()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isPlaying) {
+                                CircularProgressIndicator(
+                                    progress = playProgress.coerceIn(0f, 1f),
+                                    size = 18.dp,
+                                    strokeWidth = 2.dp,
+                                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                        foregroundColor = Color(0xFF3B82F6),
+                                        backgroundColor = Color(0x553B82F6)
+                                    )
+                                )
+                            }
+                            GlassTextButton(
+                                backdrop = backdrop,
+                                text = "",
+                                leadingIcon = if (isPlaying) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
+                                textColor = Color(0xFF3B82F6),
+                                variant = GlassVariant.Compact,
+                                onClick = { onTogglePlay(normalizedPlaybackUrl) }
+                            )
+                        }
+                    }
                 }
-            }
 
-            voiceLines.forEach { (label, text) ->
-                val lineCopyPayload = remember(label, text) {
-                    buildGuideCopyPayload(label, text)
-                }
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val labelMaxWidth = (maxWidth * 0.28f).coerceIn(52.dp, 92.dp)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .guideCopyable(lineCopyPayload),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Text(
-                            text = label,
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
-                            modifier = Modifier.widthIn(max = labelMaxWidth),
-                            maxLines = 1,
-                            overflow = TextOverflow.Clip
-                        )
-                        Text(
-                            text = text,
-                            color = MiuixTheme.colorScheme.onBackground,
-                            modifier = Modifier.weight(1f),
-                            overflow = TextOverflow.Clip
-                        )
+                voiceLines.forEach { (label, text) ->
+                    val lineCopyPayload = remember(label, text) {
+                        buildGuideCopyPayload(label, text)
+                    }
+                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                        val labelMaxWidth = (maxWidth * 0.28f).coerceIn(52.dp, 92.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .guideCopyable(lineCopyPayload),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                text = label,
+                                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                modifier = Modifier.widthIn(max = labelMaxWidth),
+                                maxLines = 1,
+                                overflow = TextOverflow.Clip
+                            )
+                            Text(
+                                text = text,
+                                color = MiuixTheme.colorScheme.onBackground,
+                                modifier = Modifier.weight(1f),
+                                overflow = TextOverflow.Clip
+                            )
+                        }
                     }
                 }
             }
@@ -3486,150 +3486,152 @@ fun GuideWeaponCardItem(
         ),
         onClick = {}
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .guideCopyable(weaponCopyPayload)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+        CopyModeSelectionContainer {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .guideCopyable(weaponCopyPayload)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = card.name.ifBlank { "专属武器" },
-                    color = MiuixTheme.colorScheme.onBackground,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                GlassTextButton(
-                    backdrop = backdrop,
-                    text = "专武",
-                    enabled = false,
-                    textColor = Color(0xFF3B82F6),
-                    variant = GlassVariant.Compact,
-                    onClick = {}
-                )
-            }
-
-            Text(
-                text = card.description.ifBlank { "暂无专武描述。" },
-                color = MiuixTheme.colorScheme.onBackground,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (card.imageUrl.isNotBlank()) {
-                GuidePressableMediaSurface(
-                    onClick = { showImageFullscreen = true }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GuideRemoteImage(
-                        imageUrl = card.imageUrl,
-                        imageHeight = 132.dp
+                    Text(
+                        text = card.name.ifBlank { "专属武器" },
+                        color = MiuixTheme.colorScheme.onBackground,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "专武",
+                        enabled = false,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {}
                     )
                 }
-            }
 
-            if (card.statRows.isNotEmpty()) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Text(
+                    text = card.description.ifBlank { "暂无专武描述。" },
+                    color = MiuixTheme.colorScheme.onBackground,
+                    maxLines = 6,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (card.imageUrl.isNotBlank()) {
+                    GuidePressableMediaSurface(
+                        onClick = { showImageFullscreen = true }
                     ) {
-                        Text(
-                            text = "专武数值",
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
-                            modifier = Modifier.weight(1f)
+                        GuideRemoteImage(
+                            imageUrl = card.imageUrl,
+                            imageHeight = 132.dp
                         )
-                        if (levelOptions.isNotEmpty()) {
-                            var levelPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
-                            Box(
-                                modifier = Modifier.capturePopupAnchor { levelPopupAnchorBounds = it }
-                            ) {
-                                GlassTextButton(
-                                    backdrop = backdrop,
-                                    text = selectedLevel,
-                                    variant = GlassVariant.Compact,
-                                    onClick = { showLevelPopup = !showLevelPopup }
-                                )
-                                if (showLevelPopup) {
-                                    SnapshotWindowListPopup(
-                                        show = showLevelPopup,
-                                        alignment = PopupPositionProvider.Align.BottomEnd,
-                                        anchorBounds = levelPopupAnchorBounds,
-                                        placement = SnapshotPopupPlacement.ButtonEnd,
-                                        onDismissRequest = { showLevelPopup = false },
-                                        enableWindowDim = false
-                                    ) {
-                                        LiquidDropdownColumn {
-                                            levelOptions.forEachIndexed { idx, option ->
-                                                LiquidDropdownImpl(
-                                                    text = option,
-                                                    optionSize = levelOptions.size,
-                                                    isSelected = selectedLevel == option,
-                                                    index = idx,
-                                                    onSelectedIndexChange = { selected ->
-                                                        selectedLevel = levelOptions[selected]
-                                                        showLevelPopup = false
-                                                    }
-                                                )
+                    }
+                }
+
+                if (card.statRows.isNotEmpty()) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "专武数值",
+                                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (levelOptions.isNotEmpty()) {
+                                var levelPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+                                Box(
+                                    modifier = Modifier.capturePopupAnchor { levelPopupAnchorBounds = it }
+                                ) {
+                                    GlassTextButton(
+                                        backdrop = backdrop,
+                                        text = selectedLevel,
+                                        variant = GlassVariant.Compact,
+                                        onClick = { showLevelPopup = !showLevelPopup }
+                                    )
+                                    if (showLevelPopup) {
+                                        SnapshotWindowListPopup(
+                                            show = showLevelPopup,
+                                            alignment = PopupPositionProvider.Align.BottomEnd,
+                                            anchorBounds = levelPopupAnchorBounds,
+                                            placement = SnapshotPopupPlacement.ButtonEnd,
+                                            onDismissRequest = { showLevelPopup = false },
+                                            enableWindowDim = false
+                                        ) {
+                                            LiquidDropdownColumn {
+                                                levelOptions.forEachIndexed { idx, option ->
+                                                    LiquidDropdownImpl(
+                                                        text = option,
+                                                        optionSize = levelOptions.size,
+                                                        isSelected = selectedLevel == option,
+                                                        index = idx,
+                                                        onSelectedIndexChange = { selected ->
+                                                            selectedLevel = levelOptions[selected]
+                                                            showLevelPopup = false
+                                                        }
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    card.statRows.forEach { stat ->
-                        val valueText = levelValue(stat)
-                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                            val titleMaxWidth = (maxWidth * 0.34f).coerceIn(64.dp, 128.dp)
-                            val valueCharBudget = ((maxWidth - titleMaxWidth).value / 7f).toInt().coerceAtLeast(10)
-                            val valueMaxLines = adaptiveValueMaxLines(valueText, valueCharBudget)
+                        card.statRows.forEach { stat ->
+                            val valueText = levelValue(stat)
+                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                val titleMaxWidth = (maxWidth * 0.34f).coerceIn(64.dp, 128.dp)
+                                val valueCharBudget = ((maxWidth - titleMaxWidth).value / 7f).toInt().coerceAtLeast(10)
+                                val valueMaxLines = adaptiveValueMaxLines(valueText, valueCharBudget)
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .guideCopyable(buildGuideCopyPayload(stat.title, valueText)),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = stat.title,
-                                    color = MiuixTheme.colorScheme.onBackgroundVariant,
-                                    modifier = Modifier.widthIn(max = titleMaxWidth),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Clip
-                                )
-                                Text(
-                                    text = valueText,
-                                    color = MiuixTheme.colorScheme.onBackground,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = valueMaxLines,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .guideCopyable(buildGuideCopyPayload(stat.title, valueText)),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = stat.title,
+                                        color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                        modifier = Modifier.widthIn(max = titleMaxWidth),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Clip
+                                    )
+                                    Text(
+                                        text = valueText,
+                                        color = MiuixTheme.colorScheme.onBackground,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = valueMaxLines,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            if (card.starEffects.isNotEmpty()) {
-                card.starEffects.forEachIndexed { index, effect ->
-                    GuideWeaponStarEffectItem(
-                        effect = effect,
-                        glossaryIcons = card.glossaryIcons,
-                        backdrop = backdrop
-                    )
-                    if (index < card.starEffects.lastIndex) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                if (card.starEffects.isNotEmpty()) {
+                    card.starEffects.forEachIndexed { index, effect ->
+                        GuideWeaponStarEffectItem(
+                            effect = effect,
+                            glossaryIcons = card.glossaryIcons,
+                            backdrop = backdrop
+                        )
+                        if (index < card.starEffects.lastIndex) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
                     }
                 }
             }
@@ -3753,65 +3755,67 @@ private fun GuideWeaponStarEffectItem(
         return
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .guideCopyable(effectCopyPayload)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.28f))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+    CopyModeSelectionContainer {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .guideCopyable(effectCopyPayload)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.28f))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            GuideWeaponStarBadgeRow(effect.starLabel, iconSize = 18.dp)
-            if (effect.roleTag.isNotBlank()) {
-                GlassTextButton(
-                    backdrop = backdrop,
-                    text = effect.roleTag,
-                    enabled = false,
-                    textColor = Color(0xFF3B82F6),
-                    variant = GlassVariant.Compact,
-                    onClick = {}
-                )
-            }
-            Text(
-                text = effect.name.ifBlank { "效果" },
-                color = MiuixTheme.colorScheme.onBackground,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (effect.iconUrl.isNotBlank()) {
-                GuideRemoteIcon(
-                    imageUrl = effect.iconUrl,
-                    iconWidth = 20.dp,
-                    iconHeight = 20.dp
-                )
-            }
-            GuideEffectLevelPicker(
-                backdrop = backdrop,
-                levelOptions = levelOptions,
-                selectedLevel = selectedLevel,
-                showLevelPopup = showLevelPopup,
-                onTogglePopup = { showLevelPopup = !showLevelPopup },
-                onDismissPopup = { showLevelPopup = false },
-                onLevelSelected = { selected ->
-                    selectedLevel = levelOptions[selected]
-                    showLevelPopup = false
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GuideWeaponStarBadgeRow(effect.starLabel, iconSize = 18.dp)
+                if (effect.roleTag.isNotBlank()) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = effect.roleTag,
+                        enabled = false,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {}
+                    )
                 }
-            )
-        }
+                Text(
+                    text = effect.name.ifBlank { "效果" },
+                    color = MiuixTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (effect.iconUrl.isNotBlank()) {
+                    GuideRemoteIcon(
+                        imageUrl = effect.iconUrl,
+                        iconWidth = 20.dp,
+                        iconHeight = 20.dp
+                    )
+                }
+                GuideEffectLevelPicker(
+                    backdrop = backdrop,
+                    levelOptions = levelOptions,
+                    selectedLevel = selectedLevel,
+                    showLevelPopup = showLevelPopup,
+                    onTogglePopup = { showLevelPopup = !showLevelPopup },
+                    onDismissPopup = { showLevelPopup = false },
+                    onLevelSelected = { selected ->
+                        selectedLevel = levelOptions[selected]
+                        showLevelPopup = false
+                    }
+                )
+            }
 
-        if (desc.isNotBlank()) {
-            GuideSkillDescriptionText(
-                description = desc,
-                glossaryIcons = glossaryIcons,
-                descriptionIcons = effect.descriptionIconsFor(selectedLevel)
-            )
+            if (desc.isNotBlank()) {
+                GuideSkillDescriptionText(
+                    description = desc,
+                    glossaryIcons = glossaryIcons,
+                    descriptionIcons = effect.descriptionIconsFor(selectedLevel)
+                )
+            }
         }
     }
 }
@@ -3830,66 +3834,68 @@ private fun GuideWeaponTwoStarEffectItem(
     onDismissPopup: () -> Unit,
     onLevelSelected: (Int) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .guideCopyable(copyPayload)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.34f))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+    CopyModeSelectionContainer {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .guideCopyable(copyPayload)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.34f))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            GuideWeaponStarBadgeRow(effect.starLabel, iconSize = 19.dp)
-            if (effect.iconUrl.isNotBlank()) {
-                GuideRemoteIcon(
-                    imageUrl = effect.iconUrl,
-                    iconWidth = 20.dp,
-                    iconHeight = 20.dp
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GuideWeaponStarBadgeRow(effect.starLabel, iconSize = 19.dp)
+                if (effect.iconUrl.isNotBlank()) {
+                    GuideRemoteIcon(
+                        imageUrl = effect.iconUrl,
+                        iconWidth = 20.dp,
+                        iconHeight = 20.dp
+                    )
+                }
+                Text(
+                    text = effect.name.ifBlank { "辅助技能强化" },
+                    color = MiuixTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                if (effect.roleTag.isNotBlank()) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = effect.roleTag,
+                        enabled = false,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {}
+                    )
+                }
             }
-            Text(
-                text = effect.name.ifBlank { "辅助技能强化" },
-                color = MiuixTheme.colorScheme.onBackground,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (effect.roleTag.isNotBlank()) {
-                GlassTextButton(
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GuideSkillDescriptionText(
+                    description = desc.ifBlank { "暂无效果描述。" },
+                    glossaryIcons = glossaryIcons,
+                    descriptionIcons = effect.descriptionIconsFor(selectedLevel),
+                    modifier = Modifier.weight(1f)
+                )
+                GuideEffectLevelPicker(
                     backdrop = backdrop,
-                    text = effect.roleTag,
-                    enabled = false,
-                    textColor = Color(0xFF3B82F6),
-                    variant = GlassVariant.Compact,
-                    onClick = {}
+                    levelOptions = levelOptions,
+                    selectedLevel = selectedLevel,
+                    showLevelPopup = showLevelPopup,
+                    onTogglePopup = onTogglePopup,
+                    onDismissPopup = onDismissPopup,
+                    onLevelSelected = onLevelSelected
                 )
             }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            GuideSkillDescriptionText(
-                description = desc.ifBlank { "暂无效果描述。" },
-                glossaryIcons = glossaryIcons,
-                descriptionIcons = effect.descriptionIconsFor(selectedLevel),
-                modifier = Modifier.weight(1f)
-            )
-            GuideEffectLevelPicker(
-                backdrop = backdrop,
-                levelOptions = levelOptions,
-                selectedLevel = selectedLevel,
-                showLevelPopup = showLevelPopup,
-                onTogglePopup = onTogglePopup,
-                onDismissPopup = onDismissPopup,
-                onLevelSelected = onLevelSelected
-            )
         }
     }
 }

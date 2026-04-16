@@ -1,9 +1,5 @@
 package com.example.keios.ui.page.main.about.ui
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -27,7 +23,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow.Companion.Clip
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
+import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
 import com.example.keios.ui.page.main.widget.StatusPill
+import com.example.keios.ui.page.main.widget.buildTextCopyPayload
+import com.example.keios.ui.page.main.widget.rememberLightTextCopyAction
+import com.example.keios.ui.page.main.widget.rememberTextCopyExpandedEnabled
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -109,30 +109,29 @@ fun AboutCompactInfoRow(
     enableLongPressCopy: Boolean = true,
     onLongClick: (() -> Unit)? = null
 ) {
-    val context = LocalContext.current
-    val copiedToast = stringResource(R.string.guide_toast_item_copied)
     val displayValue = value.ifBlank { stringResource(R.string.common_na) }
-    val copyAction = remember(context, title, displayValue, copiedToast) {
-        {
-            copyAboutRowToClipboard(context, title, displayValue)
-            Toast.makeText(context, copiedToast, Toast.LENGTH_SHORT).show()
-        }
+    val copyPayload = remember(title, displayValue) {
+        buildTextCopyPayload(title, displayValue)
     }
+    val quickCopyAction = rememberLightTextCopyAction(copyPayload)
+    val expandedCopyMode = rememberTextCopyExpandedEnabled()
     AboutCompactRow(
         title = title,
         modifier = modifier,
         titleIcon = titleIcon,
         onClick = onClick,
-        onLongClick = onLongClick ?: if (enableLongPressCopy) copyAction else null
+        onLongClick = onLongClick ?: if (enableLongPressCopy && !expandedCopyMode) quickCopyAction else null
     ) {
-        Text(
-            text = displayValue,
-            color = valueColor,
-            maxLines = Int.MAX_VALUE,
-            overflow = Clip,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.End
-        )
+        CopyModeSelectionContainer {
+            Text(
+                text = displayValue,
+                color = valueColor,
+                maxLines = Int.MAX_VALUE,
+                overflow = Clip,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End
+            )
+        }
     }
 }
 
@@ -154,16 +153,6 @@ fun AboutCompactPillRow(
             color = color
         )
     }
-}
-
-private fun copyAboutRowToClipboard(context: Context, title: String, value: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-    val copiedText = buildString {
-        append(title)
-        append("：")
-        append(value)
-    }
-    clipboard.setPrimaryClip(ClipData.newPlainText("about-item", copiedText))
 }
 
 @Composable

@@ -38,9 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -52,6 +50,10 @@ import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
+import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
+import com.example.keios.ui.page.main.widget.buildTextCopyPayload
+import com.example.keios.ui.page.main.widget.copyModeAwareRow
+import com.example.keios.ui.page.main.widget.rememberLightTextCopyAction
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.Dispatchers
@@ -77,21 +79,14 @@ private val guideSimulateDataCache = object : LinkedHashMap<String, GuideSimulat
 }
 
 private fun buildGuideCopyPayload(key: String, value: String): String {
-    val title = key.trim().ifBlank { "信息" }
-    val content = value.trim().ifBlank { "-" }
-    return "$title：$content"
+    return buildTextCopyPayload(key, value)
 }
 
 @Composable
 private fun rememberGuideCopyAction(copyPayload: String): () -> Unit {
-    val clipboard = LocalClipboardManager.current
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val toastText = stringResource(R.string.guide_toast_item_copied)
-    return remember(clipboard, context, copyPayload, toastText) {
-        {
-            clipboard.setText(AnnotatedString(copyPayload))
-            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
-        }
+    val quickCopyAction = rememberLightTextCopyAction(copyPayload)
+    return remember(quickCopyAction) {
+        { quickCopyAction?.invoke() }
     }
 }
 
@@ -99,13 +94,9 @@ private fun Modifier.guideCopyable(
     copyPayload: String,
     onClick: (() -> Unit)? = null
 ): Modifier = composed {
-    if (copyPayload.isBlank()) return@composed this
-    val rowCopyAction = rememberGuideCopyAction(copyPayload)
-    this.combinedClickable(
-        interactionSource = remember { MutableInteractionSource() },
-        indication = null,
-        onClick = { onClick?.invoke() },
-        onLongClick = rowCopyAction
+    this.copyModeAwareRow(
+        copyPayload = copyPayload,
+        onClick = onClick
     )
 }
 
@@ -689,15 +680,17 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                             title = "相关同名角色"
                                         )
                                         sameNameRoleHint.takeIf { it.isNotBlank() }?.let { hint ->
-                                            Text(
-                                                text = hint,
-                                                color = MiuixTheme.colorScheme.onBackgroundVariant,
-                                                modifier = Modifier.guideCopyable(
-                                                    buildGuideCopyPayload("相关同名角色", hint)
-                                                ),
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
+                                            CopyModeSelectionContainer {
+                                                Text(
+                                                    text = hint,
+                                                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                                                    modifier = Modifier.guideCopyable(
+                                                        buildGuideCopyPayload("相关同名角色", hint)
+                                                    ),
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
                                         }
 
                                         if (sameNameRoleItems.isEmpty()) {
@@ -717,18 +710,19 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                         append(link)
                                                     }
                                                 }
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .guideCopyable(
-                                                            buildGuideCopyPayload(
-                                                                "同名角色",
-                                                                roleCopyPayload
-                                                            )
-                                                        ),
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
+                                                CopyModeSelectionContainer {
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .guideCopyable(
+                                                                buildGuideCopyPayload(
+                                                                    "同名角色",
+                                                                    roleCopyPayload
+                                                                )
+                                                            ),
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
                                                     val previewImage = role.imageUrl.trim()
                                                     if (previewImage.isNotBlank()) {
                                                         GuideRemoteIcon(
@@ -773,6 +767,7 @@ internal fun LazyListScope.renderBaStudentGuideTabContent(
                                                             )
                                                         }
                                                     }
+                                                }
                                                 }
                                             }
                                         }
@@ -2562,24 +2557,26 @@ private fun GuideSimulateCardTitleRow(
     val copyPayload = remember(title, capsule) {
         buildGuideCopyPayload(title, capsule.ifBlank { "-" })
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .guideCopyable(copyPayload),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            color = MiuixTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f)
-        )
-        capsule.takeIf { it.isNotBlank() }?.let { label ->
-            GuideSimulateInlineCapsule(
-                text = label,
-                backdrop = backdrop
+    CopyModeSelectionContainer {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .guideCopyable(copyPayload),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                color = MiuixTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f)
             )
+            capsule.takeIf { it.isNotBlank() }?.let { label ->
+                GuideSimulateInlineCapsule(
+                    text = label,
+                    backdrop = backdrop
+                )
+            }
         }
     }
 }
@@ -2611,31 +2608,31 @@ private fun GuideSimulateRowItem(
     val iconUrl = row.imageUrl.trim().ifBlank { row.imageUrls.firstOrNull().orEmpty() }
     val statGlyph = simulateStatGlyphForKey(key)
     if (isSimulateSubHeader(key)) {
-        Row(
-            modifier = Modifier.combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {},
-                onLongClick = rowCopyAction
-            ),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (iconUrl.isNotBlank()) {
-                GuideRemoteIcon(
-                    imageUrl = iconUrl,
-                    iconWidth = 24.dp,
-                    iconHeight = 24.dp
+        CopyModeSelectionContainer {
+            Row(
+                modifier = Modifier.copyModeAwareRow(
+                    copyPayload = buildGuideCopyPayload(key, value.ifBlank { "-" }),
+                    onLongClick = rowCopyAction
+                ),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (iconUrl.isNotBlank()) {
+                    GuideRemoteIcon(
+                        imageUrl = iconUrl,
+                        iconWidth = 24.dp,
+                        iconHeight = 24.dp
+                    )
+                }
+                GlassTextButton(
+                    backdrop = backdrop,
+                    text = key,
+                    enabled = false,
+                    textColor = Color(0xFF3B82F6),
+                    variant = GlassVariant.Compact,
+                    onClick = {}
                 )
             }
-            GlassTextButton(
-                backdrop = backdrop,
-                text = key,
-                enabled = false,
-                textColor = Color(0xFF3B82F6),
-                variant = GlassVariant.Compact,
-                onClick = {}
-            )
         }
         return
     }
@@ -2648,64 +2645,64 @@ private fun GuideSimulateRowItem(
         else -> MiuixTheme.colorScheme.onBackground
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {},
-                onLongClick = rowCopyAction
-            ),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    CopyModeSelectionContainer {
         Row(
-            modifier = Modifier.weight(0.45f),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .copyModeAwareRow(
+                    copyPayload = buildGuideCopyPayload(key, value.ifBlank { "-" }),
+                    onLongClick = rowCopyAction
+                ),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (iconUrl.isNotBlank()) {
-                GuideRemoteIcon(
-                    imageUrl = iconUrl,
-                    iconWidth = 24.dp,
-                    iconHeight = 24.dp
-                )
-            } else if (statGlyph != null) {
+            Row(
+                modifier = Modifier.weight(0.45f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (iconUrl.isNotBlank()) {
+                    GuideRemoteIcon(
+                        imageUrl = iconUrl,
+                        iconWidth = 24.dp,
+                        iconHeight = 24.dp
+                    )
+                } else if (statGlyph != null) {
+                    Text(
+                        text = statGlyph,
+                        color = MiuixTheme.colorScheme.onBackgroundVariant,
+                        modifier = Modifier.width(20.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
                 Text(
-                    text = statGlyph,
+                    text = key,
                     color = MiuixTheme.colorScheme.onBackgroundVariant,
-                    modifier = Modifier.width(20.dp),
-                    textAlign = TextAlign.Center
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            Text(
-                text = key,
-                color = MiuixTheme.colorScheme.onBackgroundVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Row(
-            modifier = Modifier.weight(0.55f),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = value.ifBlank { "-" },
-                color = valueColor,
-                textAlign = TextAlign.End,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            valueDelta.takeIf { it.isNotBlank() }?.let { delta ->
-                Spacer(modifier = Modifier.width(6.dp))
+            Row(
+                modifier = Modifier.weight(0.55f),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = delta,
-                    color = Color(0xFFE3B547),
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip
+                    text = value.ifBlank { "-" },
+                    color = valueColor,
+                    textAlign = TextAlign.End,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+                valueDelta.takeIf { it.isNotBlank() }?.let { delta ->
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = delta,
+                        color = Color(0xFFE3B547),
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip
+                    )
+                }
             }
         }
     }
@@ -3002,54 +2999,55 @@ private fun GuideProfileInfoItem(
     val displayValue = value.ifBlank { "-" }
     val rowCopyAction = rememberGuideCopyAction(buildGuideCopyPayload(displayKey, displayValue))
     val showCapsule = preferCapsule && shouldUseProfileValueCapsule(displayKey, displayValue, onClick)
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 1.dp)
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = { onClick?.invoke() },
-                onLongClick = rowCopyAction
-            )
+    CopyModeSelectionContainer {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 1.dp)
+                .copyModeAwareRow(
+                    copyPayload = buildGuideCopyPayload(displayKey, displayValue),
+                    onClick = onClick,
+                    onLongClick = rowCopyAction
+                )
         ) {
-        val keyMaxWidth = adaptiveProfileKeyMaxWidth(
-            key = displayKey,
-            value = displayValue,
-            containerWidth = maxWidth
-        )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Text(
-                text = displayKey,
-                color = MiuixTheme.colorScheme.onBackgroundVariant,
-                modifier = Modifier.widthIn(min = 52.dp, max = keyMaxWidth),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            val keyMaxWidth = adaptiveProfileKeyMaxWidth(
+                key = displayKey,
+                value = displayValue,
+                containerWidth = maxWidth
             )
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.TopEnd
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                if (showCapsule) {
-                    GuideProfileValueCapsule(
-                        label = displayValue,
-                        tint = valueColor ?: Color(0xFF5FA8FF),
-                        onClick = onClick,
-                        onLongClick = rowCopyAction
-                    )
-                } else {
-                    Text(
-                        text = displayValue,
-                        color = valueColor ?: MiuixTheme.colorScheme.onBackground,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.End,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = Int.MAX_VALUE,
-                        overflow = TextOverflow.Clip
-                    )
+                Text(
+                    text = displayKey,
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    modifier = Modifier.widthIn(min = 52.dp, max = keyMaxWidth),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.TopEnd
+                ) {
+                    if (showCapsule) {
+                        GuideProfileValueCapsule(
+                            label = displayValue,
+                            tint = valueColor ?: Color(0xFF5FA8FF),
+                            onClick = onClick,
+                            onLongClick = rowCopyAction
+                        )
+                    } else {
+                        Text(
+                            text = displayValue,
+                            color = valueColor ?: MiuixTheme.colorScheme.onBackground,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.End,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = Int.MAX_VALUE,
+                            overflow = TextOverflow.Clip
+                        )
+                    }
                 }
             }
         }
@@ -3065,10 +3063,9 @@ private fun GuideProfileValueCapsule(
 ) {
     val isDark = isSystemInDarkTheme()
     val clickModifier = if (onClick != null || onLongClick != null) {
-        Modifier.combinedClickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-            onClick = { onClick?.invoke() },
+        Modifier.copyModeAwareRow(
+            copyPayload = buildGuideCopyPayload("", label),
+            onClick = onClick,
             onLongClick = onLongClick
         )
     } else {
@@ -3181,64 +3178,63 @@ private fun GuideGalleryRelatedLinkRows(
         )
         val rowCopyAction = rememberGuideCopyAction(rowCopyPayload)
 
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 1.dp)
-        ) {
-            val keyMaxWidth = adaptiveProfileKeyMaxWidth(
-                key = keyText,
-                value = links.first(),
-                containerWidth = maxWidth
-            )
-            Row(
+        CopyModeSelectionContainer {
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .combinedClickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {},
-                        onLongClick = rowCopyAction
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Top
+                    .padding(vertical = 1.dp)
             ) {
-                Text(
-                    text = keyText,
-                    color = MiuixTheme.colorScheme.onBackgroundVariant,
-                    modifier = Modifier.widthIn(min = 52.dp, max = keyMaxWidth),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                val keyMaxWidth = adaptiveProfileKeyMaxWidth(
+                    key = keyText,
+                    value = links.first(),
+                    containerWidth = maxWidth
                 )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .copyModeAwareRow(
+                            copyPayload = rowCopyPayload,
+                            onLongClick = rowCopyAction
+                        ),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
-                    if (noteText.isNotBlank()) {
-                        Text(
-                            text = noteText,
-                            color = MiuixTheme.colorScheme.onBackground,
-                            textAlign = TextAlign.End,
-                            maxLines = Int.MAX_VALUE,
-                            overflow = TextOverflow.Clip
-                        )
-                    }
-                    links.forEach { link ->
-                        val linkCopyAction = rememberGuideCopyAction(buildGuideCopyPayload(keyText, link))
-                        Text(
-                            text = link,
-                            color = Color(0xFF3B82F6),
-                            textAlign = TextAlign.End,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.combinedClickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { onOpenExternal(link) },
-                                onLongClick = linkCopyAction
+                    Text(
+                        text = keyText,
+                        color = MiuixTheme.colorScheme.onBackgroundVariant,
+                        modifier = Modifier.widthIn(min = 52.dp, max = keyMaxWidth),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        if (noteText.isNotBlank()) {
+                            Text(
+                                text = noteText,
+                                color = MiuixTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.End,
+                                maxLines = Int.MAX_VALUE,
+                                overflow = TextOverflow.Clip
                             )
-                        )
+                        }
+                        links.forEach { link ->
+                            val linkCopyAction = rememberGuideCopyAction(buildGuideCopyPayload(keyText, link))
+                            Text(
+                                text = link,
+                                color = Color(0xFF3B82F6),
+                                textAlign = TextAlign.End,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.copyModeAwareRow(
+                                    copyPayload = buildGuideCopyPayload(keyText, link),
+                                    onClick = { onOpenExternal(link) },
+                                    onLongClick = linkCopyAction
+                                )
+                            )
+                        }
                     }
                 }
             }

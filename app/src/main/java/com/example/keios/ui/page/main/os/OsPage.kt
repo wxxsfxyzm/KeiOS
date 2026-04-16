@@ -1,8 +1,6 @@
 package com.example.keios.ui.page.main
 
 import android.app.ActivityManager
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.FeatureInfo
 import android.content.pm.PackageManager
@@ -12,11 +10,9 @@ import android.widget.Toast
 import androidx.compose.animation.core.tween
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +62,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.keios.R
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
+import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.GlassSearchField
@@ -79,6 +76,8 @@ import com.example.keios.ui.page.main.widget.SheetSectionTitle
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.page.main.widget.StatusLabelText
+import com.example.keios.ui.page.main.widget.buildTextCopyPayload
+import com.example.keios.ui.page.main.widget.copyModeAwareRow
 import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.core.system.getAllJavaPropString
 import com.example.keios.core.system.getAllSystemProperties
@@ -1019,54 +1018,35 @@ private fun OsSectionInfoRow(
     value: String,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val displayValue = value.ifBlank { "N/A" }
-    val interactionSource = remember { MutableInteractionSource() }
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = {},
-                onLongClick = {
-                    copyOsRowToClipboard(context, label, displayValue)
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.guide_toast_item_copied),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+    val copyPayload = remember(label, displayValue) {
+        buildTextCopyPayload(label, displayValue)
+    }
+    CopyModeSelectionContainer {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .copyModeAwareRow(copyPayload = copyPayload)
+                .padding(vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                modifier = Modifier.widthIn(min = 72.dp, max = 136.dp),
+                maxLines = Int.MAX_VALUE,
+                overflow = TextOverflow.Clip
             )
-            .padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            color = MiuixTheme.colorScheme.onBackgroundVariant,
-            modifier = Modifier.widthIn(min = 72.dp, max = 136.dp),
-            maxLines = Int.MAX_VALUE,
-            overflow = TextOverflow.Clip
-        )
-        Text(
-            text = displayValue,
-            color = MiuixTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.End,
-            modifier = Modifier.weight(1f),
-            maxLines = 6,
-            overflow = TextOverflow.Ellipsis
-        )
+            Text(
+                text = displayValue,
+                color = MiuixTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f),
+                maxLines = 6,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
-}
-
-private fun copyOsRowToClipboard(context: Context, label: String, value: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-    val copiedText = buildString {
-        append(label)
-        append("：")
-        append(value)
-    }
-    clipboard.setPrimaryClip(ClipData.newPlainText("os-item", copiedText))
 }
