@@ -1980,6 +1980,22 @@ private data class SimulateEquipmentGroup(
     val statRows: List<BaGuideRow>
 )
 
+private fun isSimulateEquipmentGhostMediaRow(row: BaGuideRow): Boolean {
+    val key = row.key.trim()
+    if (key.isBlank()) return false
+    val hasPayload = row.value.trim().isNotBlank() ||
+        row.imageUrl.trim().isNotBlank() ||
+        row.imageUrls.any { it.trim().isNotBlank() }
+    if (hasPayload) return false
+    val looksLikeUrl = key.startsWith("//") ||
+        key.startsWith("http://", ignoreCase = true) ||
+        key.startsWith("https://", ignoreCase = true)
+    if (!looksLikeUrl) return false
+    return Regex(
+        """(?i)\.(png|jpe?g|webp|gif|bmp|mp4|webm|mkv|mov|mp3|ogg|wav|m4a)(\?.*)?$"""
+    ).containsMatchIn(key)
+}
+
 private fun buildSimulateEquipmentGroups(rows: List<BaGuideRow>): List<SimulateEquipmentGroup> {
     if (rows.isEmpty()) return emptyList()
 
@@ -2016,6 +2032,13 @@ private fun buildSimulateEquipmentGroups(rows: List<BaGuideRow>): List<SimulateE
             currentSlot = key
             if (rowIcon.isNotBlank()) {
                 currentIcon = rowIcon
+            }
+            return@forEach
+        }
+
+        if (isSimulateEquipmentGhostMediaRow(row)) {
+            if (currentIcon.isBlank()) {
+                currentIcon = normalizeGuideUrl(key)
             }
             return@forEach
         }
