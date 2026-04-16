@@ -3226,6 +3226,7 @@ fun GuideWeaponCardItem(
     val defaultLevel = remember(levelOptions) { levelOptions.lastOrNull().orEmpty() }
     var showLevelPopup by remember(card.name, card.imageUrl) { mutableStateOf(false) }
     var selectedLevel by rememberSaveable(card.name, card.imageUrl) { mutableStateOf(defaultLevel) }
+    var showImageFullscreen by remember(card.imageUrl) { mutableStateOf(false) }
 
     LaunchedEffect(levelOptions, defaultLevel) {
         if (levelOptions.isEmpty()) {
@@ -3286,10 +3287,14 @@ fun GuideWeaponCardItem(
             )
 
             if (card.imageUrl.isNotBlank()) {
-                GuideRemoteImage(
-                    imageUrl = card.imageUrl,
-                    imageHeight = 132.dp
-                )
+                Box(
+                    modifier = Modifier.clickable { showImageFullscreen = true }
+                ) {
+                    GuideRemoteImage(
+                        imageUrl = card.imageUrl,
+                        imageHeight = 132.dp
+                    )
+                }
             }
 
             if (card.statRows.isNotEmpty()) {
@@ -3391,6 +3396,13 @@ fun GuideWeaponCardItem(
                 }
             }
         }
+    }
+
+    if (showImageFullscreen && card.imageUrl.isNotBlank()) {
+        GuideImageFullscreenDialog(
+            imageUrl = card.imageUrl,
+            onDismiss = { showImageFullscreen = false }
+        )
     }
 }
 
