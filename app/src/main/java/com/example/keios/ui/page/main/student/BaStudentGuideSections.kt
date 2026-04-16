@@ -18,6 +18,7 @@ import android.widget.SeekBar
 import android.widget.Toast
 import androidx.activity.BackEventCompat
 import androidx.activity.ExperimentalActivityApi
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -2073,13 +2074,25 @@ private fun GuideImageFullscreenDialog(
     var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
     var predictiveBackSwipeEdge by remember { mutableIntStateOf(BackEventCompat.EDGE_NONE) }
     var dialogWidthPx by remember { mutableIntStateOf(0) }
+    // Fallback: keep standard back dismiss path in case predictive back callback
+    // is unavailable on some ROM/dialog window combinations.
+    BackHandler(enabled = true) {
+        onDismiss()
+    }
     PredictiveBackHandler(enabled = true) { backEvents ->
+        var dismissedByPredictiveProgress = false
         try {
             backEvents.collect { event ->
                 predictiveBackProgress = event.progress.coerceIn(0f, 1f)
                 predictiveBackSwipeEdge = event.swipeEdge
+                if (event.progress >= 0.995f) {
+                    dismissedByPredictiveProgress = true
+                    onDismiss()
+                }
             }
-            onDismiss()
+            if (!dismissedByPredictiveProgress) {
+                onDismiss()
+            }
         } catch (_: CancellationException) {
         } finally {
             predictiveBackProgress = 0f
@@ -2105,7 +2118,7 @@ private fun GuideImageFullscreenDialog(
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false,
-            dismissOnBackPress = false
+            dismissOnBackPress = true
         )
     ) {
         Box(
