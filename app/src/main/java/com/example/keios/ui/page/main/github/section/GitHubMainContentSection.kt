@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -636,48 +637,61 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                             }
                                             val releaseUpdatedLabel = loadedReleaseUpdatedAt
                                                 ?: stringResource(R.string.common_unknown)
-                                            val tagTooLong = releaseTagLabel.length >= 22
                                             StatusPill(
                                                 label = releaseNameLabel,
                                                 color = targetAccent,
                                                 modifier = Modifier.fillMaxWidth(),
                                                 contentPadding = PaddingValues(horizontal = 9.dp, vertical = 5.dp)
                                             )
-                                            if (tagTooLong) {
-                                                StatusPill(
-                                                    label = releaseTagLabel,
-                                                    color = targetAccent,
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                                                )
-                                                Box(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    contentAlignment = androidx.compose.ui.Alignment.CenterEnd
-                                                ) {
-                                                    StatusPill(
-                                                        label = releaseUpdatedLabel,
-                                                        color = targetAccent,
-                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                                                    )
-                                                }
-                                            } else {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                    verticalAlignment = androidx.compose.ui.Alignment.Top
-                                                ) {
+                                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                                val timePillEstimatedWidth = 86.dp
+                                                val gapWidth = 6.dp
+                                                val tagInnerHorizontalPadding = 16.dp
+                                                val estimatedCharWidth = 7.2.dp
+                                                val inlineTagAvailableWidth =
+                                                    (maxWidth - timePillEstimatedWidth - gapWidth)
+                                                        .coerceAtLeast(72.dp)
+                                                val estimatedInlineTagChars = (
+                                                    (inlineTagAvailableWidth - tagInnerHorizontalPadding).value /
+                                                        estimatedCharWidth.value
+                                                    ).toInt().coerceAtLeast(8)
+                                                val tagNeedsOwnLine =
+                                                    releaseTagLabel.length > estimatedInlineTagChars
+                                                if (tagNeedsOwnLine) {
                                                     StatusPill(
                                                         label = releaseTagLabel,
                                                         color = targetAccent,
-                                                        modifier = Modifier.weight(1f),
+                                                        modifier = Modifier.fillMaxWidth(),
                                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                                     )
-                                                    StatusPill(
-                                                        label = releaseUpdatedLabel,
-                                                        color = targetAccent,
-                                                        modifier = Modifier.weight(1f),
-                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                                                    )
+                                                    Box(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        contentAlignment = androidx.compose.ui.Alignment.CenterEnd
+                                                    ) {
+                                                        StatusPill(
+                                                            label = releaseUpdatedLabel,
+                                                            color = targetAccent,
+                                                            contentPadding = PaddingValues(horizontal = 7.dp, vertical = 4.dp)
+                                                        )
+                                                    }
+                                                } else {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                        verticalAlignment = androidx.compose.ui.Alignment.Top
+                                                    ) {
+                                                        StatusPill(
+                                                            label = releaseTagLabel,
+                                                            color = targetAccent,
+                                                            modifier = Modifier.weight(1f),
+                                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                                        )
+                                                        StatusPill(
+                                                            label = releaseUpdatedLabel,
+                                                            color = targetAccent,
+                                                            contentPadding = PaddingValues(horizontal = 7.dp, vertical = 4.dp)
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
