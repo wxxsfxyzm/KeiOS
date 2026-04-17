@@ -171,15 +171,15 @@ fun AppOverviewInlineMetricTile(
                     vertical = CardLayoutRhythm.metricCardVerticalPadding
                 ),
             horizontalArrangement = Arrangement.spacedBy(CardLayoutRhythm.infoRowGap),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            verticalAlignment = androidx.compose.ui.Alignment.Top
         ) {
             top.yukonga.miuix.kmp.basic.Text(
                 text = label,
                 color = labelColor,
                 fontSize = AppTypographyTokens.Caption.fontSize,
                 lineHeight = AppTypographyTokens.Caption.lineHeight,
-                modifier = Modifier.weight(0.44f),
-                maxLines = 1,
+                modifier = Modifier.weight(0.58f),
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             top.yukonga.miuix.kmp.basic.Text(
@@ -189,7 +189,7 @@ fun AppOverviewInlineMetricTile(
                 lineHeight = AppTypographyTokens.Body.lineHeight,
                 fontWeight = if (emphasizedValue) FontWeight.Medium else FontWeight.Normal,
                 textAlign = TextAlign.End,
-                modifier = Modifier.weight(0.56f),
+                modifier = Modifier.weight(0.42f),
                 maxLines = valueMaxLines,
                 overflow = TextOverflow.Ellipsis
             )
