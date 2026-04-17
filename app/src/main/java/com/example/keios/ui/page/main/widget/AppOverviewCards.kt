@@ -2,12 +2,14 @@ package com.example.keios.ui.page.main.widget
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -33,7 +35,7 @@ fun AppOverviewCard(
     containerColor: Color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.68f),
     borderColor: Color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.18f),
     contentColor: Color = MiuixTheme.colorScheme.onBackground,
-    contentVerticalSpacing: Dp = CardLayoutRhythm.denseSectionGap,
+    contentVerticalSpacing: Dp = CardLayoutRhythm.overviewSectionGap,
     showIndication: Boolean = true,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
@@ -66,6 +68,12 @@ fun AppOverviewCard(
                 subtitle = subtitle,
                 titleColor = titleColor,
                 subtitleColor = subtitleColor,
+                minHeight = 44.dp,
+                contentPadding = PaddingValues(
+                    horizontal = CardLayoutRhythm.overviewHeaderHorizontalPadding,
+                    vertical = CardLayoutRhythm.overviewHeaderVerticalPadding
+                ),
+                titleTypography = AppTypographyTokens.CompactTitle,
                 startAction = startAction,
                 endActions = headerEndActions
             )
@@ -73,10 +81,59 @@ fun AppOverviewCard(
                 contentPadding = PaddingValues(
                     start = CardLayoutRhythm.cardHorizontalPadding,
                     end = CardLayoutRhythm.cardHorizontalPadding,
-                    bottom = CardLayoutRhythm.cardVerticalPadding
+                    bottom = CardLayoutRhythm.overviewBodyBottomPadding
                 ),
                 verticalSpacing = contentVerticalSpacing,
                 content = content
+            )
+        }
+    }
+}
+
+@Composable
+fun AppOverviewMetricTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    labelColor: Color = MiuixTheme.colorScheme.onBackgroundVariant,
+    valueColor: Color = MiuixTheme.colorScheme.onBackground,
+    containerColor: Color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.46f),
+    borderColor: Color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.12f),
+    valueMaxLines: Int = 2,
+    emphasizedValue: Boolean = true
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(containerColor, shape)
+            .border(width = 1.dp, color = borderColor, shape = shape)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = CardLayoutRhythm.metricCardHorizontalPadding,
+                    vertical = CardLayoutRhythm.metricCardVerticalPadding
+                ),
+            verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.metricCardTextGap)
+        ) {
+            top.yukonga.miuix.kmp.basic.Text(
+                text = label,
+                color = labelColor,
+                fontSize = AppTypographyTokens.Supporting.fontSize,
+                lineHeight = AppTypographyTokens.Supporting.lineHeight,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+            top.yukonga.miuix.kmp.basic.Text(
+                text = value.ifBlank { "N/A" },
+                color = valueColor,
+                fontSize = AppTypographyTokens.Body.fontSize,
+                lineHeight = AppTypographyTokens.Body.lineHeight,
+                fontWeight = if (emphasizedValue) AppTypographyTokens.BodyEmphasis.fontWeight else AppTypographyTokens.Body.fontWeight,
+                maxLines = valueMaxLines,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         }
     }

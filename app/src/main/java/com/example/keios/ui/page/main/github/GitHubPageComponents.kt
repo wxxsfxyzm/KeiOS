@@ -33,6 +33,7 @@ import com.example.keios.feature.github.model.GitHubStrategyBenchmarkResult
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.feature.github.model.InstalledAppItem
 import com.example.keios.ui.page.main.widget.AppInfoRow
+import com.example.keios.ui.page.main.widget.AppOverviewMetricTile
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.SheetChoiceCard
@@ -102,24 +103,12 @@ internal fun GitHubOverviewMetricItem(
     titleColor: Color = MiuixTheme.colorScheme.onBackgroundVariant,
     emphasized: Boolean = false
 ) {
-    AppInfoRow(
+    AppOverviewMetricTile(
         label = label,
         value = value.ifBlank { stringResource(R.string.common_na) },
         modifier = modifier,
         labelColor = titleColor,
         valueColor = valueColor,
-        labelWeight = 0.46f,
-        valueWeight = 0.54f,
-        horizontalSpacing = CardLayoutRhythm.infoRowGap,
-        rowVerticalPadding = CardLayoutRhythm.metricCardTextGap,
-        valueTextAlign = TextAlign.End,
-        labelMaxLines = 1,
-        valueMaxLines = 1,
-        valueOverflow = TextOverflow.Ellipsis,
-        labelFontSize = AppTypographyTokens.Supporting.fontSize,
-        labelLineHeight = AppTypographyTokens.Supporting.lineHeight,
-        valueFontSize = AppTypographyTokens.Body.fontSize,
-        valueLineHeight = AppTypographyTokens.Body.lineHeight,
         emphasizedValue = emphasized
     )
 }

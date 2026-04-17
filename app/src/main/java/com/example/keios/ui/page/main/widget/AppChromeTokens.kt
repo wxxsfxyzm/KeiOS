@@ -10,9 +10,9 @@ object AppChromeTokens {
     val pageBottomInsetExtra: Dp = 16.dp
     val pageFloatingOverlayBottomExtra: Dp = 64.dp
 
-    val searchBarHostHeight: Dp = 60.dp
+    val searchBarHostHeight: Dp = 54.dp
     val searchFieldHorizontalPadding: Dp = 14.dp
-    val searchFieldBottomSpacing: Dp = 8.dp
+    val searchFieldBottomSpacing: Dp = 6.dp
 
     val liquidActionBarSingleWidth: Dp = 52.dp
     val liquidActionBarMinWidth: Dp = 160.dp

@@ -70,6 +70,7 @@ import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.widget.AppOverviewCard
 import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppDualActionRow
+import com.example.keios.ui.page.main.widget.AppOverviewMetricTile
 import com.example.keios.ui.page.main.widget.AppPageSectionTitle
 import com.example.keios.ui.page.main.widget.AppTopBarSection
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
@@ -879,45 +880,18 @@ private fun McpOverviewMetricItem(
     defaultValueColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    AppOverviewMetricTile(
+        label = metric.label,
+        value = metric.value.ifBlank { stringResource(R.string.common_na) },
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp),
-        colors = CardDefaults.defaultColors(
-            color = cardColor,
-            contentColor = defaultValueColor
-        ),
-        showIndication = false,
-        onClick = {}
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = CardLayoutRhythm.metricCardHorizontalPadding,
-                    vertical = CardLayoutRhythm.metricCardVerticalPadding
-                ),
-            verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.metricCardTextGap)
-        ) {
-            Text(
-                text = metric.label,
-                color = labelColor,
-                fontSize = AppTypographyTokens.Body.fontSize,
-                lineHeight = AppTypographyTokens.Body.lineHeight,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = metric.value.ifBlank { stringResource(R.string.common_na) },
-                color = metric.valueColor ?: defaultValueColor,
-                fontSize = AppTypographyTokens.Body.fontSize,
-                lineHeight = AppTypographyTokens.Body.lineHeight,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = AppTypographyTokens.BodyEmphasis.fontWeight
-            )
-        }
-    }
+        labelColor = labelColor,
+        valueColor = metric.valueColor ?: defaultValueColor,
+        containerColor = cardColor,
+        borderColor = (metric.valueColor ?: defaultValueColor).copy(alpha = 0.12f),
+        emphasizedValue = true
+    )
 }
 
 private data class McpOverviewMetric(

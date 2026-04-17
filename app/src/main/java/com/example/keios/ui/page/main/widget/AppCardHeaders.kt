@@ -5,6 +5,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
@@ -47,6 +48,10 @@ fun AppCardHeader(
     expandTint: Color = MiuixTheme.colorScheme.primary,
     titleMaxLines: Int = 2,
     subtitleMaxLines: Int = 2,
+    minHeight: androidx.compose.ui.unit.Dp = AppInteractiveTokens.controlRowMinHeight,
+    contentPadding: PaddingValues = CardLayoutRhythm.cardContentPadding,
+    titleTypography: AppTypographyToken = AppTypographyTokens.SectionTitle,
+    subtitleTypography: AppTypographyToken = AppTypographyTokens.Supporting,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null
 ) {
@@ -70,8 +75,8 @@ fun AppCardHeader(
     Row(
         modifier = headerModifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = AppInteractiveTokens.controlRowMinHeight)
-            .padding(CardLayoutRhythm.cardContentPadding),
+            .defaultMinSize(minHeight = minHeight)
+            .padding(contentPadding),
         horizontalArrangement = Arrangement.spacedBy(CardLayoutRhythm.controlRowGap),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -95,9 +100,9 @@ fun AppCardHeader(
                 Text(
                     text = title,
                     color = titleColor,
-                    fontSize = AppTypographyTokens.SectionTitle.fontSize,
-                    lineHeight = AppTypographyTokens.SectionTitle.lineHeight,
-                    fontWeight = AppTypographyTokens.SectionTitle.fontWeight,
+                    fontSize = titleTypography.fontSize,
+                    lineHeight = titleTypography.lineHeight,
+                    fontWeight = titleTypography.fontWeight,
                     modifier = Modifier.weight(1f, fill = false),
                     maxLines = titleMaxLines,
                     overflow = TextOverflow.Ellipsis
@@ -108,8 +113,8 @@ fun AppCardHeader(
                 Text(
                     text = subtitle,
                     color = subtitleColor,
-                    fontSize = AppTypographyTokens.Supporting.fontSize,
-                    lineHeight = AppTypographyTokens.Supporting.lineHeight,
+                    fontSize = subtitleTypography.fontSize,
+                    lineHeight = subtitleTypography.lineHeight,
                     maxLines = subtitleMaxLines,
                     overflow = TextOverflow.Ellipsis
                 )
