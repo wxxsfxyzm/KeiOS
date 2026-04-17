@@ -71,7 +71,6 @@ import com.example.keios.ui.page.main.widget.AppOverviewCard
 import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppDualActionRow
 import com.example.keios.ui.page.main.widget.AppOverviewMetricTile
-import com.example.keios.ui.page.main.widget.AppPageSectionTitle
 import com.example.keios.ui.page.main.widget.AppTopBarSection
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
@@ -238,6 +237,7 @@ fun McpPage(
     var logsExporting by remember { mutableStateOf(false) }
     var pendingLogsExportGeneratedAt by remember { mutableStateOf<String?>(null) }
     var showResetTokenConfirm by remember { mutableStateOf(false) }
+    var showResetConfigConfirm by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     val scope = rememberCoroutineScope()
@@ -427,13 +427,6 @@ fun McpPage(
                 )
             ) {
             item {
-                AppPageSectionTitle(
-                    title = stringResource(R.string.mcp_page_local_service_title)
-                )
-            }
-            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
-
-            item {
                 AppOverviewCard(
                     title = stringResource(R.string.mcp_overview_title),
                     containerColor = overviewCardColor,
@@ -537,23 +530,11 @@ fun McpPage(
                     second = { modifier ->
                         GlassTextButton(
                             backdrop = contentBackdrop,
-                            variant = GlassVariant.Content,
+                            variant = GlassVariant.SheetDangerAction,
                             text = stringResource(R.string.mcp_action_reset_service_config),
+                            textColor = MiuixTheme.colorScheme.error,
                             modifier = modifier,
-                            onClick = {
-                                val requiresRestart = mcpServerManager.resetServerConfigPreservingToken()
-                                Toast.makeText(
-                                    context,
-                                    context.getString(
-                                        if (requiresRestart) {
-                                            R.string.mcp_toast_config_reset_requires_restart
-                                        } else {
-                                            R.string.mcp_toast_config_reset
-                                        }
-                                    ),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                            onClick = { showResetConfigConfirm = true }
                         )
                     }
                 )
@@ -810,6 +791,50 @@ fun McpPage(
                     textColor = MiuixTheme.colorScheme.error,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { showResetTokenConfirm = true }
+                )
+            }
+        }
+    }
+
+    WindowDialog(
+        show = showResetConfigConfirm,
+        title = stringResource(R.string.mcp_action_reset_service_config),
+        summary = stringResource(R.string.mcp_reset_service_config_confirm_summary),
+        onDismissRequest = { showResetConfigConfirm = false }
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.common_cancel),
+                    onClick = { showResetConfigConfirm = false }
+                )
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.common_reset),
+                    colors = ButtonDefaults.textButtonColors(
+                        color = MiuixTheme.colorScheme.error,
+                        textColor = MiuixTheme.colorScheme.onError
+                    ),
+                    onClick = {
+                        val requiresRestart = mcpServerManager.resetServerConfigPreservingToken()
+                        Toast.makeText(
+                            context,
+                            context.getString(
+                                if (requiresRestart) {
+                                    R.string.mcp_toast_config_reset_requires_restart
+                                } else {
+                                    R.string.mcp_toast_config_reset
+                                }
+                            ),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        showResetConfigConfirm = false
+                    }
                 )
             }
         }

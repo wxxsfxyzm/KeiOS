@@ -158,6 +158,7 @@
     <string name="mcp_sheet_section_basic">基础设置</string>
     <string name="mcp_sheet_section_network_access">网络访问范围</string>
     <string name="mcp_sheet_label_service_port">服务端口</string>
+    <string name="mcp_reset_service_config_confirm_summary">会将服务名称、端口和网络模式恢复为默认值，当前 Token 会保留。运行中的端口与网络模式可能需要重启服务后生效。确定继续吗？</string>
     <string name="mcp_reset_token_confirm_summary">重置后，现有客户端需要重新配置或重新连接。确定继续吗？</string>
     <string name="mcp_toast_service_stopped">MCP 服务已停止</string>
     <string name="mcp_toast_service_started">MCP 服务已启动</string>
