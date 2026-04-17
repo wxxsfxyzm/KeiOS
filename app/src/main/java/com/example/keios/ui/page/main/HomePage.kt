@@ -767,7 +767,7 @@ fun HomePage(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "System · MCP · GitHub · BA 一体化工具台",
+                        text = "OS · MCP · GitHub · BA · 图鉴 一体化工具台",
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
