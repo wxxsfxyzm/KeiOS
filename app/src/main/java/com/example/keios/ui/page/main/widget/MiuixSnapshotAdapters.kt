@@ -261,12 +261,13 @@ private fun calculateDropdownVerticalOffset(
     popupContentSize: IntSize,
     popupMargin: IntRect
 ): Int {
-    val rawY = if (windowBounds.bottom - anchorBounds.bottom > popupContentSize.height) {
+    val availableBelow = windowBounds.bottom - anchorBounds.bottom - popupMargin.bottom
+    val availableAbove = anchorBounds.top - windowBounds.top - popupMargin.top
+    val preferBelow = availableBelow >= popupContentSize.height || availableBelow >= availableAbove
+    val rawY = if (preferBelow) {
         anchorBounds.bottom + popupMargin.bottom
-    } else if (anchorBounds.top - windowBounds.top > popupContentSize.height) {
-        anchorBounds.top - popupContentSize.height - popupMargin.top
     } else {
-        anchorBounds.top + anchorBounds.height / 2 - popupContentSize.height / 2
+        anchorBounds.top - popupContentSize.height - popupMargin.top
     }
     val minY = (windowBounds.top + popupMargin.top)
         .coerceAtMost(windowBounds.bottom - popupContentSize.height - popupMargin.bottom)

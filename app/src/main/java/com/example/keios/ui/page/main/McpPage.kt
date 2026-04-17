@@ -498,7 +498,10 @@ fun McpPage(
                     )
                 }
             ) {
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(CardLayoutRhythm.infoRowGap)
+                ) {
                     GlassTextButton(
                         backdrop = contentBackdrop,
                         variant = GlassVariant.Content,
@@ -523,6 +526,26 @@ fun McpPage(
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
+                        }
+                    )
+                    GlassTextButton(
+                        backdrop = contentBackdrop,
+                        variant = GlassVariant.Content,
+                        text = stringResource(R.string.mcp_action_reset_service_config),
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            val requiresRestart = mcpServerManager.resetServerConfigPreservingToken()
+                            Toast.makeText(
+                                context,
+                                context.getString(
+                                    if (requiresRestart) {
+                                        R.string.mcp_toast_config_reset_requires_restart
+                                    } else {
+                                        R.string.mcp_toast_config_reset
+                                    }
+                                ),
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     )
                 }

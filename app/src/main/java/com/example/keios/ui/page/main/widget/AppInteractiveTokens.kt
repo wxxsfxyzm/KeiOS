@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.dp
 object AppInteractiveTokens {
     val controlRowMinHeight: Dp = 50.dp
     val compactControlRowMinHeight: Dp = 42.dp
+    val cardHeaderLeadingSlotSize: Dp = 22.dp
 
     val glassIconButtonSize: Dp = 40.dp
     val compactGlassIconButtonSize: Dp = 36.dp

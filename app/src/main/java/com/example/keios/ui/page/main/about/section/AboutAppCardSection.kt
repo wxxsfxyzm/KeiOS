@@ -18,6 +18,7 @@ import com.example.keios.ui.page.main.AppIcon
 import com.example.keios.ui.page.main.about.ui.AboutCompactInfoRow
 import com.example.keios.ui.page.main.widget.AppCardHeader
 import com.example.keios.ui.page.main.widget.AppInfoListBody
+import com.example.keios.ui.page.main.widget.AppInteractiveTokens
 import com.example.keios.ui.page.main.about.util.formatTime
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.appExpandIn
@@ -83,7 +84,7 @@ fun AboutAppCardSection(
                 startAction = {
                     AppIcon(
                         packageName = packageInfo?.packageName ?: context.packageName,
-                        size = 20.dp
+                        size = AppInteractiveTokens.cardHeaderLeadingSlotSize
                     )
                 },
                 expandable = true,

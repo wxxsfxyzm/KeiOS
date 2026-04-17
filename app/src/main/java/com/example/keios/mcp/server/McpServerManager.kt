@@ -70,6 +70,8 @@ class McpServerManager(
 ) {
     companion object {
         private const val TAG = "McpServerManager"
+        private const val DEFAULT_SERVER_NAME = "KeiOS MCP"
+        private const val DEFAULT_PORT = 38888
 
         fun loadSavedCacheSummary(): String {
             val snapshot = Prefs.loadSnapshot()
@@ -95,7 +97,6 @@ class McpServerManager(
         private const val KEY_SERVER_NAME = "server_name"
         private const val KEY_PORT = "port"
         private const val KEY_ALLOW_EXTERNAL = "allow_external"
-        private const val DEFAULT_PORT = 38888
         private val random = SecureRandom()
         private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
 
@@ -108,7 +109,7 @@ class McpServerManager(
             }
             return McpPrefsSnapshot(
                 authToken = store.decodeString(KEY_AUTH_TOKEN).orEmpty(),
-                serverName = store.decodeString(KEY_SERVER_NAME, "KeiOS MCP").orEmpty().ifBlank { "KeiOS MCP" },
+                serverName = store.decodeString(KEY_SERVER_NAME, DEFAULT_SERVER_NAME).orEmpty().ifBlank { DEFAULT_SERVER_NAME },
                 port = port,
                 allowExternal = store.decodeBool(KEY_ALLOW_EXTERNAL, false)
             )
@@ -273,9 +274,36 @@ class McpServerManager(
 
     @Synchronized
     fun updateServerName(name: String) {
-        val fixed = name.trim().ifBlank { "KeiOS MCP" }
+        val fixed = name.trim().ifBlank { DEFAULT_SERVER_NAME }
         Prefs.saveServerName(fixed)
         _uiState.value = _uiState.value.copy(serverName = fixed)
+    }
+
+    @Synchronized
+    fun resetServerConfigPreservingToken(): Boolean {
+        Prefs.saveServerName(DEFAULT_SERVER_NAME)
+        Prefs.savePort(DEFAULT_PORT)
+        Prefs.saveAllowExternal(false)
+        val running = _uiState.value.running
+        _uiState.value = if (running) {
+            _uiState.value.copy(
+                serverName = DEFAULT_SERVER_NAME,
+                lastError = null
+            )
+        } else {
+            _uiState.value.copy(
+                serverName = DEFAULT_SERVER_NAME,
+                port = DEFAULT_PORT,
+                allowExternal = false,
+                addresses = emptyList(),
+                lastError = null
+            )
+        }
+        if (running) {
+            syncKeepAliveNotification(forceStart = false)
+        }
+        appendLog("INFO", "Server config reset to defaults")
+        return running
     }
 
     @Synchronized
