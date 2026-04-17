@@ -11,9 +11,20 @@ data class AppTypographyToken(
 )
 
 object AppTypographyTokens {
+    val Eyebrow = AppTypographyToken(
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        fontWeight = FontWeight.Medium
+    )
+
     val Caption = AppTypographyToken(
         fontSize = 12.sp,
         lineHeight = 16.sp
+    )
+
+    val Supporting = AppTypographyToken(
+        fontSize = 12.sp,
+        lineHeight = 17.sp
     )
 
     val Body = AppTypographyToken(

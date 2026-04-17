@@ -37,6 +37,7 @@ import com.example.keios.ui.page.main.about.section.AboutPermissionCardSection
 import com.example.keios.ui.page.main.about.section.AboutRuntimeStatusCardSection
 import com.example.keios.ui.page.main.about.section.AboutUiFrameworkCardSection
 import com.example.keios.ui.page.main.about.util.openExternalUrl
+import com.example.keios.ui.page.main.widget.AppChromeTokens
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -134,15 +135,15 @@ fun AboutPage(
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 16.dp,
-                start = 16.dp,
-                end = 16.dp
+                start = AppChromeTokens.pageHorizontalPadding,
+                end = AppChromeTokens.pageHorizontalPadding
             )
         ) {
             item {
                 SmallTitle(stringResource(R.string.about_page_section_title))
             }
 
-            item { Spacer(modifier = Modifier.height(14.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
 
             item {
                 AboutAppCardSection(
@@ -154,7 +155,7 @@ fun AboutPage(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(14.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
 
             item {
                 AboutGitHubCardSection(
@@ -171,7 +172,7 @@ fun AboutPage(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(14.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
 
             item {
                 AboutRuntimeStatusCardSection(
@@ -191,7 +192,7 @@ fun AboutPage(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(14.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
 
             item {
                 AboutPermissionCardSection(
@@ -206,7 +207,7 @@ fun AboutPage(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(14.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
 
             item {
                 AboutComponentCardSection(
@@ -220,7 +221,7 @@ fun AboutPage(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(14.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
 
             item {
                 AboutBuildSdkCardSection(
@@ -232,7 +233,7 @@ fun AboutPage(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(14.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
 
             item {
                 AboutUiFrameworkCardSection(
@@ -244,7 +245,7 @@ fun AboutPage(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(14.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
 
             item {
                 AboutNetworkServiceCardSection(
@@ -256,7 +257,7 @@ fun AboutPage(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(14.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
 
             item {
                 AboutMediaStorageCardSection(

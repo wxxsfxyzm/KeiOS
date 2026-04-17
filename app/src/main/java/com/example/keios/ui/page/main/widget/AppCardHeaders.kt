@@ -86,8 +86,8 @@ fun AppCardHeader(
                 Text(
                     text = subtitle,
                     color = subtitleColor,
-                    fontSize = AppTypographyTokens.Body.fontSize,
-                    lineHeight = AppTypographyTokens.Body.lineHeight,
+                    fontSize = AppTypographyTokens.Supporting.fontSize,
+                    lineHeight = AppTypographyTokens.Supporting.lineHeight,
                     maxLines = subtitleMaxLines,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -96,8 +96,8 @@ fun AppCardHeader(
                 Text(
                     text = text,
                     color = supportingColor,
-                    fontSize = AppTypographyTokens.Body.fontSize,
-                    lineHeight = AppTypographyTokens.Body.lineHeight
+                    fontSize = AppTypographyTokens.Caption.fontSize,
+                    lineHeight = AppTypographyTokens.Caption.lineHeight
                 )
             }
         }

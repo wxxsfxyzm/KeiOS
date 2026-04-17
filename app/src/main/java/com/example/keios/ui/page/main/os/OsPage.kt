@@ -62,6 +62,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.keios.R
 import com.example.keios.ui.page.main.widget.AppInfoRow
 import com.example.keios.ui.page.main.widget.AppOverviewCard
+import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.LiquidActionBar
@@ -722,7 +723,7 @@ fun OsPage(
                             GlassSearchField(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp),
+                                    .padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding),
                                 value = queryInput,
                                 onValueChange = { queryInput = it },
                                 label = "搜索OS参数",
@@ -730,7 +731,7 @@ fun OsPage(
                                 variant = GlassVariant.Bar,
                                 singleLine = true
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(AppChromeTokens.searchFieldBottomSpacing))
                         }
                     }
                 }
@@ -807,12 +808,12 @@ fun OsPage(
             state = listState,
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                bottom = innerPadding.calculateBottomPadding() + 16.dp,
-                start = 12.dp,
-                end = 12.dp
+                bottom = innerPadding.calculateBottomPadding() + AppChromeTokens.pageBottomInsetExtra,
+                start = AppChromeTokens.pageHorizontalPadding,
+                end = AppChromeTokens.pageHorizontalPadding
             )
         ) {
-            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
             item {
                 AppOverviewCard(
                     title = "系统参数与属性",

@@ -86,6 +86,10 @@ import com.example.keios.ui.page.main.student.catalog.isBaGuideCatalogBundleComp
 import com.example.keios.ui.page.main.student.catalog.isBaGuideCatalogCacheExpired
 import com.example.keios.ui.page.main.student.catalog.loadCachedBaGuideCatalogBundle
 import com.example.keios.ui.perf.ReportPagerPerformanceState
+import com.example.keios.ui.page.main.widget.AppChromeTokens
+import com.example.keios.ui.page.main.widget.AppStatusPillSize
+import com.example.keios.ui.page.main.widget.AppTypographyTokens
+import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.FrostedBlock
@@ -100,6 +104,7 @@ import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
 import com.example.keios.ui.page.main.widget.SearchBarHost
 import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
+import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.core.prefs.UiPrefs
 import com.example.keios.ui.page.main.ba.BASettingsStore
 import com.kyant.backdrop.backdrops.LayerBackdrop
@@ -413,7 +418,7 @@ fun BaGuideCatalogPage(
                             GlassSearchField(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp),
+                                    .padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding),
                                 value = searchQuery,
                                 onValueChange = { searchQuery = it },
                                 label = "搜索名称 / 别名 / ID",
@@ -421,7 +426,7 @@ fun BaGuideCatalogPage(
                                 variant = GlassVariant.Bar,
                                 singleLine = true
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(AppChromeTokens.searchFieldBottomSpacing))
                         }
                     }
                 }
@@ -444,8 +449,8 @@ fun BaGuideCatalogPage(
                     FloatingBottomBar(
                         modifier = Modifier
                             .padding(
-                                horizontal = 12.dp,
-                                vertical = 12.dp + navigationBarBottom
+                                horizontal = AppChromeTokens.pageHorizontalPadding,
+                                vertical = AppChromeTokens.pageSectionGap + navigationBarBottom
                             ),
                         selectedIndex = { pagerState.targetPage },
                         onSelected = { index ->
@@ -553,9 +558,9 @@ private fun CatalogTabContent(
                 .fillMaxSize()
                 .padding(
                     top = innerPadding.calculateTopPadding(),
-                    bottom = innerPadding.calculateBottomPadding() + 10.dp,
-                    start = 16.dp,
-                    end = 16.dp
+                    bottom = innerPadding.calculateBottomPadding() + AppChromeTokens.pageSectionGap,
+                    start = AppChromeTokens.pageHorizontalPadding,
+                    end = AppChromeTokens.pageHorizontalPadding
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -615,11 +620,11 @@ private fun CatalogTabContent(
             .nestedScroll(nestedScrollConnection),
         contentPadding = PaddingValues(
             top = innerPadding.calculateTopPadding(),
-            bottom = innerPadding.calculateBottomPadding() + 10.dp,
-            start = 16.dp,
-            end = 16.dp
+            bottom = innerPadding.calculateBottomPadding() + AppChromeTokens.pageSectionGap,
+            start = AppChromeTokens.pageHorizontalPadding,
+            end = AppChromeTokens.pageHorizontalPadding
         ),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(AppChromeTokens.pageSectionGap)
     ) {
             item {
                 Row(
@@ -769,8 +774,11 @@ private fun BaGuideCatalogEntryCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(
+                    horizontal = CardLayoutRhythm.cardHorizontalPadding,
+                    vertical = CardLayoutRhythm.cardVerticalPadding
+                ),
+            horizontalArrangement = Arrangement.spacedBy(CardLayoutRhythm.controlRowGap),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -789,34 +797,37 @@ private fun BaGuideCatalogEntryCard(
 
             Box(modifier = Modifier.weight(1f)) {
                 androidx.compose.foundation.layout.Column(
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.controlRowTextGap)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(CardLayoutRhythm.infoRowGap),
+                        verticalAlignment = Alignment.Top
                     ) {
                         Text(
                             text = entry.name,
                             modifier = Modifier.weight(1f),
                             color = MiuixTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
+                            fontSize = AppTypographyTokens.CompactTitle.fontSize,
+                            lineHeight = AppTypographyTokens.CompactTitle.lineHeight,
+                            fontWeight = AppTypographyTokens.CompactTitle.fontWeight,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Text(
-                            text = "ID ${entry.contentId}",
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
-                            fontSize = 12.sp,
-                            maxLines = 1
+                        StatusPill(
+                            label = "ID ${entry.contentId}",
+                            color = MiuixTheme.colorScheme.primary,
+                            size = AppStatusPillSize.Compact
                         )
                     }
                     if (entry.aliasDisplay.isNotBlank()) {
                         Text(
                             text = entry.aliasDisplay,
                             color = MiuixTheme.colorScheme.onBackgroundVariant,
-                            fontSize = 12.sp,
-                            overflow = TextOverflow.Clip
+                            fontSize = AppTypographyTokens.Supporting.fontSize,
+                            lineHeight = AppTypographyTokens.Supporting.lineHeight,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

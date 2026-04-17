@@ -4,11 +4,8 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -17,12 +14,13 @@ import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.ui.page.main.AppIcon
 import com.example.keios.ui.page.main.about.ui.AboutCompactInfoRow
+import com.example.keios.ui.page.main.widget.AppCardBodyColumn
+import com.example.keios.ui.page.main.widget.AppCardHeader
+import com.example.keios.ui.page.main.widget.AppInfoListBody
 import com.example.keios.ui.page.main.about.util.formatTime
-import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Filter
 import top.yukonga.miuix.kmp.icon.extended.Info
@@ -68,35 +66,22 @@ fun AboutAppCardSection(
         ),
         onClick = {}
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(CardLayoutRhythm.cardContentPadding),
-            verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.sectionGap)
+        AppCardBodyColumn(
+            verticalSpacing = CardLayoutRhythm.sectionGap
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(CardLayoutRhythm.infoRowGap)
-            ) {
-                AppIcon(
-                    packageName = packageInfo?.packageName ?: context.packageName,
-                    size = 20.dp
-                )
-                Text(
-                    text = stringResource(R.string.about_card_app_title),
-                    color = accent,
-                    fontSize = AppTypographyTokens.SectionTitle.fontSize,
-                    lineHeight = AppTypographyTokens.SectionTitle.lineHeight,
-                    fontWeight = AppTypographyTokens.SectionTitle.fontWeight
-                )
-            }
-            Text(
-                text = stringResource(R.string.about_card_app_subtitle),
-                color = subtitleColor,
-                fontSize = AppTypographyTokens.Body.fontSize,
-                lineHeight = AppTypographyTokens.Body.lineHeight
+            AppCardHeader(
+                title = stringResource(R.string.about_card_app_title),
+                subtitle = stringResource(R.string.about_card_app_subtitle),
+                titleColor = accent,
+                subtitleColor = subtitleColor,
+                startAction = {
+                    AppIcon(
+                        packageName = packageInfo?.packageName ?: context.packageName,
+                        size = 20.dp
+                    )
+                }
             )
-            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            AppInfoListBody(verticalSpacing = 0.dp) {
                 AboutCompactInfoRow(
                     title = stringResource(R.string.about_label_name),
                     value = appLabel,

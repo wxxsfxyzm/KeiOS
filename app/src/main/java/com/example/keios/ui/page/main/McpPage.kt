@@ -66,6 +66,7 @@ import com.example.keios.R
 import com.example.keios.mcp.McpServerUiState
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.widget.AppOverviewCard
+import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.GlassIconButton
@@ -397,12 +398,12 @@ fun McpPage(
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
                     bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 64.dp,
-                    start = 12.dp,
-                    end = 12.dp
+                    start = AppChromeTokens.pageHorizontalPadding,
+                    end = AppChromeTokens.pageHorizontalPadding
                 )
             ) {
             item { SmallTitle(stringResource(R.string.mcp_page_local_service_title)) }
-            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
 
             item {
                 AppOverviewCard(

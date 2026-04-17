@@ -76,8 +76,8 @@ fun AppControlRow(
                 Text(
                     text = text,
                     color = summaryColor,
-                    fontSize = AppTypographyTokens.Body.fontSize,
-                    lineHeight = AppTypographyTokens.Body.lineHeight,
+                    fontSize = AppTypographyTokens.Supporting.fontSize,
+                    lineHeight = AppTypographyTokens.Supporting.lineHeight,
                     modifier = Modifier.padding(top = CardLayoutRhythm.controlRowTextGap)
                 )
             }

@@ -27,7 +27,7 @@ fun SearchBarHost(
 ) {
     val density = LocalDensity.current
     val searchBarHeight by animateDpAsState(
-        targetValue = if (visible) 48.dp else 0.dp,
+        targetValue = if (visible) AppChromeTokens.searchBarHostHeight else 0.dp,
         animationSpec = tween(durationMillis = 220),
         label = "${animationLabelPrefix}Height"
     )

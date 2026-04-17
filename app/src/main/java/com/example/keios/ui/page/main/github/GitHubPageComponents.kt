@@ -53,7 +53,7 @@ internal fun GitHubCompactInfoRow(
     valueColor: Color = MiuixTheme.colorScheme.onBackground,
     titleColor: Color = MiuixTheme.colorScheme.onBackgroundVariant,
     emphasized: Boolean = false,
-    titleMinWidth: Dp = 64.dp,
+    titleMinWidth: Dp = 56.dp,
     onClick: (() -> Unit)? = null
 ) {
     AppInfoRow(
@@ -67,8 +67,8 @@ internal fun GitHubCompactInfoRow(
         valueTextAlign = TextAlign.End,
         valueMaxLines = 4,
         valueOverflow = TextOverflow.Ellipsis,
-        labelFontSize = AppTypographyTokens.Body.fontSize,
-        labelLineHeight = AppTypographyTokens.Body.lineHeight,
+        labelFontSize = AppTypographyTokens.Supporting.fontSize,
+        labelLineHeight = AppTypographyTokens.Supporting.lineHeight,
         valueFontSize = AppTypographyTokens.Body.fontSize,
         valueLineHeight = AppTypographyTokens.Body.lineHeight,
         emphasizedValue = emphasized,
@@ -116,8 +116,8 @@ internal fun GitHubOverviewMetricItem(
         labelMaxLines = 1,
         valueMaxLines = 1,
         valueOverflow = TextOverflow.Ellipsis,
-        labelFontSize = AppTypographyTokens.Body.fontSize,
-        labelLineHeight = AppTypographyTokens.Body.lineHeight,
+        labelFontSize = AppTypographyTokens.Supporting.fontSize,
+        labelLineHeight = AppTypographyTokens.Supporting.lineHeight,
         valueFontSize = AppTypographyTokens.Body.fontSize,
         valueLineHeight = AppTypographyTokens.Body.lineHeight,
         emphasizedValue = emphasized

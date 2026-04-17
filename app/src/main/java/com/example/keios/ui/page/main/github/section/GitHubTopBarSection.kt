@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.ui.page.main.GitHubSortMode
+import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.LiquidActionBar
@@ -132,7 +133,7 @@ internal fun GitHubTopBarSection(
                     GlassSearchField(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp),
+                            .padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding),
                         value = trackedSearch,
                         onValueChange = onTrackedSearchChange,
                         label = stringResource(R.string.github_topbar_search_label),
@@ -140,7 +141,7 @@ internal fun GitHubTopBarSection(
                         variant = GlassVariant.Bar,
                         singleLine = true
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(AppChromeTokens.searchFieldBottomSpacing))
                 }
             }
         }

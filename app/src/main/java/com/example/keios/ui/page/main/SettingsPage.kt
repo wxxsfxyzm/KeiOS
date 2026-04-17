@@ -41,6 +41,7 @@ import com.example.keios.core.prefs.AppThemeMode
 import com.example.keios.core.prefs.CacheEntrySummary
 import com.example.keios.core.prefs.CacheStores
 import com.example.keios.core.log.AppLogStore
+import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppControlRow
 import com.example.keios.ui.page.main.widget.AppInfoRow
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
@@ -217,13 +218,13 @@ fun SettingsPage(
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                bottom = innerPadding.calculateBottomPadding() + 16.dp,
-                start = 16.dp,
-                end = 16.dp
+                bottom = innerPadding.calculateBottomPadding() + AppChromeTokens.pageBottomInsetExtra,
+                start = AppChromeTokens.pageHorizontalPadding,
+                end = AppChromeTokens.pageHorizontalPadding
             )
         ) {
             item { SmallTitle(stringResource(R.string.settings_section_ui_style)) }
-            item { Spacer(modifier = Modifier.height(14.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
 
             item {
                 Card(
@@ -330,7 +331,7 @@ fun SettingsPage(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
 
             item {
                 Card(
@@ -443,7 +444,7 @@ fun SettingsPage(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
 
             item {
                 Card(
@@ -488,7 +489,7 @@ fun SettingsPage(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
 
             item {
                 Card(
@@ -524,7 +525,7 @@ fun SettingsPage(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
 
             item {
                 Card(
@@ -544,9 +545,9 @@ fun SettingsPage(
                         Text(
                             text = stringResource(R.string.settings_cache_header),
                             color = titleColor,
-                            fontSize = AppTypographyTokens.CardHeader.fontSize,
-                            fontWeight = AppTypographyTokens.CardHeader.fontWeight,
-                            lineHeight = AppTypographyTokens.CardHeader.lineHeight
+                            fontSize = AppTypographyTokens.Eyebrow.fontSize,
+                            fontWeight = AppTypographyTokens.Eyebrow.fontWeight,
+                            lineHeight = AppTypographyTokens.Eyebrow.lineHeight
                         )
                         Row(
                             modifier = Modifier
@@ -575,8 +576,8 @@ fun SettingsPage(
                                 stringResource(R.string.settings_cache_diagnostics_summary_disabled)
                             },
                             color = subtitleColor,
-                            fontSize = AppTypographyTokens.Body.fontSize,
-                            lineHeight = AppTypographyTokens.Body.lineHeight
+                            fontSize = AppTypographyTokens.Supporting.fontSize,
+                            lineHeight = AppTypographyTokens.Supporting.lineHeight
                         )
                         SettingsInfoItem(
                             key = stringResource(R.string.common_scope),
@@ -591,8 +592,8 @@ fun SettingsPage(
                                 Text(
                                     text = stringResource(R.string.settings_cache_disabled_desc),
                                     color = subtitleColor,
-                                    fontSize = AppTypographyTokens.Body.fontSize,
-                                    lineHeight = AppTypographyTokens.Body.lineHeight
+                                    fontSize = AppTypographyTokens.Supporting.fontSize,
+                                    lineHeight = AppTypographyTokens.Supporting.lineHeight
                                 )
                             }
 
@@ -600,8 +601,8 @@ fun SettingsPage(
                                 Text(
                                     text = stringResource(R.string.settings_cache_loading_desc),
                                     color = subtitleColor,
-                                    fontSize = AppTypographyTokens.Body.fontSize,
-                                    lineHeight = AppTypographyTokens.Body.lineHeight
+                                    fontSize = AppTypographyTokens.Supporting.fontSize,
+                                    lineHeight = AppTypographyTokens.Supporting.lineHeight
                                 )
                             }
 
@@ -609,8 +610,8 @@ fun SettingsPage(
                                 Text(
                                     text = stringResource(R.string.settings_cache_empty_desc),
                                     color = subtitleColor,
-                                    fontSize = AppTypographyTokens.Body.fontSize,
-                                    lineHeight = AppTypographyTokens.Body.lineHeight
+                                    fontSize = AppTypographyTokens.Supporting.fontSize,
+                                    lineHeight = AppTypographyTokens.Supporting.lineHeight
                                 )
                             }
 
@@ -665,8 +666,9 @@ private fun SettingsGroupCard(
         Text(
             text = header,
             color = titleColor,
-            fontSize = AppTypographyTokens.Caption.fontSize,
-            lineHeight = AppTypographyTokens.Caption.lineHeight
+            fontSize = AppTypographyTokens.Eyebrow.fontSize,
+            lineHeight = AppTypographyTokens.Eyebrow.lineHeight,
+            fontWeight = AppTypographyTokens.Eyebrow.fontWeight
         )
         Text(
             text = title,
@@ -678,8 +680,8 @@ private fun SettingsGroupCard(
         Text(
             text = summary,
             color = subtitleColor,
-            fontSize = AppTypographyTokens.Body.fontSize,
-            lineHeight = AppTypographyTokens.Body.lineHeight
+            fontSize = AppTypographyTokens.Supporting.fontSize,
+            lineHeight = AppTypographyTokens.Supporting.lineHeight
         )
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -760,8 +762,8 @@ private fun SettingsInfoItem(
         labelMaxLines = 2,
         valueMaxLines = 6,
         valueOverflow = TextOverflow.Ellipsis,
-        labelFontSize = AppTypographyTokens.Body.fontSize,
-        labelLineHeight = AppTypographyTokens.Body.lineHeight,
+        labelFontSize = AppTypographyTokens.Supporting.fontSize,
+        labelLineHeight = AppTypographyTokens.Supporting.lineHeight,
         valueFontSize = AppTypographyTokens.Body.fontSize,
         valueLineHeight = AppTypographyTokens.Body.lineHeight,
         emphasizedValue = false
@@ -809,20 +811,20 @@ private fun SettingsCacheRow(
         Text(
             text = entry.detail,
             color = subtitleColor,
-            fontSize = AppTypographyTokens.Body.fontSize,
-            lineHeight = AppTypographyTokens.Body.lineHeight
+            fontSize = AppTypographyTokens.Supporting.fontSize,
+            lineHeight = AppTypographyTokens.Supporting.lineHeight
         )
         Text(
             text = entry.activity,
             color = subtitleColor,
-            fontSize = AppTypographyTokens.Body.fontSize,
-            lineHeight = AppTypographyTokens.Body.lineHeight
+            fontSize = AppTypographyTokens.Supporting.fontSize,
+            lineHeight = AppTypographyTokens.Supporting.lineHeight
         )
         Text(
             text = entry.storage,
             color = subtitleColor,
-            fontSize = AppTypographyTokens.Body.fontSize,
-            lineHeight = AppTypographyTokens.Body.lineHeight
+            fontSize = AppTypographyTokens.Supporting.fontSize,
+            lineHeight = AppTypographyTokens.Supporting.lineHeight
         )
     }
 }

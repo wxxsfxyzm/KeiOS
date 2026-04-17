@@ -82,8 +82,8 @@ fun SheetInputTitle(
     Text(
         text = text,
         color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.92f),
-        fontSize = AppTypographyTokens.Body.fontSize,
-        lineHeight = AppTypographyTokens.Body.lineHeight,
+        fontSize = AppTypographyTokens.Supporting.fontSize,
+        lineHeight = AppTypographyTokens.Supporting.lineHeight,
         modifier = modifier
     )
 }

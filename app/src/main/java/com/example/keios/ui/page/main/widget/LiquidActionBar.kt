@@ -88,13 +88,17 @@ fun LiquidActionBarPopupAnchors(
             repeat(itemCount) { add(null) }
         }
     }
-    val minimumWidth = if (compactSingleItem && itemCount == 1) 50.dp else 156.dp
-    val barWidth = maxOf(minimumWidth, (itemCount * 38).dp)
+    val minimumWidth = if (compactSingleItem && itemCount == 1) {
+        AppChromeTokens.liquidActionBarSingleWidth
+    } else {
+        AppChromeTokens.liquidActionBarMinWidth
+    }
+    val barWidth = maxOf(minimumWidth, (itemCount * AppChromeTokens.liquidActionBarItemStep.value).dp)
     Row(
         modifier = modifier
             .width(barWidth)
-            .height(50.dp)
-            .padding(horizontal = 4.dp),
+            .height(AppChromeTokens.liquidActionBarOuterHeight)
+            .padding(horizontal = AppChromeTokens.liquidActionBarHorizontalPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(itemCount) { index ->
@@ -106,8 +110,8 @@ fun LiquidActionBarPopupAnchors(
             ) {
                 Box(
                     modifier = Modifier
-                        .width(37.dp)
-                        .height(42.dp),
+                        .width(AppChromeTokens.liquidActionBarItemStep - 2.dp)
+                        .height(AppChromeTokens.liquidActionBarInnerHeight),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
@@ -300,8 +304,14 @@ fun LiquidActionBar(
         null
     }
 
-    val minimumWidth = if (compactSingleItem && items.size == 1) 50.dp else 156.dp
-    val barWidth = remember(items.size, compactSingleItem) { maxOf(minimumWidth, (items.size * 38).dp) }
+    val minimumWidth = if (compactSingleItem && items.size == 1) {
+        AppChromeTokens.liquidActionBarSingleWidth
+    } else {
+        AppChromeTokens.liquidActionBarMinWidth
+    }
+    val barWidth = remember(items.size, compactSingleItem) {
+        maxOf(minimumWidth, (items.size * AppChromeTokens.liquidActionBarItemStep.value).dp)
+    }
     val interactionLockModifier = Modifier.pointerInput(onInteractionChanged) {
         awaitEachGesture {
             awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -359,8 +369,8 @@ fun LiquidActionBar(
                 }
             )
             .then(if (!layeredStyleEnabled) dampedDragAnimation.modifier else Modifier)
-            .height(50.dp)
-            .padding(4.dp)
+            .height(AppChromeTokens.liquidActionBarOuterHeight)
+            .padding(AppChromeTokens.liquidActionBarHorizontalPadding)
 
         Row(
             primaryRowModifier,
@@ -406,8 +416,8 @@ fun LiquidActionBar(
                         onDrawSurface = { drawRect(containerColor) }
                     )
                     .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
-                    .height(42.dp)
-                    .padding(horizontal = 4.dp)
+                    .height(AppChromeTokens.liquidActionBarInnerHeight)
+                    .padding(horizontal = AppChromeTokens.liquidActionBarHorizontalPadding)
                     .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -419,7 +429,7 @@ fun LiquidActionBar(
             if (tabWidthPx > 0f) {
                 Box(
                     Modifier
-                        .padding(horizontal = 4.dp)
+                        .padding(horizontal = AppChromeTokens.liquidActionBarHorizontalPadding)
                         .graphicsLayer {
                             val contentWidth = totalWidthPx - with(density) { 8.dp.toPx() }
                             val singleTabWidth = contentWidth / items.size
@@ -473,8 +483,12 @@ fun LiquidActionBar(
                                 drawRect(Color.Black.copy(alpha = 0.03f * progress))
                             }
                         )
-                        .height(42.dp)
-                        .width(with(density) { ((totalWidthPx - 8.dp.toPx()) / items.size).toDp() })
+                        .height(AppChromeTokens.liquidActionBarInnerHeight)
+                        .width(
+                            with(density) {
+                                ((totalWidthPx - (AppChromeTokens.liquidActionBarHorizontalPadding * 2).toPx()) / items.size).toDp()
+                            }
+                        )
                 )
             }
         }

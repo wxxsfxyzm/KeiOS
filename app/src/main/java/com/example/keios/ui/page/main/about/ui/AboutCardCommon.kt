@@ -84,8 +84,8 @@ fun AboutCompactRow(
                 Text(
                     text = title,
                     color = MiuixTheme.colorScheme.onBackgroundVariant,
-                    fontSize = AppTypographyTokens.Body.fontSize,
-                    lineHeight = AppTypographyTokens.Body.lineHeight,
+                    fontSize = AppTypographyTokens.Supporting.fontSize,
+                    lineHeight = AppTypographyTokens.Supporting.lineHeight,
                     maxLines = Int.MAX_VALUE,
                     overflow = Clip
                 )

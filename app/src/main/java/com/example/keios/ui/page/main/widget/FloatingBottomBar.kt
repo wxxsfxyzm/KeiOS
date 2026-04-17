@@ -267,8 +267,8 @@ fun FloatingBottomBar(
                     onDrawSurface = { drawRect(containerColor) }
                 )
                 .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
-                .height(64.dp)
-                .padding(4.dp),
+                .height(AppChromeTokens.floatingBottomBarOuterHeight)
+                .padding(AppChromeTokens.floatingBottomBarHorizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
             content = content
         )
@@ -302,8 +302,8 @@ fun FloatingBottomBar(
                         onDrawSurface = { drawRect(containerColor) }
                     )
                     .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
-                    .height(56.dp)
-                    .padding(horizontal = 4.dp)
+                    .height(AppChromeTokens.floatingBottomBarInnerHeight)
+                    .padding(horizontal = AppChromeTokens.floatingBottomBarHorizontalPadding)
                     .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
                 verticalAlignment = Alignment.CenterVertically,
                 content = content
@@ -313,7 +313,7 @@ fun FloatingBottomBar(
         if (tabWidthPx > 0f) {
             Box(
                 Modifier
-                    .padding(horizontal = 4.dp)
+                    .padding(horizontal = AppChromeTokens.floatingBottomBarHorizontalPadding)
                     .graphicsLayer {
                         val contentWidth = totalWidthPx - with(density) { 8.dp.toPx() }
                         val singleTabWidth = contentWidth / tabsCount
@@ -371,8 +371,12 @@ fun FloatingBottomBar(
                             )
                         }
                     )
-                    .height(56.dp)
-                    .width(with(density) { ((totalWidthPx - 8.dp.toPx()) / tabsCount).toDp() })
+                        .height(AppChromeTokens.floatingBottomBarInnerHeight)
+                        .width(
+                            with(density) {
+                                ((totalWidthPx - (AppChromeTokens.floatingBottomBarHorizontalPadding * 2).toPx()) / tabsCount).toDp()
+                            }
+                        )
             )
         }
     }

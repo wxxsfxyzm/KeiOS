@@ -66,6 +66,10 @@ import com.example.keios.ui.page.main.stableVersionColor
 import com.example.keios.ui.page.main.statusActionUrl
 import com.example.keios.ui.page.main.statusColor
 import com.example.keios.ui.page.main.statusIcon
+import com.example.keios.ui.page.main.widget.AppChromeTokens
+import com.example.keios.ui.page.main.widget.AppInfoListBody
+import com.example.keios.ui.page.main.widget.AppSupportingBlock
+import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
@@ -191,12 +195,11 @@ internal fun GitHubMainContent(
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
                     bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 64.dp,
-                    start = 12.dp,
-                    end = 12.dp
+                    start = AppChromeTokens.pageHorizontalPadding,
+                    end = AppChromeTokens.pageHorizontalPadding
                 )
             ) {
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-                item { Spacer(modifier = Modifier.height(2.dp)) }
+                item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
                 item {
                     GitHubOverviewCard(
                         isDark = isDark,
@@ -210,7 +213,7 @@ internal fun GitHubMainContent(
                         onOpenTrackSheetForAdd = onOpenTrackSheetForAdd
                     )
                 }
-                item { Spacer(modifier = Modifier.height(10.dp)) }
+                item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
                 GitHubTrackedItemsSection(
                     trackedItems = trackedItems,
                     filteredTracked = filteredTracked,
@@ -370,9 +373,9 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                 }
             ) {
                 val state = checkStates[item.id] ?: VersionCheckUi()
-                Column(
+                AppInfoListBody(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalSpacing = CardLayoutRhythm.denseSectionGap
                 ) {
                     GitHubCompactInfoRow(
                         label = stringResource(R.string.github_item_label_repo),
@@ -444,11 +447,9 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                         valueColor = GitHubStatusPalette.Active
                     )
                     if (state.releaseHint.isNotBlank()) {
-                        GitHubCompactInfoRow(
-                            label = stringResource(R.string.github_item_label_hint),
-                            value = state.releaseHint,
-                            valueColor = MiuixTheme.colorScheme.onBackgroundVariant,
-                            titleColor = MiuixTheme.colorScheme.onBackgroundVariant
+                        AppSupportingBlock(
+                            text = state.releaseHint,
+                            accentColor = MiuixTheme.colorScheme.onBackgroundVariant
                         )
                     }
 
