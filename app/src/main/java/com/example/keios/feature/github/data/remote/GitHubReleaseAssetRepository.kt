@@ -12,6 +12,7 @@ import java.net.URLEncoder
 import java.time.Instant
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.math.roundToLong
 
 data class GitHubReleaseAssetFile(
     val name: String,
@@ -39,6 +40,13 @@ object GitHubReleaseAssetFetchSources {
     const val HTML = "html"
     const val API = "api"
 }
+
+private data class HtmlReleaseMetadata(
+    val releaseName: String,
+    val tagName: String,
+    val htmlUrl: String,
+    val releaseUpdatedAtMillis: Long?
+)
 
 object GitHubReleaseAssetRepository {
     private const val GITHUB_API_VERSION = "2022-11-28"
@@ -236,7 +244,11 @@ object GitHubReleaseAssetRepository {
 
         val fallback = fetchReleaseList(owner, repo, apiToken).mapCatching { releases ->
             findMatchingRelease(releases, rawTag)
-                ?: buildReleaseStub(rawTag, releaseUrl)
+                ?: buildReleaseStub(
+                    releaseName = rawTag,
+                    rawTag = rawTag,
+                    releaseUrl = releaseUrl
+                )
         }
         return fallback.takeIf { it.isSuccess } ?: byTag
     }
@@ -382,9 +394,26 @@ object GitHubReleaseAssetRepository {
         releaseUrl: String,
         apiToken: String
     ): Result<JSONObject> = runCatching {
-        val html = fetchHtml(releaseUrl, apiToken)
-        val assets = parseAssetsFromReleaseHtml(html, owner, repo, rawTag)
-        buildReleaseStub(rawTag, releaseUrl, assets)
+        val normalizedReleaseUrl = releaseUrl.trim().ifBlank {
+            GitHubVersionUtils.buildReleaseTagUrl(owner, repo, rawTag)
+        }
+        val releaseHtml = fetchHtml(normalizedReleaseUrl, apiToken)
+        val metadata = parseReleaseMetadataFromHtml(releaseHtml, rawTag, normalizedReleaseUrl)
+        val expandedAssetsUrl = parseExpandedAssetsUrl(releaseHtml).orEmpty()
+            .ifBlank { buildExpandedAssetsUrl(owner, repo, rawTag) }
+        val assets = runCatching {
+            val expandedAssetsHtml = fetchHtml(expandedAssetsUrl, apiToken)
+            parseAssetsFromExpandedHtml(expandedAssetsHtml, owner, repo, rawTag)
+        }.recoverCatching {
+            parseAssetsFromReleaseHtml(releaseHtml, owner, repo, rawTag)
+        }.getOrThrow()
+        buildReleaseStub(
+            releaseName = metadata.releaseName,
+            rawTag = metadata.tagName,
+            releaseUrl = metadata.htmlUrl,
+            releaseUpdatedAtMillis = metadata.releaseUpdatedAtMillis,
+            assets = assets
+        )
     }
 
     private fun fetchHtml(url: String, apiToken: String): String {
@@ -457,6 +486,193 @@ object GitHubReleaseAssetRepository {
         }
     }
 
+    private fun parseReleaseMetadataFromHtml(
+        html: String,
+        rawTag: String,
+        releaseUrl: String
+    ): HtmlReleaseMetadata {
+        val releaseName = Regex(
+            """<h1[^>]*class="[^"]*d-inline[^"]*"[^>]*>(.*?)</h1>""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        ).find(html)
+            ?.groupValues
+            ?.getOrNull(1)
+            .orEmpty()
+            .stripHtml()
+            .decodeHtmlEntities()
+            .trim()
+            .ifBlank {
+                Regex(
+                    """<meta[^>]*property="og:title"[^>]*content="([^"]+)"""",
+                    RegexOption.IGNORE_CASE
+                ).find(html)
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    .orEmpty()
+                    .decodeHtmlEntities()
+                    .substringBefore(" · ")
+                    .trim()
+            }
+            .ifBlank { rawTag }
+
+        val releaseUpdatedAtMillis = Regex(
+            """(?:released|published)\s+this\s*<relative-time[^>]*datetime="([^"]+)"""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        ).find(html)
+            ?.groupValues
+            ?.getOrNull(1)
+            .orEmpty()
+            .parseIsoInstantOrNull()
+
+        return HtmlReleaseMetadata(
+            releaseName = releaseName,
+            tagName = rawTag.trim(),
+            htmlUrl = releaseUrl.trim(),
+            releaseUpdatedAtMillis = releaseUpdatedAtMillis
+        )
+    }
+
+    private fun parseExpandedAssetsUrl(html: String): String? {
+        val src = Regex(
+            """<include-fragment[^>]*src="([^"]*?/releases/expanded_assets/[^"]+)"""",
+            RegexOption.IGNORE_CASE
+        ).find(html)
+            ?.groupValues
+            ?.getOrNull(1)
+            .orEmpty()
+            .replace("&amp;", "&")
+            .trim()
+        return normalizeGitHubUrl(src)
+    }
+
+    private fun buildExpandedAssetsUrl(
+        owner: String,
+        repo: String,
+        rawTag: String
+    ): String {
+        val encodedTag = URLEncoder.encode(rawTag, Charsets.UTF_8.name()).replace("+", "%20")
+        return "https://github.com/$owner/$repo/releases/expanded_assets/$encodedTag"
+    }
+
+    private fun parseAssetsFromExpandedHtml(
+        html: String,
+        owner: String,
+        repo: String,
+        rawTag: String
+    ): List<GitHubReleaseAssetFile> {
+        val rowRegex = Regex(
+            """<li\b[^>]*class="[^"]*Box-row[^"]*"[^>]*>(.*?)</li>""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        )
+        val linkRegex = Regex(
+            """<a[^>]*href="([^"]+)"[^>]*class="[^"]*Truncate[^"]*"[^>]*>(.*?)</a>""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        )
+        val sizeRegex = Regex(""">\s*(\d+(?:\.\d+)?)\s*([KMGT]?B)\s*<""", RegexOption.IGNORE_CASE)
+        val updatedAtRegex = Regex("""<relative-time[^>]*datetime="([^"]+)"""", RegexOption.IGNORE_CASE)
+        val unique = linkedMapOf<String, GitHubReleaseAssetFile>()
+        rowRegex.findAll(html).forEach { rowMatch ->
+            val rowHtml = rowMatch.groupValues.getOrNull(1).orEmpty()
+            val linkMatch = linkRegex.find(rowHtml) ?: return@forEach
+            val normalizedUrl = normalizeGitHubUrl(linkMatch.groupValues.getOrNull(1).orEmpty())
+            if (normalizedUrl.isNullOrBlank()) return@forEach
+            val fileName = inferHtmlAssetFileName(normalizedUrl, linkMatch.groupValues.getOrNull(2).orEmpty())
+            if (fileName.isBlank()) return@forEach
+            if (!normalizedUrl.contains("/$owner/$repo/")) return@forEach
+            val sizeBytes = sizeRegex.find(rowHtml)?.let { sizeMatch ->
+                parseSizeBytes(
+                    sizeValue = sizeMatch.groupValues.getOrNull(1).orEmpty(),
+                    sizeUnit = sizeMatch.groupValues.getOrNull(2).orEmpty()
+                )
+            } ?: 0L
+            val updatedAtMillis = updatedAtRegex.find(rowHtml)
+                ?.groupValues
+                ?.getOrNull(1)
+                .orEmpty()
+                .parseIsoInstantOrNull()
+            unique.putIfAbsent(
+                fileName,
+                GitHubReleaseAssetFile(
+                    name = fileName,
+                    downloadUrl = normalizedUrl,
+                    sizeBytes = sizeBytes,
+                    downloadCount = 0,
+                    contentType = inferAssetContentType(fileName),
+                    updatedAtMillis = updatedAtMillis
+                )
+            )
+        }
+        return unique.values.toList().ifEmpty {
+            error("未在 expanded_assets 页面中找到可下载资源: $rawTag")
+        }
+    }
+
+    private fun inferHtmlAssetFileName(
+        normalizedUrl: String,
+        linkInnerHtml: String
+    ): String {
+        val urlFileName = when {
+            normalizedUrl.contains("/releases/download/") -> {
+                normalizedUrl.substringAfterLast('/').substringBefore('?')
+            }
+            normalizedUrl.contains("/archive/refs/tags/") -> when {
+                normalizedUrl.endsWith(".tar.gz", ignoreCase = true) -> "Source code.tar.gz"
+                normalizedUrl.endsWith(".zip", ignoreCase = true) -> "Source code.zip"
+                else -> normalizedUrl.substringAfterLast('/').substringBefore('?')
+            }
+            else -> ""
+        }
+        val decodedUrlName = runCatching {
+            URLDecoder.decode(urlFileName, Charsets.UTF_8.name())
+        }.getOrDefault(urlFileName).trim()
+        if (decodedUrlName.isNotBlank()) return decodedUrlName
+
+        val linkText = linkInnerHtml.stripHtml().decodeHtmlEntities().trim()
+        val sourceCodeMatch = Regex("""^Source code\s*\(([^)]+)\)$""", RegexOption.IGNORE_CASE)
+            .find(linkText)
+        if (sourceCodeMatch != null) {
+            return "Source code.${sourceCodeMatch.groupValues[1].trim()}"
+        }
+        return linkText
+    }
+
+    private fun normalizeGitHubUrl(rawUrl: String): String? {
+        val cleaned = rawUrl.replace("&amp;", "&").trim()
+        if (cleaned.isBlank()) return null
+        return when {
+            cleaned.startsWith("https://", ignoreCase = true) ||
+                cleaned.startsWith("http://", ignoreCase = true) -> cleaned
+            cleaned.startsWith("/") -> "https://github.com$cleaned"
+            else -> null
+        }
+    }
+
+    private fun parseSizeBytes(
+        sizeValue: String,
+        sizeUnit: String
+    ): Long {
+        val number = sizeValue.trim().toDoubleOrNull() ?: return 0L
+        val multiplier = when (sizeUnit.trim().uppercase(Locale.ROOT)) {
+            "KB" -> 1024.0
+            "MB" -> 1024.0 * 1024.0
+            "GB" -> 1024.0 * 1024.0 * 1024.0
+            "TB" -> 1024.0 * 1024.0 * 1024.0 * 1024.0
+            else -> 1.0
+        }
+        return (number * multiplier).roundToLong()
+    }
+
+    private fun inferAssetContentType(fileName: String): String {
+        val lower = fileName.lowercase(Locale.ROOT)
+        return when {
+            lower.endsWith(".apk") -> "application/vnd.android.package-archive"
+            lower.endsWith(".apkm") -> "application/octet-stream"
+            lower.endsWith(".zip") -> "application/zip"
+            lower.endsWith(".tar.gz") || lower.endsWith(".tgz") -> "application/gzip"
+            else -> ""
+        }
+    }
+
     private fun findMatchingRelease(releases: JSONArray, rawTag: String): JSONObject? {
         val normalizedTag = rawTag.trim()
         for (index in 0 until releases.length()) {
@@ -474,15 +690,17 @@ object GitHubReleaseAssetRepository {
     }
 
     private fun buildReleaseStub(
+        releaseName: String,
         rawTag: String,
         releaseUrl: String,
+        releaseUpdatedAtMillis: Long? = null,
         assets: List<GitHubReleaseAssetFile> = emptyList()
     ): JSONObject {
         return JSONObject()
-            .put("name", rawTag)
+            .put("name", releaseName)
             .put("tag_name", rawTag)
             .put("html_url", releaseUrl)
-            .put("published_at", JSONObject.NULL)
+            .put("published_at", releaseUpdatedAtMillis?.let { Instant.ofEpochMilli(it).toString() } ?: JSONObject.NULL)
             .put(
                 "assets",
                 JSONArray().apply {
@@ -546,6 +764,21 @@ object GitHubReleaseAssetRepository {
 
     private fun String.parseIsoInstantOrNull(): Long? {
         return runCatching { if (isBlank()) null else Instant.parse(this).toEpochMilli() }.getOrNull()
+    }
+
+    private fun String.stripHtml(): String {
+        return replace(Regex("<[^>]+>"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
+    private fun String.decodeHtmlEntities(): String {
+        return replace("&amp;", "&")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace("&apos;", "'")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
     }
 
     private fun assetDisplayPriority(fileName: String): Int {

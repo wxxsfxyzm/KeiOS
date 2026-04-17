@@ -281,7 +281,7 @@
     <string name="github_item_label_prerelease_version">预发版本</string>
     <string name="github_item_label_updated_at">更新时间</string>
     <string name="github_item_label_hint">提示</string>
-    <string name="github_item_label_update_assets">更新资源</string>
+    <string name="github_item_label_update_assets">更新</string>
     <string name="github_asset_hint_loading">正在准备可下载文件</string>
     <string name="github_asset_hint_all_loaded">未找到 APK 或已手动全加载</string>
     <string name="github_asset_hint_error">资源读取失败</string>
@@ -293,8 +293,8 @@
     <string name="github_asset_count_error">!</string>
     <string name="github_asset_count_pending">·</string>
 
-    <string name="github_asset_target_prerelease">预发资源</string>
-    <string name="github_asset_target_stable">稳定资源</string>
+    <string name="github_asset_target_prerelease">预发</string>
+    <string name="github_asset_target_stable">稳定</string>
     <string name="github_asset_target_latest">最新发布</string>
     <string name="github_asset_fetch_source_api">API</string>
     <string name="github_asset_fetch_source_html">HTML</string>
