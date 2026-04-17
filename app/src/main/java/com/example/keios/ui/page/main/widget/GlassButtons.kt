@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
@@ -256,7 +257,10 @@ fun GlassTextButton(
     variant: GlassVariant = GlassVariant.Content,
     minHeight: Dp = defaultGlassTextButtonMinHeight(variant),
     horizontalPadding: Dp = defaultGlassTextButtonHorizontalPadding(variant),
-    verticalPadding: Dp = defaultGlassTextButtonVerticalPadding(variant)
+    verticalPadding: Dp = defaultGlassTextButtonVerticalPadding(variant),
+    textMaxLines: Int = Int.MAX_VALUE,
+    textOverflow: TextOverflow = TextOverflow.Clip,
+    textSoftWrap: Boolean = true
 ) {
     val isDark = isSystemInDarkTheme()
     val fallbackSurface = MiuixTheme.colorScheme.surfaceContainer
@@ -399,7 +403,10 @@ fun GlassTextButton(
                     color = textColor,
                     fontSize = AppTypographyTokens.Body.fontSize,
                     lineHeight = AppTypographyTokens.Body.lineHeight,
-                    fontWeight = AppTypographyTokens.BodyEmphasis.fontWeight
+                    fontWeight = AppTypographyTokens.BodyEmphasis.fontWeight,
+                    maxLines = textMaxLines,
+                    overflow = textOverflow,
+                    softWrap = textSoftWrap
                 )
             }
         }

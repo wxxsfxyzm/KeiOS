@@ -798,7 +798,8 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                         val sizeLabel = formatAssetSize(asset.sizeBytes, context)
                                         val relativeTimeLabel = assetRelativeTimeLabel(asset.updatedAtMillis, context)
                                         val assetCardShape = RoundedCornerShape(CardLayoutRhythm.cardCornerRadius)
-                                        val assetActionButtonWidth = 84.dp
+                                        val assetDownloadButtonWidth = 96.dp
+                                        val assetShareButtonWidth = 42.dp
                                         val assetCardContainerColor = summaryContainerColor
                                         val assetCardBorderColor = summaryBorderColor
                                         Card(
@@ -863,19 +864,22 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                         text = sizeLabel,
                                                         leadingIcon = MiuixIcons.Regular.Download,
                                                         onClick = { onOpenApkInDownloader(asset) },
-                                                        modifier = Modifier.width(assetActionButtonWidth),
+                                                        modifier = Modifier.width(assetDownloadButtonWidth),
                                                         variant = GlassVariant.SheetAction,
                                                         textColor = actionButtonColor,
                                                         iconTint = actionButtonColor,
-                                                        containerColor = Color.White
+                                                        containerColor = Color.White,
+                                                        textMaxLines = 1,
+                                                        textOverflow = TextOverflow.Clip,
+                                                        textSoftWrap = false
                                                     )
                                                     GlassTextButton(
                                                         backdrop = contentBackdrop,
-                                                        text = stringResource(R.string.common_share),
+                                                        text = "",
                                                         leadingIcon = MiuixIcons.Regular.Share,
                                                         onClick = { onShareApkLink(asset) },
                                                         modifier = Modifier
-                                                            .width(assetActionButtonWidth)
+                                                            .width(assetShareButtonWidth)
                                                             .semantics {
                                                                 contentDescription = context.getString(
                                                                     R.string.github_cd_share_asset,
