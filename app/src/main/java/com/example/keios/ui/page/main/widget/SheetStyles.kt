@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -30,7 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -91,6 +89,8 @@ fun SheetInputTitle(
     Text(
         text = text,
         color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.92f),
+        fontSize = AppTypographyTokens.Body.fontSize,
+        lineHeight = AppTypographyTokens.Body.lineHeight,
         modifier = modifier
     )
 }
@@ -104,7 +104,9 @@ fun SheetSectionTitle(
     Text(
         text = text,
         color = if (danger) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onBackground,
-        fontWeight = FontWeight.Medium,
+        fontSize = AppTypographyTokens.CardHeader.fontSize,
+        lineHeight = AppTypographyTokens.CardHeader.lineHeight,
+        fontWeight = AppTypographyTokens.CardHeader.fontWeight,
         modifier = modifier
     )
 }
@@ -120,8 +122,8 @@ fun SheetDescriptionText(
     Text(
         text = text,
         color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.96f),
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
+        fontSize = AppTypographyTokens.Body.fontSize,
+        lineHeight = AppTypographyTokens.Body.lineHeight,
         textAlign = TextAlign.Start,
         modifier = modifier
             .fillMaxWidth()
@@ -198,17 +200,12 @@ fun SheetControlRow(
     minHeight: Dp = 40.dp,
     trailing: @Composable RowScope.() -> Unit,
 ) {
-    SheetControlRow(
+    AppControlRow(
+        title = label,
         modifier = modifier,
         summary = summary,
+        titleColor = labelColor,
         minHeight = minHeight,
-        labelContent = {
-            Text(
-                text = label,
-                color = labelColor,
-                fontWeight = FontWeight.Medium
-            )
-        },
         trailing = trailing
     )
 }
@@ -221,35 +218,13 @@ fun SheetControlRow(
     labelContent: @Composable ColumnScope.() -> Unit,
     trailing: @Composable RowScope.() -> Unit,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = minHeight),
-            verticalArrangement = Arrangement.Center
-        ) {
-            labelContent()
-            summary?.takeIf { it.isNotBlank() }?.let { text ->
-                Text(
-                    text = text,
-                    color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.92f),
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp
-                )
-            }
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            content = trailing
-        )
-    }
+    AppControlRow(
+        modifier = modifier,
+        summary = summary,
+        minHeight = minHeight,
+        titleContent = labelContent,
+        trailing = trailing
+    )
 }
 
 @Composable

@@ -21,6 +21,10 @@ object CardLayoutRhythm {
     val infoRowGap: Dp = 8.dp
     val infoRowVerticalPadding: Dp = 3.dp
 
+    val controlRowGap: Dp = 12.dp
+    val controlRowTextGap: Dp = 4.dp
+    val controlRowVerticalPadding: Dp = 2.dp
+
     val metricRowGap: Dp = 14.dp
     val metricCardHorizontalPadding: Dp = 10.dp
     val metricCardVerticalPadding: Dp = 9.dp

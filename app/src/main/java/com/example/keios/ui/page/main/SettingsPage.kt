@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,6 +41,7 @@ import com.example.keios.core.prefs.AppThemeMode
 import com.example.keios.core.prefs.CacheEntrySummary
 import com.example.keios.core.prefs.CacheStores
 import com.example.keios.core.log.AppLogStore
+import com.example.keios.ui.page.main.widget.AppControlRow
 import com.example.keios.ui.page.main.widget.AppInfoRow
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
@@ -694,36 +696,19 @@ private fun SettingsActionItem(
     infoKey: String? = null,
     infoValue: String? = null,
     onClick: (() -> Unit)? = null,
-    trailing: @Composable () -> Unit = {}
+    trailing: @Composable RowScope.() -> Unit = {}
 ) {
-    val titleColor = MiuixTheme.colorScheme.onBackground
-    val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .let { base -> if (onClick != null) base.clickable { onClick() } else base },
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.sectionGap)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                color = titleColor,
-                fontSize = AppTypographyTokens.SectionTitle.fontSize,
-                fontWeight = AppTypographyTokens.SectionTitle.fontWeight,
-                lineHeight = AppTypographyTokens.SectionTitle.lineHeight,
-                modifier = Modifier.weight(1f)
-            )
-            trailing()
-        }
-        Text(
-            text = summary,
-            color = subtitleColor,
-            fontSize = AppTypographyTokens.Body.fontSize,
-            lineHeight = AppTypographyTokens.Body.lineHeight
+        AppControlRow(
+            title = title,
+            summary = summary,
+            titleColor = MiuixTheme.colorScheme.onBackground,
+            minHeight = 48.dp,
+            onClick = onClick,
+            trailing = trailing
         )
         if (!infoKey.isNullOrBlank() && !infoValue.isNullOrBlank()) {
             SettingsInfoItem(
@@ -802,36 +787,24 @@ private fun SettingsCacheRow(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.sectionGap)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = entry.title,
-                color = titleColor,
-                fontSize = AppTypographyTokens.CompactTitle.fontSize,
-                fontWeight = AppTypographyTokens.CompactTitle.fontWeight,
-                lineHeight = AppTypographyTokens.CompactTitle.lineHeight,
-                modifier = Modifier.weight(1f)
-            )
-            if (entry.clearLabel.isNotBlank()) {
-                GlassTextButton(
-                    backdrop = null,
-                    variant = GlassVariant.Compact,
-                    text = if (clearing) stringResource(R.string.common_processing) else entry.clearLabel,
-                    textColor = actionColor,
-                    containerColor = actionColor,
-                    enabled = !clearing,
-                    onClick = onClear
-                )
+        AppControlRow(
+            title = entry.title,
+            summary = entry.summary,
+            titleColor = titleColor,
+            minHeight = 48.dp,
+            trailing = {
+                if (entry.clearLabel.isNotBlank()) {
+                    GlassTextButton(
+                        backdrop = null,
+                        variant = GlassVariant.Compact,
+                        text = if (clearing) stringResource(R.string.common_processing) else entry.clearLabel,
+                        textColor = actionColor,
+                        containerColor = actionColor,
+                        enabled = !clearing,
+                        onClick = onClear
+                    )
+                }
             }
-        }
-        Text(
-            text = entry.summary,
-            color = subtitleColor,
-            fontSize = AppTypographyTokens.Body.fontSize,
-            lineHeight = AppTypographyTokens.Body.lineHeight
         )
         Text(
             text = entry.detail,
