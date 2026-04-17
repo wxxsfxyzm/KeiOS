@@ -112,10 +112,19 @@ fun GlassSearchField(
                         }
                     )
                 } else {
-                    Modifier.background(
-                        fallbackSurface.copy(alpha = glass.fallbackAlpha),
-                        ContinuousCapsule
-                    )
+                    Modifier
+                        .background(
+                            glass.baseColor.takeIf { it != Color.Transparent }
+                                ?: fallbackSurface.copy(alpha = glass.fallbackAlpha),
+                            ContinuousCapsule
+                        )
+                        .then(
+                            if (glass.overlayColor != Color.Transparent) {
+                                Modifier.background(glass.overlayColor, ContinuousCapsule)
+                            } else {
+                                Modifier
+                            }
+                        )
                 }
             )
             .then(borderModifier)

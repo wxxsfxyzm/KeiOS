@@ -49,33 +49,33 @@ internal fun glassStyle(
             showBorder = true
         )
         GlassVariant.SheetInput -> {
-            val blur = blurRadius ?: if (isDark) 6.dp else 10.dp
+            val blur = blurRadius ?: if (isDark) 6.dp else 11.dp
             if (isDark) {
                 GlassStyle(
                     blur = blur,
-                    baseColor = Color(0xFF15181E).copy(alpha = 0.22f),
-                    overlayColor = Color.White.copy(alpha = 0.05f),
-                    borderColor = Color.White.copy(alpha = 0.16f),
+                    baseColor = Color(0xFF131A23).copy(alpha = 0.26f),
+                    overlayColor = Color(0xFF84B9F8).copy(alpha = 0.06f),
+                    borderColor = Color(0xFF99C7FF).copy(alpha = 0.18f),
                     borderWidth = 1.dp,
-                    highlightAlpha = 0.62f,
+                    highlightAlpha = 0.64f,
                     shadowAlpha = 0.10f,
-                    fallbackAlpha = 0.74f,
-                    lensStart = 24.dp,
-                    lensEnd = 24.dp,
+                    fallbackAlpha = 0.76f,
+                    lensStart = 25.dp,
+                    lensEnd = 25.dp,
                     showBorder = true
                 )
             } else {
                 GlassStyle(
                     blur = blur,
-                    baseColor = Color.White.copy(alpha = 0.74f),
-                    overlayColor = Color(0xFFD8E9FF).copy(alpha = 0.24f),
-                    borderColor = Color.White.copy(alpha = 0.998f),
-                    borderWidth = 1.45.dp,
+                    baseColor = Color.White.copy(alpha = 0.78f),
+                    overlayColor = Color(0xFFE8F4FF).copy(alpha = 0.38f),
+                    borderColor = Color(0xFFD8E8FF).copy(alpha = 0.96f),
+                    borderWidth = 1.55.dp,
                     highlightAlpha = 1f,
-                    shadowAlpha = 0.22f,
-                    fallbackAlpha = 0.99f,
-                    lensStart = 26.dp,
-                    lensEnd = 26.dp,
+                    shadowAlpha = 0.20f,
+                    fallbackAlpha = 1f,
+                    lensStart = 27.dp,
+                    lensEnd = 27.dp,
                     showBorder = true
                 )
             }

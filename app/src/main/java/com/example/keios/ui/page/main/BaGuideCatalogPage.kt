@@ -732,6 +732,11 @@ internal fun BaGuideCatalogEntryCard(
         }
     }
     val cardShape = RoundedCornerShape(16.dp)
+    val favoriteActionColor = if (isFavorite) {
+        Color(0xFFEC4899)
+    } else {
+        Color(0xFF3B82F6)
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -827,8 +832,9 @@ internal fun BaGuideCatalogEntryCard(
                 onClick = { onToggleFavorite(entry.contentId) },
                 width = 34.dp,
                 height = 34.dp,
-                variant = GlassVariant.Bar,
-                iconTint = if (isFavorite) Color(0xFFEC4899) else Color(0xFF3B82F6)
+                variant = GlassVariant.Floating,
+                iconTint = favoriteActionColor,
+                containerColor = favoriteActionColor
             )
         }
     }

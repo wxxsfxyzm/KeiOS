@@ -374,8 +374,8 @@ internal fun BaOverviewCard(
                         backdrop = backdrop,
                         text = "${displayAp(cafeStoredAp)}/${cafeDailyCapacity(cafeLevel)}",
                         textColor = accentGreen,
-                        enabled = false,
-                        variant = GlassVariant.Content,
+                        containerColor = accentGreen,
+                        variant = GlassVariant.Floating,
                         onClick = {},
                     )
                 }
@@ -858,6 +858,11 @@ internal fun BaIdCard(
     val nicknameFieldWidth = (nicknameLengthForWidth * 11 + 34).coerceIn(72, 124).dp
     val friendCodeLengthForWidth = idFriendCodeInput.ifEmpty { BA_DEFAULT_FRIEND_CODE }.length.coerceIn(1, 8)
     val friendCodeFieldWidth = (friendCodeLengthForWidth * 11 + 34).coerceIn(92, 128).dp
+    val nicknameSuffixWidth = 32.dp
+    val trailingSlotWidth = maxOf(
+        nicknameFieldWidth + 6.dp + nicknameSuffixWidth,
+        friendCodeFieldWidth
+    )
     val accentBlue = Color(0xFF3B82F6)
 
     BaGlassCard(
@@ -871,12 +876,10 @@ internal fun BaIdCard(
             backdrop = backdrop,
             accentColor = accentBlue,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            BaIdFieldRow(
+                label = "昵称",
+                trailingSlotWidth = trailingSlotWidth,
             ) {
-                Text("昵称", color = MiuixTheme.colorScheme.onBackground)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -896,6 +899,8 @@ internal fun BaIdCard(
                         text = "老师",
                         color = accentBlue,
                         fontWeight = FontWeight.Medium,
+                        modifier = Modifier.width(nicknameSuffixWidth),
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
@@ -905,12 +910,10 @@ internal fun BaIdCard(
             backdrop = backdrop,
             accentColor = accentBlue,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            BaIdFieldRow(
+                label = "好友码",
+                trailingSlotWidth = trailingSlotWidth,
             ) {
-                Text("好友码", color = MiuixTheme.colorScheme.onBackground)
                 GlassSearchField(
                     modifier = Modifier.width(friendCodeFieldWidth),
                     value = idFriendCodeInput,
@@ -923,6 +926,36 @@ internal fun BaIdCard(
                     textAlign = TextAlign.Center,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun BaIdFieldRow(
+    label: String,
+    trailingSlotWidth: Dp,
+    trailingContent: @Composable RowScope.() -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            color = MiuixTheme.colorScheme.onBackground,
+            modifier = Modifier.width(64.dp),
+        )
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            Row(
+                modifier = Modifier.width(trailingSlotWidth),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+                content = trailingContent,
+            )
         }
     }
 }
