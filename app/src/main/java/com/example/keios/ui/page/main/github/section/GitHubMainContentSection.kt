@@ -76,6 +76,8 @@ import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.StatusPill
+import com.example.keios.ui.page.main.widget.appPageBottomPaddingWithFloatingOverlay
+import com.example.keios.ui.page.main.widget.appPageContentPadding
 import com.example.keios.ui.page.main.github.asset.apkAssetTarget
 import com.example.keios.ui.page.main.github.asset.assetAbiLabel
 import com.example.keios.ui.page.main.github.asset.assetDisplayName
@@ -192,11 +194,9 @@ internal fun GitHubMainContent(
                     .fillMaxSize()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                 state = listState,
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 64.dp,
-                    start = AppChromeTokens.pageHorizontalPadding,
-                    end = AppChromeTokens.pageHorizontalPadding
+                contentPadding = appPageContentPadding(
+                    innerPadding = innerPadding,
+                    bottomExtra = appPageBottomPaddingWithFloatingOverlay(contentBottomPadding)
                 )
             ) {
                 item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }

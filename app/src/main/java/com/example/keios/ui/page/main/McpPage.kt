@@ -88,6 +88,8 @@ import com.example.keios.ui.page.main.widget.SheetSectionCard
 import com.example.keios.ui.page.main.widget.SheetSectionTitle
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.page.main.widget.StatusLabelText
+import com.example.keios.ui.page.main.widget.appPageBottomPaddingWithFloatingOverlay
+import com.example.keios.ui.page.main.widget.appPageContentPadding
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import com.kyant.backdrop.Backdrop
@@ -417,11 +419,9 @@ fun McpPage(
                     .fillMaxSize()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                 state = listState,
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 64.dp,
-                    start = AppChromeTokens.pageHorizontalPadding,
-                    end = AppChromeTokens.pageHorizontalPadding
+                contentPadding = appPageContentPadding(
+                    innerPadding = innerPadding,
+                    bottomExtra = appPageBottomPaddingWithFloatingOverlay(contentBottomPadding)
                 )
             ) {
             item { SmallTitle(stringResource(R.string.mcp_page_local_service_title)) }
@@ -482,7 +482,7 @@ fun McpPage(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
 
             item {
                 MiuixExpandableSection(
@@ -552,7 +552,7 @@ fun McpPage(
             }
             }
 
-            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
 
             item {
                 MiuixExpandableSection(
@@ -577,7 +577,7 @@ fun McpPage(
             }
             }
 
-            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
 
             item {
                 MiuixExpandableSection(

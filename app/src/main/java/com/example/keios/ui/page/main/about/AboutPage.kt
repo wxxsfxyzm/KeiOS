@@ -39,6 +39,7 @@ import com.example.keios.ui.page.main.about.section.AboutUiFrameworkCardSection
 import com.example.keios.ui.page.main.about.util.openExternalUrl
 import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppTopBarSection
+import com.example.keios.ui.page.main.widget.appPageContentPadding
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -133,11 +134,9 @@ fun AboutPage(
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
-                bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 16.dp,
-                start = AppChromeTokens.pageHorizontalPadding,
-                end = AppChromeTokens.pageHorizontalPadding
+            contentPadding = appPageContentPadding(
+                innerPadding = innerPadding,
+                bottomExtra = contentBottomPadding + AppChromeTokens.pageBottomInsetExtra
             )
         ) {
             item {

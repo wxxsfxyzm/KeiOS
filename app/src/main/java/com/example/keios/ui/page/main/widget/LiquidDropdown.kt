@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -45,7 +46,9 @@ import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
@@ -62,7 +65,6 @@ import top.yukonga.miuix.kmp.icon.basic.Check
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.min
 
-private const val LiquidDropdownMaxItemsForWidth = 8
 private val LiquidDropdownContainerRadius = 20.dp
 private val LiquidDropdownItemRadius = 20.dp
 
@@ -77,16 +79,23 @@ private fun liquidDropdownItemShape(): RoundedCornerShape = RoundedCornerShape(L
 @Composable
 fun LiquidDropdownColumn(
     modifier: Modifier = Modifier,
+    minWidth: Dp = AppInteractiveTokens.liquidDropdownMinWidth,
+    maxWidth: Dp = AppInteractiveTokens.liquidDropdownMaxWidth,
+    maxHeight: Dp = AppInteractiveTokens.liquidDropdownMaxHeight,
     content: @Composable () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
     val shape = RoundedCornerShape(LiquidDropdownContainerRadius)
     val containerColors = liquidDropdownContainerColors(isDark)
-    val measurePolicy = rememberLiquidDropdownMeasurePolicy()
+    val measurePolicy = rememberLiquidDropdownMeasurePolicy(
+        minWidth = minWidth,
+        maxWidth = maxWidth
+    )
     val scrollState = rememberScrollState()
 
     Box(
         modifier = modifier
+            .widthIn(min = minWidth, max = maxWidth)
             .clip(shape)
             .background(containerColors.baseColor, shape)
             .background(containerColors.middleBrush, shape)
@@ -102,6 +111,7 @@ fun LiquidDropdownColumn(
         Layout(
             content = content,
             modifier = Modifier
+                .heightIn(max = maxHeight)
                 .height(IntrinsicSize.Min)
                 .verticalScroll(scrollState),
             measurePolicy = measurePolicy
@@ -110,21 +120,24 @@ fun LiquidDropdownColumn(
 }
 
 @Composable
-private fun rememberLiquidDropdownMeasurePolicy(): MeasurePolicy {
-    return remember {
+private fun rememberLiquidDropdownMeasurePolicy(
+    minWidth: Dp,
+    maxWidth: Dp
+): MeasurePolicy {
+    return remember(minWidth, maxWidth) {
         object : MeasurePolicy {
             override fun MeasureScope.measure(
                 measurables: List<Measurable>,
                 constraints: Constraints
             ): MeasureResult {
-                var maxWidth = 0
-                measurables.take(min(LiquidDropdownMaxItemsForWidth, measurables.size)).forEach { measurable ->
+                var widestIntrinsic = 0
+                measurables.take(min(AppInteractiveTokens.liquidDropdownMaxVisibleItemsForWidth, measurables.size)).forEach { measurable ->
                     val width = measurable.maxIntrinsicWidth(constraints.maxHeight)
-                    if (width > maxWidth) maxWidth = width
+                    if (width > widestIntrinsic) widestIntrinsic = width
                 }
-                val listWidth = maxWidth.coerceIn(
-                    AppInteractiveTokens.liquidDropdownMinWidth.roundToPx(),
-                    AppInteractiveTokens.liquidDropdownMaxWidth.roundToPx()
+                val listWidth = widestIntrinsic.coerceIn(
+                    minWidth.roundToPx(),
+                    maxWidth.roundToPx()
                 )
                 val childConstraints = constraints.copy(
                     minWidth = listWidth,
@@ -150,14 +163,14 @@ private fun rememberLiquidDropdownMeasurePolicy(): MeasurePolicy {
                 measurables: List<IntrinsicMeasurable>,
                 width: Int
             ): Int {
-                var maxWidth = 0
-                measurables.take(min(LiquidDropdownMaxItemsForWidth, measurables.size)).forEach { measurable ->
+                var widestIntrinsic = 0
+                measurables.take(min(AppInteractiveTokens.liquidDropdownMaxVisibleItemsForWidth, measurables.size)).forEach { measurable ->
                     val candidate = measurable.maxIntrinsicWidth(Int.MAX_VALUE)
-                    if (candidate > maxWidth) maxWidth = candidate
+                    if (candidate > widestIntrinsic) widestIntrinsic = candidate
                 }
-                val listWidth = maxWidth.coerceIn(
-                    AppInteractiveTokens.liquidDropdownMinWidth.roundToPx(),
-                    AppInteractiveTokens.liquidDropdownMaxWidth.roundToPx()
+                val listWidth = widestIntrinsic.coerceIn(
+                    minWidth.roundToPx(),
+                    maxWidth.roundToPx()
                 )
                 return measurables.sumOf { it.minIntrinsicHeight(listWidth) }
             }
@@ -398,9 +411,12 @@ private fun LiquidDropdownRowContent(
         Text(
             modifier = Modifier.weight(1f),
             text = text,
-            fontSize = MiuixTheme.textStyles.body1.fontSize,
+            fontSize = AppTypographyTokens.Body.fontSize,
+            lineHeight = AppTypographyTokens.Body.lineHeight,
             fontWeight = FontWeight.Medium,
-            color = textColor
+            color = textColor,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
         )
 
         Image(

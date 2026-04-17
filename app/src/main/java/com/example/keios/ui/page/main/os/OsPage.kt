@@ -80,6 +80,7 @@ import com.example.keios.ui.page.main.widget.SheetSectionTitle
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.page.main.widget.StatusLabelText
+import com.example.keios.ui.page.main.widget.appPageContentPadding
 import com.example.keios.ui.page.main.widget.copyModeAwareRow
 import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.core.system.getAllJavaPropString
@@ -796,12 +797,7 @@ fun OsPage(
                 .nestedScroll(searchBarScrollConnection)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
-                bottom = innerPadding.calculateBottomPadding() + AppChromeTokens.pageBottomInsetExtra,
-                start = AppChromeTokens.pageHorizontalPadding,
-                end = AppChromeTokens.pageHorizontalPadding
-            )
+            contentPadding = appPageContentPadding(innerPadding)
         ) {
             item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
             item {
@@ -869,7 +865,7 @@ fun OsPage(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(10.dp)) }
+            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
 
             if (isCardVisible(OsSectionCard.TOP_INFO)) {
                 item {

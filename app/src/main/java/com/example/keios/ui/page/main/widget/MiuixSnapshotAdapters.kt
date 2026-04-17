@@ -8,10 +8,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -58,10 +62,30 @@ fun SnapshotWindowListPopup(
     onDismissFinished: (() -> Unit)? = null,
     maxHeight: Dp? = null,
     minWidth: Dp = 0.dp,
+    maxWidth: Dp? = null,
+    matchAnchorWidth: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val explicitAnchorBounds = anchorBounds
+    val popupAnimationOffsetPx = with(density) { AppInteractiveTokens.popupAnimationOffset.roundToPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.roundToPx() }
+    val anchorWidthDp = remember(explicitAnchorBounds, density) {
+        explicitAnchorBounds?.let { with(density) { it.width.toDp() } } ?: 0.dp
+    }
+    val resolvedMinWidth = if (matchAnchorWidth) {
+        maxOf(minWidth, anchorWidthDp)
+    } else {
+        minWidth
+    }
+    val opensDownward = remember(explicitAnchorBounds, screenHeightPx) {
+        explicitAnchorBounds?.let {
+            val availableBelow = screenHeightPx - it.bottom
+            val availableAbove = it.top
+            availableBelow >= availableAbove
+        } ?: true
+    }
     var wasVisible by remember { mutableStateOf(false) }
     var popupRender by remember { mutableStateOf(show) }
     val popupVisibilityState = remember { MutableTransitionState(false) }
@@ -162,17 +186,28 @@ fun SnapshotWindowListPopup(
                 ) + scaleIn(
                     initialScale = 0.92f,
                     animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
+                ) + slideInVertically(
+                    initialOffsetY = {
+                        if (opensDownward) -popupAnimationOffsetPx else popupAnimationOffsetPx
+                    },
+                    animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
                 ),
                 exit = fadeOut(
                     animationSpec = tween(durationMillis = 100)
                 ) + scaleOut(
                     targetScale = 0.96f,
                     animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing)
+                ) + slideOutVertically(
+                    targetOffsetY = {
+                        if (opensDownward) -popupAnimationOffsetPx else popupAnimationOffsetPx
+                    },
+                    animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing)
                 )
             ) {
                 Box(
                     modifier = popupModifier
-                        .defaultMinSize(minWidth = minWidth)
+                        .defaultMinSize(minWidth = resolvedMinWidth)
+                        .then(if (maxWidth != null) Modifier.widthIn(max = maxWidth) else Modifier)
                         .then(if (maxHeight != null) Modifier.heightIn(max = maxHeight) else Modifier)
                 ) {
                     content()

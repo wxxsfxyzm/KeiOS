@@ -53,6 +53,7 @@ import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
 import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
 import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
+import com.example.keios.ui.page.main.widget.appPageContentPadding
 import com.example.keios.ui.page.main.widget.capturePopupAnchor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -216,12 +217,7 @@ fun SettingsPage(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
-                bottom = innerPadding.calculateBottomPadding() + AppChromeTokens.pageBottomInsetExtra,
-                start = AppChromeTokens.pageHorizontalPadding,
-                end = AppChromeTokens.pageHorizontalPadding
-            )
+            contentPadding = appPageContentPadding(innerPadding)
         ) {
             item { SmallTitle(stringResource(R.string.settings_section_ui_style)) }
             item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGapLarge)) }
