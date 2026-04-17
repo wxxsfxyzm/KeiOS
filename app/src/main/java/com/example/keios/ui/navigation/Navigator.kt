@@ -22,6 +22,14 @@ class Navigator(
     }
 
     /**
+     * Push only when the current top is different from the target key.
+     */
+    fun pushSingleTop(key: NavKey) {
+        if (backStack.lastOrNull() == key) return
+        backStack.add(key)
+    }
+
+    /**
      * Replace the top key, or push if the stack is empty.
      */
     fun replace(key: NavKey) {

@@ -619,8 +619,8 @@ private fun MainPagerLayout(
                                     .toSet()
                                 onVisibleBottomPageNamesChange(updated)
                             },
-                            onOpenSettings = { navigator.push(KeiosRoute.Settings) },
-                            onOpenAbout = { navigator.push(KeiosRoute.About) },
+                            onOpenSettings = { navigator.pushSingleTop(KeiosRoute.Settings) },
+                            onOpenAbout = { navigator.pushSingleTop(KeiosRoute.About) },
                             onActionBarInteractingChanged = { interacting ->
                                 pagerScrollEnabled = !interacting
                             },
@@ -651,7 +651,7 @@ private fun MainPagerLayout(
                                 onOpenGuideDetail(sourceUrl)
                             },
                             onOpenGuideCatalog = {
-                                navigator.push(KeiosRoute.BaGuideCatalog)
+                                navigator.pushSingleTop(KeiosRoute.BaGuideCatalog)
                             },
                             onActionBarInteractingChanged = { interacting ->
                                 pagerScrollEnabled = !interacting
@@ -665,7 +665,7 @@ private fun MainPagerLayout(
                             scrollToTopSignal = mcpScrollToTopSignal,
                             cardPressFeedbackEnabled = cardPressFeedbackEnabled,
                             liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                            onOpenSkill = { navigator.push(KeiosRoute.McpSkill) },
+                            onOpenSkill = { navigator.pushSingleTop(KeiosRoute.McpSkill) },
                             onActionBarInteractingChanged = { interacting ->
                                 pagerScrollEnabled = !interacting
                             }

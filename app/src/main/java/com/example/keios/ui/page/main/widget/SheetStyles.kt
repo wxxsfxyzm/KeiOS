@@ -37,7 +37,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun SheetContentColumn(
     modifier: Modifier = Modifier,
     scrollable: Boolean = true,
-    verticalSpacing: Dp = 12.dp,
+    verticalSpacing: Dp = AppChromeTokens.pageSectionGapLarge,
     content: @Composable () -> Unit,
 ) {
     val scrollModifier = if (scrollable) {
@@ -209,7 +209,7 @@ fun SheetControlRow(
 @Composable
 fun SheetActionGroup(
     modifier: Modifier = Modifier,
-    verticalSpacing: Dp = 8.dp,
+    verticalSpacing: Dp = AppChromeTokens.pageSectionGap,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -229,7 +229,7 @@ fun SheetFieldBlock(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(AppChromeTokens.pageSectionGap)
     ) {
         if (trailing != null || !summary.isNullOrBlank()) {
             SheetControlRow(

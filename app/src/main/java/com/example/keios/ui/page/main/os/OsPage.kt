@@ -63,15 +63,15 @@ import com.example.keios.R
 import com.example.keios.ui.page.main.widget.AppInfoRow
 import com.example.keios.ui.page.main.widget.AppOverviewCard
 import com.example.keios.ui.page.main.widget.AppChromeTokens
+import com.example.keios.ui.page.main.widget.AppTopBarSearchField
+import com.example.keios.ui.page.main.widget.AppTopBarSection
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
-import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
-import com.example.keios.ui.page.main.widget.SearchBarHost
 import com.example.keios.ui.page.main.widget.SheetContentColumn
 import com.example.keios.ui.page.main.widget.SheetControlRow
 import com.example.keios.ui.page.main.widget.SheetDescriptionText
@@ -102,7 +102,6 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Download
@@ -685,55 +684,47 @@ fun OsPage(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            Column {
-                TopAppBar(
-                    title = "",
-                    largeTitle = "OS",
-                    scrollBehavior = scrollBehavior,
-                    color = topBarMaterialBackdrop.getMiuixAppBarColor(),
-                    actions = {
-                        LiquidActionBar(
-                            backdrop = topBarBackdrop,
-                            layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                            items = listOf(
-                                LiquidActionItem(
-                                    icon = MiuixIcons.Regular.Layers,
-                                    contentDescription = "管理卡片显示",
-                                    onClick = { showCardManager = true }
-                                ),
-                                LiquidActionItem(
-                                    icon = MiuixIcons.Regular.Refresh,
-                                    contentDescription = "刷新OS参数",
-                                    onClick = {
-                                        if (refreshing) return@LiquidActionItem
-                                        scope.launch { refreshAllSections() }
-                                    }
-                                )
+            AppTopBarSection(
+                title = "",
+                largeTitle = "OS",
+                scrollBehavior = scrollBehavior,
+                color = topBarMaterialBackdrop.getMiuixAppBarColor(),
+                actions = {
+                    LiquidActionBar(
+                        backdrop = topBarBackdrop,
+                        layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
+                        items = listOf(
+                            LiquidActionItem(
+                                icon = MiuixIcons.Regular.Layers,
+                                contentDescription = "管理卡片显示",
+                                onClick = { showCardManager = true }
                             ),
-                            onInteractionChanged = onActionBarInteractingChanged
-                        )
-                    }
-                )
-                if (enableSearchBar) {
-                    SearchBarHost(
-                        visible = showSearchBar,
-                        animationLabelPrefix = "osSearchBar",
-                    ) {
-                        Column {
-                            GlassSearchField(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding),
-                                value = queryInput,
-                                onValueChange = { queryInput = it },
-                                label = "搜索OS参数",
-                                backdrop = topBarBackdrop,
-                                variant = GlassVariant.Bar,
-                                singleLine = true
+                            LiquidActionItem(
+                                icon = MiuixIcons.Regular.Refresh,
+                                contentDescription = "刷新OS参数",
+                                onClick = {
+                                    if (refreshing) return@LiquidActionItem
+                                    scope.launch { refreshAllSections() }
+                                }
                             )
-                            Spacer(modifier = Modifier.height(AppChromeTokens.searchFieldBottomSpacing))
-                        }
-                    }
+                        ),
+                        onInteractionChanged = onActionBarInteractingChanged
+                    )
+                },
+                searchBarVisible = enableSearchBar && showSearchBar,
+                searchBarAnimationLabelPrefix = "osSearchBar",
+                searchBarBackdrop = null
+            ) {
+                Column {
+                    AppTopBarSearchField(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding),
+                        value = queryInput,
+                        onValueChange = { queryInput = it },
+                        label = "搜索OS参数",
+                        backdrop = topBarBackdrop
+                    )
                 }
             }
         }

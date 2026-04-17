@@ -25,6 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -269,8 +270,66 @@ class AppDesignSystemScreenshotTest {
                             packageInfo = currentPackageInfo(),
                             cardColor = Color(0x223B82F6),
                             accent = MiuixTheme.colorScheme.primary,
-                            subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
+                            subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant,
+                            expanded = true,
+                            onExpandedChange = {}
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun aboutAppCardCollapsedLight() {
+        captureRoboImage(filePath = "src/test/screenshots/design-system/about_app_card_collapsed_light.png") {
+            CompositionLocalProvider(LocalTextCopyExpandedOverride provides false) {
+                MiuixTheme(controller = ThemeController(ColorSchemeMode.Light)) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFFF3F4F6))
+                            .padding(16.dp)
+                    ) {
+                        AboutAppCardSection(
+                            appLabel = "KeiOS",
+                            packageInfo = currentPackageInfo(),
+                            cardColor = Color(0x223B82F6),
+                            accent = MiuixTheme.colorScheme.primary,
+                            subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant,
+                            expanded = false,
+                            onExpandedChange = {}
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun topBarSearchShellLight() {
+        captureRoboImage(filePath = "src/test/screenshots/design-system/topbar_search_shell_light.png") {
+            CompositionLocalProvider(LocalTextCopyExpandedOverride provides false) {
+                MiuixTheme(controller = ThemeController(ColorSchemeMode.Light)) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFFF3F4F6))
+                            .padding(16.dp)
+                    ) {
+                        AppTopBarSection(
+                            title = "",
+                            largeTitle = "图鉴",
+                            scrollBehavior = MiuixScrollBehavior(),
+                            color = Color.Transparent,
+                            searchBarVisible = true,
+                            searchBarAnimationLabelPrefix = "screenshotTopBar"
+                        ) {
+                            AppTopBarSearchField(
+                                value = "星野",
+                                onValueChange = {},
+                                label = "搜索学生 / NPC / 卫星",
+                                modifier = Modifier.padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding)
+                            )
+                        }
                     }
                 }
             }

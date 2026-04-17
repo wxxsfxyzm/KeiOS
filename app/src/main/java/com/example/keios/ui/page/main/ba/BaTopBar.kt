@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.example.keios.R
+import com.example.keios.ui.page.main.widget.AppTopBarSection
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionBarPopupAnchors
 import com.example.keios.ui.page.main.widget.LiquidActionItem
@@ -15,7 +16,6 @@ import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Edit
@@ -37,7 +37,7 @@ internal fun BaTopBar(
     onCalendarRefreshIntervalSelected: (Int) -> Unit,
     onInteractionChanged: (Boolean) -> Unit,
 ) {
-    TopAppBar(
+    AppTopBarSection(
         title = "",
         largeTitle = stringResource(R.string.ba_topbar_title),
         scrollBehavior = scrollBehavior,

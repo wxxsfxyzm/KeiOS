@@ -44,6 +44,7 @@ import com.example.keios.core.log.AppLogStore
 import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppControlRow
 import com.example.keios.ui.page.main.widget.AppInfoRow
+import com.example.keios.ui.page.main.widget.AppTopBarSection
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.GlassTextButton
@@ -70,7 +71,6 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -196,7 +196,7 @@ fun SettingsPage(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            AppTopBarSection(
                 title = settingsTitle,
                 scrollBehavior = scrollBehavior,
                 color = Color.Transparent,
@@ -381,7 +381,7 @@ fun SettingsPage(
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(AppChromeTokens.pageSectionGap),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             GlassTextButton(
@@ -553,7 +553,7 @@ fun SettingsPage(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onCacheDiagnosticsChanged(!cacheDiagnosticsEnabled) },
-                            horizontalArrangement = Arrangement.spacedBy(18.dp),
+                            horizontalArrangement = Arrangement.spacedBy(AppChromeTokens.pageSectionGapLarge),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(

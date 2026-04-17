@@ -1,43 +1,73 @@
 package com.example.keios.ui.page.main.widget
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.SmallTitle
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-fun AppTopBar(
+fun AppTopBarSection(
     title: String,
-    subtitle: String? = null,
     modifier: Modifier = Modifier,
-    showSubtitle: Boolean = false,
-    bottomSpacing: Dp = 6.dp,
+    largeTitle: String = title,
+    color: Color = MiuixTheme.colorScheme.surface,
+    scrollBehavior: ScrollBehavior? = null,
     navigationIcon: (@Composable () -> Unit)? = null,
-    actions: @Composable RowScope.() -> Unit = {}
+    actions: @Composable RowScope.() -> Unit = {},
+    searchBarVisible: Boolean = false,
+    searchBarAnimationLabelPrefix: String = "appTopBarSearch",
+    searchBarBackdrop: LayerBackdrop? = null,
+    searchBarContent: (@Composable BoxScope.() -> Unit)? = null
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth()
-    ) {
+    Column(modifier = modifier) {
         TopAppBar(
-            modifier = Modifier.fillMaxWidth(),
             title = title,
-            color = MiuixTheme.colorScheme.surface,
+            largeTitle = largeTitle,
+            scrollBehavior = scrollBehavior,
+            color = color,
             navigationIcon = navigationIcon ?: {},
             actions = actions
         )
-        if (showSubtitle && !subtitle.isNullOrBlank()) {
-            SmallTitle(subtitle)
+        if (searchBarContent != null) {
+            SearchBarHost(
+                visible = searchBarVisible,
+                animationLabelPrefix = searchBarAnimationLabelPrefix,
+                backdrop = searchBarBackdrop,
+                content = searchBarContent
+            )
         }
-        Spacer(modifier = Modifier.height(bottomSpacing))
+    }
+}
+
+@Composable
+fun AppTopBarSearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    backdrop: LayerBackdrop? = null,
+    singleLine: Boolean = true
+) {
+    Column {
+        GlassSearchField(
+            modifier = modifier,
+            value = value,
+            onValueChange = onValueChange,
+            label = label,
+            backdrop = backdrop,
+            variant = GlassVariant.Bar,
+            singleLine = singleLine
+        )
+        Spacer(modifier = Modifier.height(AppChromeTokens.searchFieldBottomSpacing))
     }
 }

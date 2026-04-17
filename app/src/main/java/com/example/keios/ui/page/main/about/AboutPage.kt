@@ -38,12 +38,12 @@ import com.example.keios.ui.page.main.about.section.AboutRuntimeStatusCardSectio
 import com.example.keios.ui.page.main.about.section.AboutUiFrameworkCardSection
 import com.example.keios.ui.page.main.about.util.openExternalUrl
 import com.example.keios.ui.page.main.widget.AppChromeTokens
+import com.example.keios.ui.page.main.widget.AppTopBarSection
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -78,6 +78,7 @@ fun AboutPage(
 
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
+    var appExpanded by rememberSaveable { mutableStateOf(true) }
     var runtimeExpanded by rememberSaveable { mutableStateOf(false) }
     var permissionExpanded by rememberSaveable { mutableStateOf(false) }
     var componentExpanded by rememberSaveable { mutableStateOf(false) }
@@ -109,7 +110,7 @@ fun AboutPage(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            AppTopBarSection(
                 title = stringResource(R.string.about_page_title),
                 scrollBehavior = scrollBehavior,
                 color = Color.Transparent,
@@ -151,7 +152,9 @@ fun AboutPage(
                     packageInfo = packageInfo,
                     cardColor = infoCardColor,
                     accent = accent,
-                    subtitleColor = subtitleColor
+                    subtitleColor = subtitleColor,
+                    expanded = appExpanded,
+                    onExpandedChange = { appExpanded = it }
                 )
             }
 

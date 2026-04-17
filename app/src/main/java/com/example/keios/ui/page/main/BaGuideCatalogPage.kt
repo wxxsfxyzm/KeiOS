@@ -88,12 +88,13 @@ import com.example.keios.ui.page.main.student.catalog.loadCachedBaGuideCatalogBu
 import com.example.keios.ui.perf.ReportPagerPerformanceState
 import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppStatusPillSize
+import com.example.keios.ui.page.main.widget.AppTopBarSearchField
+import com.example.keios.ui.page.main.widget.AppTopBarSection
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.FrostedBlock
-import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.LiquidActionBar
@@ -101,7 +102,6 @@ import com.example.keios.ui.page.main.widget.LiquidActionBarPopupAnchors
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
 import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
-import com.example.keios.ui.page.main.widget.SearchBarHost
 import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.example.keios.ui.page.main.widget.StatusPill
@@ -129,7 +129,6 @@ import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
@@ -345,90 +344,79 @@ fun BaGuideCatalogPage(
             .background(MiuixTheme.colorScheme.background)
             .nestedScroll(bottomBarNestedScrollConnection),
         topBar = {
-            Column {
-                TopAppBar(
-                    title = pageTitle,
-                    largeTitle = pageTitle,
-                    scrollBehavior = scrollBehavior,
-                    color = topBarMaterialBackdrop.getMiuixAppBarColor(),
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = MiuixIcons.Regular.Back,
-                                contentDescription = null,
-                                tint = MiuixTheme.colorScheme.onSurface
-                            )
-                        }
-                    },
-                    actions = {
-                        Box {
-                            LiquidActionBar(
-                                backdrop = topBarBackdrop,
-                                layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                                items = listOf(
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Sort,
-                                        contentDescription = "排序",
-                                        onClick = { showSortPopup = !showSortPopup }
-                                    ),
-                                    LiquidActionItem(
-                                        icon = MiuixIcons.Regular.Refresh,
-                                        contentDescription = "刷新列表",
-                                        onClick = { refreshSignal += 1 }
-                                    )
+            AppTopBarSection(
+                title = pageTitle,
+                largeTitle = pageTitle,
+                scrollBehavior = scrollBehavior,
+                color = topBarMaterialBackdrop.getMiuixAppBarColor(),
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = MiuixIcons.Regular.Back,
+                            contentDescription = null,
+                            tint = MiuixTheme.colorScheme.onSurface
+                        )
+                    }
+                },
+                actions = {
+                    Box {
+                        LiquidActionBar(
+                            backdrop = topBarBackdrop,
+                            layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
+                            items = listOf(
+                                LiquidActionItem(
+                                    icon = MiuixIcons.Regular.Sort,
+                                    contentDescription = "排序",
+                                    onClick = { showSortPopup = !showSortPopup }
+                                ),
+                                LiquidActionItem(
+                                    icon = MiuixIcons.Regular.Refresh,
+                                    contentDescription = "刷新列表",
+                                    onClick = { refreshSignal += 1 }
                                 )
                             )
-                            LiquidActionBarPopupAnchors(itemCount = 2) { slotIndex, popupAnchorBounds ->
-                                if (slotIndex == 0 && showSortPopup) {
-                                    SnapshotWindowListPopup(
-                                        show = showSortPopup,
-                                        alignment = PopupPositionProvider.Align.BottomStart,
-                                        anchorBounds = popupAnchorBounds,
-                                        placement = SnapshotPopupPlacement.ActionBarCenter,
-                                        onDismissRequest = { showSortPopup = false },
-                                        enableWindowDim = false
-                                    ) {
-                                        LiquidDropdownColumn {
-                                            val modes = BaGuideCatalogSortMode.entries
-                                            modes.forEachIndexed { index, mode ->
-                                                LiquidDropdownImpl(
-                                                    text = mode.label,
-                                                    optionSize = modes.size,
-                                                    isSelected = sortMode == mode,
-                                                    index = index,
-                                                    onSelectedIndexChange = { selectedIndex ->
-                                                        sortMode = modes[selectedIndex]
-                                                        showSortPopup = false
-                                                    }
-                                                )
-                                            }
+                        )
+                        LiquidActionBarPopupAnchors(itemCount = 2) { slotIndex, popupAnchorBounds ->
+                            if (slotIndex == 0 && showSortPopup) {
+                                SnapshotWindowListPopup(
+                                    show = showSortPopup,
+                                    alignment = PopupPositionProvider.Align.BottomStart,
+                                    anchorBounds = popupAnchorBounds,
+                                    placement = SnapshotPopupPlacement.ActionBarCenter,
+                                    onDismissRequest = { showSortPopup = false },
+                                    enableWindowDim = false
+                                ) {
+                                    LiquidDropdownColumn {
+                                        val modes = BaGuideCatalogSortMode.entries
+                                        modes.forEachIndexed { index, mode ->
+                                            LiquidDropdownImpl(
+                                                text = mode.label,
+                                                optionSize = modes.size,
+                                                isSelected = sortMode == mode,
+                                                index = index,
+                                                onSelectedIndexChange = { selectedIndex ->
+                                                    sortMode = modes[selectedIndex]
+                                                    showSortPopup = false
+                                                }
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                )
-                if (enableSearchBar) {
-                    SearchBarHost(
-                        visible = showSearchBar,
-                        animationLabelPrefix = "baGuideCatalogSearch",
-                    ) {
-                        Column {
-                            GlassSearchField(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding),
-                                value = searchQuery,
-                                onValueChange = { searchQuery = it },
-                                label = "搜索名称 / 别名 / ID",
-                                backdrop = null,
-                                variant = GlassVariant.Bar,
-                                singleLine = true
-                            )
-                            Spacer(modifier = Modifier.height(AppChromeTokens.searchFieldBottomSpacing))
-                        }
-                    }
+                },
+                searchBarVisible = enableSearchBar && showSearchBar
+            ) {
+                Column {
+                    AppTopBarSearchField(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding),
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = "搜索名称 / 别名 / ID"
+                    )
                 }
             }
         },

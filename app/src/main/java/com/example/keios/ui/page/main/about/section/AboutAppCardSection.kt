@@ -5,6 +5,7 @@ import android.content.pm.PackageInfo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -14,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.ui.page.main.AppIcon
 import com.example.keios.ui.page.main.about.ui.AboutCompactInfoRow
-import com.example.keios.ui.page.main.widget.AppCardBodyColumn
 import com.example.keios.ui.page.main.widget.AppCardHeader
 import com.example.keios.ui.page.main.widget.AppInfoListBody
 import com.example.keios.ui.page.main.about.util.formatTime
@@ -37,7 +37,9 @@ fun AboutAppCardSection(
     packageInfo: PackageInfo?,
     cardColor: Color,
     accent: Color,
-    subtitleColor: Color
+    subtitleColor: Color,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val unknown = stringResource(R.string.common_unknown)
@@ -64,10 +66,11 @@ fun AboutAppCardSection(
             color = cardColor,
             contentColor = MiuixTheme.colorScheme.onBackground
         ),
-        onClick = {}
+        onClick = { onExpandedChange(!expanded) }
     ) {
-        AppCardBodyColumn(
-            verticalSpacing = CardLayoutRhythm.sectionGap
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.sectionGap)
         ) {
             AppCardHeader(
                 title = stringResource(R.string.about_card_app_title),
@@ -79,49 +82,62 @@ fun AboutAppCardSection(
                         packageName = packageInfo?.packageName ?: context.packageName,
                         size = 20.dp
                     )
-                }
+                },
+                expandable = true,
+                expanded = expanded,
+                expandTint = accent,
+                onClick = { onExpandedChange(!expanded) }
             )
-            AppInfoListBody(verticalSpacing = 0.dp) {
-                AboutCompactInfoRow(
-                    title = stringResource(R.string.about_label_name),
-                    value = appLabel,
-                    titleIcon = MiuixIcons.Regular.Info
-                )
-                AboutCompactInfoRow(
-                    title = stringResource(R.string.about_label_package_name),
-                    value = packageName,
-                    titleIcon = MiuixIcons.Regular.Notes
-                )
-                AboutCompactInfoRow(
-                    title = stringResource(R.string.about_label_version),
-                    value = versionText,
-                    titleIcon = MiuixIcons.Regular.Update
-                )
-                AboutCompactInfoRow(
-                    title = stringResource(R.string.about_label_last_update),
-                    value = updatedAt,
-                    titleIcon = MiuixIcons.Regular.Timer
-                )
-                AboutCompactInfoRow(
-                    title = stringResource(R.string.about_label_debug),
-                    value = if (debugEnabled) yesText else noText,
-                    titleIcon = MiuixIcons.Regular.Report
-                )
-                AboutCompactInfoRow(
-                    title = stringResource(R.string.about_label_test_only),
-                    value = if (testOnlyEnabled) yesText else noText,
-                    titleIcon = MiuixIcons.Regular.Report
-                )
-                AboutCompactInfoRow(
-                    title = stringResource(R.string.about_label_api_level),
-                    value = android.os.Build.VERSION.SDK_INT.toString(),
-                    titleIcon = MiuixIcons.Regular.Filter
-                )
-                AboutCompactInfoRow(
-                    title = stringResource(R.string.about_label_security_patch),
-                    value = android.os.Build.VERSION.SECURITY_PATCH ?: unknown,
-                    titleIcon = MiuixIcons.Regular.Lock
-                )
+            if (expanded) {
+                AppInfoListBody(
+                    modifier = Modifier.padding(
+                        start = CardLayoutRhythm.cardHorizontalPadding,
+                        end = CardLayoutRhythm.cardHorizontalPadding,
+                        bottom = CardLayoutRhythm.cardVerticalPadding
+                    ),
+                    verticalSpacing = 0.dp
+                ) {
+                    AboutCompactInfoRow(
+                        title = stringResource(R.string.about_label_name),
+                        value = appLabel,
+                        titleIcon = MiuixIcons.Regular.Info
+                    )
+                    AboutCompactInfoRow(
+                        title = stringResource(R.string.about_label_package_name),
+                        value = packageName,
+                        titleIcon = MiuixIcons.Regular.Notes
+                    )
+                    AboutCompactInfoRow(
+                        title = stringResource(R.string.about_label_version),
+                        value = versionText,
+                        titleIcon = MiuixIcons.Regular.Update
+                    )
+                    AboutCompactInfoRow(
+                        title = stringResource(R.string.about_label_last_update),
+                        value = updatedAt,
+                        titleIcon = MiuixIcons.Regular.Timer
+                    )
+                    AboutCompactInfoRow(
+                        title = stringResource(R.string.about_label_debug),
+                        value = if (debugEnabled) yesText else noText,
+                        titleIcon = MiuixIcons.Regular.Report
+                    )
+                    AboutCompactInfoRow(
+                        title = stringResource(R.string.about_label_test_only),
+                        value = if (testOnlyEnabled) yesText else noText,
+                        titleIcon = MiuixIcons.Regular.Report
+                    )
+                    AboutCompactInfoRow(
+                        title = stringResource(R.string.about_label_api_level),
+                        value = android.os.Build.VERSION.SDK_INT.toString(),
+                        titleIcon = MiuixIcons.Regular.Filter
+                    )
+                    AboutCompactInfoRow(
+                        title = stringResource(R.string.about_label_security_patch),
+                        value = android.os.Build.VERSION.SECURITY_PATCH ?: unknown,
+                        titleIcon = MiuixIcons.Regular.Lock
+                    )
+                }
             }
         }
     }

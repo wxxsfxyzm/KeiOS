@@ -14,20 +14,18 @@ import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.ui.page.main.GitHubSortMode
 import com.example.keios.ui.page.main.widget.AppChromeTokens
-import com.example.keios.ui.page.main.widget.GlassSearchField
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.AppTopBarSearchField
+import com.example.keios.ui.page.main.widget.AppTopBarSection
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionBarPopupAnchors
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
 import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
-import com.example.keios.ui.page.main.widget.SearchBarHost
 import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Refresh
@@ -54,68 +52,66 @@ internal fun GitHubTopBarSection(
     onRefreshAllTracked: () -> Unit,
     onActionBarInteractingChanged: (Boolean) -> Unit
 ) {
-    Column {
-        TopAppBar(
-            title = "",
-            largeTitle = stringResource(R.string.github_page_title),
-            scrollBehavior = scrollBehavior,
-            color = topBarColor,
-            actions = {
-                Box {
-                    LiquidActionBar(
-                        backdrop = backdrop,
-                        layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                        items = listOf(
-                            LiquidActionItem(
-                                icon = MiuixIcons.Regular.Edit,
-                                contentDescription = stringResource(R.string.github_topbar_cd_edit_strategy),
-                                onClick = onOpenStrategySheet
-                            ),
-                            LiquidActionItem(
-                                icon = MiuixIcons.Regular.Tune,
-                                contentDescription = stringResource(R.string.github_topbar_cd_check_logic),
-                                onClick = onOpenCheckLogicSheet
-                            ),
-                            LiquidActionItem(
-                                icon = MiuixIcons.Regular.Sort,
-                                contentDescription = stringResource(R.string.github_topbar_cd_sort),
-                                onClick = { onShowSortPopupChange(!showSortPopup) }
-                            ),
-                            LiquidActionItem(
-                                icon = MiuixIcons.Regular.Refresh,
-                                contentDescription = stringResource(R.string.github_topbar_cd_check),
-                                onClick = onRefreshAllTracked,
-                                enabled = !deleteInProgress
-                            )
+    AppTopBarSection(
+        title = "",
+        largeTitle = stringResource(R.string.github_page_title),
+        scrollBehavior = scrollBehavior,
+        color = topBarColor,
+        actions = {
+            Box {
+                LiquidActionBar(
+                    backdrop = backdrop,
+                    layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
+                    items = listOf(
+                        LiquidActionItem(
+                            icon = MiuixIcons.Regular.Edit,
+                            contentDescription = stringResource(R.string.github_topbar_cd_edit_strategy),
+                            onClick = onOpenStrategySheet
                         ),
-                        onInteractionChanged = onActionBarInteractingChanged
-                    )
+                        LiquidActionItem(
+                            icon = MiuixIcons.Regular.Tune,
+                            contentDescription = stringResource(R.string.github_topbar_cd_check_logic),
+                            onClick = onOpenCheckLogicSheet
+                        ),
+                        LiquidActionItem(
+                            icon = MiuixIcons.Regular.Sort,
+                            contentDescription = stringResource(R.string.github_topbar_cd_sort),
+                            onClick = { onShowSortPopupChange(!showSortPopup) }
+                        ),
+                        LiquidActionItem(
+                            icon = MiuixIcons.Regular.Refresh,
+                            contentDescription = stringResource(R.string.github_topbar_cd_check),
+                            onClick = onRefreshAllTracked,
+                            enabled = !deleteInProgress
+                        )
+                    ),
+                    onInteractionChanged = onActionBarInteractingChanged
+                )
 
-                    LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex, popupAnchorBounds ->
-                        when (slotIndex) {
-                            2 -> if (showSortPopup) {
-                                SnapshotWindowListPopup(
-                                    show = showSortPopup,
-                                    alignment = PopupPositionProvider.Align.BottomStart,
-                                    anchorBounds = popupAnchorBounds,
-                                    placement = SnapshotPopupPlacement.ActionBarCenter,
-                                    onDismissRequest = { onShowSortPopupChange(false) },
-                                    enableWindowDim = false
-                                ) {
-                                    LiquidDropdownColumn {
-                                        val modes = GitHubSortMode.entries
-                                        modes.forEachIndexed { index, mode ->
-                                            LiquidDropdownImpl(
-                                                text = stringResource(mode.labelRes),
-                                                optionSize = modes.size,
-                                                isSelected = sortMode == mode,
-                                                index = index,
-                                                onSelectedIndexChange = { selectedIndex ->
-                                                    onSortModeChange(modes[selectedIndex])
-                                                    onShowSortPopupChange(false)
-                                                }
-                                            )
-                                        }
+                LiquidActionBarPopupAnchors(itemCount = 4) { slotIndex, popupAnchorBounds ->
+                    when (slotIndex) {
+                        2 -> if (showSortPopup) {
+                            SnapshotWindowListPopup(
+                                show = showSortPopup,
+                                alignment = PopupPositionProvider.Align.BottomStart,
+                                anchorBounds = popupAnchorBounds,
+                                placement = SnapshotPopupPlacement.ActionBarCenter,
+                                onDismissRequest = { onShowSortPopupChange(false) },
+                                enableWindowDim = false
+                            ) {
+                                LiquidDropdownColumn {
+                                    val modes = GitHubSortMode.entries
+                                    modes.forEachIndexed { index, mode ->
+                                        LiquidDropdownImpl(
+                                            text = stringResource(mode.labelRes),
+                                            optionSize = modes.size,
+                                            isSelected = sortMode == mode,
+                                            index = index,
+                                            onSelectedIndexChange = { selectedIndex ->
+                                                onSortModeChange(modes[selectedIndex])
+                                                onShowSortPopupChange(false)
+                                            }
+                                        )
                                     }
                                 }
                             }
@@ -123,27 +119,21 @@ internal fun GitHubTopBarSection(
                     }
                 }
             }
-        )
-        if (enableSearchBar) {
-            SearchBarHost(
-                visible = showSearchBar,
-                animationLabelPrefix = "githubSearchBar",
-            ) {
-                Column {
-                    GlassSearchField(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding),
-                        value = trackedSearch,
-                        onValueChange = onTrackedSearchChange,
-                        label = stringResource(R.string.github_topbar_search_label),
-                        backdrop = backdrop,
-                        variant = GlassVariant.Bar,
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.height(AppChromeTokens.searchFieldBottomSpacing))
-                }
-            }
+        },
+        searchBarVisible = enableSearchBar && showSearchBar,
+        searchBarAnimationLabelPrefix = "githubSearchBar",
+        searchBarBackdrop = backdrop,
+    ) {
+        Column {
+            AppTopBarSearchField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding),
+                value = trackedSearch,
+                onValueChange = onTrackedSearchChange,
+                label = stringResource(R.string.github_topbar_search_label),
+                backdrop = backdrop
+            )
         }
     }
 }
