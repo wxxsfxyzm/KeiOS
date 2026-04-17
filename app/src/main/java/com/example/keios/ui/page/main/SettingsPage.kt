@@ -42,6 +42,8 @@ import com.example.keios.core.prefs.CacheStores
 import com.example.keios.core.log.AppLogStore
 import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppControlRow
+import com.example.keios.ui.page.main.widget.AppDualActionRow
+import com.example.keios.ui.page.main.widget.AppDropdownSelector
 import com.example.keios.ui.page.main.widget.AppInfoRow
 import com.example.keios.ui.page.main.widget.AppPageSectionTitle
 import com.example.keios.ui.page.main.widget.AppTopBarSection
@@ -49,12 +51,7 @@ import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
-import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
-import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
-import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
-import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.example.keios.ui.page.main.widget.appPageContentPadding
-import com.example.keios.ui.page.main.widget.capturePopupAnchor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -243,42 +240,21 @@ fun SettingsPage(
                             title = stringResource(R.string.settings_theme_mode_title),
                             summary = themeSummary
                         ) {
-                            Box(
-                                modifier = Modifier.capturePopupAnchor { themePopupAnchorBounds = it }
-                            ) {
-                                GlassTextButton(
-                                    backdrop = null,
-                                    variant = GlassVariant.SheetAction,
-                                    text = currentThemeLabel,
-                                    onClick = { showThemeModePopup = !showThemeModePopup }
-                                )
-                                if (showThemeModePopup) {
-                                    SnapshotWindowListPopup(
-                                        show = showThemeModePopup,
-                                        alignment = PopupPositionProvider.Align.BottomEnd,
-                                        anchorBounds = themePopupAnchorBounds,
-                                        placement = SnapshotPopupPlacement.ButtonEnd,
-                                        onDismissRequest = { showThemeModePopup = false },
-                                        enableWindowDim = false
-                                    ) {
-                                        LiquidDropdownColumn {
-                                            themeModeOptions.forEachIndexed { index, option ->
-                                                val (mode, label) = option
-                                                LiquidDropdownImpl(
-                                                    text = label,
-                                                    optionSize = themeModeOptions.size,
-                                                    isSelected = appThemeMode == mode,
-                                                    index = index,
-                                                    onSelectedIndexChange = { selectedIndex ->
-                                                        onAppThemeModeChanged(themeModeOptions[selectedIndex].first)
-                                                        showThemeModePopup = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            AppDropdownSelector(
+                                selectedText = currentThemeLabel,
+                                options = themeModeOptions.map { it.second },
+                                selectedIndex = themeModeOptions.indexOfFirst { it.first == appThemeMode }
+                                    .coerceAtLeast(0),
+                                expanded = showThemeModePopup,
+                                anchorBounds = themePopupAnchorBounds,
+                                onExpandedChange = { showThemeModePopup = it },
+                                onSelectedIndexChange = { selectedIndex ->
+                                    onAppThemeModeChanged(themeModeOptions[selectedIndex].first)
+                                },
+                                onAnchorBoundsChange = { themePopupAnchorBounds = it },
+                                backdrop = null,
+                                variant = GlassVariant.SheetAction
+                            )
                         }
 
                         SettingsToggleItem(
@@ -378,67 +354,69 @@ fun SettingsPage(
                             key = stringResource(R.string.settings_log_stat_latest),
                             value = logLatestText
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(AppChromeTokens.pageSectionGap),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            GlassTextButton(
-                                backdrop = null,
-                                variant = GlassVariant.Compact,
-                                text = if (exportingLogZip) {
-                                    stringResource(R.string.common_processing)
-                                } else {
-                                    stringResource(R.string.settings_log_action_export_zip)
-                                },
-                                enabled = !exportingLogZip && !clearingLogs,
-                                onClick = {
-                                    exportingLogZip = true
-                                    val stamp = SimpleDateFormat(
-                                        "yyyyMMdd-HHmmss",
-                                        Locale.getDefault()
-                                    ).format(Date())
-                                    logExportLauncher.launch("keios-logs-$stamp.zip")
-                                }
-                            )
-                            GlassTextButton(
-                                backdrop = null,
-                                variant = GlassVariant.Compact,
-                                text = if (clearingLogs) {
-                                    stringResource(R.string.common_processing)
-                                } else {
-                                    stringResource(R.string.settings_log_action_clear)
-                                },
-                                textColor = MiuixTheme.colorScheme.error,
-                                containerColor = MiuixTheme.colorScheme.error,
-                                enabled = !exportingLogZip && !clearingLogs,
-                                onClick = {
-                                    scope.launch {
-                                        clearingLogs = true
-                                        val result = withContext(Dispatchers.IO) {
-                                            runCatching { AppLogStore.clear(context) }
-                                        }
-                                        clearingLogs = false
-                                        if (result.isSuccess) {
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.settings_log_toast_cleared),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        } else {
-                                            val reason = result.exceptionOrNull()?.javaClass?.simpleName
-                                                ?: context.getString(R.string.common_unknown)
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.settings_log_toast_clear_failed, reason),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                        logReloadSignal++
+                        AppDualActionRow(
+                            first = { modifier ->
+                                GlassTextButton(
+                                    backdrop = null,
+                                    variant = GlassVariant.Compact,
+                                    text = if (exportingLogZip) {
+                                        stringResource(R.string.common_processing)
+                                    } else {
+                                        stringResource(R.string.settings_log_action_export_zip)
+                                    },
+                                    modifier = modifier,
+                                    enabled = !exportingLogZip && !clearingLogs,
+                                    onClick = {
+                                        exportingLogZip = true
+                                        val stamp = SimpleDateFormat(
+                                            "yyyyMMdd-HHmmss",
+                                            Locale.getDefault()
+                                        ).format(Date())
+                                        logExportLauncher.launch("keios-logs-$stamp.zip")
                                     }
-                                }
-                            )
-                        }
+                                )
+                            },
+                            second = { modifier ->
+                                GlassTextButton(
+                                    backdrop = null,
+                                    variant = GlassVariant.Compact,
+                                    text = if (clearingLogs) {
+                                        stringResource(R.string.common_processing)
+                                    } else {
+                                        stringResource(R.string.settings_log_action_clear)
+                                    },
+                                    modifier = modifier,
+                                    textColor = MiuixTheme.colorScheme.error,
+                                    containerColor = MiuixTheme.colorScheme.error,
+                                    enabled = !exportingLogZip && !clearingLogs,
+                                    onClick = {
+                                        scope.launch {
+                                            clearingLogs = true
+                                            val result = withContext(Dispatchers.IO) {
+                                                runCatching { AppLogStore.clear(context) }
+                                            }
+                                            clearingLogs = false
+                                            if (result.isSuccess) {
+                                                Toast.makeText(
+                                                    context,
+                                                    context.getString(R.string.settings_log_toast_cleared),
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            } else {
+                                                val reason = result.exceptionOrNull()?.javaClass?.simpleName
+                                                    ?: context.getString(R.string.common_unknown)
+                                                Toast.makeText(
+                                                    context,
+                                                    context.getString(R.string.settings_log_toast_clear_failed, reason),
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                            logReloadSignal++
+                                        }
+                                    }
+                                )
+                            }
+                        )
                     }
                 }
             }

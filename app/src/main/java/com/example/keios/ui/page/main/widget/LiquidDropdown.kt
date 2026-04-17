@@ -21,10 +21,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -56,6 +58,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val LiquidDropdownContainerRadius = 20.dp
 private val LiquidDropdownItemRadius = 20.dp
+private val LocalLiquidDropdownSizingPass = staticCompositionLocalOf { false }
 
 private fun liquidDropdownBlueAccent(isDark: Boolean): Color = if (isDark) {
     Color(0xFF71ADFF)
@@ -105,7 +108,12 @@ fun LiquidDropdownColumn(
                 maxWidth = maxWidthPx,
                 minHeight = 0
             )
-            val probePlaceables = subcompose("probe", content).map { measurable ->
+            val probePlaceables = subcompose("probe") {
+                CompositionLocalProvider(
+                    LocalLiquidDropdownSizingPass provides true,
+                    content = content
+                )
+            }.map { measurable ->
                 measurable.measure(probeConstraints)
             }
             val resolvedWidth = probePlaceables.maxOfOrNull { it.width }
@@ -218,6 +226,18 @@ fun LiquidDropdownItem(
     optionSize: Int = 1,
     variant: GlassVariant = GlassVariant.SheetAction
 ) {
+    if (LocalLiquidDropdownSizingPass.current) {
+        LiquidDropdownMeasureItem(
+            text = text,
+            selected = selected,
+            modifier = modifier,
+            index = index,
+            optionSize = optionSize,
+            variant = variant
+        )
+        return
+    }
+
     val isDark = isSystemInDarkTheme()
     val itemShape = liquidDropdownItemShape()
     val accentColor = when (variant) {
@@ -338,6 +358,44 @@ fun LiquidDropdownItem(
                     .background(appControlPressedOverlayColor(isDark).copy(alpha = pressedOverlayAlpha))
             )
         }
+    }
+}
+
+@Composable
+private fun LiquidDropdownMeasureItem(
+    text: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    index: Int = 0,
+    optionSize: Int = 1,
+    variant: GlassVariant = GlassVariant.SheetAction
+) {
+    val isDark = isSystemInDarkTheme()
+    val accentColor = when (variant) {
+        GlassVariant.SheetDangerAction -> Color(0xFFE25B6A)
+        else -> liquidDropdownBlueAccent(isDark)
+    }
+    val textColor = if (selected) {
+        accentColor
+    } else {
+        MiuixTheme.colorScheme.onBackground.copy(alpha = if (isDark) 0.96f else 0.92f)
+    }
+    val checkColor = if (selected) accentColor else Color.Transparent
+    val outerTopPadding = if (index == 0) 3.dp else 2.dp
+    val outerBottomPadding = if (index == optionSize - 1) 3.dp else 2.dp
+
+    Box(
+        modifier = modifier
+            .padding(horizontal = 2.dp, vertical = 0.dp)
+            .padding(top = outerTopPadding, bottom = outerBottomPadding)
+    ) {
+        LiquidDropdownRowContent(
+            modifier = Modifier,
+            text = text,
+            textColor = textColor,
+            checkColor = checkColor,
+            showCheck = selected
+        )
     }
 }
 

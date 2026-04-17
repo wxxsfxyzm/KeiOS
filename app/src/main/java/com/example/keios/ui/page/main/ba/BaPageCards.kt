@@ -25,18 +25,13 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.keios.R
+import com.example.keios.ui.page.main.widget.AppDropdownSelector
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
-import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
-import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
-import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
-import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
-import com.example.keios.ui.page.main.widget.capturePopupAnchor
 import com.kyant.backdrop.Backdrop
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -266,36 +261,18 @@ internal fun BaOverviewCard(
                     ) {
                         Text("服务器", color = MiuixTheme.colorScheme.onBackground)
                     }
-                    Box(modifier = Modifier.capturePopupAnchor { onOverviewServerPopupAnchorBoundsChange(it) }) {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            text = serverOptions[serverIndex],
-                            variant = GlassVariant.Content,
-                            onClick = { onOverviewServerPopupChange(!showOverviewServerPopup) },
-                        )
-                        if (showOverviewServerPopup) {
-                            SnapshotWindowListPopup(
-                                show = showOverviewServerPopup,
-                                alignment = PopupPositionProvider.Align.BottomEnd,
-                                anchorBounds = overviewServerPopupAnchorBounds,
-                                placement = SnapshotPopupPlacement.ButtonEnd,
-                                onDismissRequest = { onOverviewServerPopupChange(false) },
-                                enableWindowDim = false,
-                            ) {
-                                LiquidDropdownColumn {
-                                    serverOptions.forEachIndexed { index, server ->
-                                        LiquidDropdownImpl(
-                                            text = server,
-                                            optionSize = serverOptions.size,
-                                            isSelected = serverIndex == index,
-                                            index = index,
-                                            onSelectedIndexChange = { selected -> onServerSelected(selected) },
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    AppDropdownSelector(
+                        selectedText = serverOptions[serverIndex],
+                        options = serverOptions,
+                        selectedIndex = serverIndex,
+                        expanded = showOverviewServerPopup,
+                        anchorBounds = overviewServerPopupAnchorBounds,
+                        onExpandedChange = onOverviewServerPopupChange,
+                        onSelectedIndexChange = onServerSelected,
+                        onAnchorBoundsChange = onOverviewServerPopupAnchorBoundsChange,
+                        backdrop = backdrop,
+                        variant = GlassVariant.Content
+                    )
                 }
             }
         }
@@ -494,40 +471,21 @@ internal fun BaCafeCard(
                         .width(30.dp)
                         .height(22.dp)
                 )
-                Box(modifier = Modifier.capturePopupAnchor { onCafeLevelPopupAnchorBoundsChange(it) }) {
-                    GlassTextButton(
-                        backdrop = backdrop,
-                        text = "Lv$cafeLevel",
-                        textColor = accentPink,
-                        variant = GlassVariant.Content,
-                        onClick = { onCafeLevelPopupChange(!showCafeLevelPopup) },
-                    )
-                    if (showCafeLevelPopup) {
-                        SnapshotWindowListPopup(
-                            show = showCafeLevelPopup,
-                            alignment = PopupPositionProvider.Align.BottomEnd,
-                            anchorBounds = cafeLevelPopupAnchorBounds,
-                            placement = SnapshotPopupPlacement.ButtonEnd,
-                            onDismissRequest = { onCafeLevelPopupChange(false) },
-                            enableWindowDim = false,
-                        ) {
-                            LiquidDropdownColumn {
-                                cafeLevelOptions.forEachIndexed { index, level ->
-                                    LiquidDropdownImpl(
-                                        text = "Lv$level",
-                                        optionSize = cafeLevelOptions.size,
-                                        isSelected = cafeLevel == level,
-                                        index = index,
-                                        onSelectedIndexChange = { selected ->
-                                            onCafeLevelChange(cafeLevelOptions[selected])
-                                            onCafeLevelPopupChange(false)
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                AppDropdownSelector(
+                    selectedText = "Lv$cafeLevel",
+                    options = cafeLevelOptions.map { level -> "Lv$level" },
+                    selectedIndex = cafeLevelOptions.indexOf(cafeLevel).coerceAtLeast(0),
+                    expanded = showCafeLevelPopup,
+                    anchorBounds = cafeLevelPopupAnchorBounds,
+                    onExpandedChange = onCafeLevelPopupChange,
+                    onSelectedIndexChange = { selected ->
+                        onCafeLevelChange(cafeLevelOptions[selected])
+                    },
+                    onAnchorBoundsChange = onCafeLevelPopupAnchorBoundsChange,
+                    backdrop = backdrop,
+                    variant = GlassVariant.Content,
+                    textColor = accentPink
+                )
             },
         )
 

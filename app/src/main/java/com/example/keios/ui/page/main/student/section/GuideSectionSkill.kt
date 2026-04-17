@@ -129,8 +129,7 @@ import com.github.panpf.zoomimage.zoom.GestureType
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
-import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
+import com.example.keios.ui.page.main.widget.AppDropdownSelector
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -143,9 +142,6 @@ import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.icon.extended.Replace
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
-import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
-import com.example.keios.ui.page.main.widget.capturePopupAnchor
 import java.util.concurrent.ConcurrentHashMap
 
 @Composable
@@ -382,44 +378,23 @@ fun GuideSkillCardItem(
                                     )
                                 }
                                 if (levelOptions.isNotEmpty()) {
-                                    Box(
-                                        modifier = Modifier.capturePopupAnchor { levelPopupAnchorBounds = it }
-                                    ) {
-                                        GlassTextButton(
-                                            backdrop = backdrop,
-                                            text = displayLevel,
-                                            variant = GlassVariant.Compact,
-                                            minHeight = 30.dp,
-                                            horizontalPadding = 10.dp,
-                                            verticalPadding = 6.dp,
-                                            onClick = { showLevelPopup = !showLevelPopup }
-                                        )
-                                        if (showLevelPopup) {
-                                            SnapshotWindowListPopup(
-                                                show = showLevelPopup,
-                                                alignment = PopupPositionProvider.Align.BottomEnd,
-                                                anchorBounds = levelPopupAnchorBounds,
-                                                placement = SnapshotPopupPlacement.ButtonEnd,
-                                                onDismissRequest = { showLevelPopup = false },
-                                                enableWindowDim = false
-                                            ) {
-                                                LiquidDropdownColumn {
-                                                    levelOptions.forEachIndexed { index, option ->
-                                                        LiquidDropdownImpl(
-                                                            text = option,
-                                                            optionSize = levelOptions.size,
-                                                            isSelected = selectedLevel == option,
-                                                            index = index,
-                                                            onSelectedIndexChange = { selected ->
-                                                                selectedLevel = levelOptions[selected]
-                                                                showLevelPopup = false
-                                                            }
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                                    AppDropdownSelector(
+                                        selectedText = displayLevel,
+                                        options = levelOptions,
+                                        selectedIndex = levelOptions.indexOf(selectedLevel).coerceAtLeast(0),
+                                        expanded = showLevelPopup,
+                                        anchorBounds = levelPopupAnchorBounds,
+                                        onExpandedChange = { showLevelPopup = it },
+                                        onSelectedIndexChange = { selected ->
+                                            selectedLevel = levelOptions[selected]
+                                        },
+                                        onAnchorBoundsChange = { levelPopupAnchorBounds = it },
+                                        backdrop = backdrop,
+                                        variant = GlassVariant.Compact,
+                                        minHeight = 30.dp,
+                                        horizontalPadding = 10.dp,
+                                        verticalPadding = 6.dp
+                                    )
                                 }
                             }
                         }

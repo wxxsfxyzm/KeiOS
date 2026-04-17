@@ -30,12 +30,11 @@ import com.example.keios.ui.page.main.github.query.OnlineShareTargetOption
 import com.example.keios.ui.page.main.github.query.noOnlineShareTargetOption
 import com.example.keios.ui.page.main.github.query.systemDefaultDownloaderOption
 import com.example.keios.ui.page.main.github.query.systemDownloadManagerOption
+import com.example.keios.ui.page.main.widget.AppDropdownSelector
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
-import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
-import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.SheetContentColumn
 import com.example.keios.ui.page.main.widget.SheetControlRow
@@ -44,13 +43,9 @@ import com.example.keios.ui.page.main.widget.SheetInputTitle
 import com.example.keios.ui.page.main.widget.SheetSectionCard
 import com.example.keios.ui.page.main.widget.SheetSectionTitle
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
-import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
-import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.StatusPill
-import com.example.keios.ui.page.main.widget.capturePopupAnchor
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -142,42 +137,22 @@ internal fun GitHubCheckLogicSheet(
                     label = stringResource(R.string.github_check_sheet_label_refresh_interval),
                     summary = stringResource(R.string.github_check_sheet_summary_refresh_interval)
                 ) {
-                    Box(
-                        modifier = Modifier.capturePopupAnchor { onCheckLogicIntervalPopupAnchorBoundsChange(it) }
-                    ) {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            variant = GlassVariant.SheetAction,
-                            text = stringResource(selectedRefreshOption.labelRes),
-                            onClick = { onShowCheckLogicIntervalPopupChange(!showCheckLogicIntervalPopup) }
-                        )
-                        if (showCheckLogicIntervalPopup) {
-                            SnapshotWindowListPopup(
-                                show = showCheckLogicIntervalPopup,
-                                alignment = PopupPositionProvider.Align.BottomEnd,
-                                anchorBounds = checkLogicIntervalPopupAnchorBounds,
-                                placement = SnapshotPopupPlacement.ButtonEnd,
-                                onDismissRequest = { onShowCheckLogicIntervalPopupChange(false) },
-                                enableWindowDim = false
-                            ) {
-                                LiquidDropdownColumn {
-                                    val options = RefreshIntervalOption.entries
-                                    options.forEachIndexed { index, option ->
-                                        LiquidDropdownImpl(
-                                            text = stringResource(option.labelRes),
-                                            optionSize = options.size,
-                                            isSelected = selectedRefreshOption == option,
-                                            index = index,
-                                            onSelectedIndexChange = { selectedIndex ->
-                                                onRefreshIntervalHoursInputChange(options[selectedIndex].hours)
-                                                onShowCheckLogicIntervalPopupChange(false)
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    AppDropdownSelector(
+                        selectedText = stringResource(selectedRefreshOption.labelRes),
+                        options = RefreshIntervalOption.entries.map { option ->
+                            context.getString(option.labelRes)
+                        },
+                        selectedIndex = RefreshIntervalOption.entries.indexOf(selectedRefreshOption),
+                        expanded = showCheckLogicIntervalPopup,
+                        anchorBounds = checkLogicIntervalPopupAnchorBounds,
+                        onExpandedChange = onShowCheckLogicIntervalPopupChange,
+                        onSelectedIndexChange = { selectedIndex ->
+                            onRefreshIntervalHoursInputChange(RefreshIntervalOption.entries[selectedIndex].hours)
+                        },
+                        onAnchorBoundsChange = onCheckLogicIntervalPopupAnchorBoundsChange,
+                        backdrop = backdrop,
+                        variant = GlassVariant.SheetAction
+                    )
                 }
                 SheetControlRow(
                     label = stringResource(R.string.github_check_sheet_label_prerelease_check),
@@ -201,43 +176,24 @@ internal fun GitHubCheckLogicSheet(
                     label = stringResource(R.string.github_check_sheet_label_downloader),
                     summary = stringResource(R.string.github_check_sheet_summary_downloader)
                 ) {
-                    Box(
-                        modifier = Modifier.capturePopupAnchor { onDownloaderPopupAnchorBoundsChange(it) }
-                    ) {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            variant = GlassVariant.SheetAction,
-                            text = selectedDownloaderLabel,
-                            onClick = { onShowDownloaderPopupChange(!showDownloaderPopup) }
-                        )
-                        if (showDownloaderPopup) {
-                            SnapshotWindowListPopup(
-                                show = showDownloaderPopup,
-                                alignment = PopupPositionProvider.Align.BottomEnd,
-                                anchorBounds = downloaderPopupAnchorBounds,
-                                placement = SnapshotPopupPlacement.ButtonEnd,
-                                onDismissRequest = { onShowDownloaderPopupChange(false) },
-                                enableWindowDim = false
-                            ) {
-                                LiquidDropdownColumn {
-                                    allDownloaderOptions.forEachIndexed { index, option ->
-                                        LiquidDropdownImpl(
-                                            text = option.label,
-                                            optionSize = allDownloaderOptions.size,
-                                            isSelected = preferredDownloaderPackageInput == option.packageName,
-                                            index = index,
-                                            onSelectedIndexChange = { selectedIndex ->
-                                                onPreferredDownloaderPackageInputChange(
-                                                    allDownloaderOptions[selectedIndex].packageName
-                                                )
-                                                onShowDownloaderPopupChange(false)
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    AppDropdownSelector(
+                        selectedText = selectedDownloaderLabel,
+                        options = allDownloaderOptions.map { it.label },
+                        selectedIndex = allDownloaderOptions.indexOfFirst {
+                            preferredDownloaderPackageInput == it.packageName
+                        }.coerceAtLeast(0),
+                        expanded = showDownloaderPopup,
+                        anchorBounds = downloaderPopupAnchorBounds,
+                        onExpandedChange = onShowDownloaderPopupChange,
+                        onSelectedIndexChange = { selectedIndex ->
+                            onPreferredDownloaderPackageInputChange(
+                                allDownloaderOptions[selectedIndex].packageName
+                            )
+                        },
+                        onAnchorBoundsChange = onDownloaderPopupAnchorBoundsChange,
+                        backdrop = backdrop,
+                        variant = GlassVariant.SheetAction
+                    )
                 }
                 SheetControlRow(
                     label = stringResource(R.string.github_check_sheet_label_share_to_installer),
@@ -247,45 +203,24 @@ internal fun GitHubCheckLogicSheet(
                         stringResource(R.string.github_check_sheet_summary_share_unavailable)
                     }
                 ) {
-                    Box(
-                        modifier = Modifier.capturePopupAnchor {
-                            onOnlineShareTargetPopupAnchorBoundsChange(it)
-                        }
-                    ) {
-                        GlassTextButton(
-                            backdrop = backdrop,
-                            variant = GlassVariant.SheetAction,
-                            text = selectedOnlineShareTargetLabel,
-                            onClick = { onShowOnlineShareTargetPopupChange(!showOnlineShareTargetPopup) }
-                        )
-                        if (showOnlineShareTargetPopup) {
-                            SnapshotWindowListPopup(
-                                show = showOnlineShareTargetPopup,
-                                alignment = PopupPositionProvider.Align.BottomEnd,
-                                anchorBounds = onlineShareTargetPopupAnchorBounds,
-                                placement = SnapshotPopupPlacement.ButtonEnd,
-                                onDismissRequest = { onShowOnlineShareTargetPopupChange(false) },
-                                enableWindowDim = false
-                            ) {
-                                LiquidDropdownColumn {
-                                    onlineShareTargetOptions.forEachIndexed { index, option ->
-                                        LiquidDropdownImpl(
-                                            text = option.label,
-                                            optionSize = onlineShareTargetOptions.size,
-                                            isSelected = onlineShareTargetPackageInput == option.packageName,
-                                            index = index,
-                                            onSelectedIndexChange = { selectedIndex ->
-                                                onOnlineShareTargetPackageInputChange(
-                                                    onlineShareTargetOptions[selectedIndex].packageName
-                                                )
-                                                onShowOnlineShareTargetPopupChange(false)
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    AppDropdownSelector(
+                        selectedText = selectedOnlineShareTargetLabel,
+                        options = onlineShareTargetOptions.map { it.label },
+                        selectedIndex = onlineShareTargetOptions.indexOfFirst {
+                            onlineShareTargetPackageInput == it.packageName
+                        }.coerceAtLeast(0),
+                        expanded = showOnlineShareTargetPopup,
+                        anchorBounds = onlineShareTargetPopupAnchorBounds,
+                        onExpandedChange = onShowOnlineShareTargetPopupChange,
+                        onSelectedIndexChange = { selectedIndex ->
+                            onOnlineShareTargetPackageInputChange(
+                                onlineShareTargetOptions[selectedIndex].packageName
+                            )
+                        },
+                        onAnchorBoundsChange = onOnlineShareTargetPopupAnchorBoundsChange,
+                        backdrop = backdrop,
+                        variant = GlassVariant.SheetAction
+                    )
                 }
                 SheetControlRow(label = stringResource(R.string.github_check_sheet_label_save_state)) {
                     StatusPill(

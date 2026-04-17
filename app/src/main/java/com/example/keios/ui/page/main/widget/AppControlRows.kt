@@ -89,3 +89,20 @@ fun AppControlRow(
         )
     }
 }
+
+@Composable
+fun AppDualActionRow(
+    modifier: Modifier = Modifier,
+    spacing: Dp = AppChromeTokens.pageSectionGap,
+    first: @Composable (Modifier) -> Unit,
+    second: @Composable (Modifier) -> Unit
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(spacing),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        first(Modifier.weight(1f))
+        second(Modifier.weight(1f))
+    }
+}
