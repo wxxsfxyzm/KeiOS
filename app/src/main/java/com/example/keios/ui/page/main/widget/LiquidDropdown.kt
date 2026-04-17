@@ -18,11 +18,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -278,6 +281,7 @@ fun LiquidDropdownItem(
     val outerTopPadding = if (index == 0) 3.dp else 2.dp
     val outerBottomPadding = if (index == optionSize - 1) 3.dp else 2.dp
     val currentOnClick by rememberUpdatedState(onClick)
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val animatedScale by animateFloatAsState(
@@ -290,11 +294,17 @@ fun LiquidDropdownItem(
         animationSpec = tween(durationMillis = 110),
         label = "liquid_dropdown_item_overlay"
     )
+    LaunchedEffect(selected) {
+        if (selected) {
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
 
     Box(
         modifier = modifier
             .padding(horizontal = 2.dp, vertical = 0.dp)
             .padding(top = outerTopPadding, bottom = outerBottomPadding)
+            .bringIntoViewRequester(bringIntoViewRequester)
             .graphicsLayer {
                 scaleX = animatedScale
                 scaleY = animatedScale
