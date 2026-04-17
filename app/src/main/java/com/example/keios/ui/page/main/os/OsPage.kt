@@ -712,8 +712,7 @@ fun OsPage(
                     )
                 },
                 searchBarVisible = enableSearchBar && showSearchBar,
-                searchBarAnimationLabelPrefix = "osSearchBar",
-                searchBarBackdrop = null
+                searchBarAnimationLabelPrefix = "osSearchBar"
             ) {
                 Column {
                     AppTopBarSearchField(

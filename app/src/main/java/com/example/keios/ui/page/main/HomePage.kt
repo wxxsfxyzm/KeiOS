@@ -665,7 +665,7 @@ fun HomePage(
         BgEffectBackground(
             dynamicBackground = dynamicBackgroundEnabled,
             modifier = Modifier.fillMaxSize(),
-            bgModifier = Modifier.layerBackdrop(backdrop),
+            bgModifier = Modifier,
             effectBackground = effectBackgroundEnabled,
             alpha = bgAlpha,
         ) {

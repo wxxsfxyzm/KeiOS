@@ -3,7 +3,9 @@
 -keepclassmembernames enum com.example.keios.** { *; }
 
 # Keep manifest component class names stable for runtime introspection in About page.
+-keepnames class com.example.keios.KeiOSApp
 -keepnames class com.example.keios.MainActivity
+-keepnames class com.example.keios.ui.page.main.student.GuideVideoFullscreenActivity
 -keepnames class com.example.keios.mcp.McpKeepAliveService
 -keepnames class com.example.keios.feature.notification.NotificationActionReceiver
 -keepnames class com.example.keios.core.background.AppBackgroundTickReceiver

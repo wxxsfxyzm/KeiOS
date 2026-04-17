@@ -42,6 +42,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -115,7 +117,10 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowDialog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -227,10 +232,12 @@ fun McpPage(
     var configExpanded by remember { mutableStateOf(false) }
     var logsExpanded by remember { mutableStateOf(false) }
     var logsExporting by remember { mutableStateOf(false) }
-    var pendingLogsExportContent by remember { mutableStateOf<String?>(null) }
+    var pendingLogsExportGeneratedAt by remember { mutableStateOf<String?>(null) }
     var showResetTokenConfirm by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
+    val scope = rememberCoroutineScope()
+    val currentUiState by rememberUpdatedState(uiState)
     val serverNameHint = context.getString(R.string.mcp_input_service_name_hint)
     val serverNameFieldWidth = remember(serverName, serverNameHint) {
         val visibleChars = serverName.trim().ifBlank { serverNameHint }.length.coerceIn(6, 18)
@@ -299,29 +306,44 @@ fun McpPage(
     val logsExportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
-        val content = pendingLogsExportContent
-        pendingLogsExportContent = null
-        logsExporting = false
-        if (uri == null || content.isNullOrBlank()) return@rememberLauncherForActivityResult
-        runCatching {
-            context.contentResolver.openOutputStream(uri)?.bufferedWriter().use { writer ->
-                writer?.write(content)
+        val generatedAt = pendingLogsExportGeneratedAt
+        pendingLogsExportGeneratedAt = null
+        if (uri == null || generatedAt.isNullOrBlank()) {
+            logsExporting = false
+            return@rememberLauncherForActivityResult
+        }
+        scope.launch {
+            val result = runCatching {
+                val exportContent = withContext(Dispatchers.Default) {
+                    buildMcpLogsExportJson(
+                        generatedAt = generatedAt,
+                        state = currentUiState
+                    )
+                }
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.bufferedWriter().use { writer ->
+                        checkNotNull(writer) { "openOutputStream returned null" }
+                        writer.write(exportContent)
+                    }
+                }
             }
-        }.onSuccess {
-            Toast.makeText(
-                context,
-                context.getString(R.string.mcp_toast_logs_exported),
-                Toast.LENGTH_SHORT
-            ).show()
-        }.onFailure {
-            Toast.makeText(
-                context,
-                context.getString(
-                    R.string.mcp_toast_logs_export_failed,
-                    it.javaClass.simpleName
-                ),
-                Toast.LENGTH_SHORT
-            ).show()
+            logsExporting = false
+            result.onSuccess {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.mcp_toast_logs_exported),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }.onFailure {
+                Toast.makeText(
+                    context,
+                    context.getString(
+                        R.string.mcp_toast_logs_export_failed,
+                        it.javaClass.simpleName
+                    ),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
@@ -561,20 +583,30 @@ fun McpPage(
                             MiuixTheme.colorScheme.primary
                         },
                         modifier = Modifier.clickable(enabled = !logsExporting) {
-                            logsExporting = true
                             val generatedAt = SimpleDateFormat(
                                 "yyyy-MM-dd HH:mm:ss.SSS",
                                 Locale.getDefault()
                             ).format(Date())
-                            pendingLogsExportContent = buildMcpLogsExportJson(
-                                generatedAt = generatedAt,
-                                state = uiState
-                            )
+                            logsExporting = true
+                            pendingLogsExportGeneratedAt = generatedAt
                             val exportStamp = SimpleDateFormat(
                                 "yyyyMMdd-HHmmss-SSS",
                                 Locale.getDefault()
                             ).format(Date())
-                            logsExportLauncher.launch("keios-mcp-logs-$exportStamp.json")
+                            runCatching {
+                                logsExportLauncher.launch("keios-mcp-logs-$exportStamp.json")
+                            }.onFailure {
+                                pendingLogsExportGeneratedAt = null
+                                logsExporting = false
+                                Toast.makeText(
+                                    context,
+                                    context.getString(
+                                        R.string.mcp_toast_logs_export_failed,
+                                        it.javaClass.simpleName
+                                    ),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                     )
                 }

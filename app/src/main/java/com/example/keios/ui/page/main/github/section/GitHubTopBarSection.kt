@@ -122,7 +122,6 @@ internal fun GitHubTopBarSection(
         },
         searchBarVisible = enableSearchBar && showSearchBar,
         searchBarAnimationLabelPrefix = "githubSearchBar",
-        searchBarBackdrop = backdrop,
     ) {
         Column {
             AppTopBarSearchField(

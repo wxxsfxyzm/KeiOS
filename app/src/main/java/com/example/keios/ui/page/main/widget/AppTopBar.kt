@@ -26,7 +26,6 @@ fun AppTopBarSection(
     actions: @Composable RowScope.() -> Unit = {},
     searchBarVisible: Boolean = false,
     searchBarAnimationLabelPrefix: String = "appTopBarSearch",
-    searchBarBackdrop: LayerBackdrop? = null,
     searchBarContent: (@Composable BoxScope.() -> Unit)? = null
 ) {
     Column(modifier = modifier) {
@@ -42,7 +41,6 @@ fun AppTopBarSection(
             SearchBarHost(
                 visible = searchBarVisible,
                 animationLabelPrefix = searchBarAnimationLabelPrefix,
-                backdrop = searchBarBackdrop,
                 content = searchBarContent
             )
         }
