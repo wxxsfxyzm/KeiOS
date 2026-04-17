@@ -2,6 +2,7 @@ package com.example.keios.ui.page.main.widget
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -102,17 +103,36 @@ fun AppOverviewMetricTile(
     modifier: Modifier = Modifier,
     labelColor: Color = MiuixTheme.colorScheme.onBackgroundVariant,
     valueColor: Color = MiuixTheme.colorScheme.onBackground,
-    containerColor: Color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.46f),
-    borderColor: Color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.12f),
+    containerColor: Color? = null,
+    borderColor: Color? = null,
     valueMaxLines: Int = 2,
     emphasizedValue: Boolean = true
 ) {
+    val isDark = isSystemInDarkTheme()
+    val resolvedContainerColor = containerColor ?: if (isDark) {
+        Color(0xFF0F1115).copy(alpha = 0.34f)
+    } else {
+        Color.White.copy(alpha = 0.62f)
+    }
+    val resolvedOverlayColor = if (containerColor != null) {
+        Color.Transparent
+    } else if (isDark) {
+        Color.White.copy(alpha = 0.05f)
+    } else {
+        Color(0xFFDCEBFF).copy(alpha = 0.24f)
+    }
+    val resolvedBorderColor = borderColor ?: if (isDark) {
+        Color.White.copy(alpha = 0.18f)
+    } else {
+        Color.White.copy(alpha = 0.86f)
+    }
     val shape = RoundedCornerShape(12.dp)
     Box(
         modifier = modifier
             .clip(shape)
-            .background(containerColor, shape)
-            .border(width = 1.dp, color = borderColor, shape = shape)
+            .background(resolvedContainerColor, shape)
+            .background(resolvedOverlayColor, shape)
+            .border(width = 1.dp, color = resolvedBorderColor, shape = shape)
     ) {
         Column(
             modifier = Modifier
@@ -151,19 +171,38 @@ fun AppOverviewInlineMetricTile(
     modifier: Modifier = Modifier,
     labelColor: Color = MiuixTheme.colorScheme.onBackgroundVariant,
     valueColor: Color = MiuixTheme.colorScheme.onBackground,
-    containerColor: Color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.42f),
-    borderColor: Color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.12f),
+    containerColor: Color? = null,
+    borderColor: Color? = null,
     valueMaxLines: Int = 2,
     labelWeight: Float = 0.58f,
     valueWeight: Float = 0.42f,
     emphasizedValue: Boolean = true
 ) {
+    val isDark = isSystemInDarkTheme()
+    val resolvedContainerColor = containerColor ?: if (isDark) {
+        Color(0xFF0F1115).copy(alpha = 0.32f)
+    } else {
+        Color.White.copy(alpha = 0.58f)
+    }
+    val resolvedOverlayColor = if (containerColor != null) {
+        Color.Transparent
+    } else if (isDark) {
+        Color.White.copy(alpha = 0.05f)
+    } else {
+        Color(0xFFDCEBFF).copy(alpha = 0.22f)
+    }
+    val resolvedBorderColor = borderColor ?: if (isDark) {
+        Color.White.copy(alpha = 0.17f)
+    } else {
+        Color.White.copy(alpha = 0.84f)
+    }
     val shape = RoundedCornerShape(12.dp)
     Box(
         modifier = modifier
             .clip(shape)
-            .background(containerColor, shape)
-            .border(width = 1.dp, color = borderColor, shape = shape)
+            .background(resolvedContainerColor, shape)
+            .background(resolvedOverlayColor, shape)
+            .border(width = 1.dp, color = resolvedBorderColor, shape = shape)
     ) {
         Row(
             modifier = Modifier
