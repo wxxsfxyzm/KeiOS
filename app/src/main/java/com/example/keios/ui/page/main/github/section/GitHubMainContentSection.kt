@@ -798,7 +798,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                         val sizeLabel = formatAssetSize(asset.sizeBytes, context)
                                         val relativeTimeLabel = assetRelativeTimeLabel(asset.updatedAtMillis, context)
                                         val assetCardShape = RoundedCornerShape(CardLayoutRhythm.cardCornerRadius)
-                                        val assetActionButtonWidth = 78.dp
+                                        val assetActionButtonWidth = 84.dp
                                         val assetCardContainerColor = summaryContainerColor
                                         val assetCardBorderColor = summaryBorderColor
                                         Card(
@@ -871,7 +871,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                     )
                                                     GlassTextButton(
                                                         backdrop = contentBackdrop,
-                                                        text = "",
+                                                        text = stringResource(R.string.common_share),
                                                         leadingIcon = MiuixIcons.Regular.Share,
                                                         onClick = { onShareApkLink(asset) },
                                                         modifier = Modifier
@@ -885,8 +885,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                         variant = GlassVariant.SheetAction,
                                                         textColor = actionButtonColor,
                                                         iconTint = actionButtonColor,
-                                                        containerColor = Color.White,
-                                                        horizontalPadding = 10.dp
+                                                        containerColor = Color.White
                                                     )
                                                 }
                                             }
