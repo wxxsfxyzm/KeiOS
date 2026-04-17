@@ -264,7 +264,7 @@ internal fun GitHubMainContent(
                     modifier = Modifier.padding(end = 14.dp, bottom = contentBottomPadding - 24.dp),
                     width = 60.dp,
                     height = 44.dp,
-                    variant = GlassVariant.Bar
+                    variant = GlassVariant.Floating
                 )
             }
         }

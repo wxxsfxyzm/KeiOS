@@ -157,6 +157,7 @@ private fun GlassIconButtonContainer(
             GlassVariant.SheetPrimaryAction -> if (isDark) 0.18f else 0.18f
             GlassVariant.Compact -> if (isDark) 0.22f else 0.28f
             GlassVariant.SheetDangerAction -> if (isDark) 0.18f else 0.18f
+            GlassVariant.Floating -> if (isDark) 0.16f else 0.16f
             GlassVariant.Content -> if (isDark) 0.26f else 0.32f
         }
     )
@@ -296,6 +297,7 @@ fun GlassTextButton(
             GlassVariant.SheetPrimaryAction -> if (isDark) 0.18f else 0.18f
             GlassVariant.Compact -> if (isDark) 0.22f else 0.28f
             GlassVariant.SheetDangerAction -> if (isDark) 0.18f else 0.18f
+            GlassVariant.Floating -> if (isDark) 0.16f else 0.16f
             GlassVariant.Content -> if (isDark) 0.26f else 0.32f
         }
     )
