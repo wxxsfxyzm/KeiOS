@@ -256,6 +256,7 @@ fun GitHubPage(
     var credentialCheckError by remember { mutableStateOf<String?>(null) }
     var credentialCheckStatus by remember { mutableStateOf<GitHubApiCredentialStatus?>(null) }
     var recommendedTokenGuideExpanded by remember { mutableStateOf(false) }
+    var assetSourceSignature by remember { mutableStateOf("") }
     var refreshAllJob by remember { mutableStateOf<Job?>(null) }
     var deleteInProgress by remember { mutableStateOf(false) }
     var showFloatingAddButton by remember { mutableStateOf(true) }
@@ -301,6 +302,11 @@ fun GitHubPage(
 
     LaunchedEffect(trackSnapshot) {
         val activeStrategyId = trackSnapshot.lookupConfig.selectedStrategy.storageId
+        val snapshotAssetSourceSignature = listOf(
+            trackSnapshot.lookupConfig.selectedStrategy.storageId,
+            trackSnapshot.lookupConfig.apiToken.isNotBlank().toString(),
+            trackSnapshot.lookupConfig.aggressiveApkFiltering.toString()
+        ).joinToString("|")
         lookupConfig = trackSnapshot.lookupConfig
         selectedStrategyInput = trackSnapshot.lookupConfig.selectedStrategy
         githubApiTokenInput = trackSnapshot.lookupConfig.apiToken
@@ -310,6 +316,13 @@ fun GitHubPage(
         preferredDownloaderPackageInput = trackSnapshot.lookupConfig.preferredDownloaderPackage
         refreshIntervalHours = trackSnapshot.refreshIntervalHours
         refreshIntervalHoursInput = trackSnapshot.refreshIntervalHours
+        if (assetSourceSignature.isNotBlank() && assetSourceSignature != snapshotAssetSourceSignature) {
+            apkAssetBundles.clear()
+            apkAssetLoading.clear()
+            apkAssetErrors.clear()
+            apkAssetExpanded.clear()
+        }
+        assetSourceSignature = snapshotAssetSourceSignature
 
         trackedItems.clear()
         trackedItems.addAll(trackSnapshot.items)
@@ -431,6 +444,19 @@ fun GitHubPage(
     }
 
     fun activeStrategyId(): String = lookupConfig.selectedStrategy.storageId
+
+    fun buildAssetSourceSignature(config: GitHubLookupConfig = lookupConfig): String {
+        return listOf(
+            config.selectedStrategy.storageId,
+            config.apiToken.isNotBlank().toString(),
+            config.aggressiveApkFiltering.toString()
+        ).joinToString("|")
+    }
+
+    fun matchesAssetSourceSignature(bundle: GitHubReleaseAssetBundle): Boolean {
+        return bundle.sourceConfigSignature.isNotBlank() &&
+            bundle.sourceConfigSignature == buildAssetSourceSignature()
+    }
 
     fun cacheMatchesCurrentStrategy(state: GitHubCheckCacheEntry): Boolean {
         val sourceId = state.sourceStrategyId.ifBlank { GitHubLookupStrategyOption.AtomFeed.storageId }
@@ -632,7 +658,15 @@ fun GitHubPage(
             strategyChanged || activeTokenChanged -> {
                 GitHubReleaseStrategyRegistry.clearAllCaches()
                 GitHubTrackStore.clearCheckCache()
+                scope.launch(Dispatchers.IO) {
+                    GitHubReleaseAssetCacheStore.clearAll()
+                }
                 checkStates.clear()
+                apkAssetBundles.clear()
+                apkAssetLoading.clear()
+                apkAssetErrors.clear()
+                apkAssetExpanded.clear()
+                assetSourceSignature = buildAssetSourceSignature(newConfig)
                 lastRefreshMs = 0L
                 refreshProgress = 0f
                 overviewRefreshState = OverviewRefreshState.Idle
@@ -1001,6 +1035,7 @@ fun GitHubPage(
         if (
             toggleOnlyWhenCached &&
             cachedBundle != null &&
+            matchesAssetSourceSignature(cachedBundle) &&
             cachedBundle.tagName.equals(target.rawTag, ignoreCase = true) &&
             cachedBundle.showingAllAssets == includeAllAssets
         ) {
@@ -1031,7 +1066,7 @@ fun GitHubPage(
                     refreshIntervalHours = refreshIntervalHours
                 )
             }
-            if (persistedBundle != null) {
+            if (persistedBundle != null && matchesAssetSourceSignature(persistedBundle)) {
                 apkAssetLoading[item.id] = false
                 apkAssetBundles[item.id] = persistedBundle
                 apkAssetErrors[item.id] = if (persistedBundle.assets.isEmpty()) {
@@ -1050,6 +1085,10 @@ fun GitHubPage(
                     ""
                 }
                 return@launch
+            } else if (persistedBundle != null) {
+                withContext(Dispatchers.IO) {
+                    GitHubReleaseAssetCacheStore.clear(assetCacheKey)
+                }
             }
             val result = withContext(Dispatchers.IO) {
                 GitHubReleaseAssetRepository.fetchApkAssets(
@@ -1065,14 +1104,17 @@ fun GitHubPage(
             }
             apkAssetLoading[item.id] = false
             result.onSuccess { bundle ->
-                apkAssetBundles[item.id] = bundle
+                val persistedBundle = bundle.copy(
+                    sourceConfigSignature = buildAssetSourceSignature()
+                )
+                apkAssetBundles[item.id] = persistedBundle
                 scope.launch(Dispatchers.IO) {
                     GitHubReleaseAssetCacheStore.save(
                         cacheKey = assetCacheKey,
-                        bundle = bundle
+                        bundle = persistedBundle
                     )
                 }
-                apkAssetErrors[item.id] = if (bundle.assets.isEmpty()) {
+                apkAssetErrors[item.id] = if (persistedBundle.assets.isEmpty()) {
                     if (includeAllAssets) {
                         context.getString(
                             R.string.github_msg_assets_no_downloadable_except_source,

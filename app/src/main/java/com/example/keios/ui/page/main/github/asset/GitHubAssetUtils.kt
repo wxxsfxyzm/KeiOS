@@ -3,6 +3,7 @@ package com.example.keios.ui.page.main.github.asset
 import android.content.Context
 import com.example.keios.R
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetBundle
+import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFetchSources
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetRepository
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
@@ -121,10 +122,14 @@ internal fun assetTransportLabel(asset: GitHubReleaseAssetFile, context: Context
 
 internal fun bundleTransportLabel(bundle: GitHubReleaseAssetBundle?, context: Context): String? {
     bundle ?: return null
-    return if (bundle.assets.any { prefersApiAssetTransport(it) }) {
-        "API"
-    } else {
-        context.getString(R.string.github_asset_transport_direct)
+    return when (bundle.fetchSource.trim().lowercase()) {
+        GitHubReleaseAssetFetchSources.API -> context.getString(R.string.github_asset_fetch_source_api)
+        GitHubReleaseAssetFetchSources.HTML -> context.getString(R.string.github_asset_fetch_source_html)
+        else -> if (bundle.assets.any { prefersApiAssetTransport(it) }) {
+            context.getString(R.string.github_asset_fetch_source_api)
+        } else {
+            context.getString(R.string.github_asset_transport_direct)
+        }
     }
 }
 

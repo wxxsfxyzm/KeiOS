@@ -30,8 +30,15 @@ data class GitHubReleaseAssetBundle(
     val releaseUpdatedAtMillis: Long? = null,
     val assets: List<GitHubReleaseAssetFile>,
     val showingAllAssets: Boolean = false,
-    val shortCommitSha: String = ""
+    val shortCommitSha: String = "",
+    val fetchSource: String = "",
+    val sourceConfigSignature: String = ""
 )
+
+object GitHubReleaseAssetFetchSources {
+    const val HTML = "html"
+    const val API = "api"
+}
 
 object GitHubReleaseAssetRepository {
     private const val GITHUB_API_VERSION = "2022-11-28"
@@ -67,10 +74,22 @@ object GitHubReleaseAssetRepository {
         }
 
         val normalizedReleaseUrl = releaseUrl.trim()
+        val primarySource = if (preferHtml && normalizedReleaseUrl.isNotBlank()) {
+            GitHubReleaseAssetFetchSources.HTML
+        } else {
+            GitHubReleaseAssetFetchSources.API
+        }
         val primary = if (preferHtml && normalizedReleaseUrl.isNotBlank()) {
             fetchReleaseFromHtml(owner, repo, normalizedTag, normalizedReleaseUrl, apiToken)
         } else {
             fetchReleaseByTagWithFallback(owner, repo, normalizedTag, normalizedReleaseUrl, apiToken)
+        }
+        val fallbackSource = if (preferHtml) {
+            GitHubReleaseAssetFetchSources.API
+        } else if (normalizedReleaseUrl.isNotBlank()) {
+            GitHubReleaseAssetFetchSources.HTML
+        } else {
+            primarySource
         }
         val fallback = if (preferHtml) {
             fetchReleaseByTagWithFallback(owner, repo, normalizedTag, normalizedReleaseUrl, apiToken)
@@ -79,9 +98,11 @@ object GitHubReleaseAssetRepository {
         } else {
             Result.failure(primary.exceptionOrNull() ?: IllegalStateException("release fetch failed"))
         }
+        val resolvedSource = if (primary.isSuccess) primarySource else fallbackSource
 
         return (primary.takeIf { it.isSuccess } ?: fallback).mapCatching { release ->
             parseReleaseBundle(release)
+                .copy(fetchSource = resolvedSource)
                 .withResolvedShortCommitSha(owner, repo, normalizedTag, apiToken)
                 .selectDisplayAssets(
                     aggressiveFiltering = aggressiveFiltering,

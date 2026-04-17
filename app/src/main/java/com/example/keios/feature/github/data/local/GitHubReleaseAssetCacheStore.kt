@@ -137,6 +137,8 @@ internal object GitHubReleaseAssetCacheStore {
             put("releaseUpdatedAtMillis", bundle.releaseUpdatedAtMillis ?: 0L)
             put("showingAllAssets", bundle.showingAllAssets)
             put("shortCommitSha", bundle.shortCommitSha)
+            put("fetchSource", bundle.fetchSource)
+            put("sourceConfigSignature", bundle.sourceConfigSignature)
             put(
                 "assets",
                 JSONArray().apply {
@@ -190,7 +192,9 @@ internal object GitHubReleaseAssetCacheStore {
             releaseUpdatedAtMillis = obj.optLong("releaseUpdatedAtMillis", 0L).takeIf { it > 0L },
             assets = assets,
             showingAllAssets = obj.optBoolean("showingAllAssets", false),
-            shortCommitSha = obj.optString("shortCommitSha").trim()
+            shortCommitSha = obj.optString("shortCommitSha").trim(),
+            fetchSource = obj.optString("fetchSource").trim(),
+            sourceConfigSignature = obj.optString("sourceConfigSignature").trim()
         )
     }
 
