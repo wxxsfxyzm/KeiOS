@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +18,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -134,6 +139,59 @@ fun AppOverviewMetricTile(
                 fontWeight = if (emphasizedValue) AppTypographyTokens.BodyEmphasis.fontWeight else AppTypographyTokens.Body.fontWeight,
                 maxLines = valueMaxLines,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+fun AppOverviewInlineMetricTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    labelColor: Color = MiuixTheme.colorScheme.onBackgroundVariant,
+    valueColor: Color = MiuixTheme.colorScheme.onBackground,
+    containerColor: Color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.42f),
+    borderColor: Color = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.12f),
+    valueMaxLines: Int = 2,
+    emphasizedValue: Boolean = true
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(containerColor, shape)
+            .border(width = 1.dp, color = borderColor, shape = shape)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = CardLayoutRhythm.metricCardHorizontalPadding,
+                    vertical = CardLayoutRhythm.metricCardVerticalPadding
+                ),
+            horizontalArrangement = Arrangement.spacedBy(CardLayoutRhythm.infoRowGap),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            top.yukonga.miuix.kmp.basic.Text(
+                text = label,
+                color = labelColor,
+                fontSize = AppTypographyTokens.Caption.fontSize,
+                lineHeight = AppTypographyTokens.Caption.lineHeight,
+                modifier = Modifier.weight(0.44f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            top.yukonga.miuix.kmp.basic.Text(
+                text = value.ifBlank { "N/A" },
+                color = valueColor,
+                fontSize = AppTypographyTokens.Body.fontSize,
+                lineHeight = AppTypographyTokens.Body.lineHeight,
+                fontWeight = if (emphasizedValue) FontWeight.Medium else FontWeight.Normal,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(0.56f),
+                maxLines = valueMaxLines,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

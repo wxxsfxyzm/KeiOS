@@ -33,7 +33,7 @@ import com.example.keios.feature.github.model.GitHubStrategyBenchmarkResult
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.feature.github.model.InstalledAppItem
 import com.example.keios.ui.page.main.widget.AppInfoRow
-import com.example.keios.ui.page.main.widget.AppOverviewMetricTile
+import com.example.keios.ui.page.main.widget.AppOverviewInlineMetricTile
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.SheetChoiceCard
@@ -103,12 +103,13 @@ internal fun GitHubOverviewMetricItem(
     titleColor: Color = MiuixTheme.colorScheme.onBackgroundVariant,
     emphasized: Boolean = false
 ) {
-    AppOverviewMetricTile(
+    AppOverviewInlineMetricTile(
         label = label,
         value = value.ifBlank { stringResource(R.string.common_na) },
         modifier = modifier,
         labelColor = titleColor,
         valueColor = valueColor,
+        valueMaxLines = 2,
         emphasizedValue = emphasized
     )
 }
