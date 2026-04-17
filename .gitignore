@@ -75,3 +75,6 @@ tmp/
 
 # Local tooling state
 /.codex/
+
+# Root-level preview screenshots
+/keios_*.png
