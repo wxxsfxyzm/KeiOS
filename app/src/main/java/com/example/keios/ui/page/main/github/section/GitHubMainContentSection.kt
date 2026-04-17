@@ -798,19 +798,9 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                         val sizeLabel = formatAssetSize(asset.sizeBytes, context)
                                         val relativeTimeLabel = assetRelativeTimeLabel(asset.updatedAtMillis, context)
                                         val assetCardShape = RoundedCornerShape(CardLayoutRhythm.cardCornerRadius)
-                                        val assetCardContainerColor = if (alwaysLatestReleaseDownload) {
-                                            GitHubStatusPalette.tonedSurface(
-                                                targetAccent,
-                                                isDark = isDark
-                                            ).copy(alpha = if (isDark) 0.68f else 0.36f)
-                                        } else {
-                                            MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f)
-                                        }
-                                        val assetCardBorderColor = if (alwaysLatestReleaseDownload) {
-                                            targetAccent.copy(alpha = if (isDark) 0.32f else 0.22f)
-                                        } else {
-                                            MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.14f)
-                                        }
+                                        val assetActionButtonWidth = 78.dp
+                                        val assetCardContainerColor = summaryContainerColor
+                                        val assetCardBorderColor = summaryBorderColor
                                         Card(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -873,7 +863,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                         text = sizeLabel,
                                                         leadingIcon = MiuixIcons.Regular.Download,
                                                         onClick = { onOpenApkInDownloader(asset) },
-                                                        modifier = Modifier,
+                                                        modifier = Modifier.width(assetActionButtonWidth),
                                                         variant = GlassVariant.SheetAction,
                                                         textColor = actionButtonColor,
                                                         iconTint = actionButtonColor,
@@ -884,12 +874,14 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                         text = "",
                                                         leadingIcon = MiuixIcons.Regular.Share,
                                                         onClick = { onShareApkLink(asset) },
-                                                        modifier = Modifier.semantics {
-                                                            contentDescription = context.getString(
-                                                                R.string.github_cd_share_asset,
-                                                                asset.name
-                                                            )
-                                                        },
+                                                        modifier = Modifier
+                                                            .width(assetActionButtonWidth)
+                                                            .semantics {
+                                                                contentDescription = context.getString(
+                                                                    R.string.github_cd_share_asset,
+                                                                    asset.name
+                                                                )
+                                                            },
                                                         variant = GlassVariant.SheetAction,
                                                         textColor = actionButtonColor,
                                                         iconTint = actionButtonColor,

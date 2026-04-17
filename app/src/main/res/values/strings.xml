@@ -295,7 +295,7 @@
 
     <string name="github_asset_target_prerelease">预发</string>
     <string name="github_asset_target_stable">稳定</string>
-    <string name="github_asset_target_latest">最新发布</string>
+    <string name="github_asset_target_latest">最新</string>
     <string name="github_asset_fetch_source_api">API</string>
     <string name="github_asset_fetch_source_html">Atom</string>
     <string name="github_asset_transport_direct">直链</string>
