@@ -33,6 +33,7 @@ object CardLayoutRhythm {
 
     val overviewHeaderHorizontalPadding: Dp = 14.dp
     val overviewHeaderVerticalPadding: Dp = 10.dp
+    val overviewHeaderBodyGap: Dp = 4.dp
     val overviewBodyBottomPadding: Dp = 10.dp
     val overviewSectionGap: Dp = 6.dp
 }

@@ -66,7 +66,7 @@ fun AppOverviewCard(
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(contentVerticalSpacing)
+            verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.overviewHeaderBodyGap)
         ) {
             AppCardHeader(
                 title = title,
