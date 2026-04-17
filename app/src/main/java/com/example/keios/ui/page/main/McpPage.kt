@@ -4,6 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -12,6 +14,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,6 +64,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
+import com.example.keios.mcp.McpServerUiState
 import com.example.keios.mcp.McpServerManager
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
@@ -92,6 +96,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Copy
+import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Pause
@@ -108,6 +113,11 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowDialog
 import kotlinx.coroutines.delay
+import org.json.JSONArray
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun McpPage(
@@ -213,6 +223,8 @@ fun McpPage(
     var controlExpanded by remember { mutableStateOf(true) }
     var configExpanded by remember { mutableStateOf(false) }
     var logsExpanded by remember { mutableStateOf(false) }
+    var logsExporting by remember { mutableStateOf(false) }
+    var pendingLogsExportContent by remember { mutableStateOf<String?>(null) }
     var showResetTokenConfirm by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
@@ -280,6 +292,34 @@ fun McpPage(
     }
     LaunchedEffect(scrollToTopSignal) {
         if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
+    }
+    val logsExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val content = pendingLogsExportContent
+        pendingLogsExportContent = null
+        logsExporting = false
+        if (uri == null || content.isNullOrBlank()) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.openOutputStream(uri)?.bufferedWriter().use { writer ->
+                writer?.write(content)
+            }
+        }.onSuccess {
+            Toast.makeText(
+                context,
+                context.getString(R.string.mcp_toast_logs_exported),
+                Toast.LENGTH_SHORT
+            ).show()
+        }.onFailure {
+            Toast.makeText(
+                context,
+                context.getString(
+                    R.string.mcp_toast_logs_export_failed,
+                    it.javaClass.simpleName
+                ),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     Scaffold(
@@ -516,6 +556,37 @@ fun McpPage(
                     McpSectionHeaderIcon(
                         icon = MiuixIcons.Regular.Notes,
                         contentDescription = stringResource(R.string.mcp_section_logs_title)
+                    )
+                },
+                headerActions = {
+                    top.yukonga.miuix.kmp.basic.Icon(
+                        imageVector = if (logsExporting) {
+                            MiuixIcons.Regular.Refresh
+                        } else {
+                            MiuixIcons.Regular.Download
+                        },
+                        contentDescription = stringResource(R.string.mcp_action_export_logs),
+                        tint = if (logsExporting) {
+                            subtitleColor
+                        } else {
+                            MiuixTheme.colorScheme.primary
+                        },
+                        modifier = Modifier.clickable(enabled = !logsExporting) {
+                            logsExporting = true
+                            val generatedAt = SimpleDateFormat(
+                                "yyyy-MM-dd HH:mm:ss.SSS",
+                                Locale.getDefault()
+                            ).format(Date())
+                            pendingLogsExportContent = buildMcpLogsExportJson(
+                                generatedAt = generatedAt,
+                                state = uiState
+                            )
+                            val exportStamp = SimpleDateFormat(
+                                "yyyyMMdd-HHmmss-SSS",
+                                Locale.getDefault()
+                            ).format(Date())
+                            logsExportLauncher.launch("keios-mcp-logs-$exportStamp.json")
+                        }
                     )
                 }
             ) {
@@ -831,4 +902,35 @@ private fun formatMcpUptimeText(durationMs: Long): String {
 private fun copyToClipboard(context: Context, label: String, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
     clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+}
+
+private fun buildMcpLogsExportJson(
+    generatedAt: String,
+    state: McpServerUiState
+): String {
+    return JSONObject().apply {
+        put("schema", "keios.mcp.logs.v1")
+        put("generatedAt", generatedAt)
+        put("serverName", state.serverName)
+        put("running", state.running)
+        put("port", state.port)
+        put("endpointPath", state.endpointPath)
+        put("allowExternal", state.allowExternal)
+        put("connectedClients", state.connectedClients)
+        put("logCount", state.logs.size)
+        put(
+            "logs",
+            JSONArray().apply {
+                state.logs.forEach { log ->
+                    put(
+                        JSONObject().apply {
+                            put("time", log.time)
+                            put("level", log.level)
+                            put("message", log.message)
+                        }
+                    )
+                }
+            }
+        )
+    }.toString(2)
 }

@@ -113,8 +113,8 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.Layers
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -558,7 +558,7 @@ fun HomePage(
                         layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                         items = listOf(
                             LiquidActionItem(
-                                icon = MiuixIcons.Regular.Edit,
+                                icon = MiuixIcons.Regular.Layers,
                                 contentDescription = "编辑底栏板块",
                                 onClick = {
                                     actionBarSelectedIndex = 0

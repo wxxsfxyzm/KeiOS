@@ -104,7 +104,6 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Filter
 import top.yukonga.miuix.kmp.icon.extended.GridView
 import top.yukonga.miuix.kmp.icon.extended.Info
@@ -696,7 +695,7 @@ fun OsPage(
                             layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                             items = listOf(
                                 LiquidActionItem(
-                                    icon = MiuixIcons.Regular.Edit,
+                                    icon = MiuixIcons.Regular.Layers,
                                     contentDescription = "管理卡片显示",
                                     onClick = { showCardManager = true }
                                 ),
