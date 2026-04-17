@@ -21,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -858,7 +859,7 @@ internal fun BaIdCard(
     val nicknameFieldWidth = (nicknameLengthForWidth * 11 + 34).coerceIn(72, 124).dp
     val friendCodeLengthForWidth = idFriendCodeInput.ifEmpty { BA_DEFAULT_FRIEND_CODE }.length.coerceIn(1, 8)
     val friendCodeFieldWidth = (friendCodeLengthForWidth * 11 + 34).coerceIn(92, 128).dp
-    val nicknameSuffixWidth = 32.dp
+    val nicknameSuffixWidth = 44.dp
     val trailingSlotWidth = maxOf(
         nicknameFieldWidth + 6.dp + nicknameSuffixWidth,
         friendCodeFieldWidth
@@ -901,6 +902,8 @@ internal fun BaIdCard(
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.width(nicknameSuffixWidth),
                         textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
