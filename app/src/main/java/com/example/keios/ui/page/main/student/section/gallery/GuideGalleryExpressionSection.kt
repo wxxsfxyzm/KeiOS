@@ -1,0 +1,396 @@
+package com.example.keios.ui.page.main.student
+
+import android.widget.SeekBar
+import android.widget.Toast
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.example.keios.ui.page.main.widget.AppDropdownAnchorButton
+import com.example.keios.ui.page.main.widget.GlassTextButton
+import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.LiquidDropdownColumn
+import com.example.keios.ui.page.main.widget.LiquidDropdownImpl
+import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
+import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
+import com.example.keios.ui.page.main.widget.capturePopupAnchor
+import com.kyant.backdrop.Backdrop
+import kotlinx.coroutines.flow.MutableStateFlow
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.PopupPositionProvider
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Download
+import top.yukonga.miuix.kmp.icon.extended.ExpandMore
+import top.yukonga.miuix.kmp.icon.extended.Pause
+import top.yukonga.miuix.kmp.icon.extended.Play
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+@Composable
+internal fun GuideAudioSeekBar(
+    progress: Float,
+    enabled: Boolean,
+    onSeekStarted: () -> Unit,
+    onSeekChanged: (Float) -> Unit,
+    onSeekFinished: (Float) -> Unit
+) {
+    val normalizedProgress = progress.coerceIn(0f, 1f)
+    AndroidView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(26.dp),
+        factory = { ctx ->
+            SeekBar(ctx).apply {
+                max = 1000
+                isEnabled = enabled
+                setPadding(0, 0, 0, 0)
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(
+                        seekBar: SeekBar?,
+                        progressValue: Int,
+                        fromUser: Boolean
+                    ) {
+                        if (!fromUser) return
+                        onSeekChanged((progressValue / 1000f).coerceIn(0f, 1f))
+                    }
+
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                        onSeekStarted()
+                    }
+
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                        val target = ((seekBar?.progress ?: 0) / 1000f).coerceIn(0f, 1f)
+                        onSeekFinished(target)
+                    }
+                })
+            }
+        },
+        update = { seekBar ->
+            seekBar.isEnabled = enabled
+            val targetProgress = (normalizedProgress * 1000f).toInt().coerceIn(0, 1000)
+            if (kotlin.math.abs(seekBar.progress - targetProgress) > 2) {
+                seekBar.progress = targetProgress
+            }
+        }
+    )
+}
+
+internal fun formatAudioDuration(durationMs: Long): String {
+    if (durationMs <= 0L) return "00:00"
+    val totalSeconds = (durationMs / 1000L).coerceAtLeast(0L)
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    val seconds = totalSeconds % 60L
+    return if (hours > 0L) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
+    }
+}
+
+@Composable
+fun GuideGalleryExpressionCardItem(
+    title: String,
+    items: List<BaGuideGalleryItem>,
+    backdrop: Backdrop?,
+    onOpenMedia: (String) -> Unit,
+    onSaveMedia: (url: String, title: String) -> Unit = { _, _ -> },
+    mediaUrlResolver: (String) -> String = { it },
+    modifier: Modifier = Modifier
+) {
+    if (items.isEmpty()) return
+    val context = LocalContext.current
+    var showPicker by remember(title, items.size) { mutableStateOf(false) }
+    var selectedIndex by rememberSaveable(title, items.size) { mutableStateOf(0) }
+    LaunchedEffect(items.size) {
+        if (selectedIndex !in items.indices) selectedIndex = 0
+    }
+    val selectedItem = items.getOrElse(selectedIndex) { items.first() }
+    val displayImageUrl = mediaUrlResolver(selectedItem.imageUrl)
+    val displayMediaUrl = mediaUrlResolver(selectedItem.mediaUrl)
+    val saveTargetUrl = remember(selectedItem.mediaType, displayImageUrl, displayMediaUrl) {
+        if (selectedItem.mediaType.lowercase() == "video") {
+            displayMediaUrl.ifBlank { displayImageUrl }
+        } else {
+            displayImageUrl.ifBlank { displayMediaUrl }
+        }
+    }
+    val optionLabels = remember(items) {
+        items.mapIndexed { index, item ->
+            val normalizedTitle = normalizeGalleryTitle(item.title)
+            val rawVariant = when {
+                normalizedTitle.startsWith("角色表情") -> normalizedTitle.removePrefix("角色表情")
+                normalizedTitle.startsWith("表情") -> normalizedTitle.removePrefix("表情")
+                else -> ""
+            }
+            val variant = rawVariant
+                .replace(Regex("""\d+$"""), "")
+                .trim('（', '）', '(', ')', '-', '·', ' ')
+            if (variant.isBlank()) {
+                "角色表情${index + 1}"
+            } else if (variant == "包") {
+                "表情包${index + 1}"
+            } else {
+                "表情${index + 1}·$variant"
+            }
+        }
+    }
+    val pickerMaxHeight = remember(optionLabels.size) {
+        val maxVisibleRows = 7
+        val visibleRows = optionLabels.size.coerceIn(1, maxVisibleRows)
+        8.dp + (46.dp * visibleRows)
+    }
+    val canOpenMedia = selectedItem.mediaUrl.isNotBlank() && selectedItem.mediaUrl != selectedItem.imageUrl
+    val isImageType = selectedItem.mediaType.lowercase() != "video"
+    val isVideoType = selectedItem.mediaType.lowercase() == "video"
+    var videoInlineExpanded by remember(displayMediaUrl, selectedItem.mediaType) { mutableStateOf(false) }
+    var videoInlinePlaying by remember(displayMediaUrl, selectedItem.mediaType) { mutableStateOf(false) }
+    var videoControlRequestId by remember(displayMediaUrl, selectedItem.mediaType) { mutableIntStateOf(0) }
+    var showImageFullscreen by remember(displayImageUrl) { mutableStateOf(false) }
+    val canSwipeExpressions = optionLabels.size > 1
+    val swipeThresholdPx = with(LocalDensity.current) { 56.dp.toPx() }
+    var expressionDragAccumPx by remember(title, items.size) { mutableFloatStateOf(0f) }
+    val expressionDragState = rememberDraggableState { delta ->
+        expressionDragAccumPx += delta
+    }
+    val imageProgressState = remember(displayImageUrl) {
+        MutableStateFlow(if (displayImageUrl.isBlank()) 1f else 0f)
+    }
+    val imageProgress by imageProgressState.collectAsState()
+    var imageLoading by remember(displayImageUrl) { mutableStateOf(displayImageUrl.isNotBlank()) }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.defaultColors(
+            color = Color(0x223B82F6),
+            contentColor = MiuixTheme.colorScheme.onBackground
+        ),
+        onClick = {}
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    color = MiuixTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                var pickerPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
+                Box(
+                    modifier = Modifier.capturePopupAnchor { pickerPopupAnchorBounds = it }
+                ) {
+                    AppDropdownAnchorButton(
+                        backdrop = backdrop,
+                        text = optionLabels.getOrElse(selectedIndex) { "角色表情1" },
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = { showPicker = !showPicker }
+                    )
+                    if (showPicker) {
+                        SnapshotWindowListPopup(
+                            show = showPicker,
+                            alignment = PopupPositionProvider.Align.BottomEnd,
+                            anchorBounds = pickerPopupAnchorBounds,
+                            placement = SnapshotPopupPlacement.ButtonEnd,
+                            onDismissRequest = { showPicker = false },
+                            enableWindowDim = false
+                        ) {
+                            LiquidDropdownColumn(
+                                modifier = Modifier.heightIn(max = pickerMaxHeight)
+                            ) {
+                                optionLabels.forEachIndexed { idx, option ->
+                                    LiquidDropdownImpl(
+                                        text = option,
+                                        optionSize = optionLabels.size,
+                                        isSelected = selectedIndex == idx,
+                                        index = idx,
+                                        onSelectedIndexChange = { selected ->
+                                            selectedIndex = selected
+                                            showPicker = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                if (isVideoType && displayMediaUrl.isNotBlank()) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = if (videoInlineExpanded && videoInlinePlaying) {
+                            MiuixIcons.Regular.Pause
+                        } else {
+                            MiuixIcons.Regular.Play
+                        },
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            if (normalizeGuideMediaSource(displayMediaUrl).isBlank()) {
+                                Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                            } else if (!videoInlineExpanded) {
+                                videoInlineExpanded = true
+                            } else {
+                                videoControlRequestId += 1
+                            }
+                        }
+                    )
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.ExpandMore,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            val normalized = normalizeGuideMediaSource(displayMediaUrl)
+                            if (normalized.isBlank()) {
+                                Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                            } else {
+                                GuideVideoFullscreenActivity.launch(
+                                    context = context,
+                                    mediaUrl = normalized
+                                )
+                            }
+                        }
+                    )
+                }
+                if (saveTargetUrl.isNotBlank()) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "",
+                        leadingIcon = MiuixIcons.Regular.Download,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            onSaveMedia(
+                                saveTargetUrl,
+                                optionLabels.getOrElse(selectedIndex) { title }
+                            )
+                        }
+                    )
+                }
+                if (isImageType && displayImageUrl.isNotBlank()) {
+                    val imageProgressValue = if (imageLoading) imageProgress.coerceIn(0f, 1f) else 1f
+                    val progressForegroundColor = if (imageProgressValue >= 0.999f) Color(0xFF34C759) else Color(0xFF3B82F6)
+                    val progressBackgroundColor = if (imageProgressValue >= 0.999f) Color(0x5534C759) else Color(0x553B82F6)
+                    CircularProgressIndicator(
+                        progress = imageProgressValue,
+                        size = 18.dp,
+                        strokeWidth = 2.dp,
+                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                            foregroundColor = progressForegroundColor,
+                            backgroundColor = progressBackgroundColor
+                        )
+                    )
+                }
+            }
+
+            if (displayImageUrl.isNotBlank() && selectedItem.mediaType.lowercase() != "video") {
+                GuidePressableMediaSurface(
+                    modifier = Modifier.draggable(
+                        state = expressionDragState,
+                        orientation = Orientation.Horizontal,
+                        enabled = canSwipeExpressions,
+                        onDragStopped = { velocity ->
+                            val totalDrag = expressionDragAccumPx
+                            expressionDragAccumPx = 0f
+                            val shouldGoNext = totalDrag <= -swipeThresholdPx || velocity <= -1600f
+                            val shouldGoPrev = totalDrag >= swipeThresholdPx || velocity >= 1600f
+                            when {
+                                shouldGoNext && selectedIndex < items.lastIndex -> {
+                                    selectedIndex += 1
+                                    showPicker = false
+                                }
+                                shouldGoPrev && selectedIndex > 0 -> {
+                                    selectedIndex -= 1
+                                    showPicker = false
+                                }
+                            }
+                        }
+                    ),
+                    onClick = { showImageFullscreen = true }
+                ) {
+                    GuideRemoteImageAdaptive(
+                        imageUrl = displayImageUrl,
+                        progressState = if (isImageType) imageProgressState else null,
+                        onLoadingChanged = if (isImageType) {
+                            { loading -> imageLoading = loading }
+                        } else {
+                            null
+                        }
+                    )
+                }
+            }
+
+            if (canOpenMedia) {
+                if (selectedItem.mediaType.lowercase() == "video") {
+                    GuideInlineVideoPlayer(
+                        mediaUrl = displayMediaUrl,
+                        previewImageUrl = displayImageUrl,
+                        backdrop = backdrop,
+                        expanded = videoInlineExpanded,
+                        onExpandedChange = { expanded -> videoInlineExpanded = expanded },
+                        controlAction = GuideVideoControlAction.TogglePlayPause,
+                        controlActionToken = videoControlRequestId,
+                        onIsPlayingChange = { playing -> videoInlinePlaying = playing }
+                    )
+                } else {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = "打开",
+                        leadingIcon = MiuixIcons.Regular.Play,
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = { onOpenMedia(selectedItem.mediaUrl) }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showImageFullscreen && isImageType && displayImageUrl.isNotBlank()) {
+        GuideImageFullscreenDialog(
+            imageUrl = displayImageUrl,
+            onDismiss = { showImageFullscreen = false }
+        )
+    }
+}
