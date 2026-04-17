@@ -691,6 +691,11 @@ fun McpPage(
                 ),
                 modifier = Modifier.align(Alignment.BottomEnd)
             ) {
+                val floatingTint = if (uiState.running) {
+                    MiuixTheme.colorScheme.error
+                } else {
+                    MiuixTheme.colorScheme.primary
+                }
                 GlassIconButton(
                     backdrop = contentBackdrop,
                     icon = if (uiState.running) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
@@ -703,7 +708,8 @@ fun McpPage(
                     modifier = Modifier.padding(end = 14.dp, bottom = contentBottomPadding - 24.dp),
                     width = 60.dp,
                     height = 44.dp,
-                    iconTint = if (uiState.running) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.primary,
+                    iconTint = floatingTint,
+                    containerColor = floatingTint,
                     variant = GlassVariant.Floating
                 )
             }

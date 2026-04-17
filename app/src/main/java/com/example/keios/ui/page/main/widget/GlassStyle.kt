@@ -181,13 +181,13 @@ internal fun glassStyle(
             if (isDark) {
                 GlassStyle(
                     blur = blur,
-                    baseColor = Color(0xFF0E1117).copy(alpha = 0.28f),
+                    baseColor = Color(0xFF0E1117).copy(alpha = 0.22f),
                     overlayColor = Color.Transparent,
-                    borderColor = Color.White.copy(alpha = 0.20f),
+                    borderColor = Color.White.copy(alpha = 0.24f),
                     borderWidth = 1.dp,
-                    highlightAlpha = 0.72f,
-                    shadowAlpha = 0.14f,
-                    fallbackAlpha = 0.68f,
+                    highlightAlpha = 0.66f,
+                    shadowAlpha = 0.12f,
+                    fallbackAlpha = 0.62f,
                     lensStart = 25.dp,
                     lensEnd = 27.dp,
                     showBorder = true
@@ -195,13 +195,13 @@ internal fun glassStyle(
             } else {
                 GlassStyle(
                     blur = blur,
-                    baseColor = Color.White.copy(alpha = 0.56f),
-                    overlayColor = Color.Transparent,
-                    borderColor = Color.White.copy(alpha = 0.90f),
+                    baseColor = Color.White.copy(alpha = 0.52f),
+                    overlayColor = Color(0xFFDCEBFF).copy(alpha = 0.24f),
+                    borderColor = Color.White.copy(alpha = 0.94f),
                     borderWidth = 1.2.dp,
-                    highlightAlpha = 0.86f,
-                    shadowAlpha = 0.16f,
-                    fallbackAlpha = 0.88f,
+                    highlightAlpha = 0.88f,
+                    shadowAlpha = 0.14f,
+                    fallbackAlpha = 0.84f,
                     lensStart = 26.dp,
                     lensEnd = 28.dp,
                     showBorder = true

@@ -451,7 +451,7 @@ private fun glassContainerOverlayAlpha(
         GlassVariant.SheetPrimaryAction -> 0.18f
         GlassVariant.Compact -> if (isDark) 0.22f else 0.28f
         GlassVariant.SheetDangerAction -> 0.18f
-        GlassVariant.Floating -> 0.16f
+        GlassVariant.Floating -> if (isDark) 0.24f else 0.28f
         GlassVariant.Content -> if (isDark) 0.26f else 0.32f
     }
 }
