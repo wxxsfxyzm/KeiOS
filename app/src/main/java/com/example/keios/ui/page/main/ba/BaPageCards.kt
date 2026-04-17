@@ -125,6 +125,7 @@ private fun BaInlineActionPanel(
                     backdrop = backdrop,
                     text = buttonText,
                     textColor = accentColor,
+                    containerColor = accentColor,
                     enabled = enabled,
                     variant = GlassVariant.Content,
                     onClick = onClick,

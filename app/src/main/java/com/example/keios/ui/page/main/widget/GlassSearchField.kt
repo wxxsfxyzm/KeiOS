@@ -6,6 +6,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.text.BasicTextField
@@ -69,6 +70,7 @@ fun GlassSearchField(
     } else {
         AppTypographyTokens.Body.lineHeight
     }
+    val enteredTextOffsetY = if (singleLine && variant == GlassVariant.SheetInput) 1.dp else 0.dp
     val glass = glassStyle(
         isDark = isDark,
         variant = variant,
@@ -196,7 +198,14 @@ fun GlassSearchField(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    innerTextField()
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = if (value.isBlank()) 0.dp else enteredTextOffsetY),
+                        contentAlignment = contentAlignment
+                    ) {
+                        innerTextField()
+                    }
                 }
             }
         )
