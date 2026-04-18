@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.github.sheet
+package com.example.keios.ui.page.main.github.share
 
 import android.os.Build
 import androidx.compose.foundation.clickable
@@ -31,8 +31,6 @@ import androidx.compose.ui.unit.DpSize
 import com.example.keios.R
 import com.example.keios.feature.github.data.local.GitHubPendingShareImportTrackRecord
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
-import com.example.keios.ui.page.main.GitHubPendingShareImportAttachCandidate
-import com.example.keios.ui.page.main.GitHubShareImportPreview
 import com.example.keios.ui.page.main.GitHubStatusPalette
 import com.example.keios.ui.page.main.github.asset.assetIsPreferredForDevice
 import com.example.keios.ui.page.main.github.asset.assetLikelyCompatibleWithDevice
@@ -100,7 +98,7 @@ private fun compactProjectValue(preview: GitHubShareImportPreview): String {
 }
 
 @Composable
-internal fun GitHubShareImportDialog(
+internal fun GitHubShareImportSheet(
     preview: GitHubShareImportPreview?,
     resolving: Boolean,
     onDismissRequest: () -> Unit,
@@ -278,7 +276,7 @@ internal fun GitHubShareImportDialog(
 }
 
 @Composable
-internal fun GitHubShareImportPendingDialog(
+internal fun GitHubShareImportPendingSheet(
     pending: GitHubPendingShareImportTrackRecord?,
     onDismissRequest: () -> Unit,
     onClose: () -> Unit,
@@ -344,7 +342,7 @@ internal fun GitHubShareImportPendingDialog(
 }
 
 @Composable
-internal fun GitHubShareImportAttachConfirmDialog(
+internal fun GitHubShareImportAttachConfirmSheet(
     candidate: GitHubPendingShareImportAttachCandidate?,
     duplicateExists: Boolean,
     submitting: Boolean,

@@ -18,7 +18,6 @@ import com.example.keios.core.prefs.AppThemeMode
 import com.example.keios.core.prefs.UiPrefs
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.remote.GitHubShareIntentParser
-import com.example.keios.ui.page.main.GitHubShareImportOverlayHost
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
@@ -43,7 +42,7 @@ class GitHubShareImportActivity : ComponentActivity() {
 
             MiuixTheme(controller = controller) {
                 Box(modifier = Modifier.fillMaxSize())
-                GitHubShareImportOverlayHost(
+                GitHubShareImportWindowFlowHost(
                     incomingGitHubShareText = incomingGitHubShareText,
                     incomingGitHubShareToken = incomingGitHubShareToken,
                     onIncomingGitHubShareConsumed = {

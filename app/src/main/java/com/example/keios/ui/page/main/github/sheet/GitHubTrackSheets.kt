@@ -31,8 +31,8 @@ import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
 import com.example.keios.feature.github.model.GitHubLookupConfig
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.feature.github.model.InstalledAppItem
-import com.example.keios.ui.page.main.GitHubPendingShareImportAttachCandidate
-import com.example.keios.ui.page.main.GitHubShareImportPreview
+import com.example.keios.ui.page.main.github.share.GitHubPendingShareImportAttachCandidate
+import com.example.keios.ui.page.main.github.share.GitHubShareImportPreview
 import com.example.keios.ui.page.main.RefreshIntervalOption
 import com.example.keios.ui.page.main.GitHubAppCandidateRow
 import com.example.keios.ui.page.main.GitHubSelectedAppCard

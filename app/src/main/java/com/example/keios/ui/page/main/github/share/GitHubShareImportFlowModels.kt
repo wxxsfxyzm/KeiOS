@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.share
 
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
 

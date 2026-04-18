@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.example.keios.R
 import com.example.keios.ui.page.main.GitHubCompactInfoRow
-import com.example.keios.ui.page.main.GitHubPendingShareImportTrack
+import com.example.keios.ui.page.main.github.share.GitHubPendingShareImportTrack
 import com.example.keios.ui.page.main.GitHubStatusPalette
 import com.example.keios.ui.page.main.widget.AppStatusPillSize
 import com.example.keios.ui.page.main.widget.AppSurfaceCard

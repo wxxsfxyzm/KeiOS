@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.share
 
 import android.app.DownloadManager
 import android.content.Context
@@ -32,9 +32,6 @@ import com.example.keios.feature.github.model.GitHubLookupConfig
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.ui.page.main.github.query.systemDownloadManagerOption
-import com.example.keios.ui.page.main.github.sheet.GitHubShareImportAttachConfirmDialog
-import com.example.keios.ui.page.main.github.sheet.GitHubShareImportDialog
-import com.example.keios.ui.page.main.github.sheet.GitHubShareImportPendingDialog
 import com.example.keios.ui.page.main.github.state.toCacheEntry
 import com.example.keios.ui.page.main.github.state.toUi
 import kotlinx.coroutines.CoroutineScope
@@ -56,7 +53,7 @@ private val shareImportAttachActions = setOf(
     Intent.ACTION_PACKAGE_CHANGED
 )
 
-private data class OverlayInstalledPackageSnapshot(
+private data class ShareImportInstalledPackageSnapshot(
     val packageName: String,
     val appLabel: String,
     val lastUpdateTimeMs: Long,
@@ -75,7 +72,7 @@ private sealed interface ShareImportAttachResult {
 }
 
 @Composable
-internal fun GitHubShareImportOverlayHost(
+internal fun GitHubShareImportWindowFlowHost(
     incomingGitHubShareText: String?,
     incomingGitHubShareToken: Int,
     onIncomingGitHubShareConsumed: () -> Unit,
@@ -345,7 +342,7 @@ internal fun GitHubShareImportOverlayHost(
         onIdle()
     }
 
-    GitHubShareImportDialog(
+    GitHubShareImportSheet(
         preview = pendingPreview,
         resolving = resolving,
         onDismissRequest = {
@@ -390,7 +387,7 @@ internal fun GitHubShareImportOverlayHost(
             }
         }
     )
-    GitHubShareImportPendingDialog(
+    GitHubShareImportPendingSheet(
         pending = if (
             showPendingArmedSheet &&
             pendingTrack != null &&
@@ -418,7 +415,7 @@ internal fun GitHubShareImportOverlayHost(
         }
     )
 
-    GitHubShareImportAttachConfirmDialog(
+    GitHubShareImportAttachConfirmSheet(
         candidate = attachCandidate,
         duplicateExists = attachDuplicateExists,
         submitting = attachSubmitting,
@@ -430,8 +427,8 @@ internal fun GitHubShareImportOverlayHost(
             if (!attachSubmitting) attachCandidate = null
         },
         onConfirm = {
-            if (attachSubmitting) return@GitHubShareImportAttachConfirmDialog
-            val candidate = attachCandidate ?: return@GitHubShareImportAttachConfirmDialog
+            if (attachSubmitting) return@GitHubShareImportAttachConfirmSheet
+            val candidate = attachCandidate ?: return@GitHubShareImportAttachConfirmSheet
             attachSubmitting = true
             attachSubmittingAndOpen = false
             scope.launch {
@@ -456,8 +453,8 @@ internal fun GitHubShareImportOverlayHost(
             }
         },
         onConfirmAndOpenGitHub = {
-            if (attachSubmitting) return@GitHubShareImportAttachConfirmDialog
-            val candidate = attachCandidate ?: return@GitHubShareImportAttachConfirmDialog
+            if (attachSubmitting) return@GitHubShareImportAttachConfirmSheet
+            val candidate = attachCandidate ?: return@GitHubShareImportAttachConfirmSheet
             attachSubmitting = true
             attachSubmittingAndOpen = true
             scope.launch {
@@ -656,7 +653,7 @@ private fun saveTrackedFirstInstallAtFallback(candidate: GitHubPendingShareImpor
 private suspend fun loadInstalledPackageSnapshot(
     context: Context,
     packageName: String
-): OverlayInstalledPackageSnapshot? {
+): ShareImportInstalledPackageSnapshot? {
     return withContext(Dispatchers.IO) {
         val pm = context.packageManager
         val info = runCatching {
@@ -678,7 +675,7 @@ private suspend fun loadInstalledPackageSnapshot(
             pm.getApplicationLabel(appInfo).toString().trim()
         }.getOrDefault("")
 
-        OverlayInstalledPackageSnapshot(
+        ShareImportInstalledPackageSnapshot(
             packageName = packageName,
             appLabel = label,
             lastUpdateTimeMs = info.lastUpdateTime,
@@ -690,7 +687,7 @@ private suspend fun loadInstalledPackageSnapshot(
 private fun findRecentInstalledCandidateForPendingTrack(
     context: Context,
     pendingTrack: GitHubPendingShareImportTrackRecord
-): OverlayInstalledPackageSnapshot? {
+): ShareImportInstalledPackageSnapshot? {
     val pm = context.packageManager
     val installed = runCatching {
         pm.getInstalledPackages(PackageManager.PackageInfoFlags.of(0))
@@ -725,7 +722,7 @@ private fun findRecentInstalledCandidateForPendingTrack(
                 pm.getApplicationLabel(appInfo).toString().trim()
             }.getOrDefault("")
 
-            OverlayInstalledPackageSnapshot(
+            ShareImportInstalledPackageSnapshot(
                 packageName = packageName,
                 appLabel = appLabel,
                 lastUpdateTimeMs = updateTime,

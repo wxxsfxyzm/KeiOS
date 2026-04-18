@@ -51,7 +51,7 @@ import com.example.keios.feature.github.model.GitHubLookupConfig
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.ui.page.main.AppIcon
 import com.example.keios.ui.page.main.GitHubCompactInfoRow
-import com.example.keios.ui.page.main.GitHubPendingShareImportTrack
+import com.example.keios.ui.page.main.github.share.GitHubPendingShareImportTrack
 import com.example.keios.ui.page.main.GitHubSortMode
 import com.example.keios.ui.page.main.GitHubStatusPalette
 import com.example.keios.ui.page.main.OverviewRefreshState
