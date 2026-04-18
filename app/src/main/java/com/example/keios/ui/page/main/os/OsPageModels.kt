@@ -150,7 +150,7 @@ internal data class OsGoogleSystemServiceConfig(
     fun normalized(defaults: OsGoogleSystemServiceConfig = OsGoogleSystemServiceConfig()): OsGoogleSystemServiceConfig {
         return copy(
             title = title.trim().ifBlank { defaults.title },
-            subtitle = subtitle.trim().ifBlank { defaults.subtitle },
+            subtitle = subtitle.trim(),
             appName = appName.trim().ifBlank { defaults.appName },
             packageName = packageName.trim().ifBlank { defaults.packageName },
             className = className.trim(),

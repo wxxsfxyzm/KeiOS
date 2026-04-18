@@ -189,10 +189,10 @@
     <string name="os_google_system_service_sheet_section_card">卡片信息</string>
     <string name="os_google_system_service_sheet_section_target">活动目标</string>
     <string name="os_google_system_service_sheet_desc">长按卡片可随时编辑该快捷方式，保存后会立即生效。</string>
-    <string name="os_google_system_service_chip_add">添加小胶囊</string>
+    <string name="os_google_system_service_chip_add">添加</string>
     <string name="os_google_system_service_suggestion_sheet_title">添加推荐小胶囊</string>
     <string name="os_google_system_service_suggestion_sheet_section">%1$s 推荐值</string>
-    <string name="os_google_system_service_suggestion_sheet_desc">点击后会直接写入输入框；Category 与 Flags 支持追加多个值。</string>
+    <string name="os_google_system_service_suggestion_sheet_desc">点击后会直接写入输入框；Category 与 Flags 支持追加多个值；包名支持从已安装 App 列表选择。</string>
     <string name="os_google_system_service_suggestion_clear">留空</string>
     <string name="os_google_system_service_default_subtitle">更新Google系统服务App</string>
     <string name="os_google_system_service_default_app_name">Google Play 商店</string>
@@ -233,7 +233,7 @@
     <string name="os_google_system_service_field_intent_data">Intent Uri Data</string>
     <string name="os_google_system_service_field_intent_mime_type">Intent MimeType</string>
     <string name="os_google_system_service_hint_title">例如：Google系统服务</string>
-    <string name="os_google_system_service_hint_subtitle">例如：更新Google系统服务App</string>
+    <string name="os_google_system_service_hint_subtitle">可留空；例如：更新Google系统服务App</string>
     <string name="os_google_system_service_hint_app_name">例如：Google Play 商店</string>
     <string name="os_google_system_service_hint_package_name">例如：com.android.vending</string>
     <string name="os_google_system_service_hint_class_name">可留空；留空时按包名优先拉起默认入口</string>
@@ -242,6 +242,7 @@
     <string name="os_google_system_service_hint_intent_flags">可留空；留空时自动补 FLAG_ACTIVITY_NEW_TASK，多个用逗号分隔</string>
     <string name="os_google_system_service_hint_intent_data">可留空，示例：market://details?id=com.android.vending</string>
     <string name="os_google_system_service_hint_intent_mime_type">可留空，示例：text/plain</string>
+    <string name="os_google_system_service_hint_package_suggestion_search">搜索 App 名称或包名</string>
     <string name="os_google_system_service_label_app_name">App 名称</string>
     <string name="os_google_system_service_label_package_name">包名</string>
     <string name="os_google_system_service_label_class_name">类名</string>

@@ -74,7 +74,6 @@ import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassSearchField
-import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
 import com.example.keios.ui.page.main.widget.SheetContentColumn
@@ -109,6 +108,7 @@ import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Filter
@@ -204,6 +204,11 @@ fun OsPage(
     var googleSystemServiceSuggestionTarget by remember {
         mutableStateOf(ShortcutSuggestionField.IntentAction)
     }
+    var googleSystemServicePackageSuggestions by remember {
+        mutableStateOf<List<ShortcutInstalledAppOption>>(emptyList())
+    }
+    var googleSystemServicePackageSuggestionsLoading by remember { mutableStateOf(false) }
+    var googleSystemServicePackageSuggestionQuery by rememberSaveable { mutableStateOf("") }
     var uiStatePersistenceReady by remember { mutableStateOf(false) }
     var showCardManager by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -510,6 +515,19 @@ fun OsPage(
         if (!cacheLoaded) return@LaunchedEffect
         if (isPageActive && linuxEnvExpanded && isCardVisible(OsSectionCard.LINUX)) ensureLoad(SectionKind.LINUX)
     }
+    LaunchedEffect(showGoogleSystemServiceSuggestionSheet, googleSystemServiceSuggestionTarget) {
+        if (!showGoogleSystemServiceSuggestionSheet) return@LaunchedEffect
+        if (googleSystemServiceSuggestionTarget != ShortcutSuggestionField.PackageName) return@LaunchedEffect
+        googleSystemServicePackageSuggestionsLoading = true
+        runCatching {
+            withContext(Dispatchers.IO) { loadInstalledAppOptions(context) }
+        }.onSuccess { apps ->
+            googleSystemServicePackageSuggestions = apps
+        }.onFailure {
+            googleSystemServicePackageSuggestions = emptyList()
+        }
+        googleSystemServicePackageSuggestionsLoading = false
+    }
 
     val systemRows = sectionStates[SectionKind.SYSTEM]?.rows ?: emptyList()
     val secureRows = sectionStates[SectionKind.SECURE]?.rows ?: emptyList()
@@ -710,11 +728,15 @@ fun OsPage(
 
     fun openGoogleSystemServiceSuggestionSheet(target: ShortcutSuggestionField) {
         googleSystemServiceSuggestionTarget = target
+        if (target == ShortcutSuggestionField.PackageName) {
+            googleSystemServicePackageSuggestionQuery = ""
+        }
         showGoogleSystemServiceSuggestionSheet = true
     }
 
     fun currentGoogleSystemServiceSuggestionFieldValue(target: ShortcutSuggestionField): String {
         return when (target) {
+            ShortcutSuggestionField.PackageName -> googleSystemServiceDraft.packageName
             ShortcutSuggestionField.IntentAction -> googleSystemServiceDraft.intentAction
             ShortcutSuggestionField.IntentCategory -> googleSystemServiceDraft.intentCategory
             ShortcutSuggestionField.IntentFlags -> googleSystemServiceDraft.intentFlags
@@ -725,6 +747,15 @@ fun OsPage(
 
     fun applyGoogleSystemServiceSuggestion(item: ShortcutSuggestionItem) {
         when (googleSystemServiceSuggestionTarget) {
+            ShortcutSuggestionField.PackageName -> {
+                val nextPackageName = item.value.trim()
+                val nextAppName = item.relatedAppName.trim()
+                googleSystemServiceDraft = googleSystemServiceDraft.copy(
+                    packageName = nextPackageName,
+                    appName = if (nextAppName.isNotBlank()) nextAppName else googleSystemServiceDraft.appName
+                )
+            }
+
             ShortcutSuggestionField.IntentAction -> {
                 googleSystemServiceDraft = googleSystemServiceDraft.copy(intentAction = item.value)
             }
@@ -1121,7 +1152,20 @@ fun OsPage(
                         )
                     }
                     SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_package_name)
+                        title = stringResource(R.string.os_google_system_service_field_package_name),
+                        trailing = {
+                            GlassIconButton(
+                                backdrop = sheetBackdrop,
+                                variant = GlassVariant.SheetAction,
+                                icon = MiuixIcons.Regular.AddCircle,
+                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
+                                width = 40.dp,
+                                height = 32.dp,
+                                onClick = {
+                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.PackageName)
+                                }
+                            )
+                        }
                     ) {
                         GlassSearchField(
                             value = googleSystemServiceDraft.packageName,
@@ -1151,10 +1195,13 @@ fun OsPage(
                     SheetFieldBlock(
                         title = stringResource(R.string.os_google_system_service_field_intent_action),
                         trailing = {
-                            GlassTextButton(
+                            GlassIconButton(
                                 backdrop = sheetBackdrop,
                                 variant = GlassVariant.SheetAction,
-                                text = stringResource(R.string.os_google_system_service_chip_add),
+                                icon = MiuixIcons.Regular.AddCircle,
+                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
+                                width = 40.dp,
+                                height = 32.dp,
                                 onClick = {
                                     openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentAction)
                                 }
@@ -1175,10 +1222,13 @@ fun OsPage(
                     SheetFieldBlock(
                         title = stringResource(R.string.os_google_system_service_field_intent_category),
                         trailing = {
-                            GlassTextButton(
+                            GlassIconButton(
                                 backdrop = sheetBackdrop,
                                 variant = GlassVariant.SheetAction,
-                                text = stringResource(R.string.os_google_system_service_chip_add),
+                                icon = MiuixIcons.Regular.AddCircle,
+                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
+                                width = 40.dp,
+                                height = 32.dp,
                                 onClick = {
                                     openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentCategory)
                                 }
@@ -1199,10 +1249,13 @@ fun OsPage(
                     SheetFieldBlock(
                         title = stringResource(R.string.os_google_system_service_field_intent_flags),
                         trailing = {
-                            GlassTextButton(
+                            GlassIconButton(
                                 backdrop = sheetBackdrop,
                                 variant = GlassVariant.SheetAction,
-                                text = stringResource(R.string.os_google_system_service_chip_add),
+                                icon = MiuixIcons.Regular.AddCircle,
+                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
+                                width = 40.dp,
+                                height = 32.dp,
                                 onClick = {
                                     openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentFlags)
                                 }
@@ -1223,10 +1276,13 @@ fun OsPage(
                     SheetFieldBlock(
                         title = stringResource(R.string.os_google_system_service_field_intent_data),
                         trailing = {
-                            GlassTextButton(
+                            GlassIconButton(
                                 backdrop = sheetBackdrop,
                                 variant = GlassVariant.SheetAction,
-                                text = stringResource(R.string.os_google_system_service_chip_add),
+                                icon = MiuixIcons.Regular.AddCircle,
+                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
+                                width = 40.dp,
+                                height = 32.dp,
                                 onClick = {
                                     openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentUriData)
                                 }
@@ -1247,10 +1303,13 @@ fun OsPage(
                     SheetFieldBlock(
                         title = stringResource(R.string.os_google_system_service_field_intent_mime_type),
                         trailing = {
-                            GlassTextButton(
+                            GlassIconButton(
                                 backdrop = sheetBackdrop,
                                 variant = GlassVariant.SheetAction,
-                                text = stringResource(R.string.os_google_system_service_chip_add),
+                                icon = MiuixIcons.Regular.AddCircle,
+                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
+                                width = 40.dp,
+                                height = 32.dp,
                                 onClick = {
                                     openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentMimeType)
                                 }
@@ -1288,7 +1347,23 @@ fun OsPage(
                 )
             }
         ) {
+            val packageSuggestionQuery = googleSystemServicePackageSuggestionQuery.trim()
+            val filteredInstalledApps = remember(
+                googleSystemServicePackageSuggestions,
+                packageSuggestionQuery
+            ) {
+                if (packageSuggestionQuery.isBlank()) {
+                    googleSystemServicePackageSuggestions
+                } else {
+                    googleSystemServicePackageSuggestions.filter { app ->
+                        app.appName.contains(packageSuggestionQuery, ignoreCase = true) ||
+                            app.packageName.contains(packageSuggestionQuery, ignoreCase = true)
+                    }
+                }
+            }
             val targetLabel = when (googleSystemServiceSuggestionTarget) {
+                ShortcutSuggestionField.PackageName ->
+                    stringResource(R.string.os_google_system_service_field_package_name)
                 ShortcutSuggestionField.IntentAction ->
                     stringResource(R.string.os_google_system_service_field_intent_action)
                 ShortcutSuggestionField.IntentCategory ->
@@ -1301,6 +1376,15 @@ fun OsPage(
                     stringResource(R.string.os_google_system_service_field_intent_mime_type)
             }
             val suggestions = when (googleSystemServiceSuggestionTarget) {
+                ShortcutSuggestionField.PackageName -> filteredInstalledApps.map { app ->
+                    ShortcutSuggestionItem(
+                        label = app.appName,
+                        value = app.packageName,
+                        summary = app.packageName,
+                        relatedAppName = app.appName
+                    )
+                }
+
                 ShortcutSuggestionField.IntentAction -> listOf(
                     ShortcutSuggestionItem(
                         label = stringResource(R.string.os_google_system_service_suggestion_clear),
@@ -1462,8 +1546,33 @@ fun OsPage(
                         targetLabel
                     )
                 )
+                if (googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName) {
+                    GlassSearchField(
+                        value = googleSystemServicePackageSuggestionQuery,
+                        onValueChange = { googleSystemServicePackageSuggestionQuery = it },
+                        label = stringResource(R.string.os_google_system_service_hint_package_suggestion_search),
+                        backdrop = sheetBackdrop,
+                        variant = GlassVariant.SheetInput,
+                        textColor = MiuixTheme.colorScheme.primary,
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                if (
+                    googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName &&
+                    googleSystemServicePackageSuggestionsLoading
+                ) {
+                    Text(
+                        text = stringResource(R.string.common_loading),
+                        color = MiuixTheme.colorScheme.onBackgroundVariant
+                    )
+                }
                 suggestions.forEach { suggestion ->
                     val selected = when (googleSystemServiceSuggestionTarget) {
+                        ShortcutSuggestionField.PackageName -> {
+                            currentValue.trim().equals(suggestion.value.trim(), ignoreCase = true)
+                        }
+
                         ShortcutSuggestionField.IntentAction,
                         ShortcutSuggestionField.IntentUriData,
                         ShortcutSuggestionField.IntentMimeType -> {
@@ -1491,6 +1600,16 @@ fun OsPage(
                         selected = selected,
                         onSelect = { applyGoogleSystemServiceSuggestion(suggestion) },
                         selectedLabel = StatusLabelText.Activated
+                    )
+                }
+                if (
+                    googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName &&
+                    !googleSystemServicePackageSuggestionsLoading &&
+                    suggestions.isEmpty()
+                ) {
+                    Text(
+                        text = noMatchedResultsText,
+                        color = MiuixTheme.colorScheme.onBackgroundVariant
                     )
                 }
                 SheetDescriptionText(
@@ -1890,6 +2009,7 @@ private fun OsSectionInfoRow(
 }
 
 private enum class ShortcutSuggestionField {
+    PackageName,
     IntentAction,
     IntentCategory,
     IntentFlags,
@@ -1901,8 +2021,47 @@ private data class ShortcutSuggestionItem(
     val label: String,
     val value: String,
     val summary: String,
-    val append: Boolean = false
+    val append: Boolean = false,
+    val relatedAppName: String = ""
 )
+
+private data class ShortcutInstalledAppOption(
+    val appName: String,
+    val packageName: String
+)
+
+private fun loadInstalledAppOptions(context: Context): List<ShortcutInstalledAppOption> {
+    val pm = context.packageManager
+    val packageInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        pm.getInstalledPackages(PackageManager.PackageInfoFlags.of(0))
+    } else {
+        pm.getInstalledPackages(0)
+    }
+    return packageInfos.mapNotNull { info ->
+        val packageName = info.packageName.trim()
+        if (packageName.isBlank()) return@mapNotNull null
+        val appInfo = info.applicationInfo ?: runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0))
+            } else {
+                pm.getApplicationInfo(packageName, 0)
+            }
+        }.getOrNull() ?: return@mapNotNull null
+
+        val appName = runCatching {
+            pm.getApplicationLabel(appInfo).toString()
+        }.getOrDefault(packageName).trim().ifBlank { packageName }
+
+        ShortcutInstalledAppOption(
+            appName = appName,
+            packageName = packageName
+        )
+    }.distinctBy { it.packageName }
+        .sortedWith(
+            compareBy<ShortcutInstalledAppOption> { it.appName.lowercase(Locale.ROOT) }
+                .thenBy { it.packageName.lowercase(Locale.ROOT) }
+        )
+}
 
 private fun parseIntentCategories(raw: String): List<String> {
     return parseIntentTokenText(raw)
