@@ -460,10 +460,14 @@ private fun createUniqueDocumentInTree(
 @Composable
 fun BaStudentGuidePage(
     liquidActionBarLayeredStyleEnabled: Boolean = true,
+    preloadingEnabled: Boolean = false,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
+    val preloadPolicy = remember(preloadingEnabled) {
+        UiPerformanceBudget.resolvePreloadPolicy(preloadingEnabled)
+    }
     val defaultPageTitle = stringResource(R.string.guide_page_title_default)
     val shareSourceEmptyText = stringResource(R.string.guide_share_source_empty)
     val shareSourceChooserTitle = stringResource(R.string.guide_share_source_chooser_title)
@@ -922,7 +926,7 @@ fun BaStudentGuidePage(
         staticImagePrefetchStage = 1
 
         val urls = collectGuideStaticImagePrefetchUrls(guide)
-            .take(UiPerformanceBudget.guideStaticPrefetchInitialCount)
+            .take(preloadPolicy.guideStaticPrefetchInitialCount)
         if (urls.isEmpty()) return@LaunchedEffect
 
         withContext(Dispatchers.IO) {
@@ -943,8 +947,8 @@ fun BaStudentGuidePage(
         staticImagePrefetchStage = 2
 
         val urls = collectGuideStaticImagePrefetchUrls(guide)
-            .drop(UiPerformanceBudget.guideStaticPrefetchInitialCount)
-            .take(UiPerformanceBudget.guideStaticPrefetchGalleryExtraCount)
+            .drop(preloadPolicy.guideStaticPrefetchInitialCount)
+            .take(preloadPolicy.guideStaticPrefetchGalleryExtraCount)
         if (urls.isEmpty()) return@LaunchedEffect
 
         withContext(Dispatchers.IO) {
@@ -958,8 +962,8 @@ fun BaStudentGuidePage(
     }
 
     LaunchedEffect(sourceUrl, refreshSignal) {
-        if (refreshSignal == 0 && transitionAnimationsEnabled) {
-            delay(90)
+        if (refreshSignal == 0 && transitionAnimationsEnabled && preloadPolicy.initialFetchDelayMs > 0) {
+            delay(preloadPolicy.initialFetchDelayMs.toLong())
         }
         val requestUrl = sourceUrl
         if (requestUrl.isBlank()) return@LaunchedEffect
@@ -1148,7 +1152,7 @@ fun BaStudentGuidePage(
             state = pagerState,
             key = { index -> bottomTabs[index].name },
             overscrollEffect = null,
-            beyondViewportPageCount = UiPerformanceBudget.guidePagerBeyondViewportPageCount,
+            beyondViewportPageCount = preloadPolicy.guidePagerBeyondViewportPageCount,
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = farJumpAlpha.value }
@@ -1158,7 +1162,8 @@ fun BaStudentGuidePage(
             val isVoiceTab = pageBottomTab == GuideBottomTab.Voice
             val shouldRenderHeavyContent =
                 pageIndex == pagerState.currentPage ||
-                    pageIndex == pagerState.settledPage
+                    pageIndex == pagerState.settledPage ||
+                    (preloadPolicy.includeTargetPageInHeavyRender && pageIndex == pagerState.targetPage)
             val pageListState = rememberSaveable(
                 sourceUrl,
                 pageBottomTab.name,

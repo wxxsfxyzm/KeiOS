@@ -155,10 +155,14 @@ fun BaGuideCatalogPage(
     onBack: () -> Unit,
     onOpenGuide: (String) -> Unit,
     liquidActionBarLayeredStyleEnabled: Boolean = true,
+    preloadingEnabled: Boolean = false,
     enableSearchBar: Boolean = true,
 ) {
     val context = LocalContext.current
     val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
+    val preloadPolicy = remember(preloadingEnabled) {
+        UiPerformanceBudget.resolvePreloadPolicy(preloadingEnabled)
+    }
     val pageTitle = stringResource(R.string.ba_catalog_page_title)
     val sortActionContentDescription = stringResource(R.string.ba_catalog_action_sort)
     val refreshActionContentDescription = stringResource(R.string.ba_catalog_action_refresh)
@@ -311,8 +315,8 @@ fun BaGuideCatalogPage(
     }
 
     LaunchedEffect(refreshSignal) {
-        if (refreshSignal == 0 && transitionAnimationsEnabled) {
-            delay(90)
+        if (refreshSignal == 0 && transitionAnimationsEnabled && preloadPolicy.initialFetchDelayMs > 0) {
+            delay(preloadPolicy.initialFetchDelayMs.toLong())
         }
         val manualRefresh = refreshSignal > 0
         val now = System.currentTimeMillis()
@@ -523,7 +527,7 @@ fun BaGuideCatalogPage(
                 .fillMaxSize()
                 .graphicsLayer { alpha = farJumpAlpha.value }
                 .layerBackdrop(bottomBarBackdrop),
-            beyondViewportPageCount = UiPerformanceBudget.catalogPagerBeyondViewportPageCount
+            beyondViewportPageCount = preloadPolicy.catalogPagerBeyondViewportPageCount
         ) { pageIndex ->
             val pageTab = tabs.getOrElse(pageIndex) { BaGuideCatalogTab.Student }
             CatalogTabContent(
@@ -540,7 +544,9 @@ fun BaGuideCatalogPage(
                 innerPadding = innerPadding,
                 nestedScrollConnection = scrollBehavior.nestedScrollConnection,
                 isPageActive = pageIndex == pagerState.currentPage,
-                renderHeavyContent = pageIndex == pagerState.currentPage || pageIndex == pagerState.settledPage,
+                renderHeavyContent = pageIndex == pagerState.currentPage ||
+                    pageIndex == pagerState.settledPage ||
+                    (preloadPolicy.includeTargetPageInHeavyRender && pageIndex == pagerState.targetPage),
                 onOpenGuide = onOpenGuide,
                 onToggleFavorite = ::toggleCatalogFavorite
             )

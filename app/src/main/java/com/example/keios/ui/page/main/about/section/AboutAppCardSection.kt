@@ -124,6 +124,11 @@ fun AboutAppCardSection(
                         titleIcon = MiuixIcons.Regular.Update
                     )
                     AboutCompactInfoRow(
+                        title = stringResource(R.string.about_label_build_type),
+                        value = BuildConfig.BUILD_TYPE,
+                        titleIcon = MiuixIcons.Regular.Filter
+                    )
+                    AboutCompactInfoRow(
                         title = stringResource(R.string.about_label_build_time),
                         value = buildTime,
                         titleIcon = MiuixIcons.Regular.Timer

@@ -18,6 +18,7 @@ data class UiPrefsSnapshot(
     val transitionAnimationsEnabled: Boolean,
     val cardPressFeedbackEnabled: Boolean,
     val homeIconHdrEnabled: Boolean,
+    val preloadingEnabled: Boolean,
     val nonHomeBackgroundEnabled: Boolean,
     val nonHomeBackgroundUri: String,
     val superIslandNotificationEnabled: Boolean,
@@ -36,6 +37,7 @@ object UiPrefs {
     private const val KEY_TRANSITION_ANIMATIONS = "transition_animations"
     private const val KEY_CARD_PRESS_FEEDBACK = "card_press_feedback"
     private const val KEY_HOME_ICON_HDR = "home_icon_hdr"
+    private const val KEY_PRELOADING_ENABLED = "preloading_enabled"
     private const val KEY_NON_HOME_BACKGROUND_ENABLED = "non_home_background_enabled"
     private const val KEY_NON_HOME_BACKGROUND_URI = "non_home_background_uri"
     private const val KEY_SUPER_ISLAND_NOTIFICATION = "super_island_notification"
@@ -91,6 +93,14 @@ object UiPrefs {
 
     fun setHomeIconHdrEnabled(value: Boolean) {
         kv().encode(KEY_HOME_ICON_HDR, value)
+    }
+
+    fun isPreloadingEnabled(defaultValue: Boolean = false): Boolean {
+        return kv().decodeBool(KEY_PRELOADING_ENABLED, defaultValue)
+    }
+
+    fun setPreloadingEnabled(value: Boolean) {
+        kv().encode(KEY_PRELOADING_ENABLED, value)
     }
 
     fun isNonHomeBackgroundEnabled(defaultValue: Boolean = false): Boolean {
@@ -189,6 +199,7 @@ object UiPrefs {
             transitionAnimationsEnabled = true,
             cardPressFeedbackEnabled = true,
             homeIconHdrEnabled = false,
+            preloadingEnabled = false,
             nonHomeBackgroundEnabled = false,
             nonHomeBackgroundUri = "",
             superIslandNotificationEnabled = false,
@@ -209,6 +220,7 @@ object UiPrefs {
             transitionAnimationsEnabled = store.decodeBool(KEY_TRANSITION_ANIMATIONS, true),
             cardPressFeedbackEnabled = store.decodeBool(KEY_CARD_PRESS_FEEDBACK, true),
             homeIconHdrEnabled = store.decodeBool(KEY_HOME_ICON_HDR, false),
+            preloadingEnabled = store.decodeBool(KEY_PRELOADING_ENABLED, false),
             nonHomeBackgroundEnabled = store.decodeBool(KEY_NON_HOME_BACKGROUND_ENABLED, false),
             nonHomeBackgroundUri = store.decodeString(KEY_NON_HOME_BACKGROUND_URI, "").orEmpty().trim(),
             superIslandNotificationEnabled = store.decodeBool(KEY_SUPER_ISLAND_NOTIFICATION, false),

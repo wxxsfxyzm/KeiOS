@@ -86,6 +86,8 @@ fun SettingsPage(
     onCardPressFeedbackChanged: (Boolean) -> Unit,
     homeIconHdrEnabled: Boolean,
     onHomeIconHdrChanged: (Boolean) -> Unit,
+    preloadingEnabled: Boolean,
+    onPreloadingEnabledChanged: (Boolean) -> Unit,
     nonHomeBackgroundEnabled: Boolean,
     onNonHomeBackgroundEnabledChanged: (Boolean) -> Unit,
     nonHomeBackgroundUri: String,
@@ -173,6 +175,7 @@ fun SettingsPage(
         liquidBottomBarEnabled ||
         transitionAnimationsEnabled ||
         cardPressFeedbackEnabled ||
+        preloadingEnabled ||
         homeIconHdrEnabled ||
         nonHomeBackgroundEnabled
     val notifyGroupActive = superIslandNotificationEnabled || superIslandBypassRestrictionEnabled
@@ -326,6 +329,19 @@ fun SettingsPage(
                         onCheckedChange = onCardPressFeedbackChanged,
                         infoKey = stringResource(R.string.common_scope),
                         infoValue = stringResource(R.string.settings_card_feedback_scope)
+                    )
+
+                    SettingsToggleItem(
+                        title = stringResource(R.string.settings_preloading_title),
+                        summary = if (preloadingEnabled) {
+                            stringResource(R.string.settings_preloading_summary_enabled)
+                        } else {
+                            stringResource(R.string.settings_preloading_summary_disabled)
+                        },
+                        checked = preloadingEnabled,
+                        onCheckedChange = onPreloadingEnabledChanged,
+                        infoKey = stringResource(R.string.common_scope),
+                        infoValue = stringResource(R.string.settings_preloading_scope)
                     )
 
                     SettingsToggleItem(

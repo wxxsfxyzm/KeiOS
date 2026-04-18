@@ -147,6 +147,7 @@ fun MainScreen(
     }
     var cardPressFeedbackEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.cardPressFeedbackEnabled) }
     var homeIconHdrEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.homeIconHdrEnabled) }
+    var preloadingEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.preloadingEnabled) }
     var nonHomeBackgroundEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.nonHomeBackgroundEnabled) }
     var nonHomeBackgroundUri by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.nonHomeBackgroundUri) }
     var superIslandNotificationEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.superIslandNotificationEnabled) }
@@ -197,6 +198,7 @@ fun MainScreen(
                     liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                     cardPressFeedbackEnabled = cardPressFeedbackEnabled,
                     homeIconHdrEnabled = homeIconHdrEnabled,
+                    preloadingEnabled = preloadingEnabled,
                     nonHomeBackgroundEnabled = nonHomeBackgroundEnabled,
                     nonHomeBackgroundUri = nonHomeBackgroundUri,
                     visibleBottomPageNames = visibleBottomPageNames,
@@ -243,6 +245,11 @@ fun MainScreen(
                     onHomeIconHdrChanged = {
                         homeIconHdrEnabled = it
                         UiPrefs.setHomeIconHdrEnabled(it)
+                    },
+                    preloadingEnabled = preloadingEnabled,
+                    onPreloadingEnabledChanged = {
+                        preloadingEnabled = it
+                        UiPrefs.setPreloadingEnabled(it)
                     },
                     nonHomeBackgroundEnabled = nonHomeBackgroundEnabled,
                     onNonHomeBackgroundEnabledChanged = {
@@ -309,12 +316,14 @@ fun MainScreen(
             entry<KeiosRoute.BaStudentGuide> {
                 BaStudentGuidePage(
                     liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
+                    preloadingEnabled = preloadingEnabled,
                     onBack = { navigator.pop() }
                 )
             }
             entry<KeiosRoute.BaGuideCatalog> {
                 BaGuideCatalogPage(
                     liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
+                    preloadingEnabled = preloadingEnabled,
                     onBack = { navigator.pop() },
                     onOpenGuide = { sourceUrl ->
                         openGuideDetail(sourceUrl)
@@ -344,6 +353,7 @@ private fun MainPagerLayout(
     liquidActionBarLayeredStyleEnabled: Boolean,
     cardPressFeedbackEnabled: Boolean,
     homeIconHdrEnabled: Boolean,
+    preloadingEnabled: Boolean,
     nonHomeBackgroundEnabled: Boolean,
     nonHomeBackgroundUri: String,
     visibleBottomPageNames: Set<String>,
@@ -361,6 +371,9 @@ private fun MainPagerLayout(
     onRequestedBottomPageConsumed: () -> Unit
 ) {
     val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
+    val preloadPolicy = remember(preloadingEnabled) {
+        UiPerformanceBudget.resolvePreloadPolicy(preloadingEnabled)
+    }
     val hasNonHomeBackground = remember(nonHomeBackgroundEnabled, nonHomeBackgroundUri) {
         nonHomeBackgroundEnabled && nonHomeBackgroundUri.isNotBlank()
     }
@@ -612,7 +625,7 @@ private fun MainPagerLayout(
             key = { index -> tabs[index].name },
             userScrollEnabled = pagerScrollEnabled,
             overscrollEffect = null,
-            beyondViewportPageCount = UiPerformanceBudget.mainPagerBeyondViewportPageCount,
+            beyondViewportPageCount = preloadPolicy.mainPagerBeyondViewportPageCount,
             // CRITICAL FIX: NEVER conditionally unmount layerBackdrop.
             // If the node is visible (even during an exit animation), it MUST have the backdrop attached,
             // otherwise consumer composables will attempt to draw a detached Native pointer causing SIGSEGV.
@@ -687,9 +700,12 @@ private fun MainPagerLayout(
                         )
                     }
                     BottomPage.Os -> {
+                        val isWarmActive = pageIndex == pagerState.currentPage ||
+                            pageIndex == pagerState.settledPage ||
+                            (preloadPolicy.includeTargetPageInHeavyRender && pageIndex == pagerState.targetPage)
                         OsPage(
                             scrollToTopSignal = osScrollToTopSignal,
-                            isPageActive = pageIndex == pagerState.currentPage || pageIndex == pagerState.settledPage,
+                            isPageActive = isWarmActive,
                             shizukuStatus = shizukuStatus,
                             shizukuApiUtils = shizukuApiUtils,
                             cardPressFeedbackEnabled = cardPressFeedbackEnabled,
@@ -701,10 +717,13 @@ private fun MainPagerLayout(
                         )
                     }
                     BottomPage.Ba -> {
+                        val isWarmActive = pageIndex == pagerState.currentPage ||
+                            pageIndex == pagerState.settledPage ||
+                            (preloadPolicy.includeTargetPageInHeavyRender && pageIndex == pagerState.targetPage)
                         BAPage(
                             contentBottomPadding = bottomOverlayPadding,
                             scrollToTopSignal = baScrollToTopSignal,
-                            isPageActive = pageIndex == pagerState.currentPage || pageIndex == pagerState.settledPage,
+                            isPageActive = isWarmActive,
                             cardPressFeedbackEnabled = cardPressFeedbackEnabled,
                             liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                             onOpenPoolStudentGuide = { sourceUrl ->
@@ -719,11 +738,14 @@ private fun MainPagerLayout(
                         )
                     }
                     BottomPage.Mcp -> {
+                        val isWarmActive = pageIndex == pagerState.currentPage ||
+                            pageIndex == pagerState.settledPage ||
+                            (preloadPolicy.includeTargetPageInHeavyRender && pageIndex == pagerState.targetPage)
                         McpPage(
                             mcpServerManager = mcpServerManager,
                             contentBottomPadding = bottomOverlayPadding,
                             scrollToTopSignal = mcpScrollToTopSignal,
-                            isPageActive = pageIndex == pagerState.currentPage || pageIndex == pagerState.settledPage,
+                            isPageActive = isWarmActive,
                             cardPressFeedbackEnabled = cardPressFeedbackEnabled,
                             liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                             onOpenSkill = { navigator.pushSingleTop(KeiosRoute.McpSkill) },
@@ -733,10 +755,13 @@ private fun MainPagerLayout(
                         )
                     }
                     BottomPage.GitHub -> {
+                        val isWarmActive = pageIndex == pagerState.currentPage ||
+                            pageIndex == pagerState.settledPage ||
+                            (preloadPolicy.includeTargetPageInHeavyRender && pageIndex == pagerState.targetPage)
                         GitHubPage(
                             contentBottomPadding = bottomOverlayPadding,
                             scrollToTopSignal = githubScrollToTopSignal,
-                            isPageActive = pageIndex == pagerState.currentPage || pageIndex == pagerState.settledPage,
+                            isPageActive = isWarmActive,
                             cardPressFeedbackEnabled = cardPressFeedbackEnabled,
                             liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                             onActionBarInteractingChanged = { interacting ->
