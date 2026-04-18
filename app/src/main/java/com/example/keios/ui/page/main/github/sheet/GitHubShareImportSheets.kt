@@ -348,6 +348,7 @@ internal fun GitHubShareImportAttachConfirmDialog(
     candidate: GitHubPendingShareImportAttachCandidate?,
     duplicateExists: Boolean,
     submitting: Boolean,
+    submittingAndOpen: Boolean,
     onDismissRequest: () -> Unit,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
@@ -386,6 +387,24 @@ internal fun GitHubShareImportAttachConfirmDialog(
                     text = stringResource(R.string.github_share_import_attach_dialog_duplicate_hint)
                 )
             }
+            if (submitting) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (submittingAndOpen) {
+                            stringResource(R.string.github_share_import_attach_dialog_processing_open)
+                        } else {
+                            stringResource(R.string.github_share_import_attach_dialog_processing_add)
+                        },
+                        color = MiuixTheme.colorScheme.onBackgroundVariant
+                    )
+                }
+            }
             if (duplicateExists) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -415,7 +434,11 @@ internal fun GitHubShareImportAttachConfirmDialog(
                     )
                     TextButton(
                         modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.github_share_import_attach_dialog_action_confirm),
+                        text = if (submitting && !submittingAndOpen) {
+                            stringResource(R.string.common_processing)
+                        } else {
+                            stringResource(R.string.github_share_import_attach_dialog_action_confirm)
+                        },
                         colors = ButtonDefaults.textButtonColors(
                             color = GitHubStatusPalette.Active,
                             textColor = MiuixTheme.colorScheme.onPrimary
@@ -427,9 +450,13 @@ internal fun GitHubShareImportAttachConfirmDialog(
                 if (onConfirmAndOpenGitHub != null) {
                     TextButton(
                         modifier = Modifier.fillMaxWidth(),
-                        text = stringResource(
-                            R.string.github_share_import_attach_dialog_action_confirm_and_open_github
-                        ),
+                        text = if (submitting && submittingAndOpen) {
+                            stringResource(R.string.common_processing)
+                        } else {
+                            stringResource(
+                                R.string.github_share_import_attach_dialog_action_confirm_and_open_github
+                            )
+                        },
                         colors = ButtonDefaults.textButtonColors(
                             color = GitHubStatusPalette.Update,
                             textColor = MiuixTheme.colorScheme.onPrimary

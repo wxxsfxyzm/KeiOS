@@ -100,6 +100,7 @@ internal fun GitHubShareImportOverlayHost(
     var attachCandidate by remember { mutableStateOf<GitHubPendingShareImportAttachCandidate?>(null) }
     var attachDuplicateExists by remember { mutableStateOf(false) }
     var attachSubmitting by remember { mutableStateOf(false) }
+    var attachSubmittingAndOpen by remember { mutableStateOf(false) }
     var idleCallbackDispatched by remember { mutableStateOf(false) }
     val handledAtByPackage = remember { mutableStateMapOf<String, Long>() }
 
@@ -311,6 +312,7 @@ internal fun GitHubShareImportOverlayHost(
         if (candidate == null) {
             attachDuplicateExists = false
             attachSubmitting = false
+            attachSubmittingAndOpen = false
             return@LaunchedEffect
         }
         val candidateId = "${candidate.owner}/${candidate.repo}|${candidate.packageName}"
@@ -420,6 +422,7 @@ internal fun GitHubShareImportOverlayHost(
         candidate = attachCandidate,
         duplicateExists = attachDuplicateExists,
         submitting = attachSubmitting,
+        submittingAndOpen = attachSubmittingAndOpen,
         onDismissRequest = {
             if (!attachSubmitting) attachCandidate = null
         },
@@ -430,6 +433,7 @@ internal fun GitHubShareImportOverlayHost(
             if (attachSubmitting) return@GitHubShareImportAttachConfirmDialog
             val candidate = attachCandidate ?: return@GitHubShareImportAttachConfirmDialog
             attachSubmitting = true
+            attachSubmittingAndOpen = false
             scope.launch {
                 try {
                     when (val result = attachCandidateToTracked(context, candidate)) {
@@ -447,6 +451,7 @@ internal fun GitHubShareImportOverlayHost(
                     }
                 } finally {
                     attachSubmitting = false
+                    attachSubmittingAndOpen = false
                 }
             }
         },
@@ -454,9 +459,16 @@ internal fun GitHubShareImportOverlayHost(
             if (attachSubmitting) return@GitHubShareImportAttachConfirmDialog
             val candidate = attachCandidate ?: return@GitHubShareImportAttachConfirmDialog
             attachSubmitting = true
+            attachSubmittingAndOpen = true
             scope.launch {
                 try {
-                    when (val result = attachCandidateToTracked(context, candidate)) {
+                    when (
+                        val result = attachCandidateToTracked(
+                            context = context,
+                            candidate = candidate,
+                            prefetchLatestCheck = false
+                        )
+                    ) {
                         ShareImportAttachResult.Duplicate -> {
                             toast(context, R.string.github_toast_share_import_track_exists)
                             attachCandidate = null
@@ -476,6 +488,7 @@ internal fun GitHubShareImportOverlayHost(
                     }
                 } finally {
                     attachSubmitting = false
+                    attachSubmittingAndOpen = false
                 }
             }
         }
@@ -586,7 +599,8 @@ private fun enqueueWithSystemDownloadManager(
 
 private suspend fun attachCandidateToTracked(
     context: Context,
-    candidate: GitHubPendingShareImportAttachCandidate
+    candidate: GitHubPendingShareImportAttachCandidate,
+    prefetchLatestCheck: Boolean = true
 ): ShareImportAttachResult {
     return withContext(Dispatchers.IO) {
         val trackedItems = GitHubTrackStore.load().toMutableList()
@@ -607,13 +621,15 @@ private suspend fun attachCandidateToTracked(
         saveTrackedFirstInstallAtFallback(candidate)
         AppBackgroundScheduler.scheduleGitHubRefresh(context)
 
-        runCatching {
-            val refreshedUi = GitHubReleaseCheckService.evaluateTrackedApp(context, trackedItem).toUi()
-            val (cache, _) = GitHubTrackStore.loadCheckCache()
-            val updatedCache = cache.toMutableMap().apply {
-                put(trackedItem.id, refreshedUi.toCacheEntry())
+        if (prefetchLatestCheck) {
+            runCatching {
+                val refreshedUi = GitHubReleaseCheckService.evaluateTrackedApp(context, trackedItem).toUi()
+                val (cache, _) = GitHubTrackStore.loadCheckCache()
+                val updatedCache = cache.toMutableMap().apply {
+                    put(trackedItem.id, refreshedUi.toCacheEntry())
+                }
+                GitHubTrackStore.saveCheckCache(updatedCache, System.currentTimeMillis())
             }
-            GitHubTrackStore.saveCheckCache(updatedCache, System.currentTimeMillis())
         }
         GitHubTrackStoreSignals.notifyChanged()
 
