@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -62,7 +63,6 @@ internal fun GitHubShareImportDialog(
         allowDismiss = !resolving
     ) {
         val summary = when {
-            resolving -> stringResource(R.string.github_share_import_dialog_summary_parsing)
             preview != null -> stringResource(
                 R.string.github_share_import_dialog_summary_ready,
                 preview.owner,
@@ -76,16 +76,14 @@ internal fun GitHubShareImportDialog(
         }
         if (resolving) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 220.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = stringResource(R.string.github_share_import_dialog_summary_parsing),
                     color = MiuixTheme.colorScheme.onBackgroundVariant

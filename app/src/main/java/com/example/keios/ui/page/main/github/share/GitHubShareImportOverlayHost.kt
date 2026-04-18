@@ -92,6 +92,7 @@ internal fun GitHubShareImportOverlayHost(
     }
     var pendingPreview by remember { mutableStateOf<GitHubShareImportPreview?>(null) }
     var resolving by remember { mutableStateOf(false) }
+    var incomingResolveRunning by remember { mutableStateOf(false) }
     var pendingTrack by remember { mutableStateOf<GitHubPendingShareImportTrackRecord?>(null) }
     var attachCandidate by remember { mutableStateOf<GitHubPendingShareImportAttachCandidate?>(null) }
     var attachDuplicateExists by remember { mutableStateOf(false) }
@@ -132,41 +133,45 @@ internal fun GitHubShareImportOverlayHost(
     LaunchedEffect(incomingGitHubShareToken, incomingGitHubShareText) {
         val sharedText = incomingGitHubShareText?.trim().orEmpty()
         if (sharedText.isBlank()) return@LaunchedEffect
-        onIncomingGitHubShareConsumed()
-        if (resolving) return@LaunchedEffect
-        val lookupConfig = withContext(Dispatchers.IO) { GitHubTrackStore.loadLookupConfig() }
-        if (!lookupConfig.shareImportLinkageEnabled) return@LaunchedEffect
-
+        if (resolving || incomingResolveRunning) return@LaunchedEffect
+        incomingResolveRunning = true
         resolving = true
+        onIncomingGitHubShareConsumed()
         pendingPreview = null
-        runCatching {
-            withContext(Dispatchers.IO) {
-                GitHubShareImportResolver.resolve(
-                    sharedText = sharedText,
-                    lookupConfig = lookupConfig
-                ).getOrThrow()
+        try {
+            val lookupConfig = withContext(Dispatchers.IO) { GitHubTrackStore.loadLookupConfig() }
+            if (!lookupConfig.shareImportLinkageEnabled) return@LaunchedEffect
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    GitHubShareImportResolver.resolve(
+                        sharedText = sharedText,
+                        lookupConfig = lookupConfig
+                    ).getOrThrow()
+                }
+            }.onSuccess { plan ->
+                if (plan.assets.isEmpty()) {
+                    toast(context, R.string.github_toast_share_import_no_apk)
+                } else {
+                    pendingPreview = GitHubShareImportPreview(
+                        sourceUrl = plan.parsedLink.sourceUrl,
+                        projectUrl = plan.parsedLink.projectUrl,
+                        owner = plan.parsedLink.owner,
+                        repo = plan.parsedLink.repo,
+                        releaseTag = plan.resolvedReleaseTag,
+                        releaseUrl = plan.resolvedReleaseUrl,
+                        strategyLabel = lookupConfig.selectedStrategy.label,
+                        assets = plan.assets,
+                        preferredAssetName = plan.preferredAssetName
+                    )
+                }
+            }.onFailure { error ->
+                val reason = error.message?.takeIf { it.isNotBlank() } ?: error.javaClass.simpleName
+                toast(context, R.string.github_toast_share_import_failed, reason)
             }
-        }.onSuccess { plan ->
-            if (plan.assets.isEmpty()) {
-                toast(context, R.string.github_toast_share_import_no_apk)
-            } else {
-                pendingPreview = GitHubShareImportPreview(
-                    sourceUrl = plan.parsedLink.sourceUrl,
-                    projectUrl = plan.parsedLink.projectUrl,
-                    owner = plan.parsedLink.owner,
-                    repo = plan.parsedLink.repo,
-                    releaseTag = plan.resolvedReleaseTag,
-                    releaseUrl = plan.resolvedReleaseUrl,
-                    strategyLabel = lookupConfig.selectedStrategy.label,
-                    assets = plan.assets,
-                    preferredAssetName = plan.preferredAssetName
-                )
-            }
-        }.onFailure { error ->
-            val reason = error.message?.takeIf { it.isNotBlank() } ?: error.javaClass.simpleName
-            toast(context, R.string.github_toast_share_import_failed, reason)
+        } finally {
+            resolving = false
+            incomingResolveRunning = false
         }
-        resolving = false
     }
 
     LaunchedEffect(pendingTrack?.armedAtMillis) {
@@ -262,6 +267,7 @@ internal fun GitHubShareImportOverlayHost(
     }
     LaunchedEffect(
         resolving,
+        incomingResolveRunning,
         pendingPreview,
         pendingTrack?.armedAtMillis,
         attachCandidate,
@@ -271,6 +277,7 @@ internal fun GitHubShareImportOverlayHost(
         val onIdle = onIdleWithNoPendingFlow ?: return@LaunchedEffect
         val hasIncomingShareText = !incomingGitHubShareText.isNullOrBlank()
         val hasActiveFlow = resolving ||
+            incomingResolveRunning ||
             pendingPreview != null ||
             pendingTrack != null ||
             attachCandidate != null
