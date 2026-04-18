@@ -1085,138 +1085,30 @@ fun OsPage(
             }
         }
     ) { innerPadding ->
-        SnapshotWindowBottomSheet(
+        OsCardVisibilityManagerSheet(
             show = showCardManager,
             title = visibleCardsTitle,
+            sheetBackdrop = sheetBackdrop,
+            cardsHintText = "隐藏卡片后会清空对应缓存；重新显示时会立即重新获取并缓存。",
             onDismissRequest = { showCardManager = false },
-            startAction = {
-                GlassIconButton(
-                    backdrop = sheetBackdrop,
-                    variant = GlassVariant.Bar,
-                    icon = MiuixIcons.Regular.Close,
-                    contentDescription = stringResource(R.string.common_close),
-                    onClick = { showCardManager = false }
-                )
+            isCardVisible = { card -> isCardVisible(card) },
+            onCardVisibilityChange = { card, checked ->
+                scope.launch { applyCardVisibility(card, checked) }
             }
-        ) {
-            SheetContentColumn(
-                scrollable = false,
-                verticalSpacing = 10.dp
-            ) {
-                @Composable
-                fun CardLabel(card: OsSectionCard, modifier: Modifier = Modifier) {
-                    Row(
-                        modifier = modifier,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val iconModifier = Modifier
-                            .size(18.dp)
-                            .defaultMinSize(minHeight = 18.dp)
-                        val icon = sectionCardIcon(card)
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = card.title,
-                            tint = MiuixTheme.colorScheme.onBackground,
-                            modifier = iconModifier
-                        )
-                        Text(text = card.title, color = MiuixTheme.colorScheme.onBackground)
-                    }
-                }
-
-                SheetSectionCard(verticalSpacing = 10.dp) {
-                    OsSectionCard.entries.filter { it != OsSectionCard.GOOGLE_SYSTEM_SERVICE }.forEach { card ->
-                        SheetControlRow(
-                            labelContent = {
-                                CardLabel(card = card, modifier = Modifier.defaultMinSize(minHeight = 24.dp))
-                            }
-                        ) {
-                            Switch(
-                                checked = isCardVisible(card),
-                                onCheckedChange = { checked ->
-                                    scope.launch { applyCardVisibility(card, checked) }
-                                }
-                            )
-                        }
-                    }
-                }
-
-                SheetDescriptionText(
-                    text = "隐藏卡片后会清空对应缓存；重新显示时会立即重新获取并缓存。"
-                )
-            }
-        }
-        SnapshotWindowBottomSheet(
+        )
+        OsActivityVisibilityManagerSheet(
             show = showActivityVisibilityManager,
             title = visibleActivitiesTitle,
+            sheetBackdrop = sheetBackdrop,
+            activityHintText = stringResource(R.string.os_sheet_visible_activities_desc),
+            googleSystemServiceConfig = googleSystemServiceConfig,
+            googleSystemServiceDefaults = googleSystemServiceDefaults,
             onDismissRequest = { showActivityVisibilityManager = false },
-            startAction = {
-                GlassIconButton(
-                    backdrop = sheetBackdrop,
-                    variant = GlassVariant.Bar,
-                    icon = MiuixIcons.Regular.Close,
-                    contentDescription = stringResource(R.string.common_close),
-                    onClick = { showActivityVisibilityManager = false }
-                )
+            isCardVisible = { card -> isCardVisible(card) },
+            onCardVisibilityChange = { card, checked ->
+                scope.launch { applyCardVisibility(card, checked) }
             }
-        ) {
-            SheetContentColumn(
-                scrollable = false,
-                verticalSpacing = 10.dp
-            ) {
-                val shortcutConfig = googleSystemServiceConfig.normalized(googleSystemServiceDefaults)
-                val activityVisibilityItems = listOf(
-                    OsActivityVisibilityItem(
-                        card = OsSectionCard.GOOGLE_SYSTEM_SERVICE,
-                        title = shortcutConfig.title.ifBlank { OsSectionCard.GOOGLE_SYSTEM_SERVICE.title },
-                        packageName = shortcutConfig.packageName
-                    )
-                )
-                SheetSectionCard(verticalSpacing = 10.dp) {
-                    activityVisibilityItems.forEach { item ->
-                        SheetControlRow(
-                            labelContent = {
-                                Row(
-                                    modifier = Modifier.defaultMinSize(minHeight = 24.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (item.packageName.isNotBlank()) {
-                                        AppIcon(
-                                            packageName = item.packageName,
-                                            size = 18.dp
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = sectionCardIcon(item.card),
-                                            contentDescription = item.title,
-                                            tint = MiuixTheme.colorScheme.onBackground,
-                                            modifier = Modifier
-                                                .size(18.dp)
-                                                .defaultMinSize(minHeight = 18.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = item.title,
-                                        color = MiuixTheme.colorScheme.onBackground
-                                    )
-                                }
-                            }
-                        ) {
-                            Switch(
-                                checked = isCardVisible(item.card),
-                                onCheckedChange = { checked ->
-                                    scope.launch { applyCardVisibility(item.card, checked) }
-                                }
-                            )
-                        }
-                    }
-                }
-                SheetDescriptionText(
-                    text = stringResource(R.string.os_sheet_visible_activities_desc)
-                )
-            }
-        }
+        )
         SnapshotWindowBottomSheet(
             show = showGoogleSystemServiceEditor,
             title = stringResource(R.string.os_google_system_service_sheet_title),
@@ -2069,558 +1961,127 @@ fun OsPage(
 
             item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
 
-            if (isCardVisible(OsSectionCard.TOP_INFO)) {
-                item {
-                MiuixAccordionCard(
-                    backdrop = contentBackdrop,
-                    title = stringResource(R.string.os_section_top_info_title),
-                    subtitle = stringResource(R.string.common_item_count, displayedTopInfoRows.size),
-                    expanded = topInfoExpanded,
-                    onExpandedChange = { topInfoExpanded = it },
-                    headerStartAction = {
-                        OsSectionHeaderIcon(card = OsSectionCard.TOP_INFO)
-                    },
-                    headerActions = {
-                        CardExportAction(card = OsSectionCard.TOP_INFO)
-                    }
-                ) {
-                    if (displayedTopInfoRows.isEmpty()) {
-                        Text(text = noMatchedResultsText, color = MiuixTheme.colorScheme.onBackgroundVariant)
-                    } else {
-                        if (q.isBlank() && !topInfoExpanded) {
-                            displayedTopInfoRows.forEach { row ->
-                                OsSectionInfoRow(label = row.key, value = row.value)
-                            }
-                        } else {
-                            groupedTopInfoRows.forEachIndexed { index, (type, rows) ->
-                                Text(
-                                    text = type,
-                                    color = MiuixTheme.colorScheme.onBackground,
-                                    fontSize = AppTypographyTokens.CompactTitle.fontSize,
-                                    lineHeight = AppTypographyTokens.CompactTitle.lineHeight,
-                                    fontWeight = AppTypographyTokens.CompactTitle.fontWeight,
-                                    modifier = Modifier.padding(top = if (index == 0) 0.dp else 8.dp, bottom = 2.dp)
-                                )
-                                rows.forEach { row ->
-                                    OsSectionInfoRow(label = row.key, value = row.value)
-                                }
-                            }
-                        }
-                    }
-                }
-                }
+            addTopInfoCard(
+                visible = isCardVisible(OsSectionCard.TOP_INFO),
+                contentBackdrop = contentBackdrop,
+                displayedTopInfoRows = displayedTopInfoRows,
+                groupedTopInfoRows = groupedTopInfoRows,
+                query = q,
+                noMatchedResultsText = noMatchedResultsText,
+                expanded = topInfoExpanded,
+                onExpandedChange = { topInfoExpanded = it },
+                exportAction = { CardExportAction(card = OsSectionCard.TOP_INFO) }
+            )
 
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-            }
-
-            if (isCardVisible(OsSectionCard.GOOGLE_SYSTEM_SERVICE)) {
-                item {
-                    val shortcutConfig = googleSystemServiceConfig.normalized(googleSystemServiceDefaults)
-                    MiuixAccordionCard(
-                        backdrop = contentBackdrop,
-                        title = shortcutConfig.title,
-                        subtitle = shortcutConfig.subtitle,
-                        expanded = googleSystemServiceExpanded,
-                        onExpandedChange = { googleSystemServiceExpanded = it },
-                        headerStartAction = {
-                            AppIcon(packageName = shortcutConfig.packageName, size = 24.dp)
-                        },
-                        headerActions = {
-                            Icon(
-                                imageVector = MiuixIcons.Regular.Play,
-                                contentDescription = stringResource(R.string.os_google_system_service_cd_open_activity),
-                                tint = MiuixTheme.colorScheme.primary,
-                                modifier = Modifier.clickable {
-                                    openGoogleSystemServiceActivity()
-                                }
-                            )
-                        },
-                        onHeaderLongClick = {
-                            googleSystemServiceDraft = shortcutConfig
-                            showGoogleSystemServiceEditor = true
-                        }
-                    ) {
-                        OsSectionInfoRow(
-                            label = stringResource(R.string.os_google_system_service_label_app_name),
-                            value = shortcutConfig.appName
-                        )
-                        OsSectionInfoRow(
-                            label = stringResource(R.string.os_google_system_service_label_package_name),
-                            value = shortcutConfig.packageName
-                        )
-                        OsSectionInfoRow(
-                            label = stringResource(R.string.os_google_system_service_label_class_name),
-                            value = shortcutConfig.className
-                        )
-                        OsSectionInfoRow(
-                            label = stringResource(R.string.os_google_system_service_label_intent_action),
-                            value = shortcutConfig.intentAction
-                        )
-                        OsSectionInfoRow(
-                            label = stringResource(R.string.os_google_system_service_label_intent_category),
-                            value = shortcutConfig.intentCategory.ifBlank {
-                                stringResource(R.string.os_google_system_service_value_data_empty)
-                            }
-                        )
-                        OsSectionInfoRow(
-                            label = stringResource(R.string.os_google_system_service_label_intent_flags),
-                            value = shortcutConfig.intentFlags.ifBlank {
-                                stringResource(R.string.os_google_system_service_value_data_empty)
-                            }
-                        )
-                        OsSectionInfoRow(
-                            label = stringResource(R.string.os_google_system_service_label_intent_data),
-                            value = shortcutConfig.intentUriData.ifBlank {
-                                stringResource(R.string.os_google_system_service_value_data_empty)
-                            }
-                        )
-                        OsSectionInfoRow(
-                            label = stringResource(R.string.os_google_system_service_label_intent_mime_type),
-                            value = shortcutConfig.intentMimeType.ifBlank {
-                                stringResource(R.string.os_google_system_service_value_data_empty)
-                            }
-                        )
-                    }
+            val shortcutConfig = googleSystemServiceConfig.normalized(googleSystemServiceDefaults)
+            addGoogleSystemServiceCard(
+                visible = isCardVisible(OsSectionCard.GOOGLE_SYSTEM_SERVICE),
+                contentBackdrop = contentBackdrop,
+                shortcutConfig = shortcutConfig,
+                expanded = googleSystemServiceExpanded,
+                onExpandedChange = { googleSystemServiceExpanded = it },
+                onOpenActivity = { openGoogleSystemServiceActivity() },
+                onHeaderLongClick = {
+                    googleSystemServiceDraft = shortcutConfig
+                    showGoogleSystemServiceEditor = true
                 }
+            )
 
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-            }
+            addKeyValueSectionCard(
+                visible = isCardVisible(OsSectionCard.SYSTEM),
+                card = OsSectionCard.SYSTEM,
+                contentBackdrop = contentBackdrop,
+                title = context.getString(R.string.os_section_system_title),
+                subtitle = sectionSubtitle(
+                    SectionKind.SYSTEM,
+                    if (q.isBlank()) prunedSystemRows.size else displayedSystemRows.size
+                ),
+                expanded = systemTableExpanded,
+                onExpandedChange = { systemTableExpanded = it },
+                rows = displayedSystemRows,
+                noMatchedResultsText = noMatchedResultsText,
+                exportAction = { CardExportAction(card = OsSectionCard.SYSTEM) }
+            )
 
-            if (isCardVisible(OsSectionCard.SYSTEM)) {
-                item {
-                MiuixAccordionCard(
-                    backdrop = contentBackdrop,
-                    title = stringResource(R.string.os_section_system_title),
-                    subtitle = sectionSubtitle(SectionKind.SYSTEM, if (q.isBlank()) prunedSystemRows.size else displayedSystemRows.size),
-                    expanded = systemTableExpanded,
-                    onExpandedChange = { systemTableExpanded = it },
-                    headerStartAction = {
-                        OsSectionHeaderIcon(card = OsSectionCard.SYSTEM)
-                    },
-                    headerActions = {
-                        CardExportAction(card = OsSectionCard.SYSTEM)
-                    }
-                ) {
-                    if (displayedSystemRows.isEmpty()) Text(text = noMatchedResultsText, color = MiuixTheme.colorScheme.onBackgroundVariant)
-                    else displayedSystemRows.forEach { row -> OsSectionInfoRow(label = row.key, value = row.value) }
-                }
-                }
+            addKeyValueSectionCard(
+                visible = isCardVisible(OsSectionCard.SECURE),
+                card = OsSectionCard.SECURE,
+                contentBackdrop = contentBackdrop,
+                title = context.getString(R.string.os_section_secure_title),
+                subtitle = sectionSubtitle(
+                    SectionKind.SECURE,
+                    if (q.isBlank()) prunedSecureRows.size else displayedSecureRows.size
+                ),
+                expanded = secureTableExpanded,
+                onExpandedChange = { secureTableExpanded = it },
+                rows = displayedSecureRows,
+                noMatchedResultsText = noMatchedResultsText,
+                exportAction = { CardExportAction(card = OsSectionCard.SECURE) }
+            )
 
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-            }
+            addKeyValueSectionCard(
+                visible = isCardVisible(OsSectionCard.GLOBAL),
+                card = OsSectionCard.GLOBAL,
+                contentBackdrop = contentBackdrop,
+                title = context.getString(R.string.os_section_global_title),
+                subtitle = sectionSubtitle(
+                    SectionKind.GLOBAL,
+                    if (q.isBlank()) prunedGlobalRows.size else displayedGlobalRows.size
+                ),
+                expanded = globalTableExpanded,
+                onExpandedChange = { globalTableExpanded = it },
+                rows = displayedGlobalRows,
+                noMatchedResultsText = noMatchedResultsText,
+                exportAction = { CardExportAction(card = OsSectionCard.GLOBAL) }
+            )
 
-            if (isCardVisible(OsSectionCard.SECURE)) {
-                item {
-                MiuixAccordionCard(
-                    backdrop = contentBackdrop,
-                    title = stringResource(R.string.os_section_secure_title),
-                    subtitle = sectionSubtitle(SectionKind.SECURE, if (q.isBlank()) prunedSecureRows.size else displayedSecureRows.size),
-                    expanded = secureTableExpanded,
-                    onExpandedChange = { secureTableExpanded = it },
-                    headerStartAction = {
-                        OsSectionHeaderIcon(card = OsSectionCard.SECURE)
-                    },
-                    headerActions = {
-                        CardExportAction(card = OsSectionCard.SECURE)
-                    }
-                ) {
-                    if (displayedSecureRows.isEmpty()) Text(text = noMatchedResultsText, color = MiuixTheme.colorScheme.onBackgroundVariant)
-                    else displayedSecureRows.forEach { row -> OsSectionInfoRow(label = row.key, value = row.value) }
-                }
-                }
+            addKeyValueSectionCard(
+                visible = isCardVisible(OsSectionCard.ANDROID),
+                card = OsSectionCard.ANDROID,
+                contentBackdrop = contentBackdrop,
+                title = context.getString(R.string.os_section_android_title),
+                subtitle = sectionSubtitle(
+                    SectionKind.ANDROID,
+                    if (q.isBlank()) prunedAndroidRows.size else displayedAndroidRows.size
+                ),
+                expanded = androidPropsExpanded,
+                onExpandedChange = { androidPropsExpanded = it },
+                rows = displayedAndroidRows,
+                noMatchedResultsText = noMatchedResultsText,
+                exportAction = { CardExportAction(card = OsSectionCard.ANDROID) }
+            )
 
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-            }
+            addKeyValueSectionCard(
+                visible = isCardVisible(OsSectionCard.JAVA),
+                card = OsSectionCard.JAVA,
+                contentBackdrop = contentBackdrop,
+                title = context.getString(R.string.os_section_java_title),
+                subtitle = sectionSubtitle(
+                    SectionKind.JAVA,
+                    if (q.isBlank()) prunedJavaRows.size else displayedJavaRows.size
+                ),
+                expanded = javaPropsExpanded,
+                onExpandedChange = { javaPropsExpanded = it },
+                rows = displayedJavaRows,
+                noMatchedResultsText = noMatchedResultsText,
+                exportAction = { CardExportAction(card = OsSectionCard.JAVA) }
+            )
 
-            if (isCardVisible(OsSectionCard.GLOBAL)) {
-                item {
-                MiuixAccordionCard(
-                    backdrop = contentBackdrop,
-                    title = stringResource(R.string.os_section_global_title),
-                    subtitle = sectionSubtitle(SectionKind.GLOBAL, if (q.isBlank()) prunedGlobalRows.size else displayedGlobalRows.size),
-                    expanded = globalTableExpanded,
-                    onExpandedChange = { globalTableExpanded = it },
-                    headerStartAction = {
-                        OsSectionHeaderIcon(card = OsSectionCard.GLOBAL)
-                    },
-                    headerActions = {
-                        CardExportAction(card = OsSectionCard.GLOBAL)
-                    }
-                ) {
-                    if (displayedGlobalRows.isEmpty()) Text(text = noMatchedResultsText, color = MiuixTheme.colorScheme.onBackgroundVariant)
-                    else displayedGlobalRows.forEach { row -> OsSectionInfoRow(label = row.key, value = row.value) }
-                }
-                }
-
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-            }
-
-            if (isCardVisible(OsSectionCard.ANDROID)) {
-                item {
-                MiuixAccordionCard(
-                    backdrop = contentBackdrop,
-                    title = stringResource(R.string.os_section_android_title),
-                    subtitle = sectionSubtitle(SectionKind.ANDROID, if (q.isBlank()) prunedAndroidRows.size else displayedAndroidRows.size),
-                    expanded = androidPropsExpanded,
-                    onExpandedChange = { androidPropsExpanded = it },
-                    headerStartAction = {
-                        OsSectionHeaderIcon(card = OsSectionCard.ANDROID)
-                    },
-                    headerActions = {
-                        CardExportAction(card = OsSectionCard.ANDROID)
-                    }
-                ) {
-                    if (displayedAndroidRows.isEmpty()) Text(text = noMatchedResultsText, color = MiuixTheme.colorScheme.onBackgroundVariant)
-                    else displayedAndroidRows.forEach { row -> OsSectionInfoRow(label = row.key, value = row.value) }
-                }
-                }
-
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-            }
-
-            if (isCardVisible(OsSectionCard.JAVA)) {
-                item {
-                MiuixAccordionCard(
-                    backdrop = contentBackdrop,
-                    title = stringResource(R.string.os_section_java_title),
-                    subtitle = sectionSubtitle(SectionKind.JAVA, if (q.isBlank()) prunedJavaRows.size else displayedJavaRows.size),
-                    expanded = javaPropsExpanded,
-                    onExpandedChange = { javaPropsExpanded = it },
-                    headerStartAction = {
-                        OsSectionHeaderIcon(card = OsSectionCard.JAVA)
-                    },
-                    headerActions = {
-                        CardExportAction(card = OsSectionCard.JAVA)
-                    }
-                ) {
-                    if (displayedJavaRows.isEmpty()) Text(text = noMatchedResultsText, color = MiuixTheme.colorScheme.onBackgroundVariant)
-                    else displayedJavaRows.forEach { row -> OsSectionInfoRow(label = row.key, value = row.value) }
-                }
-                }
-
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-            }
-
-            if (isCardVisible(OsSectionCard.LINUX)) {
-                item {
-                MiuixAccordionCard(
-                    backdrop = contentBackdrop,
-                    title = stringResource(R.string.os_section_linux_title),
-                    subtitle = sectionSubtitle(SectionKind.LINUX, if (q.isBlank()) prunedLinuxRows.size else displayedLinuxRows.size),
-                    expanded = linuxEnvExpanded,
-                    onExpandedChange = { linuxEnvExpanded = it },
-                    headerStartAction = {
-                        OsSectionHeaderIcon(card = OsSectionCard.LINUX)
-                    },
-                    headerActions = {
-                        CardExportAction(card = OsSectionCard.LINUX)
-                    }
-                ) {
-                    if (displayedLinuxRows.isEmpty()) Text(text = noMatchedResultsText, color = MiuixTheme.colorScheme.onBackgroundVariant)
-                    else displayedLinuxRows.forEach { row -> OsSectionInfoRow(label = row.key, value = row.value) }
-                }
-                }
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-            }
+            addKeyValueSectionCard(
+                visible = isCardVisible(OsSectionCard.LINUX),
+                card = OsSectionCard.LINUX,
+                contentBackdrop = contentBackdrop,
+                title = context.getString(R.string.os_section_linux_title),
+                subtitle = sectionSubtitle(
+                    SectionKind.LINUX,
+                    if (q.isBlank()) prunedLinuxRows.size else displayedLinuxRows.size
+                ),
+                expanded = linuxEnvExpanded,
+                onExpandedChange = { linuxEnvExpanded = it },
+                rows = displayedLinuxRows,
+                noMatchedResultsText = noMatchedResultsText,
+                exportAction = { CardExportAction(card = OsSectionCard.LINUX) }
+            )
         }
     }
 }
-
-private data class OsOverviewMetric(
-    val label: String,
-    val value: String,
-    val valueColor: Color? = null
-)
-
-private fun sectionCardIcon(card: OsSectionCard) = when (card) {
-    OsSectionCard.TOP_INFO -> MiuixIcons.Regular.Info
-    OsSectionCard.GOOGLE_SYSTEM_SERVICE -> MiuixIcons.Regular.Update
-    OsSectionCard.SYSTEM -> MiuixIcons.Regular.ListView
-    OsSectionCard.SECURE -> MiuixIcons.Regular.Lock
-    OsSectionCard.GLOBAL -> MiuixIcons.Regular.Layers
-    OsSectionCard.ANDROID -> MiuixIcons.Regular.GridView
-    OsSectionCard.JAVA -> MiuixIcons.Regular.Tune
-    OsSectionCard.LINUX -> MiuixIcons.Regular.Filter
-}
-
-@Composable
-private fun OsSectionHeaderIcon(card: OsSectionCard, modifier: Modifier = Modifier) {
-    Icon(
-        imageVector = sectionCardIcon(card),
-        contentDescription = card.title,
-        tint = MiuixTheme.colorScheme.primary,
-        modifier = modifier
-            .size(22.dp)
-            .defaultMinSize(minHeight = 22.dp)
-    )
-}
-
-@Composable
-private fun OsSectionInfoRow(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    AppInfoRow(
-        label = label,
-        value = value.ifBlank { "N/A" },
-        modifier = modifier,
-        labelColor = MiuixTheme.colorScheme.onBackgroundVariant,
-        valueColor = MiuixTheme.colorScheme.onBackground,
-        labelMinWidth = 72.dp,
-        labelMaxWidth = 136.dp,
-        horizontalSpacing = CardLayoutRhythm.infoRowGap,
-        rowVerticalPadding = CardLayoutRhythm.infoRowVerticalPadding,
-        valueTextAlign = TextAlign.End,
-        labelMaxLines = Int.MAX_VALUE,
-        valueMaxLines = 6,
-        valueOverflow = TextOverflow.Ellipsis,
-        labelFontSize = AppTypographyTokens.Body.fontSize,
-        labelLineHeight = AppTypographyTokens.Body.lineHeight,
-        valueFontSize = AppTypographyTokens.Body.fontSize,
-        valueLineHeight = AppTypographyTokens.Body.lineHeight,
-        emphasizedValue = true
-    )
-}
-
-private data class OsActivityVisibilityItem(
-    val card: OsSectionCard,
-    val title: String,
-    val packageName: String
-)
-
-private enum class ShortcutSuggestionField {
-    PackageName,
-    ClassName,
-    IntentAction,
-    IntentCategory,
-    IntentFlags,
-    IntentUriData,
-    IntentMimeType
-}
-
-private data class ShortcutSuggestionItem(
-    val label: String,
-    val value: String,
-    val summary: String,
-    val append: Boolean = false,
-    val relatedAppName: String = "",
-    val classItemExported: Boolean = false
-)
-
-private data class ShortcutInstalledAppOption(
-    val appName: String,
-    val packageName: String
-)
-
-private data class ShortcutActivityClassOption(
-    val className: String,
-    val activityName: String,
-    val isExported: Boolean
-)
-
-private fun loadInstalledAppOptions(context: Context): List<ShortcutInstalledAppOption> {
-    val pm = context.packageManager
-    val packageInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        pm.getInstalledPackages(PackageManager.PackageInfoFlags.of(PackageManager.GET_ACTIVITIES.toLong()))
-    } else {
-        @Suppress("DEPRECATION")
-        pm.getInstalledPackages(PackageManager.GET_ACTIVITIES)
-    }
-    val overlayFlagMask = runCatching {
-        ApplicationInfo::class.java.getField("FLAG_IS_RESOURCE_OVERLAY").getInt(null)
-    }.getOrDefault(0)
-    return packageInfos.mapNotNull { info ->
-        val packageName = info.packageName.trim()
-        if (packageName.isBlank()) return@mapNotNull null
-        val appInfo = info.applicationInfo ?: runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0))
-            } else {
-                pm.getApplicationInfo(packageName, 0)
-            }
-        }.getOrNull() ?: return@mapNotNull null
-        if (
-            shouldIgnoreInstalledAppForShortcut(
-                packageName = packageName,
-                appInfo = appInfo,
-                hasAnyEnabledActivity = info.activities?.any { it.enabled } == true,
-                overlayFlagMask = overlayFlagMask
-            )
-        ) {
-            return@mapNotNull null
-        }
-
-        val appName = runCatching {
-            pm.getApplicationLabel(appInfo).toString()
-        }.getOrDefault(packageName).trim().ifBlank { packageName }
-
-        ShortcutInstalledAppOption(
-            appName = appName,
-            packageName = packageName
-        )
-    }.distinctBy { it.packageName }
-        .sortedWith(
-            compareBy<ShortcutInstalledAppOption> { it.appName.lowercase(Locale.ROOT) }
-                .thenBy { it.packageName.lowercase(Locale.ROOT) }
-        )
-}
-
-private fun loadActivityClassOptions(
-    context: Context,
-    packageName: String
-): List<ShortcutActivityClassOption> {
-    val normalizedPackageName = packageName.trim()
-    if (normalizedPackageName.isBlank()) return emptyList()
-    val pm = context.packageManager
-    val packageInfo = runCatching {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pm.getPackageInfo(
-                normalizedPackageName,
-                PackageManager.PackageInfoFlags.of(PackageManager.GET_ACTIVITIES.toLong())
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            pm.getPackageInfo(normalizedPackageName, PackageManager.GET_ACTIVITIES)
-        }
-    }.getOrNull() ?: return emptyList()
-
-    return packageInfo.activities.orEmpty()
-        .asSequence()
-        .filter { it.enabled || it.exported }
-        .mapNotNull { info ->
-            val raw = info.name.trim()
-            if (raw.isBlank()) return@mapNotNull null
-            val normalized = if (raw.startsWith(".")) {
-                "$normalizedPackageName$raw"
-            } else {
-                raw
-            }
-            val activityName = runCatching {
-                info.loadLabel(pm).toString()
-            }.getOrNull()?.trim().orEmpty().ifBlank {
-                normalized.substringAfterLast('.')
-            }
-            ShortcutActivityClassOption(
-                className = normalized,
-                activityName = activityName,
-                isExported = info.exported
-            )
-        }
-        .groupBy { it.className }
-        .values
-        .mapNotNull { options ->
-            options.maxWithOrNull(
-                compareBy<ShortcutActivityClassOption> { it.isExported }
-                    .thenBy { it.activityName.length }
-            )
-        }
-        .sortedWith(
-            compareBy<ShortcutActivityClassOption> { it.activityName.lowercase(Locale.ROOT) }
-                .thenBy { it.className.lowercase(Locale.ROOT) }
-        )
-        .toList()
-}
-
-private fun shouldIgnoreInstalledAppForShortcut(
-    packageName: String,
-    appInfo: ApplicationInfo,
-    hasAnyEnabledActivity: Boolean,
-    overlayFlagMask: Int
-): Boolean {
-    if (!hasAnyEnabledActivity) return true
-    if (!appInfo.enabled) return true
-    if ((appInfo.flags and ApplicationInfo.FLAG_INSTALLED) == 0) return true
-    if ((appInfo.flags and ApplicationInfo.FLAG_HAS_CODE) == 0) return true
-    if ((appInfo.flags and ApplicationInfo.FLAG_TEST_ONLY) != 0) return true
-    if (overlayFlagMask != 0 && (appInfo.flags and overlayFlagMask) != 0) return true
-    val normalizedPackageName = packageName.lowercase(Locale.ROOT)
-    if (normalizedPackageName.contains(".overlay")) return true
-    if (normalizedPackageName.startsWith("overlay.")) return true
-    return false
-}
-
-private fun parseIntentCategories(raw: String): List<String> {
-    return parseIntentTokenText(raw)
-}
-
-private fun parseIntentTokenText(raw: String): List<String> {
-    return raw.split(',', ';', '|', '\n')
-        .map { it.trim() }
-        .filter { it.isNotBlank() }
-        .distinct()
-}
-
-private fun mergeIntentTokenText(
-    current: String,
-    incoming: String,
-    append: Boolean
-): String {
-    val normalizedIncoming = incoming.trim()
-    if (!append) return normalizedIncoming
-    if (normalizedIncoming.isBlank()) return ""
-
-    val mergedTokens = linkedSetOf<String>()
-    parseIntentTokenText(current).forEach { mergedTokens.add(it) }
-    parseIntentTokenText(normalizedIncoming).forEach { token ->
-        val duplicated = mergedTokens.any { it.equals(token, ignoreCase = true) }
-        if (!duplicated) {
-            mergedTokens.add(token)
-        }
-    }
-    return mergedTokens.joinToString(", ")
-}
-
-private fun parseIntentFlags(raw: String): Int {
-    if (raw.isBlank()) return 0
-    return raw.split(',', ';', '|', '\n', ' ')
-        .map { it.trim() }
-        .filter { it.isNotBlank() }
-        .fold(0) { current, token ->
-            current or parseSingleIntentFlag(token)
-        }
-}
-
-private fun parseSingleIntentFlag(token: String): Int {
-    val normalized = token.trim()
-    if (normalized.isBlank()) return 0
-    normalized.toIntOrNull()?.let { return it }
-    normalized.removePrefix("0x").removePrefix("0X")
-        .toLongOrNull(16)
-        ?.toInt()
-        ?.let { return it }
-
-    val compact = normalized
-        .removePrefix("Intent.")
-        .removePrefix("android.content.Intent.")
-        .uppercase(Locale.ROOT)
-    return intentFlagNameValues[compact]
-        ?: intentFlagNameValues["FLAG_ACTIVITY_$compact"]
-        ?: 0
-}
-
-private fun Int.ifBlankUse(fallback: Int): Int {
-    return if (this == 0) fallback else this
-}
-
-private val intentFlagNameValues: Map<String, Int> = mapOf(
-    "FLAG_ACTIVITY_NEW_TASK" to Intent.FLAG_ACTIVITY_NEW_TASK,
-    "FLAG_ACTIVITY_SINGLE_TOP" to Intent.FLAG_ACTIVITY_SINGLE_TOP,
-    "FLAG_ACTIVITY_CLEAR_TOP" to Intent.FLAG_ACTIVITY_CLEAR_TOP,
-    "FLAG_ACTIVITY_FORWARD_RESULT" to Intent.FLAG_ACTIVITY_FORWARD_RESULT,
-    "FLAG_ACTIVITY_PREVIOUS_IS_TOP" to Intent.FLAG_ACTIVITY_PREVIOUS_IS_TOP,
-    "FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS" to Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS,
-    "FLAG_ACTIVITY_BROUGHT_TO_FRONT" to Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT,
-    "FLAG_ACTIVITY_RESET_TASK_IF_NEEDED" to Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED,
-    "FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY" to Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY,
-    "FLAG_ACTIVITY_MULTIPLE_TASK" to Intent.FLAG_ACTIVITY_MULTIPLE_TASK,
-    "FLAG_ACTIVITY_NO_USER_ACTION" to Intent.FLAG_ACTIVITY_NO_USER_ACTION,
-    "FLAG_ACTIVITY_REORDER_TO_FRONT" to Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
-    "FLAG_ACTIVITY_NO_ANIMATION" to Intent.FLAG_ACTIVITY_NO_ANIMATION,
-    "FLAG_ACTIVITY_CLEAR_TASK" to Intent.FLAG_ACTIVITY_CLEAR_TASK,
-    "FLAG_ACTIVITY_TASK_ON_HOME" to Intent.FLAG_ACTIVITY_TASK_ON_HOME,
-    "FLAG_ACTIVITY_RETAIN_IN_RECENTS" to Intent.FLAG_ACTIVITY_RETAIN_IN_RECENTS,
-    "FLAG_ACTIVITY_REQUIRE_NON_BROWSER" to Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER,
-    "FLAG_ACTIVITY_REQUIRE_DEFAULT" to Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT,
-    "FLAG_ACTIVITY_MATCH_EXTERNAL" to Intent.FLAG_ACTIVITY_MATCH_EXTERNAL
-)
