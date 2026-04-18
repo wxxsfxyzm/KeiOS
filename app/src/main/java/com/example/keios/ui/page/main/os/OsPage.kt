@@ -2,6 +2,7 @@ package com.example.keios.ui.page.main
 
 import android.app.ActivityManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.FeatureInfo
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -72,10 +73,12 @@ import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.GlassIconButton
+import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
 import com.example.keios.ui.page.main.widget.SheetContentColumn
 import com.example.keios.ui.page.main.widget.SheetControlRow
+import com.example.keios.ui.page.main.widget.SheetFieldBlock
 import com.example.keios.ui.page.main.widget.SheetDescriptionText
 import com.example.keios.ui.page.main.widget.SheetSectionCard
 import com.example.keios.ui.page.main.widget.SheetSectionTitle
@@ -112,8 +115,11 @@ import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Layers
 import top.yukonga.miuix.kmp.icon.extended.ListView
 import top.yukonga.miuix.kmp.icon.extended.Lock
+import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Tune
+import top.yukonga.miuix.kmp.icon.extended.Update
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -148,6 +154,20 @@ fun OsPage(
     val refreshParamsContentDescription = stringResource(R.string.os_action_refresh_params)
     val searchLabel = stringResource(R.string.os_search_label)
     val visibleCardsTitle = stringResource(R.string.os_sheet_visible_cards_title)
+    val googleSystemServiceDefaultTitle = stringResource(R.string.os_section_google_system_service_title)
+    val googleSystemServiceDefaultSubtitle = stringResource(R.string.os_google_system_service_default_subtitle)
+    val googleSystemServiceDefaultAppName = stringResource(R.string.os_google_system_service_default_app_name)
+    val googleSystemServiceDefaults = remember(
+        googleSystemServiceDefaultTitle,
+        googleSystemServiceDefaultSubtitle,
+        googleSystemServiceDefaultAppName
+    ) {
+        OsGoogleSystemServiceConfig(
+            title = googleSystemServiceDefaultTitle,
+            subtitle = googleSystemServiceDefaultSubtitle,
+            appName = googleSystemServiceDefaultAppName
+        ).normalized()
+    }
     val noMatchedResultsText = stringResource(R.string.common_no_matched_results)
     val shizukuReady = shizukuStatus.contains("granted", ignoreCase = true)
     val initialUiSnapshot = remember { OsUiStateStore.loadSnapshot() }
@@ -157,6 +177,7 @@ fun OsPage(
     val queryInput by osPageViewModel.queryInput.collectAsState()
     val queryApplied by osPageViewModel.queryApplied.collectAsState()
     var topInfoExpanded by remember { mutableStateOf(initialUiSnapshot.topInfoExpanded) }
+    var googleSystemServiceExpanded by remember { mutableStateOf(initialUiSnapshot.googleSystemServiceExpanded) }
     var systemTableExpanded by remember { mutableStateOf(initialUiSnapshot.systemTableExpanded) }
     var secureTableExpanded by remember { mutableStateOf(initialUiSnapshot.secureTableExpanded) }
     var globalTableExpanded by remember { mutableStateOf(initialUiSnapshot.globalTableExpanded) }
@@ -164,6 +185,15 @@ fun OsPage(
     var javaPropsExpanded by remember { mutableStateOf(initialUiSnapshot.javaPropsExpanded) }
     var linuxEnvExpanded by remember { mutableStateOf(initialUiSnapshot.linuxEnvExpanded) }
     var visibleCards by remember { mutableStateOf(initialUiSnapshot.visibleCards) }
+    var googleSystemServiceConfig by remember {
+        mutableStateOf(
+            OsShortcutCardStore.loadGoogleSystemServiceConfig(
+                defaults = googleSystemServiceDefaults
+            )
+        )
+    }
+    var googleSystemServiceDraft by remember { mutableStateOf(googleSystemServiceConfig) }
+    var showGoogleSystemServiceEditor by rememberSaveable { mutableStateOf(false) }
     var uiStatePersistenceReady by remember { mutableStateOf(false) }
     var showCardManager by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -303,6 +333,11 @@ fun OsPage(
             OsSectionCard.TOP_INFO -> {
                 if (!visible) topInfoExpanded = false
             }
+            OsSectionCard.GOOGLE_SYSTEM_SERVICE -> {
+                if (!visible) {
+                    googleSystemServiceExpanded = false
+                }
+            }
             OsSectionCard.SYSTEM -> {
                 if (!visible) {
                     systemTableExpanded = false
@@ -409,6 +444,12 @@ fun OsPage(
     LaunchedEffect(topInfoExpanded) {
         if (!uiStatePersistenceReady) return@LaunchedEffect
         withContext(Dispatchers.IO) { OsUiStateStore.setTopInfoExpanded(topInfoExpanded) }
+    }
+    LaunchedEffect(googleSystemServiceExpanded) {
+        if (!uiStatePersistenceReady) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            OsUiStateStore.setGoogleSystemServiceExpanded(googleSystemServiceExpanded)
+        }
     }
     LaunchedEffect(systemTableExpanded) {
         if (!uiStatePersistenceReady) return@LaunchedEffect
@@ -550,8 +591,71 @@ fun OsPage(
         }
     }
 
+    fun buildGoogleSystemServiceRows(config: OsGoogleSystemServiceConfig): List<InfoRow> {
+        val normalized = config.normalized(googleSystemServiceDefaults)
+        val emptyDataValue = context.getString(R.string.os_google_system_service_value_data_empty)
+        return listOf(
+            InfoRow(
+                key = context.getString(R.string.os_google_system_service_label_app_name),
+                value = normalized.appName
+            ),
+            InfoRow(
+                key = context.getString(R.string.os_google_system_service_label_package_name),
+                value = normalized.packageName
+            ),
+            InfoRow(
+                key = context.getString(R.string.os_google_system_service_label_class_name),
+                value = normalized.className
+            ),
+            InfoRow(
+                key = context.getString(R.string.os_google_system_service_label_intent_action),
+                value = normalized.intentAction
+            ),
+            InfoRow(
+                key = context.getString(R.string.os_google_system_service_label_intent_data),
+                value = normalized.intentData.ifBlank { emptyDataValue }
+            )
+        )
+    }
+
+    fun openGoogleSystemServiceActivity() {
+        val config = googleSystemServiceConfig.normalized(googleSystemServiceDefaults)
+        val packageName = config.packageName.trim()
+        val className = config.className.trim()
+        val action = config.intentAction.trim()
+        if (packageName.isBlank() || className.isBlank() || action.isBlank()) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.os_google_system_service_toast_invalid_target),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        runCatching {
+            val intent = Intent(action).apply {
+                setClassName(packageName, className)
+                val dataText = config.intentData.trim()
+                if (dataText.isNotBlank()) {
+                    data = Uri.parse(dataText)
+                }
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }.onFailure { error ->
+            Toast.makeText(
+                context,
+                context.getString(
+                    R.string.os_google_system_service_toast_open_failed,
+                    error.javaClass.simpleName
+                ),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     fun sectionKindByCard(card: OsSectionCard): SectionKind? = when (card) {
         OsSectionCard.TOP_INFO -> null
+        OsSectionCard.GOOGLE_SYSTEM_SERVICE -> null
         OsSectionCard.SYSTEM -> SectionKind.SYSTEM
         OsSectionCard.SECURE -> SectionKind.SECURE
         OsSectionCard.GLOBAL -> SectionKind.GLOBAL
@@ -561,22 +665,31 @@ fun OsPage(
     }
 
     fun currentRowsForCard(card: OsSectionCard): List<InfoRow> {
-        val section = sectionKindByCard(card)
-        return if (section == null) {
-            val system = sectionStates[SectionKind.SYSTEM]?.rows ?: emptyList()
-            val secure = sectionStates[SectionKind.SECURE]?.rows ?: emptyList()
-            val global = sectionStates[SectionKind.GLOBAL]?.rows ?: emptyList()
-            val android = sectionStates[SectionKind.ANDROID]?.rows ?: emptyList()
-            val java = sectionStates[SectionKind.JAVA]?.rows ?: emptyList()
-            val linux = sectionStates[SectionKind.LINUX]?.rows ?: emptyList()
-            buildTopInfoRows(system, secure, global, android, java, linux)
-        } else {
-            removeTopInfoRows(section, sectionStates[section]?.rows ?: emptyList())
+        return when (card) {
+            OsSectionCard.TOP_INFO -> {
+                val system = sectionStates[SectionKind.SYSTEM]?.rows ?: emptyList()
+                val secure = sectionStates[SectionKind.SECURE]?.rows ?: emptyList()
+                val global = sectionStates[SectionKind.GLOBAL]?.rows ?: emptyList()
+                val android = sectionStates[SectionKind.ANDROID]?.rows ?: emptyList()
+                val java = sectionStates[SectionKind.JAVA]?.rows ?: emptyList()
+                val linux = sectionStates[SectionKind.LINUX]?.rows ?: emptyList()
+                buildTopInfoRows(system, secure, global, android, java, linux)
+            }
+
+            OsSectionCard.GOOGLE_SYSTEM_SERVICE -> {
+                buildGoogleSystemServiceRows(googleSystemServiceConfig)
+            }
+
+            else -> {
+                val section = sectionKindByCard(card) ?: return emptyList()
+                removeTopInfoRows(section, sectionStates[section]?.rows ?: emptyList())
+            }
         }
     }
 
     fun exportSlug(card: OsSectionCard): String = when (card) {
         OsSectionCard.TOP_INFO -> "top-info"
+        OsSectionCard.GOOGLE_SYSTEM_SERVICE -> "google-system-service"
         OsSectionCard.SYSTEM -> "system-table"
         OsSectionCard.SECURE -> "secure-table"
         OsSectionCard.GLOBAL -> "global-table"
@@ -815,6 +928,148 @@ fun OsPage(
                 )
             }
         }
+        SnapshotWindowBottomSheet(
+            show = showGoogleSystemServiceEditor,
+            title = stringResource(R.string.os_google_system_service_sheet_title),
+            onDismissRequest = { showGoogleSystemServiceEditor = false },
+            startAction = {
+                GlassIconButton(
+                    backdrop = sheetBackdrop,
+                    variant = GlassVariant.Bar,
+                    icon = MiuixIcons.Regular.Close,
+                    contentDescription = stringResource(R.string.common_close),
+                    onClick = { showGoogleSystemServiceEditor = false }
+                )
+            },
+            endAction = {
+                GlassIconButton(
+                    backdrop = sheetBackdrop,
+                    variant = GlassVariant.Bar,
+                    icon = MiuixIcons.Regular.Ok,
+                    contentDescription = stringResource(R.string.common_save),
+                    onClick = {
+                        val normalized = googleSystemServiceDraft.normalized(googleSystemServiceDefaults)
+                        googleSystemServiceConfig = normalized
+                        scope.launch(Dispatchers.IO) {
+                            OsShortcutCardStore.saveGoogleSystemServiceConfig(
+                                normalized,
+                                defaults = googleSystemServiceDefaults
+                            )
+                        }
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.os_google_system_service_toast_saved),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        showGoogleSystemServiceEditor = false
+                    }
+                )
+            }
+        ) {
+            SheetContentColumn(verticalSpacing = 10.dp) {
+                SheetSectionTitle(stringResource(R.string.os_google_system_service_sheet_section_card))
+                SheetSectionCard(verticalSpacing = 10.dp) {
+                    SheetFieldBlock(
+                        title = stringResource(R.string.os_google_system_service_field_title)
+                    ) {
+                        GlassSearchField(
+                            value = googleSystemServiceDraft.title,
+                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(title = it) },
+                            label = stringResource(R.string.os_google_system_service_hint_title),
+                            backdrop = sheetBackdrop,
+                            variant = GlassVariant.SheetInput,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    SheetFieldBlock(
+                        title = stringResource(R.string.os_google_system_service_field_subtitle)
+                    ) {
+                        GlassSearchField(
+                            value = googleSystemServiceDraft.subtitle,
+                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(subtitle = it) },
+                            label = stringResource(R.string.os_google_system_service_hint_subtitle),
+                            backdrop = sheetBackdrop,
+                            variant = GlassVariant.SheetInput,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                SheetSectionTitle(stringResource(R.string.os_google_system_service_sheet_section_target))
+                SheetSectionCard(verticalSpacing = 10.dp) {
+                    SheetFieldBlock(
+                        title = stringResource(R.string.os_google_system_service_field_app_name)
+                    ) {
+                        GlassSearchField(
+                            value = googleSystemServiceDraft.appName,
+                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(appName = it) },
+                            label = stringResource(R.string.os_google_system_service_hint_app_name),
+                            backdrop = sheetBackdrop,
+                            variant = GlassVariant.SheetInput,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    SheetFieldBlock(
+                        title = stringResource(R.string.os_google_system_service_field_package_name)
+                    ) {
+                        GlassSearchField(
+                            value = googleSystemServiceDraft.packageName,
+                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(packageName = it) },
+                            label = stringResource(R.string.os_google_system_service_hint_package_name),
+                            backdrop = sheetBackdrop,
+                            variant = GlassVariant.SheetInput,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    SheetFieldBlock(
+                        title = stringResource(R.string.os_google_system_service_field_class_name)
+                    ) {
+                        GlassSearchField(
+                            value = googleSystemServiceDraft.className,
+                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(className = it) },
+                            label = stringResource(R.string.os_google_system_service_hint_class_name),
+                            backdrop = sheetBackdrop,
+                            variant = GlassVariant.SheetInput,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    SheetFieldBlock(
+                        title = stringResource(R.string.os_google_system_service_field_intent_action)
+                    ) {
+                        GlassSearchField(
+                            value = googleSystemServiceDraft.intentAction,
+                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(intentAction = it) },
+                            label = stringResource(R.string.os_google_system_service_hint_intent_action),
+                            backdrop = sheetBackdrop,
+                            variant = GlassVariant.SheetInput,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    SheetFieldBlock(
+                        title = stringResource(R.string.os_google_system_service_field_intent_data)
+                    ) {
+                        GlassSearchField(
+                            value = googleSystemServiceDraft.intentData,
+                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(intentData = it) },
+                            label = stringResource(R.string.os_google_system_service_hint_intent_data),
+                            backdrop = sheetBackdrop,
+                            variant = GlassVariant.SheetInput,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                SheetDescriptionText(
+                    text = stringResource(R.string.os_google_system_service_sheet_desc)
+                )
+            }
+        }
         AppPageLazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -931,6 +1186,62 @@ fun OsPage(
                         }
                     }
                 }
+                }
+
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+            }
+
+            if (isCardVisible(OsSectionCard.GOOGLE_SYSTEM_SERVICE)) {
+                item {
+                    val shortcutConfig = googleSystemServiceConfig.normalized(googleSystemServiceDefaults)
+                    val dataValue = shortcutConfig.intentData.ifBlank {
+                        stringResource(R.string.os_google_system_service_value_data_empty)
+                    }
+                    MiuixAccordionCard(
+                        backdrop = contentBackdrop,
+                        title = shortcutConfig.title,
+                        subtitle = shortcutConfig.subtitle,
+                        expanded = googleSystemServiceExpanded,
+                        onExpandedChange = { googleSystemServiceExpanded = it },
+                        headerStartAction = {
+                            OsSectionHeaderIcon(card = OsSectionCard.GOOGLE_SYSTEM_SERVICE)
+                        },
+                        headerActions = {
+                            Icon(
+                                imageVector = MiuixIcons.Regular.Play,
+                                contentDescription = stringResource(R.string.os_google_system_service_cd_open_activity),
+                                tint = MiuixTheme.colorScheme.primary,
+                                modifier = Modifier.clickable {
+                                    openGoogleSystemServiceActivity()
+                                }
+                            )
+                        },
+                        onHeaderLongClick = {
+                            googleSystemServiceDraft = shortcutConfig
+                            showGoogleSystemServiceEditor = true
+                        }
+                    ) {
+                        OsSectionInfoRow(
+                            label = stringResource(R.string.os_google_system_service_label_app_name),
+                            value = shortcutConfig.appName
+                        )
+                        OsSectionInfoRow(
+                            label = stringResource(R.string.os_google_system_service_label_package_name),
+                            value = shortcutConfig.packageName
+                        )
+                        OsSectionInfoRow(
+                            label = stringResource(R.string.os_google_system_service_label_class_name),
+                            value = shortcutConfig.className
+                        )
+                        OsSectionInfoRow(
+                            label = stringResource(R.string.os_google_system_service_label_intent_action),
+                            value = shortcutConfig.intentAction
+                        )
+                        OsSectionInfoRow(
+                            label = stringResource(R.string.os_google_system_service_label_intent_data),
+                            value = dataValue
+                        )
+                    }
                 }
 
                 item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -1084,6 +1395,7 @@ private data class OsOverviewMetric(
 
 private fun sectionCardIcon(card: OsSectionCard) = when (card) {
     OsSectionCard.TOP_INFO -> MiuixIcons.Regular.Info
+    OsSectionCard.GOOGLE_SYSTEM_SERVICE -> MiuixIcons.Regular.Update
     OsSectionCard.SYSTEM -> MiuixIcons.Regular.ListView
     OsSectionCard.SECURE -> MiuixIcons.Regular.Lock
     OsSectionCard.GLOBAL -> MiuixIcons.Regular.Layers

@@ -98,6 +98,7 @@ internal data class InfoRow(
 
 internal enum class OsSectionCard(val title: String) {
     TOP_INFO("TopInfo"),
+    GOOGLE_SYSTEM_SERVICE("Google系统服务"),
     SYSTEM("System Table"),
     SECURE("Secure Table"),
     GLOBAL("Global Table"),
@@ -124,6 +125,7 @@ internal enum class SystemOverviewState {
 
 internal data class OsUiSnapshot(
     val topInfoExpanded: Boolean = true,
+    val googleSystemServiceExpanded: Boolean = false,
     val systemTableExpanded: Boolean = false,
     val secureTableExpanded: Boolean = false,
     val globalTableExpanded: Boolean = false,
@@ -132,6 +134,28 @@ internal data class OsUiSnapshot(
     val linuxEnvExpanded: Boolean = false,
     val visibleCards: Set<OsSectionCard> = OsSectionCard.entries.toSet()
 )
+
+internal data class OsGoogleSystemServiceConfig(
+    val title: String = "Google系统服务",
+    val subtitle: String = "更新Google系统服务App",
+    val appName: String = "Google Play 商店",
+    val packageName: String = "com.android.vending",
+    val className: String = "com.google.android.finsky.systemservicesactivity.SystemServicesActivity",
+    val intentAction: String = "android.intent.action.VIEW",
+    val intentData: String = ""
+) {
+    fun normalized(defaults: OsGoogleSystemServiceConfig = OsGoogleSystemServiceConfig()): OsGoogleSystemServiceConfig {
+        return copy(
+            title = title.trim().ifBlank { defaults.title },
+            subtitle = subtitle.trim().ifBlank { defaults.subtitle },
+            appName = appName.trim().ifBlank { defaults.appName },
+            packageName = packageName.trim().ifBlank { defaults.packageName },
+            className = className.trim().ifBlank { defaults.className },
+            intentAction = intentAction.trim().ifBlank { defaults.intentAction },
+            intentData = intentData.trim()
+        )
+    }
+}
 
 internal data class CachedSectionsSnapshot(
     val cached: CachedSections = CachedSections(),
@@ -499,4 +523,3 @@ internal object TopInfoKeys {
         "env.ANDROID_SOCKET_zygote"
     )
 }
-

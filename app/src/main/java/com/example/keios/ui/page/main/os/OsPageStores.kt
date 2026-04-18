@@ -311,6 +311,7 @@ internal object OsUiStateStore {
 
     private const val KEY_OVERVIEW = "expanded_os_overview"
     private const val KEY_TOP_INFO = "expanded_os_top_info"
+    private const val KEY_GOOGLE_SYSTEM_SERVICE = "expanded_os_google_system_service"
     private const val KEY_SYSTEM_TABLE = "expanded_os_system_table"
     private const val KEY_SECURE_TABLE = "expanded_os_secure_table"
     private const val KEY_GLOBAL_TABLE = "expanded_os_global_table"
@@ -320,6 +321,7 @@ internal object OsUiStateStore {
 
     private const val LEGACY_KEY_OVERVIEW = "expanded_overview"
     private const val LEGACY_KEY_TOP_INFO = "expanded_top_info"
+    private const val LEGACY_KEY_GOOGLE_SYSTEM_SERVICE = "expanded_google_system_service"
     private const val LEGACY_KEY_SYSTEM_TABLE = "expanded_system_table"
     private const val LEGACY_KEY_SECURE_TABLE = "expanded_secure_table"
     private const val LEGACY_KEY_GLOBAL_TABLE = "expanded_global_table"
@@ -345,6 +347,13 @@ internal object OsUiStateStore {
         val legacyKv = legacyStore
         return OsUiSnapshot(
             topInfoExpanded = readBool(kv, legacyKv, KEY_TOP_INFO, LEGACY_KEY_TOP_INFO, true),
+            googleSystemServiceExpanded = readBool(
+                kv,
+                legacyKv,
+                KEY_GOOGLE_SYSTEM_SERVICE,
+                LEGACY_KEY_GOOGLE_SYSTEM_SERVICE,
+                false
+            ),
             systemTableExpanded = readBool(kv, legacyKv, KEY_SYSTEM_TABLE, LEGACY_KEY_SYSTEM_TABLE, false),
             secureTableExpanded = readBool(kv, legacyKv, KEY_SECURE_TABLE, LEGACY_KEY_SECURE_TABLE, false),
             globalTableExpanded = readBool(kv, legacyKv, KEY_GLOBAL_TABLE, LEGACY_KEY_GLOBAL_TABLE, false),
@@ -363,6 +372,9 @@ internal object OsUiStateStore {
 
     fun osSystemTableExpanded(defaultValue: Boolean = false): Boolean =
         readBool(KEY_SYSTEM_TABLE, LEGACY_KEY_SYSTEM_TABLE, defaultValue)
+
+    fun googleSystemServiceExpanded(defaultValue: Boolean = false): Boolean =
+        readBool(KEY_GOOGLE_SYSTEM_SERVICE, LEGACY_KEY_GOOGLE_SYSTEM_SERVICE, defaultValue)
 
     fun secureTableExpanded(defaultValue: Boolean = false): Boolean =
         readBool(KEY_SECURE_TABLE, LEGACY_KEY_SECURE_TABLE, defaultValue)
@@ -389,6 +401,10 @@ internal object OsUiStateStore {
 
     fun setOsSystemTableExpanded(value: Boolean) {
         store.encode(KEY_SYSTEM_TABLE, value)
+    }
+
+    fun setGoogleSystemServiceExpanded(value: Boolean) {
+        store.encode(KEY_GOOGLE_SYSTEM_SERVICE, value)
     }
 
     fun setSecureTableExpanded(value: Boolean) {
@@ -419,6 +435,46 @@ internal object OsUiStateStore {
         val snapshot = loadSnapshot()
         val boolBytes = 8L
         val cardBytes = snapshot.visibleCards.sumOf { it.name.length.toLong() * 2 + 4L }
-        return boolBytes * 7 + cardBytes
+        return boolBytes * 8 + cardBytes
+    }
+}
+
+internal object OsShortcutCardStore {
+    private const val KV_ID = "os_ui_state"
+    private const val KEY_GOOGLE_SYSTEM_SERVICE_TITLE = "google_system_service_title"
+    private const val KEY_GOOGLE_SYSTEM_SERVICE_SUBTITLE = "google_system_service_subtitle"
+    private const val KEY_GOOGLE_SYSTEM_SERVICE_APP_NAME = "google_system_service_app_name"
+    private const val KEY_GOOGLE_SYSTEM_SERVICE_PACKAGE = "google_system_service_package"
+    private const val KEY_GOOGLE_SYSTEM_SERVICE_CLASS = "google_system_service_class"
+    private const val KEY_GOOGLE_SYSTEM_SERVICE_ACTION = "google_system_service_action"
+    private const val KEY_GOOGLE_SYSTEM_SERVICE_DATA = "google_system_service_data"
+    private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
+
+    fun loadGoogleSystemServiceConfig(
+        defaults: OsGoogleSystemServiceConfig = OsGoogleSystemServiceConfig()
+    ): OsGoogleSystemServiceConfig {
+        return OsGoogleSystemServiceConfig(
+            title = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_TITLE, defaults.title).orEmpty(),
+            subtitle = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_SUBTITLE, defaults.subtitle).orEmpty(),
+            appName = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_APP_NAME, defaults.appName).orEmpty(),
+            packageName = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_PACKAGE, defaults.packageName).orEmpty(),
+            className = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_CLASS, defaults.className).orEmpty(),
+            intentAction = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_ACTION, defaults.intentAction).orEmpty(),
+            intentData = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_DATA, defaults.intentData).orEmpty()
+        ).normalized(defaults)
+    }
+
+    fun saveGoogleSystemServiceConfig(
+        config: OsGoogleSystemServiceConfig,
+        defaults: OsGoogleSystemServiceConfig = OsGoogleSystemServiceConfig()
+    ) {
+        val normalized = config.normalized(defaults)
+        store.encode(KEY_GOOGLE_SYSTEM_SERVICE_TITLE, normalized.title)
+        store.encode(KEY_GOOGLE_SYSTEM_SERVICE_SUBTITLE, normalized.subtitle)
+        store.encode(KEY_GOOGLE_SYSTEM_SERVICE_APP_NAME, normalized.appName)
+        store.encode(KEY_GOOGLE_SYSTEM_SERVICE_PACKAGE, normalized.packageName)
+        store.encode(KEY_GOOGLE_SYSTEM_SERVICE_CLASS, normalized.className)
+        store.encode(KEY_GOOGLE_SYSTEM_SERVICE_ACTION, normalized.intentAction)
+        store.encode(KEY_GOOGLE_SYSTEM_SERVICE_DATA, normalized.intentData)
     }
 }
