@@ -4,7 +4,10 @@ import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.DpSize
 import com.example.keios.R
 import com.example.keios.feature.github.data.local.GitHubPendingShareImportTrackRecord
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
@@ -44,7 +48,21 @@ import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.RadioButton
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.layout.BottomSheetDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+private val shareImportSheetInsideMargin = DpSize(
+    BottomSheetDefaults.insideMargin.width,
+    20.dp
+)
+
+private fun Modifier.shareImportSheetSafeArea(): Modifier {
+    return this
+        .fillMaxWidth()
+        .navigationBarsPadding()
+        .imePadding()
+        .padding(bottom = 12.dp)
+}
 
 @Composable
 internal fun GitHubShareImportDialog(
@@ -60,25 +78,14 @@ internal fun GitHubShareImportDialog(
         show = showSheet,
         title = stringResource(R.string.github_share_import_dialog_title),
         onDismissRequest = onDismissRequest,
+        insideMargin = shareImportSheetInsideMargin,
         allowDismiss = !resolving
     ) {
-        val summary = when {
-            preview != null -> stringResource(
-                R.string.github_share_import_dialog_summary_ready,
-                preview.owner,
-                preview.repo,
-                preview.releaseTag
-            )
-            else -> null
-        }
-        summary?.let { text ->
-            SheetDescriptionText(text = text)
-        }
         if (resolving) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 220.dp),
+                    .shareImportSheetSafeArea()
+                    .heightIn(min = 236.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -118,10 +125,9 @@ internal fun GitHubShareImportDialog(
         val selectedAsset = preview.assets.getOrNull(safeSelectedIndex)
 
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.shareImportSheetSafeArea(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Spacer(modifier = Modifier.height(4.dp))
             SheetSectionCard(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
                 verticalSpacing = 6.dp
@@ -247,11 +253,12 @@ internal fun GitHubShareImportPendingDialog(
         show = pending != null,
         title = stringResource(R.string.github_share_import_pending_title),
         onDismissRequest = onDismissRequest,
+        insideMargin = shareImportSheetInsideMargin,
         allowDismiss = false
     ) {
         val pendingTrack = pending ?: return@SnapshotWindowBottomSheet
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.shareImportSheetSafeArea(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             SheetDescriptionText(
@@ -313,11 +320,12 @@ internal fun GitHubShareImportAttachConfirmDialog(
     SnapshotWindowBottomSheet(
         show = candidate != null,
         title = stringResource(R.string.github_share_import_attach_dialog_title),
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        insideMargin = shareImportSheetInsideMargin
     ) {
         val attachCandidate = candidate ?: return@SnapshotWindowBottomSheet
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.shareImportSheetSafeArea(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             SheetDescriptionText(
