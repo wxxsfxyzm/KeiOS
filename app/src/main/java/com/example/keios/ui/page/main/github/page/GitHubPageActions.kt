@@ -58,31 +58,39 @@ internal class GitHubPageActions(
     suspend fun syncTrackSnapshotFromStore(forceRefreshApps: Boolean = true) =
         refreshActions.syncSnapshotFromStore(forceRefreshApps)
 
-    fun refreshAllTracked(showToast: Boolean = true) =
-        refreshActions.refreshAllTracked(showToast = showToast) {
-            val expandedItemIds = env.state.apkAssetExpanded
-                .filterValues { it }
-                .keys
-                .toSet()
-            if (expandedItemIds.isEmpty()) return@refreshAllTracked
+    suspend fun syncLocalAppStateOnPageActive() {
+        refreshActions.syncLocalAppStateWithInstalledApps(forceRefreshApps = true)
+    }
 
-            env.state.trackedItems.forEach { item ->
-                if (item.id !in expandedItemIds) return@forEach
-                val itemState = env.state.checkStates[item.id] ?: return@forEach
-                val includeAllAssets = env.state.apkAssetIncludeAll[item.id] == true
-                if (canLoadApkAssets(item, itemState)) {
-                    assetActions.clearApkAssetCache(item, itemState)
-                    assetActions.loadApkAssets(
-                        item = item,
-                        itemState = itemState,
-                        toggleOnlyWhenCached = false,
-                        includeAllAssets = includeAllAssets
-                    )
-                } else {
-                    assetActions.clearApkAssetUiState(item.id)
+    fun refreshAllTracked(showToast: Boolean = true) {
+        env.scope.launch {
+            refreshActions.reloadApps(forceRefresh = true)
+            refreshActions.refreshAllTracked(showToast = showToast) {
+                val expandedItemIds = env.state.apkAssetExpanded
+                    .filterValues { it }
+                    .keys
+                    .toSet()
+                if (expandedItemIds.isEmpty()) return@refreshAllTracked
+
+                env.state.trackedItems.forEach { item ->
+                    if (item.id !in expandedItemIds) return@forEach
+                    val itemState = env.state.checkStates[item.id] ?: return@forEach
+                    val includeAllAssets = env.state.apkAssetIncludeAll[item.id] == true
+                    if (canLoadApkAssets(item, itemState)) {
+                        assetActions.clearApkAssetCache(item, itemState)
+                        assetActions.loadApkAssets(
+                            item = item,
+                            itemState = itemState,
+                            toggleOnlyWhenCached = false,
+                            includeAllAssets = includeAllAssets
+                        )
+                    } else {
+                        assetActions.clearApkAssetUiState(item.id)
+                    }
                 }
             }
         }
+    }
 
     fun refreshTrackedItem(
         item: GitHubTrackedApp,
@@ -90,23 +98,26 @@ internal class GitHubPageActions(
     ) {
         if (env.state.trackedItems.none { it.id == item.id }) return
         if (env.state.checkStates[item.id]?.loading == true) return
-        val wasAssetExpanded = env.state.apkAssetExpanded[item.id] == true
-        val includeAllAssets = env.state.apkAssetIncludeAll[item.id] == true
-        val previousState = env.state.checkStates[item.id] ?: VersionCheckUi()
-        assetActions.clearApkAssetCache(item, previousState)
-        refreshActions.refreshItem(item = item, showToastOnError = showToastOnError) { updatedState ->
-            if (wasAssetExpanded && canLoadApkAssets(item, updatedState)) {
-                assetActions.clearApkAssetCache(item, updatedState)
-                assetActions.loadApkAssets(
-                    item = item,
-                    itemState = updatedState,
-                    toggleOnlyWhenCached = false,
-                    includeAllAssets = includeAllAssets
-                )
-            } else if (wasAssetExpanded) {
-                assetActions.clearApkAssetUiState(item.id)
-            } else {
-                assetActions.clearApkAssetRuntimeState(item.id)
+        env.scope.launch {
+            refreshActions.reloadApps(forceRefresh = true)
+            val wasAssetExpanded = env.state.apkAssetExpanded[item.id] == true
+            val includeAllAssets = env.state.apkAssetIncludeAll[item.id] == true
+            val previousState = env.state.checkStates[item.id] ?: VersionCheckUi()
+            assetActions.clearApkAssetCache(item, previousState)
+            refreshActions.refreshItem(item = item, showToastOnError = showToastOnError) { updatedState ->
+                if (wasAssetExpanded && canLoadApkAssets(item, updatedState)) {
+                    assetActions.clearApkAssetCache(item, updatedState)
+                    assetActions.loadApkAssets(
+                        item = item,
+                        itemState = updatedState,
+                        toggleOnlyWhenCached = false,
+                        includeAllAssets = includeAllAssets
+                    )
+                } else if (wasAssetExpanded) {
+                    assetActions.clearApkAssetUiState(item.id)
+                } else {
+                    assetActions.clearApkAssetRuntimeState(item.id)
+                }
             }
         }
     }

@@ -127,6 +127,38 @@ internal class GitHubRefreshActions(
         }
     }
 
+    suspend fun syncLocalAppStateWithInstalledApps(forceRefreshApps: Boolean = true) {
+        if (forceRefreshApps) {
+            reloadApps(forceRefresh = true)
+        }
+        val trackedSnapshot = state.trackedItems.toList()
+        if (trackedSnapshot.isEmpty()) return
+
+        trackedSnapshot.forEach { item ->
+            val packageName = item.packageName.trim()
+            if (packageName.isBlank()) return@forEach
+
+            val latestLocalVersionInfo = runCatching {
+                GitHubVersionUtils.localVersionInfoOrNull(context, packageName)
+            }.getOrNull()
+            val installed = latestLocalVersionInfo != null
+
+            val cachedState = state.checkStates[item.id] ?: return@forEach
+            val cachedUninstalled = cachedState.isLocalAppUninstalled()
+            val cachedVersionCode = cachedState.localVersionCode
+            val latestVersionCode = latestLocalVersionInfo?.versionCode ?: -1L
+            val shouldRefresh = when {
+                installed && cachedUninstalled -> true
+                !installed && !cachedUninstalled -> true
+                installed && cachedVersionCode != latestVersionCode -> true
+                else -> false
+            }
+            if (shouldRefresh) {
+                refreshItem(item = item, showToastOnError = false)
+            }
+        }
+    }
+
     private fun refreshRequestedTracksIfNeeded(): Boolean {
         val trackedById = state.trackedItems.associateBy { it.id }
         if (trackedById.isEmpty()) return false
@@ -283,6 +315,9 @@ internal class GitHubRefreshActions(
         state.trackedFirstInstallAtByPackage.clear()
         state.trackedFirstInstallAtByPackage.putAll(trackSnapshot.trackedFirstInstallAtByPackage)
         state.retainTrackedFirstInstallAtByTrackedItems()
+        state.trackedAddedAtById.clear()
+        state.trackedAddedAtById.putAll(trackSnapshot.trackedAddedAtById)
+        state.retainTrackedAddedAtByTrackedItems()
         state.pendingShareImportTrack = trackSnapshot.pendingShareImportTrack?.let { pending ->
             GitHubPendingShareImportTrack(
                 projectUrl = pending.projectUrl,

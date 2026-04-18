@@ -258,17 +258,27 @@ fun GitHubPage(
             )
         }
     }
-    val appLastUpdatedAtByPackage by remember {
+    val appLastUpdatedAtByTrackId by remember {
         derivedStateOf {
-            buildMap {
-                state.trackedFirstInstallAtByPackage.forEach { (packageName, firstInstallAtMillis) ->
-                    if (packageName.isNotBlank() && firstInstallAtMillis > 0L) {
-                        put(packageName, firstInstallAtMillis)
+            buildMap<String, Long> {
+                val appUpdatedAtByPackage = buildMap<String, Long> {
+                    state.trackedFirstInstallAtByPackage.forEach { (packageName, firstInstallAtMillis) ->
+                        if (packageName.isNotBlank() && firstInstallAtMillis > 0L) {
+                            put(packageName, firstInstallAtMillis)
+                        }
+                    }
+                    state.appList
+                        .filter { it.packageName.isNotBlank() && it.lastUpdateTimeMs > 0L }
+                        .forEach { put(it.packageName, it.lastUpdateTimeMs) }
+                }
+                state.trackedItems.forEach { item ->
+                    val byPackage = appUpdatedAtByPackage[item.packageName]
+                    val byTrackId = state.trackedAddedAtById[item.id]
+                    val updatedAt = byPackage?.takeIf { it > 0L } ?: byTrackId?.takeIf { it > 0L }
+                    if (updatedAt != null) {
+                        put(item.id, updatedAt)
                     }
                 }
-                state.appList
-                    .filter { it.packageName.isNotBlank() && it.lastUpdateTimeMs > 0L }
-                    .forEach { put(it.packageName, it.lastUpdateTimeMs) }
             }
         }
     }
@@ -340,7 +350,7 @@ fun GitHubPage(
         trackedItems = state.trackedItems,
         filteredTracked = trackedUi.filteredTracked,
         sortedTracked = trackedUi.sortedTracked,
-        appLastUpdatedAtByPackage = appLastUpdatedAtByPackage,
+        appLastUpdatedAtByTrackId = appLastUpdatedAtByTrackId,
         checkStates = state.checkStates,
         apkAssetBundles = state.apkAssetBundles,
         apkAssetLoading = state.apkAssetLoading,

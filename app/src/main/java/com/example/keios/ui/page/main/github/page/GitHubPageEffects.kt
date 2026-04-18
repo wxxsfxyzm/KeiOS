@@ -42,6 +42,7 @@ internal fun BindGitHubPageEffects(
         } else if (currentSignalVersion > state.lastTrackStoreSignalVersion) {
             actions.syncTrackSnapshotFromStore(forceRefreshApps = true)
         }
+        actions.syncLocalAppStateOnPageActive()
         state.lastTrackStoreSignalVersion = currentSignalVersion
         actions.trimExpiredPendingShareImportTrack()
     }

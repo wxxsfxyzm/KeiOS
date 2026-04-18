@@ -40,6 +40,7 @@ internal class GitHubTrackActions(
     }
 
     fun applyTrackSheet() {
+        val nowMillis = System.currentTimeMillis()
         val parsed = GitHubVersionUtils.parseOwnerRepo(state.repoUrlInput)
         if (parsed == null) {
             env.toast(R.string.github_toast_fill_repo_and_select_app)
@@ -79,6 +80,7 @@ internal class GitHubTrackActions(
                 return
             }
             state.trackedItems.add(newItem)
+            state.recordTrackedAddedAt(newItem.id, nowMillis)
             env.saveTrackedItems(refreshTrackIds = setOf(newItem.id))
             env.toast(R.string.github_toast_track_added)
         } else {
@@ -87,6 +89,11 @@ internal class GitHubTrackActions(
                 env.toast(R.string.github_toast_track_exists)
                 return
             }
+            val existingAddedAt = state.trackedAddedAtById[editing.id]
+                ?.takeIf { it > 0L }
+                ?: state.trackedAddedAtById[newItem.id]
+                ?.takeIf { it > 0L }
+                ?: nowMillis
             val index = state.trackedItems.indexOfFirst { it.id == editing.id }
             if (index >= 0) {
                 state.trackedItems[index] = newItem
@@ -97,7 +104,9 @@ internal class GitHubTrackActions(
                 state.checkStates.remove(editing.id)
                 state.trackedCardExpanded.remove(editing.id)
                 state.clearAssetUiState(editing.id)
+                state.trackedAddedAtById.remove(editing.id)
             }
+            state.recordTrackedAddedAt(newItem.id, existingAddedAt)
             env.saveTrackedItems(refreshTrackIds = setOf(newItem.id))
             env.toast(R.string.github_toast_track_updated)
         }
@@ -113,6 +122,7 @@ internal class GitHubTrackActions(
                 state.trackedItems.remove(deleting)
                 state.checkStates.remove(deleting.id)
                 state.trackedCardExpanded.remove(deleting.id)
+                state.trackedAddedAtById.remove(deleting.id)
                 state.clearAssetUiState(deleting.id)
                 env.saveTrackedItems()
                 refreshActions.persistCheckCache()

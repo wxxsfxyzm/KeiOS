@@ -15,7 +15,8 @@ data class GitHubTrackSnapshot(
     val refreshIntervalHours: Int = 3,
     val lookupConfig: GitHubLookupConfig = GitHubLookupConfig(),
     val pendingShareImportTrack: GitHubPendingShareImportTrackRecord? = null,
-    val trackedFirstInstallAtByPackage: Map<String, Long> = emptyMap()
+    val trackedFirstInstallAtByPackage: Map<String, Long> = emptyMap(),
+    val trackedAddedAtById: Map<String, Long> = emptyMap()
 )
 
 data class GitHubTrackedItemsImportPayload(
@@ -50,6 +51,7 @@ object GitHubTrackStore {
     private const val KEY_PREFERRED_DOWNLOADER_PACKAGE = "github_preferred_downloader_package"
     private const val KEY_PENDING_SHARE_IMPORT_TRACK = "github_pending_share_import_track"
     private const val KEY_TRACKED_FIRST_INSTALL_AT_BY_PACKAGE = "github_tracked_first_install_at_by_package"
+    private const val KEY_TRACKED_ADDED_AT_BY_ID = "github_tracked_added_at_by_id"
 
     @Volatile
     private var didAutoRefreshInSession: Boolean = false
@@ -152,6 +154,43 @@ object GitHubTrackStore {
             return
         }
         kv().encode(KEY_TRACKED_FIRST_INSTALL_AT_BY_PACKAGE, payload.toString())
+    }
+
+    fun loadTrackedAddedAtById(): Map<String, Long> {
+        val raw = kv().decodeString(KEY_TRACKED_ADDED_AT_BY_ID).orEmpty()
+        if (raw.isBlank()) return emptyMap()
+        return runCatching {
+            val obj = JSONObject(raw)
+            buildMap {
+                val keys = obj.keys()
+                while (keys.hasNext()) {
+                    val trackId = keys.next().trim()
+                    if (trackId.isBlank()) continue
+                    val addedAtMillis = obj.optLong(trackId, -1L)
+                    if (addedAtMillis > 0L) {
+                        put(trackId, addedAtMillis)
+                    }
+                }
+            }
+        }.getOrDefault(emptyMap())
+    }
+
+    fun saveTrackedAddedAtById(values: Map<String, Long>) {
+        if (values.isEmpty()) {
+            kv().removeValueForKey(KEY_TRACKED_ADDED_AT_BY_ID)
+            return
+        }
+        val payload = JSONObject()
+        values.forEach { (trackId, addedAtMillis) ->
+            val normalizedTrackId = trackId.trim()
+            if (normalizedTrackId.isBlank() || addedAtMillis <= 0L) return@forEach
+            payload.put(normalizedTrackId, addedAtMillis)
+        }
+        if (payload.length() == 0) {
+            kv().removeValueForKey(KEY_TRACKED_ADDED_AT_BY_ID)
+            return
+        }
+        kv().encode(KEY_TRACKED_ADDED_AT_BY_ID, payload.toString())
     }
 
     fun buildTrackedItemsExportJson(
@@ -272,7 +311,8 @@ object GitHubTrackStore {
             refreshIntervalHours = loadRefreshIntervalHours(),
             lookupConfig = lookupConfig,
             pendingShareImportTrack = loadPendingShareImportTrack(),
-            trackedFirstInstallAtByPackage = loadTrackedFirstInstallAtByPackage()
+            trackedFirstInstallAtByPackage = loadTrackedFirstInstallAtByPackage(),
+            trackedAddedAtById = loadTrackedAddedAtById()
         )
     }
 

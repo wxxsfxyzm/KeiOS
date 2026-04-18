@@ -31,8 +31,10 @@ internal class GitHubPageActionEnvironment(
 
     fun saveTrackedItems(refreshTrackIds: Set<String> = emptySet()) {
         state.retainTrackedFirstInstallAtByTrackedItems()
+        state.retainTrackedAddedAtByTrackedItems()
         GitHubTrackStore.save(state.trackedItems.toList())
         GitHubTrackStore.saveTrackedFirstInstallAtByPackage(state.trackedFirstInstallAtByPackage)
+        GitHubTrackStore.saveTrackedAddedAtById(state.trackedAddedAtById)
         AppBackgroundScheduler.scheduleGitHubRefresh(context)
         refreshTrackIds.forEach { trackId ->
             GitHubTrackStoreSignals.requestTrackRefresh(

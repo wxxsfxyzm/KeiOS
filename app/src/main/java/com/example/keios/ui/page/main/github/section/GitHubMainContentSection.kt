@@ -141,7 +141,7 @@ internal fun GitHubMainContent(
     trackedItems: List<GitHubTrackedApp>,
     filteredTracked: List<GitHubTrackedApp>,
     sortedTracked: List<GitHubTrackedApp>,
-    appLastUpdatedAtByPackage: Map<String, Long>,
+    appLastUpdatedAtByTrackId: Map<String, Long>,
     checkStates: SnapshotStateMap<String, VersionCheckUi>,
     apkAssetBundles: SnapshotStateMap<String, GitHubReleaseAssetBundle>,
     apkAssetLoading: SnapshotStateMap<String, Boolean>,
@@ -235,7 +235,7 @@ internal fun GitHubMainContent(
                     trackedItems = trackedItems,
                     filteredTracked = filteredTracked,
                     sortedTracked = sortedTracked,
-                    appLastUpdatedAtByPackage = appLastUpdatedAtByPackage,
+                    appLastUpdatedAtByTrackId = appLastUpdatedAtByTrackId,
                     checkStates = checkStates,
                     contentBackdrop = contentBackdrop,
                     isDark = isDark,
@@ -284,7 +284,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
     trackedItems: List<GitHubTrackedApp>,
     filteredTracked: List<GitHubTrackedApp>,
     sortedTracked: List<GitHubTrackedApp>,
-    appLastUpdatedAtByPackage: Map<String, Long>,
+    appLastUpdatedAtByTrackId: Map<String, Long>,
     checkStates: SnapshotStateMap<String, VersionCheckUi>,
     contentBackdrop: LayerBackdrop,
     isDark: Boolean,
@@ -472,7 +472,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                         )
                     }
                     val appUpdatedAtLabel = formatReleaseUpdatedAtCompact(
-                        appLastUpdatedAtByPackage[item.packageName]?.takeIf { it > 0L }
+                        appLastUpdatedAtByTrackId[item.id]?.takeIf { it > 0L }
                     ) ?: stringResource(R.string.common_unknown)
                     VersionValueRow(
                         label = stringResource(R.string.github_item_label_updated_at),

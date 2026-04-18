@@ -280,6 +280,7 @@ internal class GitHubConfigActions(
     private fun applyImportedTrackedItems(
         payload: GitHubTrackedItemsImportPayload
     ): GitHubTrackImportApplyResult {
+        val nowMillis = System.currentTimeMillis()
         if (payload.items.isEmpty()) {
             return GitHubTrackImportApplyResult(
                 addedCount = 0,
@@ -303,6 +304,7 @@ internal class GitHubConfigActions(
                 existingIndex == null -> {
                     mergedItems += item
                     indexById[item.id] = mergedItems.lastIndex
+                    state.recordTrackedAddedAt(item.id, nowMillis)
                     touchedItems += item
                     addedCount += 1
                 }
