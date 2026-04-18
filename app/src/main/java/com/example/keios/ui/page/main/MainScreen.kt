@@ -387,8 +387,11 @@ private fun MainPagerLayout(
     val preloadPolicy = remember(preloadingEnabled) {
         UiPerformanceBudget.resolvePreloadPolicy(preloadingEnabled)
     }
-    val hasNonHomeBackground = remember(nonHomeBackgroundEnabled, nonHomeBackgroundUri) {
-        nonHomeBackgroundEnabled && nonHomeBackgroundUri.isNotBlank()
+    val effectiveNonHomeBackgroundUri = remember(nonHomeBackgroundEnabled, nonHomeBackgroundUri) {
+        if (nonHomeBackgroundEnabled) nonHomeBackgroundUri.trim() else ""
+    }
+    val hasNonHomeBackground = remember(effectiveNonHomeBackgroundUri) {
+        effectiveNonHomeBackgroundUri.isNotBlank()
     }
     val tabs = remember(visibleBottomPageNames) {
         BottomPage.entries.filter { page ->
@@ -785,7 +788,7 @@ private fun MainPagerLayout(
                 // This avoids N-times duplicated AsyncImage work in offscreen pager pages.
                 NonHomePageBackground(
                     enabled = hasNonHomeBackground,
-                    imageUri = nonHomeBackgroundUri,
+                    imageUri = effectiveNonHomeBackgroundUri,
                     opacity = nonHomeBackgroundOpacity,
                     modifier = Modifier.fillMaxSize()
                 )

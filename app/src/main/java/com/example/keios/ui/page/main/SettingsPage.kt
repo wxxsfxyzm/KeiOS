@@ -185,12 +185,11 @@ fun SettingsPage(
             delay(1200)
         } while (true)
     }
-    val uiGroupActive = liquidActionBarLayeredStyleEnabled ||
+    val visualGroupActive = preloadingEnabled || homeIconHdrEnabled
+    val animationGroupActive = transitionAnimationsEnabled
+    val componentEffectsGroupActive = liquidActionBarLayeredStyleEnabled ||
         liquidBottomBarEnabled ||
-        transitionAnimationsEnabled ||
-        cardPressFeedbackEnabled ||
-        preloadingEnabled ||
-        homeIconHdrEnabled
+        cardPressFeedbackEnabled
     val backgroundGroupActive = nonHomeBackgroundEnabled || nonHomeBackgroundUri.isNotBlank()
     val notifyGroupActive = superIslandNotificationEnabled || superIslandBypassRestrictionEnabled
     val logGroupActive = logDebugEnabled || logStats.fileCount > 0
@@ -338,7 +337,7 @@ fun SettingsPage(
                     header = stringResource(R.string.settings_group_visual_header),
                     title = stringResource(R.string.settings_group_visual_title),
                     summary = stringResource(R.string.settings_group_visual_summary),
-                    containerColor = if (uiGroupActive) enabledCardColor else disabledCardColor
+                    containerColor = if (visualGroupActive) enabledCardColor else disabledCardColor
                 ) {
                     SettingsActionItem(
                         title = stringResource(R.string.settings_theme_mode_title),
@@ -362,6 +361,40 @@ fun SettingsPage(
                     }
 
                     SettingsToggleItem(
+                        title = stringResource(R.string.settings_preloading_title),
+                        summary = if (preloadingEnabled) {
+                            stringResource(R.string.settings_preloading_summary_enabled)
+                        } else {
+                            stringResource(R.string.settings_preloading_summary_disabled)
+                        },
+                        checked = preloadingEnabled,
+                        onCheckedChange = onPreloadingEnabledChanged,
+                        infoKey = stringResource(R.string.common_scope),
+                        infoValue = stringResource(R.string.settings_preloading_scope)
+                    )
+
+                    SettingsToggleItem(
+                        title = stringResource(R.string.settings_home_shine_title),
+                        summary = if (homeIconHdrEnabled) {
+                            stringResource(R.string.settings_home_shine_summary_enabled)
+                        } else {
+                            stringResource(R.string.settings_home_shine_summary_disabled)
+                        },
+                        checked = homeIconHdrEnabled,
+                        onCheckedChange = onHomeIconHdrChanged,
+                        infoKey = stringResource(R.string.common_scope),
+                        infoValue = stringResource(R.string.settings_home_shine_scope)
+                    )
+                }
+            }
+            item {
+                SettingsGroupCard(
+                    header = stringResource(R.string.settings_group_animation_header),
+                    title = stringResource(R.string.settings_group_animation_title),
+                    summary = stringResource(R.string.settings_group_animation_summary),
+                    containerColor = if (animationGroupActive) enabledCardColor else disabledCardColor
+                ) {
+                    SettingsToggleItem(
                         title = stringResource(R.string.settings_transition_animations_title),
                         summary = if (transitionAnimationsEnabled) {
                             stringResource(R.string.settings_transition_animations_summary_enabled)
@@ -373,7 +406,15 @@ fun SettingsPage(
                         infoKey = stringResource(R.string.common_scope),
                         infoValue = stringResource(R.string.settings_transition_animations_scope)
                     )
-
+                }
+            }
+            item {
+                SettingsGroupCard(
+                    header = stringResource(R.string.settings_group_component_effects_header),
+                    title = stringResource(R.string.settings_group_component_effects_title),
+                    summary = stringResource(R.string.settings_group_component_effects_summary),
+                    containerColor = if (componentEffectsGroupActive) enabledCardColor else disabledCardColor
+                ) {
                     SettingsToggleItem(
                         title = stringResource(R.string.settings_actionbar_style_title),
                         summary = if (liquidActionBarLayeredStyleEnabled) {
@@ -405,32 +446,6 @@ fun SettingsPage(
                         onCheckedChange = onCardPressFeedbackChanged,
                         infoKey = stringResource(R.string.common_scope),
                         infoValue = stringResource(R.string.settings_card_feedback_scope)
-                    )
-
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_preloading_title),
-                        summary = if (preloadingEnabled) {
-                            stringResource(R.string.settings_preloading_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_preloading_summary_disabled)
-                        },
-                        checked = preloadingEnabled,
-                        onCheckedChange = onPreloadingEnabledChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_preloading_scope)
-                    )
-
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_home_shine_title),
-                        summary = if (homeIconHdrEnabled) {
-                            stringResource(R.string.settings_home_shine_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_home_shine_summary_disabled)
-                        },
-                        checked = homeIconHdrEnabled,
-                        onCheckedChange = onHomeIconHdrChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_home_shine_scope)
                     )
                 }
             }

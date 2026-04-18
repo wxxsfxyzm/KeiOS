@@ -60,8 +60,14 @@
     <string name="settings_transition_animations_summary_disabled">关闭后统一改为直接显隐，减少弱 SoC 设备的额外动画开销。</string>
     <string name="settings_transition_animations_scope">影响主页面切页、搜索栏、底栏显隐、折叠区域与常用胶囊按压等过渡动画。</string>
     <string name="settings_group_visual_header">Visual</string>
-    <string name="settings_group_visual_title">视觉与交互</string>
-    <string name="settings_group_visual_summary">主题、ActionBar、底栏、按压反馈与主页高光集中管理。</string>
+    <string name="settings_group_visual_title">视觉与主题</string>
+    <string name="settings_group_visual_summary">主题模式、预加载与主页高光能力配置。</string>
+    <string name="settings_group_animation_header">Animation</string>
+    <string name="settings_group_animation_title">动画</string>
+    <string name="settings_group_animation_summary">管理页面切换与交互过渡动画节奏。</string>
+    <string name="settings_group_component_effects_header">Components</string>
+    <string name="settings_group_component_effects_title">组件效果</string>
+    <string name="settings_group_component_effects_summary">管理 ActionBar、底栏与卡片反馈等组件视觉效果。</string>
     <string name="settings_group_background_header">Background</string>
     <string name="settings_group_background_title">背景图片资源</string>
     <string name="settings_group_background_summary">管理非 Home 页面背景开关、图片资源与透明度关键档位。</string>
