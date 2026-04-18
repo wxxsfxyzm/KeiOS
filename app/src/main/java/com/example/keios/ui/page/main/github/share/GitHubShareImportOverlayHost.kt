@@ -38,9 +38,11 @@ import com.example.keios.ui.page.main.github.sheet.GitHubShareImportPendingDialo
 import com.example.keios.ui.page.main.github.state.toCacheEntry
 import com.example.keios.ui.page.main.github.state.toUi
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -55,6 +57,7 @@ private val shareImportAttachActions = setOf(
 )
 
 private data class OverlayInstalledPackageSnapshot(
+    val packageName: String,
     val appLabel: String,
     val lastUpdateTimeMs: Long,
     val firstInstallTimeMs: Long
@@ -129,8 +132,56 @@ internal fun GitHubShareImportOverlayHost(
         GitHubTrackStoreSignals.notifyChanged()
         pendingTrack = null
     }
+    LaunchedEffect(pendingTrack?.armedAtMillis, attachCandidate?.packageName) {
+        val armedAtMillis = pendingTrack?.armedAtMillis ?: return@LaunchedEffect
+        if (attachCandidate != null) return@LaunchedEffect
+        while (true) {
+            val currentPending = pendingTrack ?: return@LaunchedEffect
+            if (currentPending.armedAtMillis != armedAtMillis) return@LaunchedEffect
+            if (attachCandidate != null) return@LaunchedEffect
 
-    LaunchedEffect(incomingGitHubShareToken, incomingGitHubShareText) {
+            val reconciled = withContext(Dispatchers.IO) {
+                findRecentInstalledCandidateForPendingTrack(context, currentPending)
+            }
+            if (reconciled != null) {
+                val duplicateId = "${currentPending.owner}/${currentPending.repo}|${reconciled.packageName}"
+                val duplicateExists = withContext(Dispatchers.IO) {
+                    GitHubTrackStore.load().any { it.id == duplicateId }
+                }
+                if (duplicateExists) {
+                    withContext(Dispatchers.IO) {
+                        GitHubTrackStore.savePendingShareImportTrack(null)
+                    }
+                    GitHubTrackStoreSignals.notifyChanged()
+                    pendingTrack = null
+                    toast(context, R.string.github_toast_share_import_track_exists)
+                    return@LaunchedEffect
+                }
+                attachCandidate = GitHubPendingShareImportAttachCandidate(
+                    projectUrl = currentPending.projectUrl,
+                    owner = currentPending.owner,
+                    repo = currentPending.repo,
+                    packageName = reconciled.packageName,
+                    appLabel = reconciled.appLabel.ifBlank { reconciled.packageName },
+                    eventAction = "reconciled",
+                    detectedAtMillis = System.currentTimeMillis(),
+                    firstInstallTimeMs = reconciled.firstInstallTimeMs
+                )
+                withContext(Dispatchers.IO) {
+                    GitHubTrackStore.savePendingShareImportTrack(null)
+                }
+                GitHubTrackStoreSignals.notifyChanged()
+                pendingTrack = null
+                return@LaunchedEffect
+            }
+
+            val pendingAge = (System.currentTimeMillis() - currentPending.armedAtMillis).coerceAtLeast(0L)
+            if (pendingAge > shareImportTrackMaxAgeMs) return@LaunchedEffect
+            delay(2500L)
+        }
+    }
+
+    LaunchedEffect(incomingGitHubShareToken) {
         val sharedText = incomingGitHubShareText?.trim().orEmpty()
         if (sharedText.isBlank()) return@LaunchedEffect
         if (resolving || incomingResolveRunning) return@LaunchedEffect
@@ -141,14 +192,13 @@ internal fun GitHubShareImportOverlayHost(
         try {
             val lookupConfig = withContext(Dispatchers.IO) { GitHubTrackStore.loadLookupConfig() }
             if (!lookupConfig.shareImportLinkageEnabled) return@LaunchedEffect
-            runCatching {
-                withContext(Dispatchers.IO) {
+            try {
+                val plan = withContext(Dispatchers.IO) {
                     GitHubShareImportResolver.resolve(
                         sharedText = sharedText,
                         lookupConfig = lookupConfig
                     ).getOrThrow()
                 }
-            }.onSuccess { plan ->
                 if (plan.assets.isEmpty()) {
                     toast(context, R.string.github_toast_share_import_no_apk)
                 } else {
@@ -164,7 +214,8 @@ internal fun GitHubShareImportOverlayHost(
                         preferredAssetName = plan.preferredAssetName
                     )
                 }
-            }.onFailure { error ->
+            } catch (error: Throwable) {
+                if (error.shouldSuppressShareImportFailureToast()) return@LaunchedEffect
                 val reason = error.message?.takeIf { it.isNotBlank() } ?: error.javaClass.simpleName
                 toast(context, R.string.github_toast_share_import_failed, reason)
             }
@@ -589,11 +640,73 @@ private suspend fun loadInstalledPackageSnapshot(
         }.getOrDefault("")
 
         OverlayInstalledPackageSnapshot(
+            packageName = packageName,
             appLabel = label,
             lastUpdateTimeMs = info.lastUpdateTime,
             firstInstallTimeMs = info.firstInstallTime
         )
     }
+}
+
+private fun findRecentInstalledCandidateForPendingTrack(
+    context: Context,
+    pendingTrack: GitHubPendingShareImportTrackRecord
+): OverlayInstalledPackageSnapshot? {
+    val pm = context.packageManager
+    val installed = runCatching {
+        pm.getInstalledPackages(PackageManager.PackageInfoFlags.of(0))
+    }.recoverCatching {
+        @Suppress("DEPRECATION")
+        pm.getInstalledPackages(0)
+    }.getOrDefault(emptyList())
+
+    val candidates = installed.asSequence()
+        .filter { info ->
+            val packageName = info.packageName.trim()
+            packageName.isNotBlank() &&
+                packageName != context.packageName &&
+                pm.getLaunchIntentForPackage(packageName) != null
+        }
+        .mapNotNull { info ->
+            val packageName = info.packageName.trim()
+            val updateTime = info.lastUpdateTime
+            if (updateTime <= 0L) return@mapNotNull null
+            if (updateTime < (pendingTrack.armedAtMillis - shareImportTrackUpdateToleranceMs)) {
+                return@mapNotNull null
+            }
+            val appLabel = runCatching {
+                val appInfo = info.applicationInfo ?: pm.getApplicationInfo(
+                    packageName,
+                    PackageManager.ApplicationInfoFlags.of(0)
+                )
+                pm.getApplicationLabel(appInfo).toString().trim()
+            }.recoverCatching {
+                @Suppress("DEPRECATION")
+                val appInfo = info.applicationInfo ?: pm.getApplicationInfo(packageName, 0)
+                pm.getApplicationLabel(appInfo).toString().trim()
+            }.getOrDefault("")
+
+            OverlayInstalledPackageSnapshot(
+                packageName = packageName,
+                appLabel = appLabel,
+                lastUpdateTimeMs = updateTime,
+                firstInstallTimeMs = info.firstInstallTime
+            )
+        }
+        .sortedByDescending { it.lastUpdateTimeMs }
+        .take(3)
+        .toList()
+
+    if (candidates.isEmpty()) return null
+    if (candidates.size >= 2) {
+        val first = candidates[0]
+        val second = candidates[1]
+        val updateGap = (first.lastUpdateTimeMs - second.lastUpdateTimeMs).coerceAtLeast(0L)
+        if (updateGap < 90_000L) {
+            return null
+        }
+    }
+    return candidates.first()
 }
 
 private fun isShareImportAttachEventValid(
@@ -615,4 +728,23 @@ private fun toast(
     vararg args: Any
 ) {
     Toast.makeText(context, context.getString(resId, *args), Toast.LENGTH_SHORT).show()
+}
+
+private fun Throwable.shouldSuppressShareImportFailureToast(): Boolean {
+    if (this is CancellationException) return true
+    var current: Throwable? = this
+    var depth = 0
+    while (current != null && depth < 6) {
+        val message = current.message.orEmpty()
+        val className = current.javaClass.name
+        if (
+            message.contains("left the composition", ignoreCase = true) ||
+            className.contains("LeftComposition", ignoreCase = true)
+        ) {
+            return true
+        }
+        current = current.cause
+        depth += 1
+    }
+    return false
 }

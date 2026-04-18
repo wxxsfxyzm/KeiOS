@@ -66,7 +66,6 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import com.example.keios.MainActivity
 import com.example.keios.R
 import com.example.keios.mcp.McpNotificationHelper
 import com.example.keios.mcp.McpServerManager
@@ -133,8 +132,6 @@ fun MainScreen(
     val currentOnCheckOrRequestShizuku by rememberUpdatedState(onCheckOrRequestShizuku)
     val currentOnRequestNotificationPermission by rememberUpdatedState(onRequestNotificationPermission)
     val currentOnAppThemeModeChanged by rememberUpdatedState(onAppThemeModeChanged)
-    var overlayRequestedBottomPage by remember { mutableStateOf<String?>(null) }
-    var overlayRequestedBottomPageToken by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(requestedBottomPageToken, requestedBottomPage) {
         if (requestedBottomPage.isNullOrBlank()) return@LaunchedEffect
@@ -183,12 +180,6 @@ fun MainScreen(
             navigator.push(KeiosRoute.BaStudentGuide(nonce = System.nanoTime()))
         }
     }
-    val openGitHubPageFromShareOverlay: () -> Unit = {
-        navigator.popUntil { it == KeiosRoute.Main }
-        overlayRequestedBottomPage = MainActivity.TARGET_BOTTOM_PAGE_GITHUB
-        overlayRequestedBottomPageToken += 1
-    }
-
     if (!view.isInEditMode) {
         SideEffect {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@SideEffect
@@ -231,12 +222,7 @@ fun MainScreen(
                     onOpenGuideDetail = openGuideDetail,
                     requestedBottomPage = requestedBottomPage,
                     requestedBottomPageToken = requestedBottomPageToken,
-                    onRequestedBottomPageConsumed = onRequestedBottomPageConsumed,
-                    overlayRequestedBottomPage = overlayRequestedBottomPage,
-                    overlayRequestedBottomPageToken = overlayRequestedBottomPageToken,
-                    onOverlayRequestedBottomPageConsumed = {
-                        overlayRequestedBottomPage = null
-                    }
+                    onRequestedBottomPageConsumed = onRequestedBottomPageConsumed
                 )
             }
             entry<KeiosRoute.Settings> {
@@ -363,19 +349,11 @@ fun MainScreen(
     )
 
     CompositionLocalProvider(LocalTransitionAnimationsEnabled provides transitionAnimationsEnabled) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            NavDisplay(
-                entries = entries,
-                onBack = { navigator.pop() },
-                modifier = Modifier.fillMaxSize()
-            )
-            GitHubShareImportOverlayHost(
-                incomingGitHubShareText = null,
-                incomingGitHubShareToken = 0,
-                onIncomingGitHubShareConsumed = {},
-                onNavigateToGitHubPage = openGitHubPageFromShareOverlay
-            )
-        }
+        NavDisplay(
+            entries = entries,
+            onBack = { navigator.pop() },
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
@@ -402,10 +380,7 @@ private fun MainPagerLayout(
     onOpenGuideDetail: (String) -> Unit,
     requestedBottomPage: String?,
     requestedBottomPageToken: Int,
-    onRequestedBottomPageConsumed: () -> Unit,
-    overlayRequestedBottomPage: String?,
-    overlayRequestedBottomPageToken: Int,
-    onOverlayRequestedBottomPageConsumed: () -> Unit
+    onRequestedBottomPageConsumed: () -> Unit
 ) {
     val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
     val preloadPolicy = remember(preloadingEnabled) {
@@ -578,34 +553,6 @@ private fun MainPagerLayout(
         }
         onRequestedBottomPageConsumed()
     }
-    LaunchedEffect(
-        overlayRequestedBottomPageToken,
-        overlayRequestedBottomPage,
-        tabs
-    ) {
-        val target = overlayRequestedBottomPage ?: return@LaunchedEffect
-        val index = tabs.indexOfFirst { it.name == target }
-        val stablePageIndex = if (pagerState.isScrollInProgress) {
-            pagerState.targetPage
-        } else {
-            pagerState.settledPage
-        }
-        if (index >= 0 && index != stablePageIndex) {
-            tabJumpJob?.cancel()
-            tabJumpJob = coroutineScope.launch {
-                pagerState.animateTabSwitch(
-                    fromIndex = stablePageIndex,
-                    targetIndex = index,
-                    animationsEnabled = transitionAnimationsEnabled,
-                    onFarJumpBefore = farJumpBefore,
-                    onFarJumpAfter = farJumpAfter
-                )
-            }
-            showBottomBar = true
-        }
-        onOverlayRequestedBottomPageConsumed()
-    }
-
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -824,9 +771,6 @@ private fun MainPagerLayout(
                                 isPageActive = isWarmActive,
                                 cardPressFeedbackEnabled = cardPressFeedbackEnabled,
                                 liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                                incomingGitHubShareText = null,
-                                incomingGitHubShareToken = 0,
-                                onIncomingGitHubShareConsumed = {},
                                 onActionBarInteractingChanged = { interacting ->
                                     pagerScrollEnabled = !interacting
                                 }

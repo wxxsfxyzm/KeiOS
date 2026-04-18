@@ -19,13 +19,10 @@ internal fun BindGitHubPageEffects(
     listState: LazyListState,
     scrollToTopSignal: Int,
     isPageActive: Boolean,
-    incomingGitHubShareText: String?,
-    incomingGitHubShareToken: Int,
     state: GitHubPageState,
     actions: GitHubPageActions,
     installedOnlineShareTargets: List<OnlineShareTargetOption>,
     onLaunchAppListPermission: (Intent) -> Unit,
-    onIncomingGitHubShareConsumed: () -> Unit,
     onActionBarInteractingChanged: (Boolean) -> Unit
 ) {
     DisposableEffect(Unit) {
@@ -61,18 +58,6 @@ internal fun BindGitHubPageEffects(
         if (isPageActive && scrollToTopSignal > 0) {
             listState.animateScrollToItem(0)
         }
-    }
-
-    LaunchedEffect(
-        incomingGitHubShareToken,
-        incomingGitHubShareText,
-        isPageActive
-    ) {
-        if (!isPageActive) return@LaunchedEffect
-        val sharedText = incomingGitHubShareText?.trim().orEmpty()
-        if (sharedText.isBlank()) return@LaunchedEffect
-        actions.handleIncomingGitHubShareText(sharedText)
-        onIncomingGitHubShareConsumed()
     }
 
     LaunchedEffect(state.appListLoaded, state.appList) {

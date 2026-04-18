@@ -24,8 +24,6 @@ import com.example.keios.ui.page.main.github.section.GitHubMainContent
 import com.example.keios.ui.page.main.github.section.GitHubOverviewMetrics
 import com.example.keios.ui.page.main.github.sheet.GitHubCheckLogicSheet
 import com.example.keios.ui.page.main.github.sheet.GitHubDeleteTrackDialog
-import com.example.keios.ui.page.main.github.sheet.GitHubShareImportAttachConfirmDialog
-import com.example.keios.ui.page.main.github.sheet.GitHubShareImportDialog
 import com.example.keios.ui.page.main.github.sheet.GitHubStrategySheet
 import com.example.keios.ui.page.main.github.sheet.GitHubTrackEditSheet
 import com.example.keios.ui.page.main.github.sheet.GitHubTrackImportDialog
@@ -54,9 +52,6 @@ fun GitHubPage(
     cardPressFeedbackEnabled: Boolean = true,
     liquidActionBarLayeredStyleEnabled: Boolean = true,
     enableSearchBar: Boolean = true,
-    incomingGitHubShareText: String? = null,
-    incomingGitHubShareToken: Int = 0,
-    onIncomingGitHubShareConsumed: () -> Unit = {},
     onActionBarInteractingChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -203,13 +198,10 @@ fun GitHubPage(
         listState = listState,
         scrollToTopSignal = scrollToTopSignal,
         isPageActive = isPageActive,
-        incomingGitHubShareText = incomingGitHubShareText,
-        incomingGitHubShareToken = incomingGitHubShareToken,
         state = state,
         actions = actions,
         installedOnlineShareTargets = installedOnlineShareTargets,
         onLaunchAppListPermission = { intent -> appListPermissionLauncher.launch(intent) },
-        onIncomingGitHubShareConsumed = onIncomingGitHubShareConsumed,
         onActionBarInteractingChanged = onActionBarInteractingChanged
     )
 
@@ -322,17 +314,6 @@ fun GitHubPage(
             withinVisibleWindow || pendingShareImportRepoOverlapCount > 0
         }
     }
-    val shareImportAttachDuplicateExists by remember(
-        state.pendingShareImportAttachCandidate,
-        state.trackedItems
-    ) {
-        derivedStateOf {
-            val candidate = state.pendingShareImportAttachCandidate ?: return@derivedStateOf false
-            val candidateId = "${candidate.owner}/${candidate.repo}|${candidate.packageName}"
-            state.trackedItems.any { it.id == candidateId }
-        }
-    }
-
     GitHubMainContent(
         contentBottomPadding = contentBottomPadding,
         listState = listState,
@@ -596,21 +577,4 @@ fun GitHubPage(
         }
     )
 
-    GitHubShareImportDialog(
-        preview = state.pendingShareImportPreview,
-        resolving = state.shareImportResolving,
-        onDismissRequest = actions::dismissShareImportDialog,
-        onCancel = actions::dismissShareImportDialog,
-        onConfirmImport = { asset ->
-            actions.confirmShareImportSelection(asset)
-        }
-    )
-
-    GitHubShareImportAttachConfirmDialog(
-        candidate = state.pendingShareImportAttachCandidate,
-        duplicateExists = shareImportAttachDuplicateExists,
-        onDismissRequest = actions::dismissPendingShareImportAttachCandidate,
-        onCancel = actions::dismissPendingShareImportAttachCandidate,
-        onConfirm = actions::confirmPendingShareImportAttachCandidate
-    )
 }
