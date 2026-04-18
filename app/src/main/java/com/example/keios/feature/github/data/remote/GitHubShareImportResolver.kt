@@ -3,6 +3,7 @@ package com.example.keios.feature.github.data.remote
 import com.example.keios.feature.github.model.GitHubLookupConfig
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.feature.github.model.GitHubAtomReleaseEntry
+import java.io.IOException
 
 internal data class GitHubShareImportAssetPlan(
     val parsedLink: GitHubSharedReleaseLink,
@@ -18,6 +19,11 @@ private data class ResolvedReleaseTarget(
     val preferredAssetName: String = ""
 )
 
+private data class ShareImportResolveAttempt(
+    val target: ResolvedReleaseTarget,
+    val fetchedBundle: GitHubReleaseAssetBundle
+)
+
 internal object GitHubShareImportResolver {
     fun resolve(
         sharedText: String,
@@ -26,10 +32,86 @@ internal object GitHubShareImportResolver {
         val parsedLink = GitHubShareIntentParser.parseSharedReleaseLink(sharedText)
             ?: error("未识别到有效的 GitHub 链接")
 
+        val attempt = resolveWithFallbackStrategies(
+            parsedLink = parsedLink,
+            lookupConfig = lookupConfig
+        )
+
+        val apkAssets = attempt.fetchedBundle.assets
+            .filter { asset ->
+                asset.name.endsWith(".apk", ignoreCase = true) &&
+                    !asset.name.contains("metadata", ignoreCase = true)
+            }
+
+        val mergedAssets = mergeDirectSharedAssetIfNeeded(
+            strategy = lookupConfig.selectedStrategy,
+            parsedLink = parsedLink,
+            fetchedAssets = apkAssets
+        )
+
+        val finalAssets = when {
+            mergedAssets.isNotEmpty() -> mergedAssets
+            else -> {
+                val fallbackAsset = buildDirectSharedAsset(parsedLink)
+                if (fallbackAsset != null) {
+                    listOf(fallbackAsset)
+                } else {
+                    error("目标 release 中未找到可用 APK")
+                }
+            }
+        }
+
+        GitHubShareImportAssetPlan(
+            parsedLink = parsedLink,
+            resolvedReleaseTag = attempt.target.tag,
+            resolvedReleaseUrl = attempt.target.releaseUrl,
+            assets = finalAssets,
+            preferredAssetName = attempt.target.preferredAssetName
+        )
+    }
+
+    private fun resolveWithFallbackStrategies(
+        parsedLink: GitHubSharedReleaseLink,
+        lookupConfig: GitHubLookupConfig
+    ): ShareImportResolveAttempt {
+        val primaryStrategy = lookupConfig.selectedStrategy
+        val fallbackStrategy = primaryStrategy.fallbackStrategy()
+        val attempts = listOfNotNull(primaryStrategy, fallbackStrategy)
+        var lastError: Throwable? = null
+
+        attempts.forEachIndexed { index, strategy ->
+            val strategyConfig = if (strategy == primaryStrategy) {
+                lookupConfig
+            } else {
+                lookupConfig.copy(selectedStrategy = strategy)
+            }
+            val attemptResult = runCatching {
+                resolveOnce(
+                    parsedLink = parsedLink,
+                    lookupConfig = strategyConfig
+                )
+            }
+            attemptResult.getOrNull()?.let { return it }
+
+            val error = attemptResult.exceptionOrNull()
+            lastError = error
+            val canTryFallback = index < attempts.lastIndex &&
+                shouldTryStrategyFallback(parsedLink = parsedLink, error = error)
+            if (!canTryFallback) {
+                throw error ?: IllegalStateException("分享导入解析失败")
+            }
+        }
+
+        throw lastError ?: IllegalStateException("分享导入解析失败")
+    }
+
+    private fun resolveOnce(
+        parsedLink: GitHubSharedReleaseLink,
+        lookupConfig: GitHubLookupConfig
+    ): ShareImportResolveAttempt {
         val strategy = lookupConfig.selectedStrategy
         val target = resolveReleaseTarget(parsedLink, lookupConfig)
         val preferHtml = strategy == GitHubLookupStrategyOption.AtomFeed
-
         val fetchedBundle = GitHubReleaseAssetRepository.fetchApkAssets(
             owner = parsedLink.owner,
             repo = parsedLink.repo,
@@ -56,38 +138,24 @@ internal object GitHubShareImportResolver {
             }
             throw error
         }
-
-        val apkAssets = fetchedBundle.assets
-            .filter { asset ->
-                asset.name.endsWith(".apk", ignoreCase = true) &&
-                    !asset.name.contains("metadata", ignoreCase = true)
-            }
-
-        val mergedAssets = mergeDirectSharedAssetIfNeeded(
-            strategy = strategy,
-            parsedLink = parsedLink,
-            fetchedAssets = apkAssets
+        return ShareImportResolveAttempt(
+            target = target,
+            fetchedBundle = fetchedBundle
         )
+    }
 
-        val finalAssets = when {
-            mergedAssets.isNotEmpty() -> mergedAssets
-            else -> {
-                val fallbackAsset = buildDirectSharedAsset(parsedLink)
-                if (fallbackAsset != null) {
-                    listOf(fallbackAsset)
-                } else {
-                    error("目标 release 中未找到可用 APK")
-                }
-            }
+    private fun shouldTryStrategyFallback(
+        parsedLink: GitHubSharedReleaseLink,
+        error: Throwable?
+    ): Boolean {
+        if (error == null) return true
+        return when (parsedLink.type) {
+            GitHubSharedUrlType.Repo,
+            GitHubSharedUrlType.Releases,
+            GitHubSharedUrlType.ReleasesLatest -> true
+            GitHubSharedUrlType.ReleaseTag,
+            GitHubSharedUrlType.ReleaseDownloadAsset -> error.isTransientGitHubResolveError()
         }
-
-        GitHubShareImportAssetPlan(
-            parsedLink = parsedLink,
-            resolvedReleaseTag = target.tag,
-            resolvedReleaseUrl = target.releaseUrl,
-            assets = finalAssets,
-            preferredAssetName = target.preferredAssetName
-        )
     }
 
     private fun resolveReleaseTarget(
@@ -242,5 +310,36 @@ internal object GitHubShareImportResolver {
             downloadCount = 0,
             contentType = "application/vnd.android.package-archive"
         )
+    }
+
+    private fun GitHubLookupStrategyOption.fallbackStrategy(): GitHubLookupStrategyOption? {
+        return when (this) {
+            GitHubLookupStrategyOption.AtomFeed -> GitHubLookupStrategyOption.GitHubApiToken
+            GitHubLookupStrategyOption.GitHubApiToken -> GitHubLookupStrategyOption.AtomFeed
+        }
+    }
+
+    private fun Throwable.isTransientGitHubResolveError(): Boolean {
+        if (this is IOException) return true
+        var current: Throwable? = this
+        var depth = 0
+        while (current != null && depth < 8) {
+            val message = current.message.orEmpty().lowercase()
+            if (
+                message.contains("timeout") ||
+                message.contains("timed out") ||
+                message.contains("connection reset") ||
+                message.contains("connection closed") ||
+                message.contains("failed to connect") ||
+                message.contains("unable to resolve host") ||
+                message.contains("network")
+            ) {
+                return true
+            }
+            if (current is IOException) return true
+            current = current.cause
+            depth += 1
+        }
+        return false
     }
 }

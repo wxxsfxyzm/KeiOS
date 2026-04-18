@@ -95,15 +95,25 @@ object GitHubReleaseAssetRepository {
         } else {
             fetchReleaseByTagWithFallback(owner, repo, normalizedTag, normalizedReleaseUrl, apiToken)
         }
-        val fallbackSource = if (!preferHtml && resolvedHtmlReleaseUrl.isNotBlank()) {
-            GitHubReleaseAssetFetchSources.HTML
-        } else {
-            primarySource
+        val fallbackSource = when {
+            preferHtml -> GitHubReleaseAssetFetchSources.API
+            resolvedHtmlReleaseUrl.isNotBlank() -> GitHubReleaseAssetFetchSources.HTML
+            else -> primarySource
         }
-        val fallback = if (!preferHtml && resolvedHtmlReleaseUrl.isNotBlank()) {
-            fetchReleaseFromHtml(owner, repo, normalizedTag, resolvedHtmlReleaseUrl, apiToken)
-        } else {
-            Result.failure(primary.exceptionOrNull() ?: IllegalStateException("release fetch failed"))
+        val fallback = when {
+            preferHtml -> {
+                fetchReleaseByTagWithFallback(
+                    owner = owner,
+                    repo = repo,
+                    rawTag = normalizedTag,
+                    releaseUrl = normalizedReleaseUrl,
+                    apiToken = apiToken
+                )
+            }
+            resolvedHtmlReleaseUrl.isNotBlank() -> {
+                fetchReleaseFromHtml(owner, repo, normalizedTag, resolvedHtmlReleaseUrl, apiToken)
+            }
+            else -> Result.failure(primary.exceptionOrNull() ?: IllegalStateException("release fetch failed"))
         }
         val resolvedSource = if (primary.isSuccess) primarySource else fallbackSource
 

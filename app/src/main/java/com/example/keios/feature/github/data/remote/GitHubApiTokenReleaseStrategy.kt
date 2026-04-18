@@ -129,7 +129,11 @@ class GitHubApiTokenReleaseStrategy(
                 repo = repo
             ).take(limit)
         }
-        releaseCache[key] = GitHubApiCachedValue(result, now)
+        if (result.isSuccess) {
+            releaseCache[key] = GitHubApiCachedValue(result, now)
+        } else {
+            releaseCache.remove(key)
+        }
         return GitHubStrategyLoadTrace(
             result = result,
             fromCache = false,
@@ -168,7 +172,11 @@ class GitHubApiTokenReleaseStrategy(
             check(!entry.isLikelyPreRelease) { "latest release is not stable" }
             entry.toReleaseSignal()
         }
-        stableCache[key] = GitHubApiCachedValue(result, now)
+        if (result.isSuccess) {
+            stableCache[key] = GitHubApiCachedValue(result, now)
+        } else {
+            stableCache.remove(key)
+        }
         return GitHubStrategyLoadTrace(
             result = result,
             fromCache = false,
@@ -197,7 +205,11 @@ class GitHubApiTokenReleaseStrategy(
         val result = fetch(buildRateLimitUrl()).map { body ->
             parseCredentialStatus(body)
         }
-        credentialCache[key] = GitHubApiCachedValue(result, now)
+        if (result.isSuccess) {
+            credentialCache[key] = GitHubApiCachedValue(result, now)
+        } else {
+            credentialCache.remove(key)
+        }
         return GitHubStrategyLoadTrace(
             result = result,
             fromCache = false,
@@ -438,10 +450,10 @@ class GitHubApiTokenReleaseStrategy(
 
         private val githubClient: OkHttpClient by lazy {
             OkHttpClient.Builder()
-                .callTimeout(10, TimeUnit.SECONDS)
-                .connectTimeout(8, TimeUnit.SECONDS)
-                .readTimeout(8, TimeUnit.SECONDS)
-                .writeTimeout(8, TimeUnit.SECONDS)
+                .callTimeout(18, TimeUnit.SECONDS)
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(14, TimeUnit.SECONDS)
+                .writeTimeout(10, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(true)
                 .followRedirects(true)
                 .followSslRedirects(true)
