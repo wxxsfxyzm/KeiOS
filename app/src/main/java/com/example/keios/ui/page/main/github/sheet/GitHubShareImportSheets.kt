@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.DpSize
 import com.example.keios.R
@@ -36,6 +37,7 @@ import com.example.keios.ui.page.main.GitHubStatusPalette
 import com.example.keios.ui.page.main.github.asset.assetIsPreferredForDevice
 import com.example.keios.ui.page.main.github.asset.assetLikelyCompatibleWithDevice
 import com.example.keios.ui.page.main.github.asset.formatAssetSize
+import com.example.keios.ui.page.main.widget.AppInfoRow
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.SheetControlRow
 import com.example.keios.ui.page.main.widget.SheetDescriptionText
@@ -55,6 +57,7 @@ private val shareImportSheetInsideMargin = DpSize(
     BottomSheetDefaults.insideMargin.width,
     20.dp
 )
+private const val shareImportInfoLabelWeight = 0.24f
 
 private fun Modifier.shareImportSheetSafeArea(): Modifier {
     return this
@@ -62,6 +65,38 @@ private fun Modifier.shareImportSheetSafeArea(): Modifier {
         .navigationBarsPadding()
         .imePadding()
         .padding(bottom = 12.dp)
+}
+
+@Composable
+private fun ShareImportCompactInfoRow(
+    key: String,
+    value: String
+) {
+    AppInfoRow(
+        label = key,
+        value = value,
+        labelWeight = shareImportInfoLabelWeight,
+        valueWeight = 1f - shareImportInfoLabelWeight,
+        valueTextAlign = TextAlign.Start,
+        horizontalSpacing = 8.dp,
+        rowVerticalPadding = 2.dp
+    )
+}
+
+private fun compactProjectValue(preview: GitHubShareImportPreview): String {
+    val owner = preview.owner.trim()
+    val repo = preview.repo.trim()
+    if (owner.isNotBlank() && repo.isNotBlank()) {
+        return "$owner/$repo"
+    }
+    val rawProjectUrl = preview.projectUrl.trim()
+    val compacted = rawProjectUrl
+        .removePrefix("https://github.com/")
+        .removePrefix("http://github.com/")
+        .removePrefix("https://www.github.com/")
+        .removePrefix("http://www.github.com/")
+        .trim('/')
+    return compacted.ifBlank { rawProjectUrl }
 }
 
 @Composable
@@ -130,17 +165,17 @@ internal fun GitHubShareImportDialog(
         ) {
             SheetSectionCard(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-                verticalSpacing = 6.dp
+                verticalSpacing = 4.dp
             ) {
-                MiuixInfoItem(
+                ShareImportCompactInfoRow(
                     key = stringResource(R.string.github_share_import_dialog_label_project),
-                    value = preview.projectUrl
+                    value = compactProjectValue(preview)
                 )
-                MiuixInfoItem(
+                ShareImportCompactInfoRow(
                     key = stringResource(R.string.github_share_import_dialog_label_strategy),
                     value = preview.strategyLabel
                 )
-                MiuixInfoItem(
+                ShareImportCompactInfoRow(
                     key = stringResource(R.string.github_share_import_dialog_label_release),
                     value = preview.releaseTag
                 )
