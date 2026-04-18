@@ -1,5 +1,6 @@
 package com.example.keios.ui.page.main
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -85,6 +86,10 @@ fun SettingsPage(
     onCardPressFeedbackChanged: (Boolean) -> Unit,
     homeIconHdrEnabled: Boolean,
     onHomeIconHdrChanged: (Boolean) -> Unit,
+    nonHomeBackgroundEnabled: Boolean,
+    onNonHomeBackgroundEnabledChanged: (Boolean) -> Unit,
+    nonHomeBackgroundUri: String,
+    onNonHomeBackgroundUriChanged: (String) -> Unit,
     superIslandNotificationEnabled: Boolean,
     onSuperIslandNotificationChanged: (Boolean) -> Unit,
     superIslandBypassRestrictionEnabled: Boolean,
@@ -168,7 +173,8 @@ fun SettingsPage(
         liquidBottomBarEnabled ||
         transitionAnimationsEnabled ||
         cardPressFeedbackEnabled ||
-        homeIconHdrEnabled
+        homeIconHdrEnabled ||
+        nonHomeBackgroundEnabled
     val notifyGroupActive = superIslandNotificationEnabled || superIslandBypassRestrictionEnabled
     val logGroupActive = logDebugEnabled || logStats.fileCount > 0
     val logLatestText = if (logStats.latestModifiedAtMs <= 0L) {
@@ -202,6 +208,24 @@ fun SettingsPage(
             }
             logReloadSignal++
         }
+    }
+    val nonHomeBackgroundPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+        onNonHomeBackgroundUriChanged(uri.toString())
+        if (!nonHomeBackgroundEnabled) onNonHomeBackgroundEnabledChanged(true)
+        Toast.makeText(
+            context,
+            context.getString(R.string.settings_non_home_background_toast_selected),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     val scrollBehavior = MiuixScrollBehavior()
@@ -315,6 +339,60 @@ fun SettingsPage(
                         onCheckedChange = onHomeIconHdrChanged,
                         infoKey = stringResource(R.string.common_scope),
                         infoValue = stringResource(R.string.settings_home_shine_scope)
+                    )
+
+                    SettingsToggleItem(
+                        title = stringResource(R.string.settings_non_home_background_title),
+                        summary = if (nonHomeBackgroundEnabled) {
+                            stringResource(R.string.settings_non_home_background_summary_enabled)
+                        } else {
+                            stringResource(R.string.settings_non_home_background_summary_disabled)
+                        },
+                        checked = nonHomeBackgroundEnabled,
+                        onCheckedChange = onNonHomeBackgroundEnabledChanged,
+                        infoKey = stringResource(R.string.common_scope),
+                        infoValue = stringResource(R.string.settings_non_home_background_scope)
+                    )
+
+                    SettingsActionItem(
+                        title = stringResource(R.string.settings_non_home_background_image_title),
+                        summary = if (nonHomeBackgroundUri.isBlank()) {
+                            stringResource(R.string.settings_non_home_background_image_summary_empty)
+                        } else {
+                            stringResource(R.string.settings_non_home_background_image_summary_ready)
+                        }
+                    )
+                    AppDualActionRow(
+                        first = { modifier ->
+                            GlassTextButton(
+                                backdrop = contentBackdrop,
+                                variant = GlassVariant.SheetPrimaryAction,
+                                text = stringResource(R.string.settings_non_home_background_action_select),
+                                modifier = modifier,
+                                textColor = MiuixTheme.colorScheme.primary,
+                                onClick = {
+                                    nonHomeBackgroundPickerLauncher.launch(arrayOf("image/*"))
+                                }
+                            )
+                        },
+                        second = { modifier ->
+                            GlassTextButton(
+                                backdrop = contentBackdrop,
+                                variant = GlassVariant.SheetDangerAction,
+                                text = stringResource(R.string.settings_non_home_background_action_clear),
+                                modifier = modifier,
+                                textColor = MiuixTheme.colorScheme.error,
+                                enabled = nonHomeBackgroundUri.isNotBlank(),
+                                onClick = {
+                                    onNonHomeBackgroundUriChanged("")
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.settings_non_home_background_toast_cleared),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                        }
                     )
                 }
             }

@@ -24,6 +24,7 @@ import com.example.keios.ui.page.main.ba.BASettingsStore
 import com.example.keios.ui.page.main.ba.BA_AP_MAX
 import com.example.keios.ui.page.main.ba.BaCalendarEntry
 import com.example.keios.ui.page.main.ba.BaCalendarPoolViewModel
+import com.example.keios.ui.page.main.ba.BaOfficeViewModel
 import com.example.keios.ui.page.main.ba.BaPageCommonEffects
 import com.example.keios.ui.page.main.ba.BaPageContent
 import com.example.keios.ui.page.main.ba.BaPoolEntry
@@ -34,7 +35,6 @@ import com.example.keios.ui.page.main.ba.buildBaPageContentActions
 import com.example.keios.ui.page.main.ba.buildBaPageContentState
 import com.example.keios.ui.page.main.ba.buildBaSettingsSheetState
 import com.example.keios.ui.page.main.ba.openBaExternalLink
-import com.example.keios.ui.page.main.ba.rememberBaOfficeController
 import com.example.keios.ui.page.main.ba.rememberBaPageUiController
 import com.example.keios.ui.page.main.ba.saveBaPageSettings
 import com.kyant.backdrop.backdrops.LayerBackdrop
@@ -98,8 +98,9 @@ fun BAPage(
         }
     }
 
-    val initialSnapshot = remember { BASettingsStore.loadSnapshot() }
-    val office = rememberBaOfficeController(initialSnapshot)
+    val officeViewModel: BaOfficeViewModel = viewModel()
+    val initialSnapshot = officeViewModel.initialSnapshot
+    val office = officeViewModel.office
     val ui = rememberBaPageUiController(initialSnapshot)
     val calendarPoolViewModel: BaCalendarPoolViewModel = viewModel()
     val calendarUiState by calendarPoolViewModel.calendarUiState.collectAsState()

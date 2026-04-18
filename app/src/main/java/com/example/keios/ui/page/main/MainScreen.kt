@@ -55,6 +55,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,6 +90,7 @@ import com.example.keios.core.prefs.UiPrefs
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -145,6 +147,8 @@ fun MainScreen(
     }
     var cardPressFeedbackEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.cardPressFeedbackEnabled) }
     var homeIconHdrEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.homeIconHdrEnabled) }
+    var nonHomeBackgroundEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.nonHomeBackgroundEnabled) }
+    var nonHomeBackgroundUri by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.nonHomeBackgroundUri) }
     var superIslandNotificationEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.superIslandNotificationEnabled) }
     var superIslandBypassRestrictionEnabled by remember(uiPrefsSnapshot) {
         mutableStateOf(uiPrefsSnapshot.superIslandBypassRestrictionEnabled)
@@ -193,6 +197,8 @@ fun MainScreen(
                     liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                     cardPressFeedbackEnabled = cardPressFeedbackEnabled,
                     homeIconHdrEnabled = homeIconHdrEnabled,
+                    nonHomeBackgroundEnabled = nonHomeBackgroundEnabled,
+                    nonHomeBackgroundUri = nonHomeBackgroundUri,
                     visibleBottomPageNames = visibleBottomPageNames,
                     onVisibleBottomPageNamesChange = { names ->
                         visibleBottomPageNames = names
@@ -237,6 +243,16 @@ fun MainScreen(
                     onHomeIconHdrChanged = {
                         homeIconHdrEnabled = it
                         UiPrefs.setHomeIconHdrEnabled(it)
+                    },
+                    nonHomeBackgroundEnabled = nonHomeBackgroundEnabled,
+                    onNonHomeBackgroundEnabledChanged = {
+                        nonHomeBackgroundEnabled = it
+                        UiPrefs.setNonHomeBackgroundEnabled(it)
+                    },
+                    nonHomeBackgroundUri = nonHomeBackgroundUri,
+                    onNonHomeBackgroundUriChanged = {
+                        nonHomeBackgroundUri = it
+                        UiPrefs.setNonHomeBackgroundUri(it)
                     },
                     superIslandNotificationEnabled = superIslandNotificationEnabled,
                     onSuperIslandNotificationChanged = {
@@ -328,6 +344,8 @@ private fun MainPagerLayout(
     liquidActionBarLayeredStyleEnabled: Boolean,
     cardPressFeedbackEnabled: Boolean,
     homeIconHdrEnabled: Boolean,
+    nonHomeBackgroundEnabled: Boolean,
+    nonHomeBackgroundUri: String,
     visibleBottomPageNames: Set<String>,
     onVisibleBottomPageNamesChange: (Set<String>) -> Unit,
     appLabel: String,
@@ -631,6 +649,12 @@ private fun MainPagerLayout(
                     .padding(contentInsets)
                     .padding(top = topSpacerPadding)
             ) {
+                if (!isHome) {
+                    NonHomePageBackground(
+                        enabled = nonHomeBackgroundEnabled,
+                        imageUri = nonHomeBackgroundUri
+                    )
+                }
                 when (currentPageType) {
                     BottomPage.Home -> {
                         HomePage(
@@ -727,4 +751,19 @@ private fun MainPagerLayout(
             }
         }
     }
+}
+
+@Composable
+private fun NonHomePageBackground(
+    enabled: Boolean,
+    imageUri: String
+) {
+    if (!enabled || imageUri.isBlank()) return
+    AsyncImage(
+        model = imageUri,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        alpha = 0.26f,
+        modifier = Modifier.fillMaxSize()
+    )
 }
