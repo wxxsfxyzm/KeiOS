@@ -293,6 +293,9 @@ fun SheetChoiceCard(
     onSelect: () -> Unit,
     modifier: Modifier = Modifier,
     accentColor: Color = MiuixTheme.colorScheme.primary,
+    selectedAccentColor: Color = accentColor,
+    unselectedTitleColor: Color = MiuixTheme.colorScheme.onBackground,
+    summaryColor: Color = MiuixTheme.colorScheme.onBackgroundVariant,
     selectedLabel: String? = "已选择",
     leading: (@Composable () -> Unit)? = null,
     details: (@Composable ColumnScope.() -> Unit)? = null,
@@ -300,12 +303,12 @@ fun SheetChoiceCard(
     SheetSurfaceCard(
         modifier = modifier,
         containerColor = if (selected) {
-            accentColor.copy(alpha = 0.12f)
+            selectedAccentColor.copy(alpha = 0.12f)
         } else {
             MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.68f)
         },
         borderColor = if (selected) {
-            accentColor.copy(alpha = 0.32f)
+            selectedAccentColor.copy(alpha = 0.32f)
         } else {
             MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.14f)
         },
@@ -327,7 +330,7 @@ fun SheetChoiceCard(
                 ) {
                     Text(
                         text = title,
-                        color = if (selected) accentColor else MiuixTheme.colorScheme.onBackground,
+                        color = if (selected) selectedAccentColor else unselectedTitleColor,
                         fontWeight = AppTypographyTokens.CardHeader.fontWeight,
                         fontSize = AppTypographyTokens.CardHeader.fontSize,
                         lineHeight = AppTypographyTokens.CardHeader.lineHeight
@@ -335,13 +338,13 @@ fun SheetChoiceCard(
                     if (selected && !selectedLabel.isNullOrBlank()) {
                         StatusPill(
                             label = selectedLabel,
-                            color = accentColor
+                            color = selectedAccentColor
                         )
                     }
                 }
                 Text(
                     text = summary,
-                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    color = summaryColor,
                     fontSize = AppTypographyTokens.Body.fontSize,
                     lineHeight = AppTypographyTokens.Body.lineHeight
                 )

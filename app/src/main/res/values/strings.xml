@@ -207,6 +207,14 @@
     <string name="os_google_system_service_suggestion_action_send_multiple_summary">分享多条内容给目标活动。</string>
     <string name="os_google_system_service_suggestion_action_edit_summary">以编辑模式打开可修改内容。</string>
     <string name="os_google_system_service_suggestion_action_pick_summary">请求目标活动返回一个可选条目。</string>
+    <string name="os_google_system_service_class_suggestion_implicit_title">（留空）隐式匹配</string>
+    <string name="os_google_system_service_class_suggestion_implicit_summary">不固定类名，按 Action 与 Category 进行匹配。</string>
+    <string name="os_google_system_service_class_suggestion_explicit_summary">显式指定类名直接打开，定位更稳定。</string>
+    <string name="os_google_system_service_class_recommend_section">推荐值</string>
+    <string name="os_google_system_service_class_recommend_explicit_title">推荐：显式模式</string>
+    <string name="os_google_system_service_class_recommend_explicit_summary">Action 建议 VIEW，Category 建议留空，适合已选类名直接打开。</string>
+    <string name="os_google_system_service_class_recommend_implicit_title">推荐：隐式模式</string>
+    <string name="os_google_system_service_class_recommend_implicit_summary">类名留空，Action 建议 MAIN，Category 建议 LAUNCHER。</string>
     <string name="os_google_system_service_suggestion_category_clear_summary">清空全部 Category，保持最简请求。</string>
     <string name="os_google_system_service_suggestion_category_default_summary">通用默认入口，最常见。</string>
     <string name="os_google_system_service_suggestion_category_browsable_summary">允许来自浏览器或网页深链。</string>
@@ -240,6 +248,7 @@
     <string name="os_google_system_service_hint_app_name">例如：Google Play 商店</string>
     <string name="os_google_system_service_hint_package_name">例如：com.android.vending</string>
     <string name="os_google_system_service_hint_class_name">可留空；留空时按包名优先拉起默认入口</string>
+    <string name="os_google_system_service_hint_class_suggestion_search">搜索类名</string>
     <string name="os_google_system_service_hint_intent_action">可留空；留空时自动按目标入口选择默认 Action</string>
     <string name="os_google_system_service_hint_intent_category">可留空，多个用逗号分隔，例如：android.intent.category.DEFAULT</string>
     <string name="os_google_system_service_hint_intent_flags">可留空；留空时自动补 FLAG_ACTIVITY_NEW_TASK，多个用逗号分隔</string>
