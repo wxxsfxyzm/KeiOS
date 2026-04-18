@@ -18,6 +18,7 @@
     public static *** getServerPatchVersion(...);
     public static *** getSELinuxContext(...);
     public static *** getLatestServiceVersion(...);
+    private static *** newProcess(java.lang.String[],java.lang.String[],java.lang.String);
 }
 
 # Keep annotation/signature metadata used by Kotlin + library runtime features.

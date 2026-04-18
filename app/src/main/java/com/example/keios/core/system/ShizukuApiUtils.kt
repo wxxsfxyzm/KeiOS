@@ -1,7 +1,9 @@
 package com.example.keios.core.system
 
 import android.content.pm.PackageManager
+import com.example.keios.core.log.AppLogger
 import rikka.shizuku.Shizuku
+import java.lang.reflect.Method
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -15,6 +17,7 @@ class ShizukuApiUtils(
 
 
     private var statusCallback: ((String) -> Unit)? = null
+    private var cachedNewProcessMethod: Method? = null
 
     private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
         publishStatus(currentStatus())
@@ -101,22 +104,49 @@ class ShizukuApiUtils(
         if (!resolved.redirectedPath.isNullOrBlank()) {
             publishStatus("UI dump redirected: ${resolved.redirectedPath}")
         }
+        val processMethod = resolveNewProcessMethod() ?: run {
+            publishStatus("Shizuku process API unavailable")
+            AppLogger.w(TAG, "execCommand skipped: Shizuku newProcess method unavailable")
+            return null
+        }
         return runCatching {
-            val process = run {
-                val method = Shizuku::class.java.getDeclaredMethod(
-                    "newProcess",
-                    Array<String>::class.java,
-                    Array<String>::class.java,
-                    String::class.java
-                )
-                method.isAccessible = true
-                method.invoke(null, arrayOf("sh", "-c", resolved.command), null, null) as Process
-            }
+            val process = processMethod.invoke(
+                null,
+                arrayOf("sh", "-c", resolved.command),
+                null,
+                null
+            ) as? Process ?: error("Shizuku newProcess did not return Process")
             val out = process.inputStream.bufferedReader().use { it.readText() }
             val err = process.errorStream.bufferedReader().use { it.readText() }
             process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
             (out.ifBlank { err }).trim().ifBlank { null }
+        }.onFailure {
+            AppLogger.w(
+                TAG,
+                "execCommand failed: ${it.javaClass.simpleName}${it.message?.let { msg -> ": $msg" }.orEmpty()}"
+            )
         }.getOrNull()
+    }
+
+    private fun resolveNewProcessMethod(): Method? {
+        cachedNewProcessMethod?.let { return it }
+        val resolved = runCatching {
+            val parameterTypes = arrayOf(
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java
+            )
+            Shizuku::class.java.declaredMethods.firstOrNull { method ->
+                method.parameterTypes.contentEquals(parameterTypes) &&
+                    Process::class.java.isAssignableFrom(method.returnType)
+            }?.apply {
+                isAccessible = true
+            }
+        }.onFailure {
+            AppLogger.w(TAG, "resolveNewProcessMethod failed: ${it.javaClass.simpleName}")
+        }.getOrNull()
+        cachedNewProcessMethod = resolved
+        return resolved
     }
 
     private fun rewriteUiAutomatorDumpCommand(command: String): UiDumpRewriteResult {
@@ -209,6 +239,7 @@ class ShizukuApiUtils(
     }
 
     companion object {
+        private const val TAG = "ShizukuApiUtils"
         const val DEFAULT_REQUEST_CODE = 1001
         const val API_VERSION = "13.1.5"
     }
