@@ -86,6 +86,7 @@ import com.example.keios.ui.page.main.widget.LocalTransitionAnimationsEnabled
 import com.example.keios.ui.page.main.widget.appMotionFloatState
 import com.example.keios.ui.page.main.widget.resolvedMotionDuration
 import com.example.keios.feature.github.data.local.GitHubTrackStore
+import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberActionBarBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -155,6 +156,9 @@ private data class HomeGitHubOverview(
     val trackedCount: Int = 0,
     val cacheHitCount: Int = 0,
     val updatableCount: Int = 0,
+    val preReleaseUpdateCount: Int = 0,
+    val strategy: GitHubLookupStrategyOption = GitHubLookupStrategyOption.AtomFeed,
+    val apiTokenConfigured: Boolean = false,
     val cachedRefreshMs: Long = 0L,
     val loaded: Boolean = false
 )
@@ -174,6 +178,9 @@ private fun loadHomeGitHubOverview(): HomeGitHubOverview {
         trackedCount = snapshot.items.size,
         cacheHitCount = snapshot.items.count { snapshot.checkCache.containsKey(it.id) },
         updatableCount = snapshot.items.count { snapshot.checkCache[it.id]?.hasUpdate == true },
+        preReleaseUpdateCount = snapshot.items.count { snapshot.checkCache[it.id]?.hasPreReleaseUpdate == true },
+        strategy = snapshot.lookupConfig.selectedStrategy,
+        apiTokenConfigured = snapshot.lookupConfig.apiToken.isNotBlank(),
         cachedRefreshMs = snapshot.lastRefreshMs,
         loaded = true
     )
@@ -349,6 +356,7 @@ private fun HomeInlineInfoItem(
     title: String,
     headline: String,
     detail: String = "",
+    extraDetail: String = "",
     naText: String
 ) {
     val summaryColor = if (isSystemInDarkTheme()) {
@@ -395,6 +403,16 @@ private fun HomeInlineInfoItem(
                 overflow = TextOverflow.Ellipsis
             )
         }
+        if (extraDetail.isNotBlank()) {
+            Text(
+                text = extraDetail,
+                color = summaryColor,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -402,7 +420,11 @@ private fun HomeInlineInfoItem(
 fun HomePage(
     shizukuStatus: String,
     mcpRunning: Boolean,
+    mcpRunningSinceEpochMs: Long,
     mcpPort: Int,
+    mcpEndpointPath: String,
+    mcpServerName: String,
+    mcpAuthTokenConfigured: Boolean,
     mcpConnectedClients: Int,
     mcpAllowExternal: Boolean,
     homeIconHdrEnabled: Boolean,
@@ -460,6 +482,7 @@ fun HomePage(
     val trackedCount = githubOverview.trackedCount
     val cacheHitCount = githubOverview.cacheHitCount
     val updatableCount = githubOverview.updatableCount
+    val preReleaseUpdateCount = githubOverview.preReleaseUpdateCount
     val cacheStateColor = when {
         !githubOverview.loaded -> inactiveColor
         cacheHitCount > 0 -> githubCacheColor
@@ -481,10 +504,33 @@ fun HomePage(
     val homeCardMcp = stringResource(R.string.home_card_title_mcp)
     val homeCardGitHub = stringResource(R.string.home_card_title_github_cache)
     val homeCardBa = stringResource(R.string.home_card_title_ba)
+    val homeMcpRuntimePending = stringResource(R.string.mcp_runtime_pending)
+    val homeCommonFilled = stringResource(R.string.common_filled)
+    val homeCommonNotUsed = stringResource(R.string.common_not_used)
     val networkModeText = if (mcpAllowExternal) {
         stringResource(R.string.mcp_network_mode_lan_accessible)
     } else {
         stringResource(R.string.mcp_network_mode_local_only_short)
+    }
+    val mcpRuntimeText = if (!mcpRunning || mcpRunningSinceEpochMs <= 0L) {
+        homeMcpRuntimePending
+    } else {
+        formatMcpUptimeText(System.currentTimeMillis() - mcpRunningSinceEpochMs)
+    }
+    val mcpStatusText = if (mcpRunning) {
+        stringResource(R.string.home_mcp_status_running)
+    } else {
+        stringResource(R.string.home_mcp_status_stopped)
+    }
+    val mcpTokenStatusText = if (mcpAuthTokenConfigured) homeCommonFilled else homeCommonNotUsed
+    val githubStrategyText = when (githubOverview.strategy) {
+        GitHubLookupStrategyOption.AtomFeed -> stringResource(R.string.github_overview_strategy_atom)
+        GitHubLookupStrategyOption.GitHubApiToken -> stringResource(R.string.github_overview_strategy_api)
+    }
+    val githubApiText = when {
+        githubOverview.strategy != GitHubLookupStrategyOption.GitHubApiToken -> homeCommonNotUsed
+        githubOverview.apiTokenConfigured -> homeCommonFilled
+        else -> stringResource(R.string.common_guest)
     }
     val cacheRefreshLine = formatGitHubCacheAgo(
         lastRefreshMs = githubOverview.cachedRefreshMs,
@@ -502,6 +548,11 @@ fun HomePage(
         trackedCount == 0 -> stringResource(R.string.github_overview_value_count, 0)
         cacheHitCount == 0 -> homeGitHubPendingRefresh
         else -> stringResource(R.string.github_overview_value_count, updatableCount)
+    }
+    val githubPreReleaseUpdateLine = when {
+        !githubOverview.loaded || trackedCount == 0 || cacheHitCount == 0 ->
+            stringResource(R.string.github_overview_value_count, 0)
+        else -> stringResource(R.string.github_overview_value_count, preReleaseUpdateCount)
     }
 
     var logoHeightPx by remember { mutableIntStateOf(0) }
@@ -897,18 +948,21 @@ fun HomePage(
                             HomeInlineInfoItem(
                                 title = homeCardMcp,
                                 headline = stringResource(
-                                    R.string.home_mcp_line_status_clients,
-                                    if (mcpRunning) {
-                                        stringResource(R.string.home_mcp_status_running)
-                                    } else {
-                                        stringResource(R.string.home_mcp_status_stopped)
-                                    },
-                                    mcpConnectedClients
+                                    R.string.home_mcp_line_priority_primary,
+                                    mcpStatusText,
+                                    mcpRuntimeText
                                 ),
                                 detail = stringResource(
-                                    R.string.home_mcp_line_port_mode,
-                                    mcpPort,
-                                    networkModeText
+                                    R.string.home_mcp_line_priority_secondary,
+                                    mcpConnectedClients,
+                                    networkModeText,
+                                    mcpPort
+                                ),
+                                extraDetail = stringResource(
+                                    R.string.home_mcp_line_priority_tertiary,
+                                    mcpEndpointPath,
+                                    mcpServerName,
+                                    mcpTokenStatusText
                                 ),
                                 naText = homeNa
                             )
@@ -920,11 +974,29 @@ fun HomePage(
                         ) {
                             HomeInlineInfoItem(
                                 title = homeCardGitHub,
-                                headline = stringResource(R.string.home_github_line_last_update, githubLastUpdateLine),
+                                headline = if (!githubOverview.loaded) {
+                                    homeStatusLoading
+                                } else if (trackedCount == 0) {
+                                    homeGitHubUnconfigured
+                                } else if (cacheHitCount == 0) {
+                                    homeGitHubPendingRefresh
+                                } else {
+                                    stringResource(
+                                        R.string.home_github_line_priority_primary,
+                                        githubUpdatableLine,
+                                        githubPreReleaseUpdateLine
+                                    )
+                                },
                                 detail = stringResource(
-                                    R.string.home_github_line_track_update,
-                                    trackedCount,
-                                    githubUpdatableLine
+                                    R.string.home_github_line_priority_secondary,
+                                    stringResource(R.string.github_overview_value_count, trackedCount),
+                                    stringResource(R.string.github_overview_value_count, cacheHitCount)
+                                ),
+                                extraDetail = stringResource(
+                                    R.string.home_github_line_priority_tertiary,
+                                    githubStrategyText,
+                                    githubApiText,
+                                    githubLastUpdateLine
                                 ),
                                 naText = homeNa
                             )

@@ -195,11 +195,17 @@
     <string name="home_mcp_status_stopped">未运行</string>
     <string name="home_mcp_line_status_clients">状态：%1$s   在线设备：%2$d</string>
     <string name="home_mcp_line_port_mode">端口：%1$d   网络模式：%2$s</string>
+    <string name="home_mcp_line_priority_primary">状态：%1$s   运行时长：%2$s</string>
+    <string name="home_mcp_line_priority_secondary">在线设备：%1$d   网络：%2$s   端口：%3$d</string>
+    <string name="home_mcp_line_priority_tertiary">路径：%1$s   服务：%2$s   Token：%3$s</string>
     <string name="home_github_status_unconfigured">未配置</string>
     <string name="home_github_status_no_cache">暂无缓存</string>
     <string name="home_github_status_pending_refresh">待刷新</string>
     <string name="home_github_line_last_update">上次更新：%1$s</string>
     <string name="home_github_line_track_update">追踪：%1$d 项   可更新：%2$s</string>
+    <string name="home_github_line_priority_primary">稳定可更新：%1$s   预发可更新：%2$s</string>
+    <string name="home_github_line_priority_secondary">追踪：%1$s   缓存：%2$s</string>
+    <string name="home_github_line_priority_tertiary">策略：%1$s   API：%2$s   上次更新：%3$s</string>
     <string name="home_ba_line_ap">AP：%1$d/%2$d   咖啡厅AP：%3$d/%4$d</string>
     <string name="mcp_network_mode_local_only_summary">仅允许本机客户端通过 127.0.0.1 访问</string>
     <string name="mcp_network_mode_lan_short">局域网</string>

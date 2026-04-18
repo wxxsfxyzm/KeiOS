@@ -636,7 +636,11 @@ private fun MainPagerLayout(
                         HomePage(
                             shizukuStatus = shizukuStatus,
                             mcpRunning = mcpUiState.running,
+                            mcpRunningSinceEpochMs = mcpUiState.runningSinceEpochMs,
                             mcpPort = mcpUiState.port,
+                            mcpEndpointPath = mcpUiState.endpointPath,
+                            mcpServerName = mcpUiState.serverName,
+                            mcpAuthTokenConfigured = mcpUiState.authToken.isNotBlank(),
                             mcpConnectedClients = mcpUiState.connectedClients,
                             mcpAllowExternal = mcpUiState.allowExternal,
                             homeIconHdrEnabled = homeIconHdrEnabled,
