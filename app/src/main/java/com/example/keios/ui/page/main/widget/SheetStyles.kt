@@ -293,7 +293,8 @@ fun SheetChoiceCard(
     onSelect: () -> Unit,
     modifier: Modifier = Modifier,
     accentColor: Color = MiuixTheme.colorScheme.primary,
-    selectedLabel: String = "已选择",
+    selectedLabel: String? = "已选择",
+    leading: (@Composable () -> Unit)? = null,
     details: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     SheetSurfaceCard(
@@ -315,6 +316,7 @@ fun SheetChoiceCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            leading?.invoke()
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -330,7 +332,7 @@ fun SheetChoiceCard(
                         fontSize = AppTypographyTokens.CardHeader.fontSize,
                         lineHeight = AppTypographyTokens.CardHeader.lineHeight
                     )
-                    if (selected) {
+                    if (selected && !selectedLabel.isNullOrBlank()) {
                         StatusPill(
                             label = selectedLabel,
                             color = accentColor

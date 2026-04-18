@@ -1335,7 +1335,20 @@ fun OsPage(
         }
         SnapshotWindowBottomSheet(
             show = showGoogleSystemServiceSuggestionSheet,
-            title = stringResource(R.string.os_google_system_service_suggestion_sheet_title),
+            title = when (googleSystemServiceSuggestionTarget) {
+                ShortcutSuggestionField.PackageName ->
+                    stringResource(R.string.os_google_system_service_field_package_name)
+                ShortcutSuggestionField.IntentAction ->
+                    stringResource(R.string.os_google_system_service_field_intent_action)
+                ShortcutSuggestionField.IntentCategory ->
+                    stringResource(R.string.os_google_system_service_field_intent_category)
+                ShortcutSuggestionField.IntentFlags ->
+                    stringResource(R.string.os_google_system_service_field_intent_flags)
+                ShortcutSuggestionField.IntentUriData ->
+                    stringResource(R.string.os_google_system_service_field_intent_data)
+                ShortcutSuggestionField.IntentMimeType ->
+                    stringResource(R.string.os_google_system_service_field_intent_mime_type)
+            },
             onDismissRequest = { showGoogleSystemServiceSuggestionSheet = false },
             startAction = {
                 GlassIconButton(
@@ -1360,20 +1373,6 @@ fun OsPage(
                             app.packageName.contains(packageSuggestionQuery, ignoreCase = true)
                     }
                 }
-            }
-            val targetLabel = when (googleSystemServiceSuggestionTarget) {
-                ShortcutSuggestionField.PackageName ->
-                    stringResource(R.string.os_google_system_service_field_package_name)
-                ShortcutSuggestionField.IntentAction ->
-                    stringResource(R.string.os_google_system_service_field_intent_action)
-                ShortcutSuggestionField.IntentCategory ->
-                    stringResource(R.string.os_google_system_service_field_intent_category)
-                ShortcutSuggestionField.IntentFlags ->
-                    stringResource(R.string.os_google_system_service_field_intent_flags)
-                ShortcutSuggestionField.IntentUriData ->
-                    stringResource(R.string.os_google_system_service_field_intent_data)
-                ShortcutSuggestionField.IntentMimeType ->
-                    stringResource(R.string.os_google_system_service_field_intent_mime_type)
             }
             val suggestions = when (googleSystemServiceSuggestionTarget) {
                 ShortcutSuggestionField.PackageName -> filteredInstalledApps.map { app ->
@@ -1540,12 +1539,6 @@ fun OsPage(
             }
             val currentValue = currentGoogleSystemServiceSuggestionFieldValue(googleSystemServiceSuggestionTarget)
             SheetContentColumn(verticalSpacing = 10.dp) {
-                SheetSectionTitle(
-                    text = stringResource(
-                        R.string.os_google_system_service_suggestion_sheet_section,
-                        targetLabel
-                    )
-                )
                 if (googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName) {
                     GlassSearchField(
                         value = googleSystemServicePackageSuggestionQuery,
@@ -1594,12 +1587,23 @@ fun OsPage(
                             }
                         }
                     }
+                    val leading = if (googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName) {
+                        @Composable {
+                            AppIcon(
+                                packageName = suggestion.value.trim(),
+                                size = 24.dp
+                            )
+                        }
+                    } else {
+                        null
+                    }
                     SheetChoiceCard(
                         title = suggestion.label,
                         summary = suggestion.summary,
                         selected = selected,
                         onSelect = { applyGoogleSystemServiceSuggestion(suggestion) },
-                        selectedLabel = StatusLabelText.Activated
+                        selectedLabel = null,
+                        leading = leading
                     )
                 }
                 if (
