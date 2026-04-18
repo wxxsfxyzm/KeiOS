@@ -411,13 +411,13 @@
     <string name="github_check_sheet_summary_track_count">当前设备本地保存的跟踪项目数量</string>
     <string name="github_check_sheet_value_track_count">%1$d 项</string>
     <string name="github_check_sheet_label_track_transfer">导入与导出</string>
-    <string name="github_check_sheet_summary_track_transfer">导出备份；导入会按同一条目智能合并</string>
+    <string name="github_check_sheet_summary_track_transfer">导出备份；导入前会先预览智能合并结果</string>
     <string name="github_check_sheet_action_export_tracks">导出跟踪</string>
     <string name="github_check_sheet_action_import_tracks">导入跟踪</string>
     <string name="github_check_sheet_action_exporting">导出中</string>
     <string name="github_check_sheet_action_importing">导入中</string>
     <string name="github_check_sheet_section_notes">说明</string>
-    <string name="github_check_sheet_note_transfer">导入默认按“owner/repo + 包名”识别同一条目：同 ID 会覆盖更新，新条目会追加，现有未出现在导入文件里的项目会保留。</string>
+    <string name="github_check_sheet_note_transfer">导入会先显示预览，再按“owner/repo + 包名”识别同一条目：同 ID 会覆盖更新，新条目会追加，现有未出现在导入文件里的项目会保留。</string>
     <string name="github_check_sheet_note_1">全局预发检查只负责发现版本；单条目的“优先预发行版本”才决定推荐目标。</string>
     <string name="github_check_sheet_note_2">更激进过滤会优先保留 arm64；同一 release 已有 arm64-v8a 时才会过滤 universal。</string>
     <string name="github_check_sheet_note_3">“分享到安装器”只影响分享动作，“下载器”只影响直链打开。</string>
@@ -450,6 +450,18 @@
     <string name="github_delete_dialog_title">删除跟踪</string>
     <string name="github_delete_dialog_summary">确定删除 %1$s (%2$s/%3$s) 吗？</string>
     <string name="github_delete_dialog_deleting">删除中...</string>
+    <string name="github_import_dialog_title">导入预览</string>
+    <string name="github_import_dialog_summary_ready">会按同一条目智能合并后写入当前设备。</string>
+    <string name="github_import_dialog_summary_invalid">这个文件里还没有可导入的有效条目。</string>
+    <string name="github_import_dialog_label_file_items">文件项目</string>
+    <string name="github_import_dialog_label_valid_items">有效项目</string>
+    <string name="github_import_dialog_label_duplicate_items">文件内重复</string>
+    <string name="github_import_dialog_label_invalid_items">解析失败</string>
+    <string name="github_import_dialog_label_new_items">将新增</string>
+    <string name="github_import_dialog_label_updated_items">将更新</string>
+    <string name="github_import_dialog_label_unchanged_items">保持不变</string>
+    <string name="github_import_dialog_label_merged_items">导入后总数</string>
+    <string name="github_import_dialog_action_confirm">确认导入</string>
 
     <string name="github_token_guide_collapsed">Fine-grained PAT · Contents: Read</string>
     <string name="github_token_guide_summary">建议为 KeiOS 单独建一个 Fine-grained PAT。当前这套 Releases API 与资源下载只需 `Contents: Read`；公开仓库也能正常追踪。</string>

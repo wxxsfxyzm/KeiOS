@@ -25,6 +25,7 @@ import com.example.keios.ui.page.main.github.sheet.GitHubCheckLogicSheet
 import com.example.keios.ui.page.main.github.sheet.GitHubDeleteTrackDialog
 import com.example.keios.ui.page.main.github.sheet.GitHubStrategySheet
 import com.example.keios.ui.page.main.github.sheet.GitHubTrackEditSheet
+import com.example.keios.ui.page.main.github.sheet.GitHubTrackImportDialog
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
@@ -168,32 +169,11 @@ fun GitHubPage(
                         reader.readText()
                     }
                 }
-                actions.importTrackedItemsJson(raw)
+                actions.previewTrackedItemsImport(raw)
             }
             tracksImporting = false
-            result.onSuccess { importResult ->
-                val effectiveCount = importResult.addedCount +
-                    importResult.updatedCount +
-                    importResult.unchangedCount
-                if (effectiveCount == 0) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.github_toast_track_import_no_valid),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    Toast.makeText(
-                        context,
-                        context.getString(
-                            R.string.github_toast_track_imported_summary,
-                            importResult.addedCount,
-                            importResult.updatedCount,
-                            importResult.unchangedCount,
-                            importResult.invalidCount + importResult.duplicateCount
-                        ),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+            result.onSuccess { preview ->
+                state.pendingTrackImportPreview = preview
             }.onFailure {
                 Toast.makeText(
                     context,
@@ -477,5 +457,67 @@ fun GitHubPage(
             }
         },
         onConfirmDelete = actions::confirmDeletePendingItem
+    )
+
+    GitHubTrackImportDialog(
+        preview = state.pendingTrackImportPreview,
+        importInProgress = tracksImporting,
+        onDismissRequest = {
+            if (!tracksImporting) {
+                state.dismissTrackImportPreview()
+            }
+        },
+        onCancel = {
+            if (!tracksImporting) {
+                state.dismissTrackImportPreview()
+            }
+        },
+        onConfirmImport = {
+            val preview = state.pendingTrackImportPreview ?: return@GitHubTrackImportDialog
+            if (tracksImporting) return@GitHubTrackImportDialog
+            if (!preview.canImport) {
+                state.dismissTrackImportPreview()
+                return@GitHubTrackImportDialog
+            }
+            tracksImporting = true
+            scope.launch {
+                val result = runCatching { actions.applyTrackedItemsImport(preview) }
+                tracksImporting = false
+                result.onSuccess { importResult ->
+                    state.dismissTrackImportPreview()
+                    val effectiveCount = importResult.addedCount +
+                        importResult.updatedCount +
+                        importResult.unchangedCount
+                    if (effectiveCount == 0) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.github_toast_track_import_no_valid),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Toast.makeText(
+                            context,
+                            context.getString(
+                                R.string.github_toast_track_imported_summary,
+                                importResult.addedCount,
+                                importResult.updatedCount,
+                                importResult.unchangedCount,
+                                importResult.invalidCount + importResult.duplicateCount
+                            ),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }.onFailure {
+                    Toast.makeText(
+                        context,
+                        context.getString(
+                            R.string.github_toast_track_import_failed,
+                            it.javaClass.simpleName
+                        ),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
     )
 }

@@ -18,6 +18,7 @@ data class GitHubTrackSnapshot(
 
 data class GitHubTrackedItemsImportPayload(
     val items: List<GitHubTrackedApp> = emptyList(),
+    val sourceCount: Int = 0,
     val invalidCount: Int = 0,
     val duplicateCount: Int = 0
 )
@@ -114,6 +115,7 @@ object GitHubTrackStore {
         }
         return GitHubTrackedItemsImportPayload(
             items = deduplicated.values.toList(),
+            sourceCount = rootArray.length(),
             invalidCount = invalidCount,
             duplicateCount = duplicateCount
         )

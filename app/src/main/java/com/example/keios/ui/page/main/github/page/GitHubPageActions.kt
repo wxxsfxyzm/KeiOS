@@ -92,6 +92,11 @@ internal class GitHubPageActions(
         exportedAtMillis: Long = System.currentTimeMillis()
     ) = configActions.buildTrackedItemsExportJson(exportedAtMillis)
 
+    fun previewTrackedItemsImport(raw: String) = configActions.previewTrackedItemsImport(raw)
+
+    fun applyTrackedItemsImport(preview: GitHubTrackImportPreview) =
+        configActions.applyTrackedItemsImport(preview)
+
     fun importTrackedItemsJson(raw: String) = configActions.importTrackedItemsJson(raw)
 
     fun openExternalUrl(url: String, failureMessage: String = env.openLinkFailureMessage) =

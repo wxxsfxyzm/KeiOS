@@ -45,6 +45,7 @@ internal class GitHubPageState(
     var checkLogicIntervalPopupAnchorBounds by mutableStateOf<IntRect?>(null)
     var downloaderPopupAnchorBounds by mutableStateOf<IntRect?>(null)
     var onlineShareTargetPopupAnchorBounds by mutableStateOf<IntRect?>(null)
+    var pendingTrackImportPreview by mutableStateOf<GitHubTrackImportPreview?>(null)
     var sortMode by mutableStateOf(GitHubSortMode.UpdateFirst)
     var pendingDeleteItem by mutableStateOf<GitHubTrackedApp?>(null)
     var overviewRefreshState by mutableStateOf(OverviewRefreshState.Idle)
@@ -161,7 +162,12 @@ internal class GitHubPageState(
         showCheckLogicIntervalPopup = false
         showDownloaderPopup = false
         showOnlineShareTargetPopup = false
+        pendingTrackImportPreview = null
         showCheckLogicSheet = false
+    }
+
+    fun dismissTrackImportPreview() {
+        pendingTrackImportPreview = null
     }
 
     fun resetTrackEditor() {

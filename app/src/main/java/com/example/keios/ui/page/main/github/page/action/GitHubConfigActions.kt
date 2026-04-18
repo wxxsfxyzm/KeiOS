@@ -24,6 +24,21 @@ internal data class GitHubTrackImportApplyResult(
     val duplicateCount: Int
 )
 
+internal data class GitHubTrackImportPreview(
+    val payload: GitHubTrackedItemsImportPayload,
+    val fileItemCount: Int,
+    val validCount: Int,
+    val duplicateCount: Int,
+    val invalidCount: Int,
+    val newCount: Int,
+    val updatedCount: Int,
+    val unchangedCount: Int,
+    val mergedCount: Int
+) {
+    val canImport: Boolean
+        get() = validCount > 0
+}
+
 internal class GitHubConfigActions(
     private val env: GitHubPageActionEnvironment,
     private val refreshActions: GitHubRefreshActions
@@ -78,9 +93,17 @@ internal class GitHubConfigActions(
         )
     }
 
-    fun importTrackedItemsJson(raw: String): GitHubTrackImportApplyResult {
+    fun previewTrackedItemsImport(raw: String): GitHubTrackImportPreview {
         val payload = GitHubTrackStore.parseTrackedItemsImport(raw)
-        return applyImportedTrackedItems(payload)
+        return buildTrackedItemsImportPreview(payload)
+    }
+
+    fun applyTrackedItemsImport(preview: GitHubTrackImportPreview): GitHubTrackImportApplyResult {
+        return applyImportedTrackedItems(preview.payload)
+    }
+
+    fun importTrackedItemsJson(raw: String): GitHubTrackImportApplyResult {
+        return applyTrackedItemsImport(previewTrackedItemsImport(raw))
     }
 
     fun applyLookupConfig() {
@@ -319,6 +342,33 @@ internal class GitHubConfigActions(
             unchangedCount = unchangedCount,
             invalidCount = payload.invalidCount,
             duplicateCount = payload.duplicateCount
+        )
+    }
+
+    private fun buildTrackedItemsImportPreview(
+        payload: GitHubTrackedItemsImportPayload
+    ): GitHubTrackImportPreview {
+        val existingItemsById = state.trackedItems.associateBy { it.id }
+        var newCount = 0
+        var updatedCount = 0
+        var unchangedCount = 0
+        payload.items.forEach { item ->
+            when (val existingItem = existingItemsById[item.id]) {
+                null -> newCount += 1
+                item -> unchangedCount += 1
+                else -> updatedCount += 1
+            }
+        }
+        return GitHubTrackImportPreview(
+            payload = payload,
+            fileItemCount = payload.sourceCount,
+            validCount = payload.items.size,
+            duplicateCount = payload.duplicateCount,
+            invalidCount = payload.invalidCount,
+            newCount = newCount,
+            updatedCount = updatedCount,
+            unchangedCount = unchangedCount,
+            mergedCount = state.trackedItems.size + newCount
         )
     }
 }

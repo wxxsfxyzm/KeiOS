@@ -26,6 +26,7 @@ import com.example.keios.ui.page.main.RefreshIntervalOption
 import com.example.keios.ui.page.main.GitHubAppCandidateRow
 import com.example.keios.ui.page.main.GitHubSelectedAppCard
 import com.example.keios.ui.page.main.GitHubStatusPalette
+import com.example.keios.ui.page.main.GitHubTrackImportPreview
 import com.example.keios.ui.page.main.github.query.DownloaderOption
 import com.example.keios.ui.page.main.github.query.OnlineShareTargetOption
 import com.example.keios.ui.page.main.github.query.noOnlineShareTargetOption
@@ -190,7 +191,7 @@ internal fun GitHubCheckLogicSheet(
                         color = if (logicChanged) {
                             GitHubStatusPalette.PreRelease
                         } else {
-                            MiuixTheme.colorScheme.onBackgroundVariant
+                            GitHubStatusPalette.Update
                         }
                     )
                 }
@@ -547,6 +548,135 @@ internal fun GitHubDeleteTrackDialog(
                         textColor = MiuixTheme.colorScheme.onError
                     ),
                     onClick = onConfirmDelete
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun GitHubTrackImportDialog(
+    preview: GitHubTrackImportPreview?,
+    importInProgress: Boolean,
+    onDismissRequest: () -> Unit,
+    onCancel: () -> Unit,
+    onConfirmImport: () -> Unit
+) {
+    WindowDialog(
+        show = preview != null,
+        title = stringResource(R.string.github_import_dialog_title),
+        summary = preview?.let {
+            stringResource(
+                if (it.canImport) {
+                    R.string.github_import_dialog_summary_ready
+                } else {
+                    R.string.github_import_dialog_summary_invalid
+                }
+            )
+        },
+        onDismissRequest = onDismissRequest
+    ) {
+        if (preview == null) return@WindowDialog
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Spacer(modifier = Modifier.height(4.dp))
+            SheetSectionCard(
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                verticalSpacing = 6.dp
+            ) {
+                MiuixInfoItem(
+                    key = stringResource(R.string.github_import_dialog_label_file_items),
+                    value = stringResource(
+                        R.string.github_check_sheet_value_track_count,
+                        preview.fileItemCount
+                    )
+                )
+                MiuixInfoItem(
+                    key = stringResource(R.string.github_import_dialog_label_valid_items),
+                    value = stringResource(
+                        R.string.github_check_sheet_value_track_count,
+                        preview.validCount
+                    ),
+                    valueColor = GitHubStatusPalette.Active
+                )
+                MiuixInfoItem(
+                    key = stringResource(R.string.github_import_dialog_label_duplicate_items),
+                    value = stringResource(
+                        R.string.github_check_sheet_value_track_count,
+                        preview.duplicateCount
+                    ),
+                    valueColor = GitHubStatusPalette.PreRelease
+                )
+                MiuixInfoItem(
+                    key = stringResource(R.string.github_import_dialog_label_invalid_items),
+                    value = stringResource(
+                        R.string.github_check_sheet_value_track_count,
+                        preview.invalidCount
+                    ),
+                    valueColor = GitHubStatusPalette.Error
+                )
+                MiuixInfoItem(
+                    key = stringResource(R.string.github_import_dialog_label_new_items),
+                    value = stringResource(
+                        R.string.github_check_sheet_value_track_count,
+                        preview.newCount
+                    ),
+                    valueColor = GitHubStatusPalette.Update
+                )
+                MiuixInfoItem(
+                    key = stringResource(R.string.github_import_dialog_label_updated_items),
+                    value = stringResource(
+                        R.string.github_check_sheet_value_track_count,
+                        preview.updatedCount
+                    ),
+                    valueColor = GitHubStatusPalette.Active
+                )
+                MiuixInfoItem(
+                    key = stringResource(R.string.github_import_dialog_label_unchanged_items),
+                    value = stringResource(
+                        R.string.github_check_sheet_value_track_count,
+                        preview.unchangedCount
+                    ),
+                    valueColor = MiuixTheme.colorScheme.onBackgroundVariant
+                )
+                MiuixInfoItem(
+                    key = stringResource(R.string.github_import_dialog_label_merged_items),
+                    value = stringResource(
+                        R.string.github_check_sheet_value_track_count,
+                        preview.mergedCount
+                    ),
+                    valueColor = GitHubStatusPalette.Stable
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.common_cancel),
+                    onClick = onCancel,
+                    enabled = !importInProgress
+                )
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = when {
+                        importInProgress -> stringResource(R.string.github_check_sheet_action_importing)
+                        preview.canImport -> stringResource(R.string.github_import_dialog_action_confirm)
+                        else -> stringResource(R.string.common_close)
+                    },
+                    colors = if (preview.canImport) {
+                        ButtonDefaults.textButtonColors(
+                            color = GitHubStatusPalette.Active,
+                            textColor = MiuixTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        ButtonDefaults.textButtonColors()
+                    },
+                    onClick = if (preview.canImport) onConfirmImport else onDismissRequest,
+                    enabled = !importInProgress
                 )
             }
         }
