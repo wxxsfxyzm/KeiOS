@@ -182,6 +182,14 @@
     <string name="mcp_network_mode_local_only_access">仅本机访问</string>
     <string name="mcp_network_mode_local_only_short">仅本机</string>
     <string name="home_status_loading">读取中</string>
+    <string name="home_app_version_unknown_fallback">unknown</string>
+    <string name="home_app_version_unknown">版本未知</string>
+    <string name="home_header_tagline">OS · MCP · GitHub · BA · 图鉴 一体化工具台</string>
+    <string name="home_status_ba">BA</string>
+    <string name="home_status_shizuku">Shizuku</string>
+    <string name="home_card_title_mcp">MCP</string>
+    <string name="home_card_title_github_cache">GitHub Cache</string>
+    <string name="home_card_title_ba">BA</string>
     <string name="home_time_just_now">刚刚</string>
     <string name="home_mcp_status_running">运行中</string>
     <string name="home_mcp_status_stopped">未运行</string>

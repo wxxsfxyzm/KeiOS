@@ -270,8 +270,8 @@ private fun HomeInfoCard(
 
     Box(
         modifier = Modifier
-            .padding(horizontal = 12.dp)
-            .padding(bottom = 12.dp)
+            .padding(horizontal = 10.dp)
+            .padding(bottom = 8.dp)
             .drawBackdrop(
                 backdrop = backdrop,
                 shape = { RoundedRectangle(20.dp) },
@@ -296,8 +296,8 @@ private fun HomeInfoCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             content()
         }
@@ -348,7 +348,8 @@ private fun HomeBottomPageLabel(
 private fun HomeInlineInfoItem(
     title: String,
     headline: String,
-    detail: String = ""
+    detail: String = "",
+    naText: String
 ) {
     val summaryColor = if (isSystemInDarkTheme()) {
         Color(0xFF8AB8FF)
@@ -359,8 +360,8 @@ private fun HomeInlineInfoItem(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+            .padding(vertical = 1.dp),
+        verticalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -368,12 +369,17 @@ private fun HomeInlineInfoItem(
         ) {
             Text(
                 text = title,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
+                lineHeight = 16.sp
             )
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = headline.ifBlank { "N/A" },
+                text = headline.ifBlank { naText },
                 color = summaryColor,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -383,6 +389,8 @@ private fun HomeInlineInfoItem(
             Text(
                 text = detail,
                 color = summaryColor,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -433,11 +441,13 @@ fun HomePage(
     val inactiveColor = MiuixTheme.colorScheme.onBackgroundVariant
     val githubCacheColor = Color(0xFFF59E0B)
 
-    val appVersionText = remember {
+    val homeAppVersionUnknownFallback = stringResource(R.string.home_app_version_unknown_fallback)
+    val homeAppVersionUnknown = stringResource(R.string.home_app_version_unknown)
+    val appVersionText = remember(homeAppVersionUnknownFallback, homeAppVersionUnknown) {
         runCatching {
             val info = context.packageManager.getPackageInfo(context.packageName, 0)
-            "v${info.versionName ?: "unknown"} (${info.longVersionCode})"
-        }.getOrDefault("版本未知")
+            "v${info.versionName ?: homeAppVersionUnknownFallback} (${info.longVersionCode})"
+        }.getOrDefault(homeAppVersionUnknown)
     }
 
     var githubOverview by remember { mutableStateOf(HomeGitHubOverview()) }
@@ -461,6 +471,16 @@ fun HomePage(
     val homeGitHubNoCache = stringResource(R.string.home_github_status_no_cache)
     val homeGitHubPendingRefresh = stringResource(R.string.home_github_status_pending_refresh)
     val homeJustNow = stringResource(R.string.home_time_just_now)
+    val homeNa = stringResource(R.string.common_na)
+    val homeAppName = stringResource(R.string.app_name)
+    val homeTagline = stringResource(R.string.home_header_tagline)
+    val homeStatusMcp = stringResource(R.string.page_mcp_title)
+    val homeStatusGitHub = stringResource(R.string.github_page_title)
+    val homeStatusBa = stringResource(R.string.home_status_ba)
+    val homeStatusShizuku = stringResource(R.string.home_status_shizuku)
+    val homeCardMcp = stringResource(R.string.home_card_title_mcp)
+    val homeCardGitHub = stringResource(R.string.home_card_title_github_cache)
+    val homeCardBa = stringResource(R.string.home_card_title_ba)
     val networkModeText = if (mcpAllowExternal) {
         stringResource(R.string.mcp_network_mode_lan_accessible)
     } else {
@@ -682,7 +702,7 @@ fun HomePage(
             bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 16.dp
         )
         val logoPadding = PaddingValues(
-            top = innerPadding.calculateTopPadding() + contentTopPadding + 40.dp,
+            top = innerPadding.calculateTopPadding() + contentTopPadding + 24.dp,
             start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
             end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
         )
@@ -698,7 +718,7 @@ fun HomePage(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
-                        top = logoPadding.calculateTopPadding() + 52.dp,
+                        top = logoPadding.calculateTopPadding() + 36.dp,
                         start = logoPadding.calculateStartPadding(layoutDirection),
                         end = logoPadding.calculateEndPadding(layoutDirection)
                     )
@@ -710,7 +730,7 @@ fun HomePage(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(96.dp)
+                        .size(88.dp)
                         .graphicsLayer {
                             alpha = 1f - iconProgress
                             scaleX = 1f - (iconProgress * 0.05f)
@@ -725,7 +745,7 @@ fun HomePage(
                         painter = painterResource(id = R.drawable.ic_kei_logo_color),
                         contentDescription = null,
                         modifier = Modifier
-                            .size(96.dp)
+                            .size(88.dp)
                             .graphicsLayer {
                                 alpha = (1f - iconProgress) * 0.95f
                             }
@@ -741,7 +761,7 @@ fun HomePage(
                 }
 
                 BasicText(
-                    text = "KeiOS",
+                    text = homeAppName,
                     style = TextStyle(
                         brush = Brush.linearGradient(
                             colors = HOME_KEI_TITLE_GRADIENT_COLORS,
@@ -749,7 +769,7 @@ fun HomePage(
                             end = Offset(260f, 104f)
                         ),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 33.sp,
+                        fontSize = 30.sp,
                         shadow = ComposeTextShadow(
                             color = Color(0x55FF74A6),
                             offset = Offset(0f, 3f),
@@ -757,7 +777,7 @@ fun HomePage(
                         )
                     ),
                     modifier = Modifier
-                        .padding(top = 14.dp, bottom = 6.dp)
+                        .padding(top = 10.dp, bottom = 4.dp)
                         .onGloballyPositioned { coordinates ->
                             if (titleY != 0f) return@onGloballyPositioned
                             titleY = coordinates.positionInWindow().y + coordinates.size.height
@@ -792,7 +812,7 @@ fun HomePage(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "OS · MCP · GitHub · BA · 图鉴 一体化工具台",
+                        text = homeTagline,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
@@ -807,32 +827,32 @@ fun HomePage(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
                     ) {
                         StatusPill(
-                            label = "MCP",
+                            label = homeStatusMcp,
                             color = if (mcpRunning) runningColor else stoppedColor,
-                            modifier = Modifier.defaultMinSize(minWidth = 68.dp)
+                            modifier = Modifier.defaultMinSize(minWidth = 62.dp)
                         )
                         StatusPill(
-                            label = "GitHub",
+                            label = homeStatusGitHub,
                             color = cacheStateColor,
-                            modifier = Modifier.defaultMinSize(minWidth = 78.dp)
+                            modifier = Modifier.defaultMinSize(minWidth = 72.dp)
                         )
                         StatusPill(
-                            label = "BA",
+                            label = homeStatusBa,
                             color = when {
                                 !baOverview.loaded -> inactiveColor
                                 baOverview.activated -> runningColor
                                 else -> stoppedColor
                             },
-                            modifier = Modifier.defaultMinSize(minWidth = 68.dp)
+                            modifier = Modifier.defaultMinSize(minWidth = 62.dp)
                         )
                         StatusPill(
-                            label = "Shizuku",
+                            label = homeStatusShizuku,
                             color = if (shizukuGranted) runningColor else stoppedColor,
-                            modifier = Modifier.defaultMinSize(minWidth = 78.dp),
+                            modifier = Modifier.defaultMinSize(minWidth = 70.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 5.dp)
                         )
                     }
@@ -851,9 +871,9 @@ fun HomePage(
                         Modifier
                             .fillMaxWidth()
                             .height(
-                                logoHeightDp + 52.dp +
+                                logoHeightDp + 36.dp +
                                     logoPadding.calculateTopPadding() -
-                                    listContentPadding.calculateTopPadding() + 126.dp
+                                    listContentPadding.calculateTopPadding() + 90.dp
                             )
                             .onSizeChanged { size ->
                                 logoHeightPx = size.height
@@ -875,8 +895,8 @@ fun HomePage(
                             blurEnabled = blurEnabled
                         ) {
                             HomeInlineInfoItem(
-                                "MCP",
-                                stringResource(
+                                title = homeCardMcp,
+                                headline = stringResource(
                                     R.string.home_mcp_line_status_clients,
                                     if (mcpRunning) {
                                         stringResource(R.string.home_mcp_status_running)
@@ -885,11 +905,12 @@ fun HomePage(
                                     },
                                     mcpConnectedClients
                                 ),
-                                stringResource(
+                                detail = stringResource(
                                     R.string.home_mcp_line_port_mode,
                                     mcpPort,
                                     networkModeText
-                                )
+                                ),
+                                naText = homeNa
                             )
                         }
 
@@ -898,13 +919,14 @@ fun HomePage(
                             blurEnabled = blurEnabled
                         ) {
                             HomeInlineInfoItem(
-                                "GitHub Cache",
-                                stringResource(R.string.home_github_line_last_update, githubLastUpdateLine),
-                                stringResource(
+                                title = homeCardGitHub,
+                                headline = stringResource(R.string.home_github_line_last_update, githubLastUpdateLine),
+                                detail = stringResource(
                                     R.string.home_github_line_track_update,
                                     trackedCount,
                                     githubUpdatableLine
-                                )
+                                ),
+                                naText = homeNa
                             )
                         }
 
@@ -913,8 +935,8 @@ fun HomePage(
                             blurEnabled = blurEnabled
                         ) {
                             HomeInlineInfoItem(
-                                "BA",
-                                if (baOverview.loaded) {
+                                title = homeCardBa,
+                                headline = if (baOverview.loaded) {
                                     stringResource(
                                         R.string.home_ba_line_ap,
                                         baOverview.apCurrent,
@@ -924,10 +946,11 @@ fun HomePage(
                                     )
                                 } else {
                                     homeStatusLoading
-                                }
+                                },
+                                naText = homeNa
                             )
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
             }

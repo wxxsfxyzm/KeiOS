@@ -12,47 +12,47 @@ data class AppTypographyToken(
 
 object AppTypographyTokens {
     val Eyebrow = AppTypographyToken(
-        fontSize = 11.sp,
-        lineHeight = 14.sp,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
         fontWeight = FontWeight.Medium
     )
 
     val Caption = AppTypographyToken(
-        fontSize = 12.sp,
-        lineHeight = 16.sp
+        fontSize = 13.sp,
+        lineHeight = 18.sp
     )
 
     val Supporting = AppTypographyToken(
-        fontSize = 12.sp,
-        lineHeight = 16.sp
+        fontSize = 13.sp,
+        lineHeight = 18.sp
     )
 
     val Body = AppTypographyToken(
-        fontSize = 13.sp,
-        lineHeight = 19.sp
+        fontSize = 14.sp,
+        lineHeight = 20.sp
     )
 
     val BodyEmphasis = AppTypographyToken(
-        fontSize = 13.sp,
-        lineHeight = 19.sp,
-        fontWeight = FontWeight.Medium
-    )
-
-    val CardHeader = AppTypographyToken(
-        fontSize = 15.sp,
+        fontSize = 14.sp,
         lineHeight = 20.sp,
         fontWeight = FontWeight.Medium
     )
 
+    val CardHeader = AppTypographyToken(
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        fontWeight = FontWeight.Medium
+    )
+
     val CompactTitle = AppTypographyToken(
-        fontSize = 15.sp,
-        lineHeight = 21.sp,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
         fontWeight = FontWeight.Medium
     )
 
     val SectionTitle = AppTypographyToken(
-        fontSize = 17.sp,
-        lineHeight = 22.sp,
+        fontSize = 18.sp,
+        lineHeight = 24.sp,
         fontWeight = FontWeight.SemiBold
     )
 }
