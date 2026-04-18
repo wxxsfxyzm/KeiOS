@@ -1,5 +1,6 @@
 package com.example.keios.ui.page.main.github.sheet
 
+import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
@@ -28,6 +30,7 @@ import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
 import com.example.keios.feature.github.model.GitHubLookupConfig
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.feature.github.model.InstalledAppItem
+import com.example.keios.ui.page.main.GitHubPendingShareImportAttachCandidate
 import com.example.keios.ui.page.main.GitHubShareImportPreview
 import com.example.keios.ui.page.main.RefreshIntervalOption
 import com.example.keios.ui.page.main.GitHubAppCandidateRow
@@ -35,6 +38,8 @@ import com.example.keios.ui.page.main.GitHubSelectedAppCard
 import com.example.keios.ui.page.main.GitHubStatusPalette
 import com.example.keios.ui.page.main.GitHubTrackImportPreview
 import com.example.keios.ui.page.main.github.asset.formatAssetSize
+import com.example.keios.ui.page.main.github.asset.assetIsPreferredForDevice
+import com.example.keios.ui.page.main.github.asset.assetLikelyCompatibleWithDevice
 import com.example.keios.ui.page.main.github.query.DownloaderOption
 import com.example.keios.ui.page.main.github.query.OnlineShareTargetOption
 import com.example.keios.ui.page.main.github.query.noOnlineShareTargetOption
@@ -752,8 +757,26 @@ internal fun GitHubShareImportDialog(
         }
         if (preview == null) return@WindowDialog
 
-        var selectedIndex by remember(preview.sourceUrl, preview.releaseTag, preview.assets) {
-            mutableIntStateOf(preview.defaultSelectedIndex.coerceAtLeast(0))
+        val supportedAbis = remember {
+            Build.SUPPORTED_ABIS?.toList().orEmpty()
+        }
+        val devicePreferredAssetIndex = remember(preview.assets, supportedAbis) {
+            preview.assets.indexOfFirst { asset ->
+                assetIsPreferredForDevice(asset.name, supportedAbis)
+            }
+        }
+        var selectedIndex by remember(
+            preview.sourceUrl,
+            preview.releaseTag,
+            preview.assets,
+            devicePreferredAssetIndex
+        ) {
+            val initialIndex = when {
+                preview.preferredAssetName.isNotBlank() -> preview.defaultSelectedIndex
+                devicePreferredAssetIndex >= 0 -> devicePreferredAssetIndex
+                else -> preview.defaultSelectedIndex
+            }.coerceAtLeast(0)
+            mutableIntStateOf(initialIndex)
         }
         val safeSelectedIndex = selectedIndex.coerceIn(0, preview.assets.lastIndex)
         val selectedAsset = preview.assets.getOrNull(safeSelectedIndex)
@@ -795,7 +818,18 @@ internal fun GitHubShareImportDialog(
                         items = preview.assets,
                         key = { _, asset -> asset.name }
                     ) { index, asset ->
-                        val assetSummary = stringResource(
+                        val preferredForDevice = assetIsPreferredForDevice(asset.name, supportedAbis)
+                        val likelyCompatible = assetLikelyCompatibleWithDevice(asset.name, supportedAbis)
+                        val compatibilityHint = when {
+                            preferredForDevice -> stringResource(
+                                R.string.github_share_import_dialog_asset_hint_device_recommended
+                            )
+                            !likelyCompatible -> stringResource(
+                                R.string.github_share_import_dialog_asset_hint_maybe_incompatible
+                            )
+                            else -> null
+                        }
+                        val baseAssetSummary = stringResource(
                             R.string.github_share_import_dialog_asset_summary,
                             formatAssetSize(asset.sizeBytes, context),
                             if (asset.apiAssetUrl.isNotBlank()) {
@@ -804,6 +838,9 @@ internal fun GitHubShareImportDialog(
                                 stringResource(R.string.github_asset_transport_direct)
                             }
                         )
+                        val assetSummary = compatibilityHint?.let { hint ->
+                            "$baseAssetSummary · $hint"
+                        } ?: baseAssetSummary
                         val selected = safeSelectedIndex == index
                         SheetControlRow(
                             modifier = Modifier
@@ -812,6 +849,23 @@ internal fun GitHubShareImportDialog(
                             label = asset.name,
                             summary = assetSummary
                         ) {
+                            if (preferredForDevice) {
+                                StatusPill(
+                                    label = stringResource(
+                                        R.string.github_share_import_dialog_asset_badge_recommended
+                                    ),
+                                    color = GitHubStatusPalette.Update
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                            } else if (!likelyCompatible) {
+                                StatusPill(
+                                    label = stringResource(
+                                        R.string.github_share_import_dialog_asset_badge_incompatible
+                                    ),
+                                    color = GitHubStatusPalette.PreRelease
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
                             RadioButton(
                                 selected = selected,
                                 onClick = { selectedIndex = index }
@@ -840,6 +894,76 @@ internal fun GitHubShareImportDialog(
                         selectedAsset?.let(onConfirmImport)
                     },
                     enabled = selectedAsset != null
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun GitHubShareImportAttachConfirmDialog(
+    candidate: GitHubPendingShareImportAttachCandidate?,
+    duplicateExists: Boolean,
+    onDismissRequest: () -> Unit,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    WindowDialog(
+        show = candidate != null,
+        title = stringResource(R.string.github_share_import_attach_dialog_title),
+        summary = candidate?.let {
+            stringResource(
+                R.string.github_share_import_attach_dialog_summary,
+                it.owner,
+                it.repo
+            )
+        },
+        onDismissRequest = onDismissRequest
+    ) {
+        val attachCandidate = candidate ?: return@WindowDialog
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            SheetSectionCard(
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                verticalSpacing = 6.dp
+            ) {
+                MiuixInfoItem(
+                    key = stringResource(R.string.github_share_import_attach_dialog_label_app),
+                    value = attachCandidate.appLabel
+                )
+                MiuixInfoItem(
+                    key = stringResource(R.string.github_share_import_attach_dialog_label_package),
+                    value = attachCandidate.packageName
+                )
+            }
+            if (duplicateExists) {
+                SheetDescriptionText(
+                    text = stringResource(R.string.github_share_import_attach_dialog_duplicate_hint)
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.common_cancel),
+                    onClick = onCancel
+                )
+                TextButton(
+                    modifier = Modifier.weight(1f),
+                    text = if (duplicateExists) {
+                        stringResource(R.string.common_close)
+                    } else {
+                        stringResource(R.string.github_share_import_attach_dialog_action_confirm)
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        color = GitHubStatusPalette.Active,
+                        textColor = MiuixTheme.colorScheme.onPrimary
+                    ),
+                    onClick = if (duplicateExists) onCancel else onConfirm
                 )
             }
         }

@@ -36,9 +36,12 @@ internal fun BindGitHubPageEffects(
     }
 
     LaunchedEffect(isPageActive) {
-        if (!isPageActive || state.hasInitialized) return@LaunchedEffect
-        state.hasInitialized = true
-        actions.initializePage()
+        if (!isPageActive) return@LaunchedEffect
+        if (!state.hasInitialized) {
+            state.hasInitialized = true
+            actions.initializePage()
+        }
+        actions.trimExpiredPendingShareImportTrack()
     }
 
     LaunchedEffect(scrollToTopSignal, isPageActive) {

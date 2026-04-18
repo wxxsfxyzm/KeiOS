@@ -6,6 +6,7 @@ import java.net.URLDecoder
 internal enum class GitHubSharedUrlType {
     Repo,
     Releases,
+    ReleasesLatest,
     ReleaseTag,
     ReleaseDownloadAsset
 }
@@ -26,12 +27,18 @@ internal object GitHubShareIntentParser {
         option = RegexOption.IGNORE_CASE
     )
 
-    fun extractFirstGitHubUrl(text: String): String? {
+    fun extractGitHubUrls(text: String): List<String> {
         val rawText = text.trim()
-        if (rawText.isBlank()) return null
-        val matched = githubUrlRegex.find(rawText)?.value?.trim().orEmpty()
-        val cleaned = matched.trimEnd('.', ',', ';', ':', '!', '?')
-        return cleaned.ifBlank { null }
+        if (rawText.isBlank()) return emptyList()
+        return githubUrlRegex.findAll(rawText)
+            .map { match -> match.value.trim().trimEnd('.', ',', ';', ':', '!', '?') }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .toList()
+    }
+
+    fun extractFirstGitHubUrl(text: String): String? {
+        return extractGitHubUrls(text).firstOrNull()
     }
 
     fun looksLikeGitHubShareText(text: String): Boolean {
@@ -39,8 +46,15 @@ internal object GitHubShareIntentParser {
     }
 
     fun parseSharedReleaseLink(text: String): GitHubSharedReleaseLink? {
-        val sharedUrl = extractFirstGitHubUrl(text) ?: return null
-        return parseSharedReleaseUrl(sharedUrl)
+        val parsedLinks = extractGitHubUrls(text)
+            .mapNotNull(::parseSharedReleaseUrl)
+        if (parsedLinks.isEmpty()) return null
+        return parsedLinks.withIndex()
+            .maxWithOrNull(
+                compareBy<IndexedValue<GitHubSharedReleaseLink>> { it.value.type.priority() }
+                    .thenBy { -it.index }
+            )
+            ?.value
     }
 
     fun parseSharedReleaseUrl(rawUrl: String): GitHubSharedReleaseLink? {
@@ -93,6 +107,13 @@ internal object GitHubShareIntentParser {
         }
 
         return when (fourth) {
+            "latest" -> GitHubSharedReleaseLink(
+                sourceUrl = normalizedUrl,
+                projectUrl = projectUrl,
+                owner = parsedOwner,
+                repo = parsedRepo,
+                type = GitHubSharedUrlType.ReleasesLatest
+            )
             "tag" -> {
                 val tag = decodePathSegment(ownerRepoFromPath.getOrNull(4).orEmpty())
                 GitHubSharedReleaseLink(
@@ -143,5 +164,15 @@ internal object GitHubShareIntentParser {
 
     private fun buildProjectUrl(owner: String, repo: String): String {
         return "https://github.com/${owner.trim()}/${repo.trim()}"
+    }
+
+    private fun GitHubSharedUrlType.priority(): Int {
+        return when (this) {
+            GitHubSharedUrlType.ReleaseDownloadAsset -> 5
+            GitHubSharedUrlType.ReleaseTag -> 4
+            GitHubSharedUrlType.ReleasesLatest -> 3
+            GitHubSharedUrlType.Releases -> 2
+            GitHubSharedUrlType.Repo -> 1
+        }
     }
 }

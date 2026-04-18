@@ -58,6 +58,35 @@ class GitHubShareIntentParserTest {
     }
 
     @Test
+    fun `parse releases latest link to latest stable target`() {
+        val parsed = GitHubShareIntentParser.parseSharedReleaseLink(
+            "https://github.com/open-ani/animeko/releases/latest"
+        )
+        assertNotNull(parsed)
+        assertEquals(GitHubSharedUrlType.ReleasesLatest, parsed.type)
+    }
+
+    @Test
+    fun `multiple links choose download over repo`() {
+        val parsed = GitHubShareIntentParser.parseSharedReleaseLink(
+            "仓库：https://github.com/open-ani/animeko 直链：https://github.com/open-ani/animeko/releases/download/v5.5.0-alpha02/ani-5.5.0-alpha02-arm64-v8a.apk"
+        )
+        assertNotNull(parsed)
+        assertEquals(GitHubSharedUrlType.ReleaseDownloadAsset, parsed.type)
+        assertEquals("v5.5.0-alpha02", parsed.releaseTag)
+    }
+
+    @Test
+    fun `multiple links choose tag over releases page`() {
+        val parsed = GitHubShareIntentParser.parseSharedReleaseLink(
+            "https://github.com/open-ani/animeko/releases https://github.com/open-ani/animeko/releases/tag/v5.5.0-alpha02"
+        )
+        assertNotNull(parsed)
+        assertEquals(GitHubSharedUrlType.ReleaseTag, parsed.type)
+        assertEquals("v5.5.0-alpha02", parsed.releaseTag)
+    }
+
+    @Test
     fun `non github text returns null`() {
         val parsed = GitHubShareIntentParser.parseSharedReleaseLink("https://example.com/demo")
         assertNull(parsed)

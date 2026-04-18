@@ -40,75 +40,21 @@ internal class GitHubAssetActions(
 
     fun shareApkLink(asset: GitHubReleaseAssetFile) {
         scope.launch {
-            val resolvedUrl = resolvePreferredAssetUrl(asset)
-            val onlineSharePackage = state.lookupConfig.onlineShareTargetPackage.trim()
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, asset.name)
-                putExtra(Intent.EXTRA_TEXT, resolvedUrl)
-                if (onlineSharePackage.isNotBlank()) {
-                    `package` = onlineSharePackage
-                    putExtra("channel", "Online")
-                    putExtra("extra_channel", "Online")
-                    putExtra("online_channel", true)
-                }
-            }
-            runCatching {
-                if (onlineSharePackage.isNotBlank()) {
-                    context.startActivity(intent)
-                } else {
-                    context.startActivity(
-                        Intent.createChooser(intent, context.getString(R.string.github_share_apk_link_title))
-                    )
-                }
-            }.onFailure {
-                env.toast(R.string.github_toast_share_link_failed)
-            }
+            shareApkLinkInternal(asset)
         }
     }
 
     fun openApkInDownloader(asset: GitHubReleaseAssetFile) {
         scope.launch {
-            val resolvedUrl = resolvePreferredAssetUrl(asset)
-            val preferredPackage = state.lookupConfig.preferredDownloaderPackage.trim()
-            runCatching {
-                when (preferredPackage) {
-                    systemDmOption.packageName -> {
-                        enqueueWithSystemDownloadManager(resolvedUrl, asset.name)
-                        env.toast(R.string.github_toast_downloader_system_builtin)
-                    }
-                    "" -> {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
-                                addCategory(Intent.CATEGORY_BROWSABLE)
-                            }
-                        )
-                        env.toast(R.string.github_toast_downloader_system_default)
-                    }
-                    else -> {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
-                                addCategory(Intent.CATEGORY_BROWSABLE)
-                                setPackage(preferredPackage)
-                            }
-                        )
-                        env.toast(R.string.github_toast_downloader_selected)
-                    }
-                }
-            }.recoverCatching {
-                if (preferredPackage.isNotBlank() && preferredPackage != systemDmOption.packageName) {
-                    context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
-                            addCategory(Intent.CATEGORY_BROWSABLE)
-                        }
-                    )
-                    env.toast(R.string.github_toast_downloader_fallback_system)
-                } else {
-                    throw it
-                }
-            }.onFailure {
-                env.toast(R.string.github_toast_open_downloader_failed)
-            }
+            openApkInDownloaderInternal(asset)
+        }
+    }
+
+    suspend fun sendAssetToConfiguredChannel(asset: GitHubReleaseAssetFile): Boolean {
+        return if (state.lookupConfig.onlineShareTargetPackage.isNotBlank()) {
+            shareApkLinkInternal(asset)
+        } else {
+            openApkInDownloaderInternal(asset)
         }
     }
 
@@ -281,6 +227,81 @@ internal class GitHubAssetActions(
                 useApiAssetUrl = preferApiAsset,
                 apiToken = token
             ).getOrElse { asset.downloadUrl }
+        }
+    }
+
+    private suspend fun shareApkLinkInternal(asset: GitHubReleaseAssetFile): Boolean {
+        val resolvedUrl = resolvePreferredAssetUrl(asset)
+        val onlineSharePackage = state.lookupConfig.onlineShareTargetPackage.trim()
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, asset.name)
+            putExtra(Intent.EXTRA_TEXT, resolvedUrl)
+            if (onlineSharePackage.isNotBlank()) {
+                `package` = onlineSharePackage
+                putExtra("channel", "Online")
+                putExtra("extra_channel", "Online")
+                putExtra("online_channel", true)
+            }
+        }
+        return runCatching {
+            if (onlineSharePackage.isNotBlank()) {
+                context.startActivity(intent)
+            } else {
+                context.startActivity(
+                    Intent.createChooser(intent, context.getString(R.string.github_share_apk_link_title))
+                )
+            }
+            true
+        }.getOrElse {
+            env.toast(R.string.github_toast_share_link_failed)
+            false
+        }
+    }
+
+    private suspend fun openApkInDownloaderInternal(asset: GitHubReleaseAssetFile): Boolean {
+        val resolvedUrl = resolvePreferredAssetUrl(asset)
+        val preferredPackage = state.lookupConfig.preferredDownloaderPackage.trim()
+        return runCatching {
+            when (preferredPackage) {
+                systemDmOption.packageName -> {
+                    enqueueWithSystemDownloadManager(resolvedUrl, asset.name)
+                    env.toast(R.string.github_toast_downloader_system_builtin)
+                }
+                "" -> {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
+                            addCategory(Intent.CATEGORY_BROWSABLE)
+                        }
+                    )
+                    env.toast(R.string.github_toast_downloader_system_default)
+                }
+                else -> {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
+                            addCategory(Intent.CATEGORY_BROWSABLE)
+                            setPackage(preferredPackage)
+                        }
+                    )
+                    env.toast(R.string.github_toast_downloader_selected)
+                }
+            }
+            true
+        }.recoverCatching {
+            if (preferredPackage.isNotBlank() && preferredPackage != systemDmOption.packageName) {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
+                        addCategory(Intent.CATEGORY_BROWSABLE)
+                    }
+                )
+                env.toast(R.string.github_toast_downloader_fallback_system)
+                true
+            } else {
+                throw it
+            }
+        }.getOrElse {
+            env.toast(R.string.github_toast_open_downloader_failed)
+            false
         }
     }
 

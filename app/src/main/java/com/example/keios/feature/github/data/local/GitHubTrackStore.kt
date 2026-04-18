@@ -13,7 +13,8 @@ data class GitHubTrackSnapshot(
     val checkCache: Map<String, GitHubCheckCacheEntry> = emptyMap(),
     val lastRefreshMs: Long = 0L,
     val refreshIntervalHours: Int = 3,
-    val lookupConfig: GitHubLookupConfig = GitHubLookupConfig()
+    val lookupConfig: GitHubLookupConfig = GitHubLookupConfig(),
+    val pendingShareImportTrack: GitHubPendingShareImportTrackRecord? = null
 )
 
 data class GitHubTrackedItemsImportPayload(
@@ -21,6 +22,15 @@ data class GitHubTrackedItemsImportPayload(
     val sourceCount: Int = 0,
     val invalidCount: Int = 0,
     val duplicateCount: Int = 0
+)
+
+data class GitHubPendingShareImportTrackRecord(
+    val projectUrl: String,
+    val owner: String,
+    val repo: String,
+    val releaseTag: String = "",
+    val assetName: String = "",
+    val armedAtMillis: Long
 )
 
 object GitHubTrackStore {
@@ -37,6 +47,7 @@ object GitHubTrackStore {
     private const val KEY_SHARE_IMPORT_LINKAGE_ENABLED = "github_share_import_linkage_enabled"
     private const val KEY_ONLINE_SHARE_TARGET_PACKAGE = "github_online_share_target_package"
     private const val KEY_PREFERRED_DOWNLOADER_PACKAGE = "github_preferred_downloader_package"
+    private const val KEY_PENDING_SHARE_IMPORT_TRACK = "github_pending_share_import_track"
 
     @Volatile
     private var didAutoRefreshInSession: Boolean = false
@@ -64,6 +75,44 @@ object GitHubTrackStore {
             array.put(trackedItemToJson(item))
         }
         kv().encode(KEY_ITEMS, array.toString())
+    }
+
+    fun loadPendingShareImportTrack(): GitHubPendingShareImportTrackRecord? {
+        val raw = kv().decodeString(KEY_PENDING_SHARE_IMPORT_TRACK).orEmpty()
+        if (raw.isBlank()) return null
+        return runCatching {
+            val obj = JSONObject(raw)
+            val projectUrl = obj.optString("projectUrl").trim()
+            val owner = obj.optString("owner").trim()
+            val repo = obj.optString("repo").trim()
+            val armedAtMillis = obj.optLong("armedAtMillis", 0L)
+            if (projectUrl.isBlank() || owner.isBlank() || repo.isBlank() || armedAtMillis <= 0L) {
+                return@runCatching null
+            }
+            GitHubPendingShareImportTrackRecord(
+                projectUrl = projectUrl,
+                owner = owner,
+                repo = repo,
+                releaseTag = obj.optString("releaseTag").trim(),
+                assetName = obj.optString("assetName").trim(),
+                armedAtMillis = armedAtMillis
+            )
+        }.getOrNull()
+    }
+
+    fun savePendingShareImportTrack(record: GitHubPendingShareImportTrackRecord?) {
+        if (record == null) {
+            kv().removeValueForKey(KEY_PENDING_SHARE_IMPORT_TRACK)
+            return
+        }
+        val payload = JSONObject()
+            .put("projectUrl", record.projectUrl)
+            .put("owner", record.owner)
+            .put("repo", record.repo)
+            .put("releaseTag", record.releaseTag)
+            .put("assetName", record.assetName)
+            .put("armedAtMillis", record.armedAtMillis)
+        kv().encode(KEY_PENDING_SHARE_IMPORT_TRACK, payload.toString())
     }
 
     fun buildTrackedItemsExportJson(
@@ -182,7 +231,8 @@ object GitHubTrackStore {
             checkCache = checkCache,
             lastRefreshMs = lastRefreshMs,
             refreshIntervalHours = loadRefreshIntervalHours(),
-            lookupConfig = lookupConfig
+            lookupConfig = lookupConfig,
+            pendingShareImportTrack = loadPendingShareImportTrack()
         )
     }
 

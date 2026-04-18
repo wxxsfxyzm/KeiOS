@@ -23,6 +23,7 @@ import com.example.keios.ui.page.main.github.section.GitHubMainContent
 import com.example.keios.ui.page.main.github.section.GitHubOverviewMetrics
 import com.example.keios.ui.page.main.github.sheet.GitHubCheckLogicSheet
 import com.example.keios.ui.page.main.github.sheet.GitHubDeleteTrackDialog
+import com.example.keios.ui.page.main.github.sheet.GitHubShareImportAttachConfirmDialog
 import com.example.keios.ui.page.main.github.sheet.GitHubShareImportDialog
 import com.example.keios.ui.page.main.github.sheet.GitHubStrategySheet
 import com.example.keios.ui.page.main.github.sheet.GitHubTrackEditSheet
@@ -272,6 +273,28 @@ fun GitHubPage(
             emptyList()
         }
     }
+    val pendingShareImportRepoOverlapCount by remember(
+        state.pendingShareImportTrack,
+        state.trackedItems
+    ) {
+        derivedStateOf {
+            val pending = state.pendingShareImportTrack ?: return@derivedStateOf 0
+            state.trackedItems.count { item ->
+                item.owner.equals(pending.owner, ignoreCase = true) &&
+                    item.repo.equals(pending.repo, ignoreCase = true)
+            }
+        }
+    }
+    val shareImportAttachDuplicateExists by remember(
+        state.pendingShareImportAttachCandidate,
+        state.trackedItems
+    ) {
+        derivedStateOf {
+            val candidate = state.pendingShareImportAttachCandidate ?: return@derivedStateOf false
+            val candidateId = "${candidate.owner}/${candidate.repo}|${candidate.packageName}"
+            state.trackedItems.any { it.id == candidateId }
+        }
+    }
 
     GitHubMainContent(
         contentBottomPadding = contentBottomPadding,
@@ -306,6 +329,8 @@ fun GitHubPage(
         apkAssetErrors = state.apkAssetErrors,
         apkAssetExpanded = state.apkAssetExpanded,
         trackedCardExpanded = state.trackedCardExpanded,
+        pendingShareImportTrack = state.pendingShareImportTrack,
+        pendingShareImportRepoOverlapCount = pendingShareImportRepoOverlapCount,
         onTrackedSearchChange = { state.trackedSearch = it },
         onShowSortPopupChange = { state.showSortPopup = it },
         onSortModeChange = { state.sortMode = it },
@@ -330,6 +355,7 @@ fun GitHubPage(
         onOpenExternalUrl = actions::openExternalUrl,
         onOpenApkInDownloader = actions::openApkInDownloader,
         onShareApkLink = actions::shareApkLink,
+        onCancelPendingShareImportTrack = actions::cancelPendingShareImportTrack,
         onActionBarInteractingChanged = onActionBarInteractingChanged
     )
 
@@ -540,5 +566,13 @@ fun GitHubPage(
         onConfirmImport = { asset ->
             actions.confirmShareImportSelection(asset)
         }
+    )
+
+    GitHubShareImportAttachConfirmDialog(
+        candidate = state.pendingShareImportAttachCandidate,
+        duplicateExists = shareImportAttachDuplicateExists,
+        onDismissRequest = actions::dismissPendingShareImportAttachCandidate,
+        onCancel = actions::dismissPendingShareImportAttachCandidate,
+        onConfirm = actions::confirmPendingShareImportAttachCandidate
     )
 }

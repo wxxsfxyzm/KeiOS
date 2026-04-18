@@ -1,6 +1,8 @@
 package com.example.keios.ui.page.main
 
 import com.example.keios.R
+import com.example.keios.feature.github.data.local.GitHubPendingShareImportTrackRecord
+import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
 import com.example.keios.feature.github.data.remote.GitHubShareImportResolver
 import kotlinx.coroutines.Dispatchers
@@ -64,19 +66,32 @@ internal class GitHubShareImportActions(
 
     fun confirmShareImportSelection(asset: GitHubReleaseAssetFile) {
         val preview = state.pendingShareImportPreview ?: return
-        state.pendingShareImportPreview = null
-        state.pendingShareImportTrack = GitHubPendingShareImportTrack(
-            projectUrl = preview.projectUrl,
-            owner = preview.owner,
-            repo = preview.repo
-        )
-
-        val hasOnlineShareTarget = state.lookupConfig.onlineShareTargetPackage.isNotBlank()
-        if (hasOnlineShareTarget) {
-            assetActions.shareApkLink(asset)
-        } else {
-            assetActions.openApkInDownloader(asset)
+        scope.launch {
+            val delivered = assetActions.sendAssetToConfiguredChannel(asset)
+            if (!delivered) return@launch
+            state.pendingShareImportPreview = null
+            val pending = GitHubPendingShareImportTrack(
+                projectUrl = preview.projectUrl,
+                owner = preview.owner,
+                repo = preview.repo,
+                releaseTag = preview.releaseTag,
+                assetName = asset.name
+            )
+            state.pendingShareImportAttachCandidate = null
+            state.pendingShareImportTrack = pending
+            withContext(Dispatchers.IO) {
+                GitHubTrackStore.savePendingShareImportTrack(
+                    GitHubPendingShareImportTrackRecord(
+                        projectUrl = pending.projectUrl,
+                        owner = pending.owner,
+                        repo = pending.repo,
+                        releaseTag = pending.releaseTag,
+                        assetName = pending.assetName,
+                        armedAtMillis = pending.armedAtMillis
+                    )
+                )
+            }
+            env.toast(R.string.github_toast_share_import_wait_install, asset.name)
         }
-        env.toast(R.string.github_toast_share_import_wait_install, asset.name)
     }
 }

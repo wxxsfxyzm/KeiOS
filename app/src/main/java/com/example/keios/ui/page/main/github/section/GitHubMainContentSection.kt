@@ -1,6 +1,7 @@
 package com.example.keios.ui.page.main.github.section
 
 import android.content.Context
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,6 +51,7 @@ import com.example.keios.feature.github.model.GitHubLookupConfig
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.ui.page.main.AppIcon
 import com.example.keios.ui.page.main.GitHubCompactInfoRow
+import com.example.keios.ui.page.main.GitHubPendingShareImportTrack
 import com.example.keios.ui.page.main.GitHubSortMode
 import com.example.keios.ui.page.main.GitHubStatusPalette
 import com.example.keios.ui.page.main.OverviewRefreshState
@@ -83,6 +85,8 @@ import com.example.keios.ui.page.main.github.asset.apkAssetTarget
 import com.example.keios.ui.page.main.github.asset.assetAbiLabel
 import com.example.keios.ui.page.main.github.asset.assetDisplayName
 import com.example.keios.ui.page.main.github.asset.assetFileExtensionLabel
+import com.example.keios.ui.page.main.github.asset.assetIsPreferredForDevice
+import com.example.keios.ui.page.main.github.asset.assetLikelyCompatibleWithDevice
 import com.example.keios.ui.page.main.github.asset.assetRelativeTimeLabel
 import com.example.keios.ui.page.main.github.asset.assetTransportLabel
 import com.example.keios.ui.page.main.github.asset.bundleReleaseUpdatedAtMillis
@@ -143,6 +147,8 @@ internal fun GitHubMainContent(
     apkAssetErrors: SnapshotStateMap<String, String>,
     apkAssetExpanded: SnapshotStateMap<String, Boolean>,
     trackedCardExpanded: SnapshotStateMap<String, Boolean>,
+    pendingShareImportTrack: GitHubPendingShareImportTrack?,
+    pendingShareImportRepoOverlapCount: Int,
     onTrackedSearchChange: (String) -> Unit,
     onShowSortPopupChange: (Boolean) -> Unit,
     onSortModeChange: (GitHubSortMode) -> Unit,
@@ -157,9 +163,11 @@ internal fun GitHubMainContent(
     onOpenExternalUrl: (String) -> Unit,
     onOpenApkInDownloader: (GitHubReleaseAssetFile) -> Unit,
     onShareApkLink: (GitHubReleaseAssetFile) -> Unit,
+    onCancelPendingShareImportTrack: () -> Unit,
     onActionBarInteractingChanged: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
+    val supportedAbis = Build.SUPPORTED_ABIS?.toList().orEmpty()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -211,6 +219,15 @@ internal fun GitHubMainContent(
                         onOpenTrackSheetForAdd = onOpenTrackSheetForAdd
                     )
                 }
+                if (pendingShareImportTrack != null) {
+                    item {
+                        GitHubPendingShareImportCard(
+                            pending = pendingShareImportTrack,
+                            repoOverlapCount = pendingShareImportRepoOverlapCount,
+                            onCancel = onCancelPendingShareImportTrack
+                        )
+                    }
+                }
                 GitHubTrackedItemsSection(
                     trackedItems = trackedItems,
                     filteredTracked = filteredTracked,
@@ -231,7 +248,8 @@ internal fun GitHubMainContent(
                     onOpenExternalUrl = onOpenExternalUrl,
                     onOpenApkInDownloader = onOpenApkInDownloader,
                     onShareApkLink = onShareApkLink,
-                    context = context
+                    context = context,
+                    supportedAbis = supportedAbis
                 )
             }
 
@@ -278,7 +296,8 @@ private fun LazyListScope.GitHubTrackedItemsSection(
     onOpenExternalUrl: (String) -> Unit,
     onOpenApkInDownloader: (GitHubReleaseAssetFile) -> Unit,
     onShareApkLink: (GitHubReleaseAssetFile) -> Unit,
-    context: Context
+    context: Context,
+    supportedAbis: List<String>
 ) {
     if (trackedItems.isEmpty()) {
         item {
@@ -762,6 +781,14 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                         val displayName = assetDisplayName(asset.name)
                                         val sizeLabel = formatAssetSize(asset.sizeBytes, context)
                                         val relativeTimeLabel = assetRelativeTimeLabel(asset.updatedAtMillis, context)
+                                        val preferredForDevice = assetIsPreferredForDevice(
+                                            fileName = asset.name,
+                                            supportedAbis = supportedAbis
+                                        )
+                                        val likelyCompatible = assetLikelyCompatibleWithDevice(
+                                            fileName = asset.name,
+                                            supportedAbis = supportedAbis
+                                        )
                                         val assetDownloadButtonMinWidth = 100.dp
                                         val assetShareButtonSize = 40.dp
                                         val assetCardContainerColor = summaryContainerColor
@@ -809,6 +836,21 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                         StatusPill(
                                                             label = label,
                                                             color = MiuixTheme.colorScheme.onBackgroundVariant
+                                                        )
+                                                    }
+                                                    if (preferredForDevice) {
+                                                        StatusPill(
+                                                            label = stringResource(
+                                                                R.string.github_asset_badge_recommended
+                                                            ),
+                                                            color = GitHubStatusPalette.Update
+                                                        )
+                                                    } else if (!likelyCompatible && abiLabel != null) {
+                                                        StatusPill(
+                                                            label = stringResource(
+                                                                R.string.github_asset_badge_incompatible
+                                                            ),
+                                                            color = GitHubStatusPalette.PreRelease
                                                         )
                                                     }
                                                 }

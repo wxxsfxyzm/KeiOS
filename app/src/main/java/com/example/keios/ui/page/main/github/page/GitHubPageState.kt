@@ -49,6 +49,7 @@ internal class GitHubPageState(
     var pendingTrackImportPreview by mutableStateOf<GitHubTrackImportPreview?>(null)
     var pendingShareImportPreview by mutableStateOf<GitHubShareImportPreview?>(null)
     var pendingShareImportTrack by mutableStateOf<GitHubPendingShareImportTrack?>(null)
+    var pendingShareImportAttachCandidate by mutableStateOf<GitHubPendingShareImportAttachCandidate?>(null)
     var shareImportResolving by mutableStateOf(false)
     var sortMode by mutableStateOf(GitHubSortMode.UpdateFirst)
     var pendingDeleteItem by mutableStateOf<GitHubTrackedApp?>(null)

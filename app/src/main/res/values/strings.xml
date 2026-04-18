@@ -332,6 +332,8 @@
     <string name="github_toast_share_import_no_apk">该链接对应的 release 暂无可用 APK</string>
     <string name="github_toast_share_import_wait_install">已发送 %1$s，安装或更新完成后会自动新增跟踪</string>
     <string name="github_toast_share_import_track_added">已新增跟踪：%1$s</string>
+    <string name="github_toast_share_import_track_exists">该项目与应用已在本地追踪，已自动跳过</string>
+    <string name="github_toast_share_import_pending_cancelled">已取消本次分享导入联动</string>
     <string name="github_msg_checking">检查中...</string>
     <string name="github_msg_assets_no_downloadable_except_source">%1$s 当前除了 Source code 外没有其它可下载资源</string>
     <string name="github_msg_assets_no_downloadable">%1$s 当前没有可直接下载的资源</string>
@@ -574,7 +576,26 @@
     <string name="github_share_import_dialog_label_release">Release</string>
     <string name="github_share_import_dialog_label_assets">可选 APK</string>
     <string name="github_share_import_dialog_asset_summary">大小：%1$s · 链路：%2$s</string>
+    <string name="github_share_import_dialog_asset_hint_device_recommended">推荐本机</string>
+    <string name="github_share_import_dialog_asset_hint_maybe_incompatible">可能不兼容</string>
+    <string name="github_share_import_dialog_asset_badge_recommended">推荐</string>
+    <string name="github_share_import_dialog_asset_badge_incompatible">注意</string>
     <string name="github_share_import_dialog_action_confirm">继续安装</string>
+    <string name="github_share_import_attach_dialog_title">确认新增跟踪</string>
+    <string name="github_share_import_attach_dialog_summary">检测到安装事件：%1$s/%2$s</string>
+    <string name="github_share_import_attach_dialog_label_app">应用</string>
+    <string name="github_share_import_attach_dialog_label_package">包名</string>
+    <string name="github_share_import_attach_dialog_duplicate_hint">本地已存在同仓库同包名追踪，当前操作会自动跳过新增。</string>
+    <string name="github_share_import_attach_dialog_action_confirm">新增跟踪</string>
+    <string name="github_share_import_pending_title">分享导入联动进行中</string>
+    <string name="github_share_import_pending_armed_minutes">%1$d 分钟前</string>
+    <string name="github_share_import_pending_label_target">目标</string>
+    <string name="github_share_import_pending_label_release">Release</string>
+    <string name="github_share_import_pending_label_asset">APK</string>
+    <string name="github_share_import_pending_repo_overlap_hint">本地已追踪该仓库 %1$d 项；检测到同仓同包时会自动去重。</string>
+    <string name="github_share_import_pending_action_cancel">取消联动</string>
+    <string name="github_asset_badge_recommended">推荐本机</string>
+    <string name="github_asset_badge_incompatible">可能不兼容</string>
 
     <string name="github_token_guide_collapsed">Fine-grained PAT · Contents: Read</string>
     <string name="github_token_guide_summary">建议为 KeiOS 单独建一个 Fine-grained PAT。当前这套 Releases API 与资源下载只需 `Contents: Read`；公开仓库也能正常追踪。</string>

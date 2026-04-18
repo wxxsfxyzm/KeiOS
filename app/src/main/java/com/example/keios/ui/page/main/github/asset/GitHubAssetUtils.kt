@@ -210,3 +210,56 @@ internal fun assetRelativeTimeLabel(
         else -> context.getString(R.string.github_asset_relative_months_ago, days / 30L)
     }
 }
+
+internal fun assetIsPreferredForDevice(
+    fileName: String,
+    supportedAbis: List<String>
+): Boolean {
+    val assetAbi = assetAbiLabel(fileName) ?: return false
+    val deviceAbiSet = supportedAbis
+        .map { it.trim().lowercase(Locale.ROOT) }
+        .filter { it.isNotBlank() }
+        .toSet()
+    val hasArm64 = deviceAbiSet.any { abi -> "arm64" in abi || "aarch64" in abi }
+    val hasArm32 = deviceAbiSet.any { abi ->
+        "armeabi" in abi || "armv7" in abi || abi.startsWith("arm")
+    }
+    val hasX86_64 = deviceAbiSet.any { abi -> "x86_64" in abi }
+    val hasX86 = deviceAbiSet.any { abi ->
+        Regex("""(^|[^a-z0-9])x86([^a-z0-9]|$)""").containsMatchIn(abi)
+    }
+    return when (assetAbi) {
+        "arm64" -> hasArm64
+        "armeabi-v7a", "armeabi" -> !hasArm64 && hasArm32
+        "x86_64" -> hasX86_64
+        "x86" -> !hasX86_64 && hasX86
+        else -> false
+    }
+}
+
+internal fun assetLikelyCompatibleWithDevice(
+    fileName: String,
+    supportedAbis: List<String>
+): Boolean {
+    val assetAbi = assetAbiLabel(fileName) ?: return true
+    val deviceAbiSet = supportedAbis
+        .map { it.trim().lowercase(Locale.ROOT) }
+        .filter { it.isNotBlank() }
+        .toSet()
+    val hasArm64 = deviceAbiSet.any { abi -> "arm64" in abi || "aarch64" in abi }
+    val hasArm32 = deviceAbiSet.any { abi ->
+        "armeabi" in abi || "armv7" in abi || abi.startsWith("arm")
+    }
+    val hasX86_64 = deviceAbiSet.any { abi -> "x86_64" in abi }
+    val hasX86 = deviceAbiSet.any { abi ->
+        Regex("""(^|[^a-z0-9])x86([^a-z0-9]|$)""").containsMatchIn(abi)
+    }
+    return when (assetAbi) {
+        "universal" -> true
+        "arm64" -> hasArm64
+        "armeabi-v7a", "armeabi" -> hasArm64 || hasArm32
+        "x86_64" -> hasX86_64
+        "x86" -> hasX86_64 || hasX86
+        else -> true
+    }
+}

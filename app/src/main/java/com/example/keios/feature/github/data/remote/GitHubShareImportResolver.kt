@@ -115,6 +115,14 @@ internal object GitHubShareImportResolver {
                 )
             }
 
+            GitHubSharedUrlType.ReleasesLatest -> {
+                resolveLatestStableReleaseTarget(
+                    owner = parsedLink.owner,
+                    repo = parsedLink.repo,
+                    lookupConfig = lookupConfig
+                )
+            }
+
             GitHubSharedUrlType.ReleaseTag,
             GitHubSharedUrlType.ReleaseDownloadAsset -> {
                 val tag = parsedLink.releaseTag.trim()
@@ -130,6 +138,37 @@ internal object GitHubShareImportResolver {
                 )
             }
         }
+    }
+
+    private fun resolveLatestStableReleaseTarget(
+        owner: String,
+        repo: String,
+        lookupConfig: GitHubLookupConfig
+    ): ResolvedReleaseTarget {
+        val snapshot = when (lookupConfig.selectedStrategy) {
+            GitHubLookupStrategyOption.AtomFeed -> {
+                GitHubAtomReleaseStrategy.loadSnapshot(owner, repo).getOrThrow()
+            }
+
+            GitHubLookupStrategyOption.GitHubApiToken -> {
+                GitHubApiTokenReleaseStrategy(
+                    apiToken = lookupConfig.apiToken
+                ).loadSnapshot(owner, repo).getOrThrow()
+            }
+        }
+        check(snapshot.hasStableRelease) { "该仓库暂无稳定版 release" }
+        val latestStable = snapshot.latestStable
+        val tag = latestStable.rawTag.trim().ifBlank {
+            GitHubReleaseAssetRepository.parseReleaseTagFromUrl(latestStable.link)
+        }
+        check(tag.isNotBlank()) { "该仓库暂无稳定版 release" }
+        val releaseUrl = latestStable.link.trim().ifBlank {
+            GitHubVersionUtils.buildReleaseTagUrl(owner, repo, tag)
+        }
+        return ResolvedReleaseTarget(
+            tag = tag,
+            releaseUrl = releaseUrl
+        )
     }
 
     private fun resolveLatestReleaseEntry(

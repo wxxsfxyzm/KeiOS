@@ -242,6 +242,17 @@ internal class GitHubRefreshActions(
         state.trackedItems.clear()
         state.trackedItems.addAll(trackSnapshot.items)
         state.retainTrackedUiState(trackSnapshot.items.map { it.id }.toSet())
+        state.pendingShareImportTrack = trackSnapshot.pendingShareImportTrack?.let { pending ->
+            GitHubPendingShareImportTrack(
+                projectUrl = pending.projectUrl,
+                owner = pending.owner,
+                repo = pending.repo,
+                releaseTag = pending.releaseTag,
+                assetName = pending.assetName,
+                armedAtMillis = pending.armedAtMillis
+            )
+        }
+        state.pendingShareImportAttachCandidate = null
 
         val cachedStates = trackSnapshot.checkCache
         state.checkStates.clear()

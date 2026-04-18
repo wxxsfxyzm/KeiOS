@@ -29,5 +29,17 @@ internal data class GitHubPendingShareImportTrack(
     val projectUrl: String,
     val owner: String,
     val repo: String,
+    val releaseTag: String = "",
+    val assetName: String = "",
     val armedAtMillis: Long = System.currentTimeMillis()
+)
+
+internal data class GitHubPendingShareImportAttachCandidate(
+    val projectUrl: String,
+    val owner: String,
+    val repo: String,
+    val packageName: String,
+    val appLabel: String,
+    val eventAction: String,
+    val detectedAtMillis: Long = System.currentTimeMillis()
 )
