@@ -361,6 +361,9 @@ private fun MainPagerLayout(
     onRequestedBottomPageConsumed: () -> Unit
 ) {
     val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
+    val hasNonHomeBackground = remember(nonHomeBackgroundEnabled, nonHomeBackgroundUri) {
+        nonHomeBackgroundEnabled && nonHomeBackgroundUri.isNotBlank()
+    }
     val tabs = remember(visibleBottomPageNames) {
         BottomPage.entries.filter { page ->
             page == BottomPage.Home || visibleBottomPageNames.contains(page.name)
@@ -742,11 +745,11 @@ private fun MainPagerLayout(
                         )
                     }
                 }
-                if (!isHome) {
+                if (!isHome && hasNonHomeBackground) {
                     // Render as a soft foreground overlay so it remains visible even when
                     // destination pages use opaque surface/background containers.
                     NonHomePageBackground(
-                        enabled = nonHomeBackgroundEnabled,
+                        enabled = hasNonHomeBackground,
                         imageUri = nonHomeBackgroundUri
                     )
                 }

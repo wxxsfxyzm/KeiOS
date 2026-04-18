@@ -117,6 +117,7 @@ import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
@@ -310,6 +311,9 @@ fun BaGuideCatalogPage(
     }
 
     LaunchedEffect(refreshSignal) {
+        if (refreshSignal == 0 && transitionAnimationsEnabled) {
+            delay(90)
+        }
         val manualRefresh = refreshSignal > 0
         val now = System.currentTimeMillis()
         loading = true

@@ -958,6 +958,9 @@ fun BaStudentGuidePage(
     }
 
     LaunchedEffect(sourceUrl, refreshSignal) {
+        if (refreshSignal == 0 && transitionAnimationsEnabled) {
+            delay(90)
+        }
         val requestUrl = sourceUrl
         if (requestUrl.isBlank()) return@LaunchedEffect
         val manualRefresh = manualRefreshRequested
@@ -1155,7 +1158,6 @@ fun BaStudentGuidePage(
             val isVoiceTab = pageBottomTab == GuideBottomTab.Voice
             val shouldRenderHeavyContent =
                 pageIndex == pagerState.currentPage ||
-                    pageIndex == pagerState.targetPage ||
                     pageIndex == pagerState.settledPage
             val pageListState = rememberSaveable(
                 sourceUrl,
