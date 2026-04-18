@@ -396,17 +396,39 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                         tint = iconTint,
                         modifier = clickableModifier
                     )
-                    val refreshModifier = if (state.loading || isItemRefreshLoading) {
-                        Modifier
+                    if (isItemRefreshLoading) {
+                        val checkingContentDescription = stringResource(R.string.github_msg_checking)
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .semantics {
+                                    contentDescription = checkingContentDescription
+                                },
+                            contentAlignment = androidx.compose.ui.Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                progress = 0f,
+                                size = 16.dp,
+                                strokeWidth = 2.dp,
+                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                    foregroundColor = iconTint,
+                                    backgroundColor = iconTint.copy(alpha = 0.18f)
+                                )
+                            )
+                        }
                     } else {
-                        Modifier.clickable { onRefreshTrackedItem(item) }
+                        val refreshModifier = if (state.loading) {
+                            Modifier
+                        } else {
+                            Modifier.clickable { onRefreshTrackedItem(item) }
+                        }
+                        top.yukonga.miuix.kmp.basic.Icon(
+                            imageVector = MiuixIcons.Regular.Refresh,
+                            contentDescription = stringResource(R.string.common_refresh),
+                            tint = if (state.loading) iconTint.copy(alpha = 0.68f) else iconTint,
+                            modifier = refreshModifier
+                        )
                     }
-                    top.yukonga.miuix.kmp.basic.Icon(
-                        imageVector = MiuixIcons.Regular.Refresh,
-                        contentDescription = stringResource(R.string.common_refresh),
-                        tint = if (isItemRefreshLoading) iconTint.copy(alpha = 0.68f) else iconTint,
-                        modifier = refreshModifier
-                    )
                 }
             ) {
                 val state = checkStates[item.id] ?: VersionCheckUi()

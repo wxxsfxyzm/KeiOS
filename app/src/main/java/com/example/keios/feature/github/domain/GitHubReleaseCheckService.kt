@@ -1,16 +1,20 @@
 package com.example.keios.feature.github.domain
 
 import android.content.Context
+import com.example.keios.feature.github.data.remote.GitHubApiTokenReleaseStrategy
 import com.example.keios.feature.github.data.remote.GitHubAtomReleaseStrategy
 import com.example.keios.feature.github.data.remote.GitHubReleaseLookupStrategy
 import com.example.keios.feature.github.data.remote.GitHubReleaseStrategyRegistry
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
+import com.example.keios.feature.github.model.GitHubLookupConfig
+import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.feature.github.model.GitHubReleaseChannel
 import com.example.keios.feature.github.model.GitHubRepositoryReleaseSnapshot
 import com.example.keios.feature.github.model.GitHubCheckCacheEntry
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.feature.github.model.GitHubTrackedReleaseCheck
 import com.example.keios.feature.github.model.GitHubTrackedReleaseStatus
+import java.io.IOException
 
 object GitHubReleaseCheckService {
     fun evaluateTrackedApp(
@@ -34,7 +38,13 @@ object GitHubReleaseCheckService {
             )
         }
 
-        val snapshot = effectiveStrategy.loadSnapshot(item.owner, item.repo).getOrElse { error ->
+        val snapshot = loadSnapshotWithFallback(
+            owner = item.owner,
+            repo = item.repo,
+            strategy = effectiveStrategy,
+            lookupConfig = lookupConfig,
+            allowFallback = strategy == null
+        ).getOrElse { error ->
             return GitHubTrackedReleaseCheck(
                 strategyId = effectiveStrategy.id,
                 localVersion = localVersion,
@@ -148,6 +158,87 @@ object GitHubReleaseCheckService {
             status = status,
             message = status.defaultMessage
         )
+    }
+
+    private fun loadSnapshotWithFallback(
+        owner: String,
+        repo: String,
+        strategy: GitHubReleaseLookupStrategy,
+        lookupConfig: GitHubLookupConfig,
+        allowFallback: Boolean
+    ): Result<GitHubRepositoryReleaseSnapshot> {
+        val primaryResult = strategy.loadSnapshot(owner, repo)
+        if (primaryResult.isSuccess) return primaryResult
+
+        val primaryError = primaryResult.exceptionOrNull() ?: IllegalStateException("unknown")
+        val fallbackStrategy = if (allowFallback && primaryError.shouldTryStrategyFallback()) {
+            resolveFallbackStrategy(
+                primaryStrategyId = strategy.id,
+                lookupConfig = lookupConfig
+            )
+        } else {
+            null
+        } ?: return primaryResult
+
+        val fallbackResult = fallbackStrategy.loadSnapshot(owner, repo)
+        if (fallbackResult.isSuccess) return fallbackResult
+
+        val fallbackError = fallbackResult.exceptionOrNull()
+        val message = buildString {
+            append("主策略失败(")
+            append(strategy.id)
+            append("): ")
+            append(primaryError.message ?: "unknown")
+            append("；备用策略失败(")
+            append(fallbackStrategy.id)
+            append("): ")
+            append(fallbackError?.message ?: "unknown")
+        }
+        return Result.failure(
+            IllegalStateException(message, fallbackError ?: primaryError)
+        )
+    }
+
+    private fun resolveFallbackStrategy(
+        primaryStrategyId: String,
+        lookupConfig: GitHubLookupConfig
+    ): GitHubReleaseLookupStrategy? {
+        return when (primaryStrategyId) {
+            GitHubLookupStrategyOption.AtomFeed.storageId -> {
+                GitHubApiTokenReleaseStrategy(apiToken = lookupConfig.apiToken.trim())
+            }
+
+            GitHubLookupStrategyOption.GitHubApiToken.storageId -> {
+                GitHubAtomReleaseStrategy
+            }
+
+            else -> null
+        }
+    }
+
+    private fun Throwable.shouldTryStrategyFallback(): Boolean {
+        var current: Throwable? = this
+        var depth = 0
+        while (current != null && depth < 8) {
+            val message = current.message.orEmpty().lowercase()
+            if (
+                message.contains("http 5") ||
+                message.contains("http 429") ||
+                message.contains("timeout") ||
+                message.contains("timed out") ||
+                message.contains("connection reset") ||
+                message.contains("connection closed") ||
+                message.contains("failed to connect") ||
+                message.contains("unable to resolve host") ||
+                message.contains("network")
+            ) {
+                return true
+            }
+            if (current is IOException) return true
+            current = current.cause
+            depth += 1
+        }
+        return false
     }
 
     fun GitHubTrackedReleaseCheck.toCacheEntry(): GitHubCheckCacheEntry {
