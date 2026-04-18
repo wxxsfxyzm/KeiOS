@@ -157,6 +157,7 @@ internal fun GitHubMainContent(
     onOpenStrategySheet: () -> Unit,
     onOpenCheckLogicSheet: () -> Unit,
     onRefreshAllTracked: () -> Unit,
+    onRefreshTrackedItem: (GitHubTrackedApp) -> Unit,
     onOpenTrackSheetForAdd: () -> Unit,
     onOpenTrackSheetForEdit: (GitHubTrackedApp) -> Unit,
     onClearApkAssetUiState: (String) -> Unit,
@@ -243,6 +244,7 @@ internal fun GitHubMainContent(
                     apkAssetErrors = apkAssetErrors,
                     apkAssetExpanded = apkAssetExpanded,
                     trackedCardExpanded = trackedCardExpanded,
+                    onRefreshTrackedItem = onRefreshTrackedItem,
                     onOpenTrackSheetForEdit = onOpenTrackSheetForEdit,
                     onClearApkAssetUiState = onClearApkAssetUiState,
                     onCollapseApkAssetPanel = onCollapseApkAssetPanel,
@@ -291,6 +293,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
     apkAssetErrors: SnapshotStateMap<String, String>,
     apkAssetExpanded: SnapshotStateMap<String, Boolean>,
     trackedCardExpanded: SnapshotStateMap<String, Boolean>,
+    onRefreshTrackedItem: (GitHubTrackedApp) -> Unit,
     onOpenTrackSheetForEdit: (GitHubTrackedApp) -> Unit,
     onClearApkAssetUiState: (String) -> Unit,
     onCollapseApkAssetPanel: (GitHubTrackedApp, VersionCheckUi) -> Unit,
@@ -388,6 +391,21 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                         contentDescription = state.message.ifBlank { stringResource(R.string.github_cd_status) },
                         tint = iconTint,
                         modifier = clickableModifier
+                    )
+                    val refreshModifier = if (state.loading) {
+                        Modifier
+                    } else {
+                        Modifier.clickable { onRefreshTrackedItem(item) }
+                    }
+                    top.yukonga.miuix.kmp.basic.Icon(
+                        imageVector = MiuixIcons.Regular.Refresh,
+                        contentDescription = stringResource(R.string.common_refresh),
+                        tint = if (state.loading) {
+                            GitHubStatusPalette.Active
+                        } else {
+                            MiuixTheme.colorScheme.onBackgroundVariant
+                        },
+                        modifier = refreshModifier
                     )
                 }
             ) {

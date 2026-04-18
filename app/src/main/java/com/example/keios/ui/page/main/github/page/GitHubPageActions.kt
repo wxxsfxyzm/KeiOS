@@ -84,6 +84,33 @@ internal class GitHubPageActions(
             }
         }
 
+    fun refreshTrackedItem(
+        item: GitHubTrackedApp,
+        showToastOnError: Boolean = true
+    ) {
+        if (env.state.trackedItems.none { it.id == item.id }) return
+        if (env.state.checkStates[item.id]?.loading == true) return
+        val wasAssetExpanded = env.state.apkAssetExpanded[item.id] == true
+        val includeAllAssets = env.state.apkAssetIncludeAll[item.id] == true
+        val previousState = env.state.checkStates[item.id] ?: VersionCheckUi()
+        assetActions.clearApkAssetCache(item, previousState)
+        refreshActions.refreshItem(item = item, showToastOnError = showToastOnError) { updatedState ->
+            if (wasAssetExpanded && canLoadApkAssets(item, updatedState)) {
+                assetActions.clearApkAssetCache(item, updatedState)
+                assetActions.loadApkAssets(
+                    item = item,
+                    itemState = updatedState,
+                    toggleOnlyWhenCached = false,
+                    includeAllAssets = includeAllAssets
+                )
+            } else if (wasAssetExpanded) {
+                assetActions.clearApkAssetUiState(item.id)
+            } else {
+                assetActions.clearApkAssetRuntimeState(item.id)
+            }
+        }
+    }
+
     fun runStrategyBenchmark() = configActions.runStrategyBenchmark()
 
     fun runCredentialCheck() = configActions.runCredentialCheck()

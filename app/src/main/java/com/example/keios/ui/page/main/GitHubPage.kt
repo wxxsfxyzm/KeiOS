@@ -356,6 +356,7 @@ fun GitHubPage(
         onOpenStrategySheet = actions::openStrategySheet,
         onOpenCheckLogicSheet = actions::openCheckLogicSheet,
         onRefreshAllTracked = { actions.refreshAllTracked(showToast = true) },
+        onRefreshTrackedItem = { actions.refreshTrackedItem(it, showToastOnError = true) },
         onOpenTrackSheetForAdd = actions::openTrackSheetForAdd,
         onOpenTrackSheetForEdit = actions::openTrackSheetForEdit,
         onClearApkAssetUiState = actions::clearApkAssetUiState,

@@ -414,15 +414,6 @@ internal fun GitHubTrackEditSheet(
         ) {
             SheetSectionTitle(stringResource(R.string.github_track_sheet_section_repo_app))
             SheetSectionCard {
-                SheetInputTitle(stringResource(R.string.github_track_sheet_input_app_filter_title))
-                GlassSearchField(
-                    value = appSearch,
-                    onValueChange = onAppSearchChange,
-                    label = stringResource(R.string.github_track_sheet_input_app_filter),
-                    backdrop = backdrop,
-                    variant = GlassVariant.SheetInput,
-                    singleLine = true
-                )
                 SheetInputTitle(stringResource(R.string.github_track_sheet_input_package_title))
                 GlassSearchField(
                     value = packageNameInput,
@@ -466,27 +457,15 @@ internal fun GitHubTrackEditSheet(
                 selectedApp?.let { app ->
                     GitHubSelectedAppCard(selectedApp = app)
                 }
-            }
-            SheetSectionTitle(stringResource(R.string.github_track_sheet_section_check_option))
-            SheetSectionCard {
-                SheetControlRow(
-                    label = stringResource(R.string.github_track_sheet_label_prefer_prerelease),
-                    summary = stringResource(R.string.github_track_sheet_summary_prefer_prerelease)
-                ) {
-                    Switch(
-                        checked = preferPreReleaseInput,
-                        onCheckedChange = onPreferPreReleaseInputChange
-                    )
-                }
-                SheetControlRow(
-                    label = stringResource(R.string.github_track_sheet_label_always_show_latest_release_download),
-                    summary = stringResource(R.string.github_track_sheet_summary_always_show_latest_release_download)
-                ) {
-                    Switch(
-                        checked = alwaysShowLatestReleaseDownloadButtonInput,
-                        onCheckedChange = onAlwaysShowLatestReleaseDownloadButtonInputChange
-                    )
-                }
+                SheetInputTitle(stringResource(R.string.github_track_sheet_input_app_filter_title))
+                GlassSearchField(
+                    value = appSearch,
+                    onValueChange = onAppSearchChange,
+                    label = stringResource(R.string.github_track_sheet_input_app_filter),
+                    backdrop = backdrop,
+                    variant = GlassVariant.SheetInput,
+                    singleLine = true
+                )
             }
             if (pickerExpanded) {
                 val filteredApps = remember(appList, appSearch) {
@@ -526,6 +505,27 @@ internal fun GitHubTrackEditSheet(
                             }
                         }
                     }
+                }
+            }
+            SheetSectionTitle(stringResource(R.string.github_track_sheet_section_check_option))
+            SheetSectionCard {
+                SheetControlRow(
+                    label = stringResource(R.string.github_track_sheet_label_prefer_prerelease),
+                    summary = stringResource(R.string.github_track_sheet_summary_prefer_prerelease)
+                ) {
+                    Switch(
+                        checked = preferPreReleaseInput,
+                        onCheckedChange = onPreferPreReleaseInputChange
+                    )
+                }
+                SheetControlRow(
+                    label = stringResource(R.string.github_track_sheet_label_always_show_latest_release_download),
+                    summary = stringResource(R.string.github_track_sheet_summary_always_show_latest_release_download)
+                ) {
+                    Switch(
+                        checked = alwaysShowLatestReleaseDownloadButtonInput,
+                        onCheckedChange = onAlwaysShowLatestReleaseDownloadButtonInputChange
+                    )
                 }
             }
             if (editingTrackedItem != null) {
