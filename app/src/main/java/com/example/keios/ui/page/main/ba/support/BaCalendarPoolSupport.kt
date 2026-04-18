@@ -36,10 +36,10 @@ import java.util.concurrent.TimeoutException
 internal const val BA_CALENDAR_ENDPOINT = "/v1/activity/page-list"
 internal const val BA_NETWORK_RETRY_ATTEMPTS = 1
 internal const val BA_SYNC_TIMEOUT_MS = 20_000L
-internal const val BA_CALENDAR_MAX_ITEMS = 6
+internal const val BA_CALENDAR_MAX_ITEMS = 10
 internal const val BA_CALENDAR_CACHE_SCHEMA_VERSION = 3
 internal const val BA_POOL_ENDPOINT = "/v1/cardPool/query-list"
-internal const val BA_POOL_MAX_ITEMS = 6
+internal const val BA_POOL_MAX_ITEMS = 10
 internal const val BA_POOL_CACHE_SCHEMA_VERSION = 5
 
 internal val BA_POOL_TAGS = listOf(
@@ -209,6 +209,31 @@ internal fun extractGameKeeImageLink(item: JSONObject): String {
     return findImageLinkRecursively(item)
 }
 
+private fun decodeSampledLocalBitmap(
+    localPath: String,
+    maxDecodeDimension: Int = 1280
+): Bitmap? {
+    val safeMax = maxDecodeDimension.coerceAtLeast(512)
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(localPath, bounds)
+    val srcWidth = bounds.outWidth
+    val srcHeight = bounds.outHeight
+    if (srcWidth <= 0 || srcHeight <= 0) {
+        return BitmapFactory.decodeFile(localPath)
+    }
+    var sample = 1
+    while ((srcWidth / sample) > safeMax || (srcHeight / sample) > safeMax) {
+        sample *= 2
+    }
+    return BitmapFactory.decodeFile(
+        localPath,
+        BitmapFactory.Options().apply {
+            inSampleSize = sample.coerceAtLeast(1)
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+    )
+}
+
 @Composable
 internal fun GameKeeCoverImage(
     imageUrl: String,
@@ -224,9 +249,12 @@ internal fun GameKeeCoverImage(
             runCatching {
                 if (normalizedUrl.startsWith("file://")) {
                     val localPath = Uri.parse(normalizedUrl).path.orEmpty()
-                    if (localPath.isBlank()) null else BitmapFactory.decodeFile(localPath)
+                    if (localPath.isBlank()) null else decodeSampledLocalBitmap(localPath)
                 } else {
-                    GameKeeFetchHelper.fetchImage(normalizedUrl)
+                    GameKeeFetchHelper.fetchImage(
+                        imageUrl = normalizedUrl,
+                        maxDecodeDimension = 1280
+                    )
                 }
             }.getOrNull()
         }
@@ -382,8 +410,7 @@ internal fun normalizeBaCalendarEntries(entries: List<BaCalendarEntry>, nowMs: L
             )
         )
 
-    val maxItems = BA_CALENDAR_MAX_ITEMS.coerceAtLeast(activeOrUpcoming.size + fallbackMissingKinds.size)
-    return sorted.take(maxItems)
+    return sorted.take(BA_CALENDAR_MAX_ITEMS.coerceAtLeast(1))
 }
 
 internal fun encodeBaCalendarEntries(entries: List<BaCalendarEntry>): String {
@@ -500,8 +527,7 @@ internal fun normalizeBaPoolEntries(entries: List<BaPoolEntry>, nowMs: Long = Sy
         )
     )
 
-    val maxItems = BA_POOL_MAX_ITEMS.coerceAtLeast(activeOrUpcoming.size + fallbackMissingTags.size)
-    return sorted.take(maxItems)
+    return sorted.take(BA_POOL_MAX_ITEMS.coerceAtLeast(1))
 }
 
 internal fun fetchBaPoolEntriesFromAll(

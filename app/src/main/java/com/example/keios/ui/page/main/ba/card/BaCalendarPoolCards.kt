@@ -95,63 +95,65 @@ internal fun BaCalendarCard(
 
             else -> {
                 visibleCalendarEntries.forEach { activity ->
-                    val isEnded = activity.endAtMs <= uiNowMs
-                    val remainTarget = if (activity.isRunning || isEnded) activity.endAtMs else activity.beginAtMs
-                    val remainText = if (isEnded) "已结束" else formatBaRemainingTime(remainTarget, uiNowMs)
-                    val statusText = when {
-                        activity.isRunning -> "进行中"
-                        isEnded -> "已结束"
-                        else -> "即将开始"
-                    }
-                    val statusColor = when {
-                        activity.isRunning -> accentGreen
-                        isEnded -> MiuixTheme.colorScheme.onBackgroundVariant
-                        else -> accentBlue
-                    }
-
-                    BaGlassPanel(
-                        backdrop = backdrop,
-                        modifier = Modifier.fillMaxWidth(),
-                        accentColor = statusColor,
-                        onClick = { onOpenCalendarLink(activity.linkUrl) },
-                        onLongClick = { onOpenCalendarLink(activity.linkUrl) },
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(text = statusText, color = statusColor, fontWeight = FontWeight.Medium)
-                            Text(text = remainText, color = countdownBlue, fontWeight = FontWeight.Bold, maxLines = 1)
+                    key(activity.id, activity.beginAtMs, activity.endAtMs) {
+                        val isEnded = activity.endAtMs <= uiNowMs
+                        val remainTarget = if (activity.isRunning || isEnded) activity.endAtMs else activity.beginAtMs
+                        val remainText = if (isEnded) "已结束" else formatBaRemainingTime(remainTarget, uiNowMs)
+                        val statusText = when {
+                            activity.isRunning -> "进行中"
+                            isEnded -> "已结束"
+                            else -> "即将开始"
                         }
-                        Text(
-                            text = "${activity.kindName} · ${activity.title}",
-                            color = MiuixTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (showCalendarPoolImages) {
-                            GameKeeCoverImage(
-                                imageUrl = activity.imageUrl,
+                        val statusColor = when {
+                            activity.isRunning -> accentGreen
+                            isEnded -> MiuixTheme.colorScheme.onBackgroundVariant
+                            else -> accentBlue
+                        }
+
+                        BaGlassPanel(
+                            backdrop = backdrop,
+                            modifier = Modifier.fillMaxWidth(),
+                            accentColor = statusColor,
+                            onClick = { onOpenCalendarLink(activity.linkUrl) },
+                            onLongClick = { onOpenCalendarLink(activity.linkUrl) },
+                        ) {
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(text = statusText, color = statusColor, fontWeight = FontWeight.Medium)
+                                Text(text = remainText, color = countdownBlue, fontWeight = FontWeight.Bold, maxLines = 1)
+                            }
+                            Text(
+                                text = "${activity.kindName} · ${activity.title}",
+                                color = MiuixTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (showCalendarPoolImages) {
+                                GameKeeCoverImage(
+                                    imageUrl = activity.imageUrl,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                            Text(
+                                text = "${formatBaDateTimeNoYearInTimeZone(activity.beginAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(activity.endAtMs, serverTimeZone)}",
+                                color = countdownBlue.copy(alpha = 0.92f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            LinearProgressIndicator(
+                                progress = activityProgress(activity, uiNowMs),
+                                modifier = Modifier.fillMaxWidth(),
+                                height = 5.dp,
+                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                    foregroundColor = if (activity.isRunning) accentGreen else accentBlue,
+                                    backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f),
+                                ),
                             )
                         }
-                        Text(
-                            text = "${formatBaDateTimeNoYearInTimeZone(activity.beginAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(activity.endAtMs, serverTimeZone)}",
-                            color = countdownBlue.copy(alpha = 0.92f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        LinearProgressIndicator(
-                            progress = activityProgress(activity, uiNowMs),
-                            modifier = Modifier.fillMaxWidth(),
-                            height = 5.dp,
-                            colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                foregroundColor = if (activity.isRunning) accentGreen else accentBlue,
-                                backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f),
-                            ),
-                        )
                     }
                 }
             }
