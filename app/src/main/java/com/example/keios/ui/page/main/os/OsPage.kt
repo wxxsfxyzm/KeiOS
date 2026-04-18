@@ -146,7 +146,6 @@ fun OsPage(
     val cachedColor = Color(0xFFF59E0B)
     val refreshingColor = Color(0xFF3B82F6)
     val syncedColor = Color(0xFF22C55E)
-
     val context = LocalContext.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
@@ -296,7 +295,6 @@ fun OsPage(
             ).show()
         }
     }
-
     var sectionStates by remember {
         mutableStateOf(
             mapOf(
@@ -309,27 +307,14 @@ fun OsPage(
             )
         )
     }
-
-    fun visibleSectionKinds(): Set<SectionKind> = buildSet {
-        if (visibleCards.contains(OsSectionCard.SYSTEM)) add(SectionKind.SYSTEM)
-        if (visibleCards.contains(OsSectionCard.SECURE)) add(SectionKind.SECURE)
-        if (visibleCards.contains(OsSectionCard.GLOBAL)) add(SectionKind.GLOBAL)
-        if (visibleCards.contains(OsSectionCard.ANDROID)) add(SectionKind.ANDROID)
-        if (visibleCards.contains(OsSectionCard.JAVA)) add(SectionKind.JAVA)
-        if (visibleCards.contains(OsSectionCard.LINUX)) add(SectionKind.LINUX)
-    }
-
-    fun isCardVisible(card: OsSectionCard): Boolean = visibleCards.contains(card)
-
     fun updateSection(section: SectionKind, transform: (SectionState) -> SectionState) {
         sectionStates = sectionStates.toMutableMap().also { map ->
             val old = map[section] ?: SectionState()
             map[section] = transform(old)
         }
     }
-
     suspend fun ensureLoad(section: SectionKind, forceRefresh: Boolean = false) {
-        if (!visibleSectionKinds().contains(section)) return
+        if (!visibleSectionKinds(visibleCards).contains(section)) return
         val current = sectionStates[section] ?: SectionState()
         if (current.loading) return
         if (!forceRefresh) {
@@ -343,7 +328,7 @@ fun OsPage(
         updateSection(section) { it.copy(rows = fresh, loading = false, loadedFresh = true) }
         cachePersisted = withContext(Dispatchers.IO) {
             OsInfoCache.write(section, fresh)
-            OsInfoCache.readSnapshot(visibleSectionKinds()).hasPersistedCache
+            OsInfoCache.readSnapshot(visibleSectionKinds(visibleCards)).hasPersistedCache
         }
     }
 
@@ -406,7 +391,7 @@ fun OsPage(
             }
         }
         cachePersisted = withContext(Dispatchers.IO) {
-            OsInfoCache.readSnapshot(visibleSectionKinds()).hasPersistedCache
+            OsInfoCache.readSnapshot(visibleSectionKinds(visibleCards)).hasPersistedCache
         }
     }
 
@@ -414,7 +399,7 @@ fun OsPage(
         refreshing = true
         refreshProgress = 0f
         try {
-            val targets = SectionKind.entries.filter { visibleSectionKinds().contains(it) }
+            val targets = SectionKind.entries.filter { visibleSectionKinds(visibleCards).contains(it) }
             val sectionCount = targets.size.coerceAtLeast(1)
             targets.forEachIndexed { index, section ->
                 ensureLoad(section, forceRefresh = true)
@@ -435,7 +420,7 @@ fun OsPage(
     }
 
     LaunchedEffect(Unit) {
-        val visibleSections = visibleSectionKinds()
+        val visibleSections = visibleSectionKinds(visibleCards)
         val snapshot = withContext(Dispatchers.IO) {
             OsInfoCache.readSnapshot(visibleSections)
         }
@@ -502,27 +487,27 @@ fun OsPage(
 
     LaunchedEffect(systemTableExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && systemTableExpanded && isCardVisible(OsSectionCard.SYSTEM)) ensureLoad(SectionKind.SYSTEM)
+        if (isPageActive && systemTableExpanded && isCardVisible(visibleCards, OsSectionCard.SYSTEM)) ensureLoad(SectionKind.SYSTEM)
     }
     LaunchedEffect(secureTableExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && secureTableExpanded && isCardVisible(OsSectionCard.SECURE)) ensureLoad(SectionKind.SECURE)
+        if (isPageActive && secureTableExpanded && isCardVisible(visibleCards, OsSectionCard.SECURE)) ensureLoad(SectionKind.SECURE)
     }
     LaunchedEffect(globalTableExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && globalTableExpanded && isCardVisible(OsSectionCard.GLOBAL)) ensureLoad(SectionKind.GLOBAL)
+        if (isPageActive && globalTableExpanded && isCardVisible(visibleCards, OsSectionCard.GLOBAL)) ensureLoad(SectionKind.GLOBAL)
     }
     LaunchedEffect(androidPropsExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && androidPropsExpanded && isCardVisible(OsSectionCard.ANDROID)) ensureLoad(SectionKind.ANDROID)
+        if (isPageActive && androidPropsExpanded && isCardVisible(visibleCards, OsSectionCard.ANDROID)) ensureLoad(SectionKind.ANDROID)
     }
     LaunchedEffect(javaPropsExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && javaPropsExpanded && isCardVisible(OsSectionCard.JAVA)) ensureLoad(SectionKind.JAVA)
+        if (isPageActive && javaPropsExpanded && isCardVisible(visibleCards, OsSectionCard.JAVA)) ensureLoad(SectionKind.JAVA)
     }
     LaunchedEffect(linuxEnvExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && linuxEnvExpanded && isCardVisible(OsSectionCard.LINUX)) ensureLoad(SectionKind.LINUX)
+        if (isPageActive && linuxEnvExpanded && isCardVisible(visibleCards, OsSectionCard.LINUX)) ensureLoad(SectionKind.LINUX)
     }
     LaunchedEffect(
         showGoogleSystemServiceSuggestionSheet,
@@ -647,278 +632,13 @@ fun OsPage(
             displayedLinuxRows.size
     }
 
-    fun sectionSubtitle(section: SectionKind, size: Int): String {
-        val state = sectionStates[section] ?: SectionState()
-        return when {
-            state.loading -> context.getString(R.string.common_loading)
-            !state.loadedFresh && state.rows.isNotEmpty() -> {
-                context.getString(R.string.common_item_count_cached, size)
-            }
-            !state.loadedFresh && state.rows.isEmpty() -> context.getString(R.string.common_not_loaded)
-            else -> context.getString(R.string.common_item_count, size)
-        }
-    }
-
-    fun buildGoogleSystemServiceRows(config: OsGoogleSystemServiceConfig): List<InfoRow> {
-        val normalized = config.normalized(googleSystemServiceDefaults)
-        val emptyDataValue = context.getString(R.string.os_google_system_service_value_data_empty)
-        val actionValue = normalized.intentAction.ifBlank {
-            context.getString(R.string.os_google_system_service_value_action_auto_default)
-        }
-        val flagsValue = normalized.intentFlags.ifBlank {
-            context.getString(R.string.os_google_system_service_value_flags_auto_default)
-        }
-        return listOf(
-            InfoRow(
-                key = context.getString(R.string.os_google_system_service_label_app_name),
-                value = normalized.appName
-            ),
-            InfoRow(
-                key = context.getString(R.string.os_google_system_service_label_package_name),
-                value = normalized.packageName
-            ),
-            InfoRow(
-                key = context.getString(R.string.os_google_system_service_label_class_name),
-                value = normalized.className
-            ),
-            InfoRow(
-                key = context.getString(R.string.os_google_system_service_label_intent_action),
-                value = actionValue
-            ),
-            InfoRow(
-                key = context.getString(R.string.os_google_system_service_label_intent_category),
-                value = normalized.intentCategory.ifBlank { emptyDataValue }
-            ),
-            InfoRow(
-                key = context.getString(R.string.os_google_system_service_label_intent_flags),
-                value = flagsValue
-            ),
-            InfoRow(
-                key = context.getString(R.string.os_google_system_service_label_intent_data),
-                value = normalized.intentUriData.ifBlank { emptyDataValue }
-            ),
-            InfoRow(
-                key = context.getString(R.string.os_google_system_service_label_intent_mime_type),
-                value = normalized.intentMimeType.ifBlank { emptyDataValue }
-            )
-        )
-    }
-
-    fun openGoogleSystemServiceActivity() {
-        val config = googleSystemServiceConfig.normalized(googleSystemServiceDefaults)
-        val packageName = config.packageName.trim()
-        val className = config.className.trim()
-        val action = config.intentAction.trim()
-        if (packageName.isBlank()) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.os_google_system_service_toast_invalid_target),
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-        runCatching {
-            val intent = if (className.isBlank()) {
-                context.packageManager.getLaunchIntentForPackage(packageName)?.apply {
-                    if (action.isNotBlank()) {
-                        this.action = action
-                    }
-                } ?: if (action.isBlank()) {
-                    Intent(Intent.ACTION_MAIN).apply {
-                        addCategory(Intent.CATEGORY_LAUNCHER)
-                        setPackage(packageName)
-                    }
-                } else {
-                    Intent(action).apply { setPackage(packageName) }
-                }
-            } else {
-                Intent(action.ifBlank { Intent.ACTION_VIEW }).apply {
-                    setClassName(packageName, className)
-                }
-            }
-
-            intent.apply {
-                val dataText = config.intentUriData.trim()
-                val mimeType = config.intentMimeType.trim()
-                if (dataText.isNotBlank() && mimeType.isNotBlank()) {
-                    setDataAndType(Uri.parse(dataText), mimeType)
-                } else if (dataText.isNotBlank()) {
-                    data = Uri.parse(dataText)
-                } else if (mimeType.isNotBlank()) {
-                    type = mimeType
-                }
-                parseIntentCategories(config.intentCategory).forEach { category ->
-                    addCategory(category)
-                }
-                val parsedFlags = parseIntentFlags(config.intentFlags)
-                addFlags(parsedFlags.ifBlankUse(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
-            context.startActivity(intent)
-        }.onFailure { error ->
-            Toast.makeText(
-                context,
-                context.getString(
-                    R.string.os_google_system_service_toast_open_failed,
-                    error.javaClass.simpleName
-                ),
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    fun openGoogleSystemServiceSuggestionSheet(target: ShortcutSuggestionField) {
-        googleSystemServiceSuggestionTarget = target
-        when (target) {
-            ShortcutSuggestionField.PackageName -> googleSystemServicePackageSuggestionQuery = ""
-            ShortcutSuggestionField.ClassName -> googleSystemServiceClassSuggestionQuery = ""
-            else -> Unit
-        }
-        showGoogleSystemServiceSuggestionSheet = true
-    }
-
-    fun currentGoogleSystemServiceSuggestionFieldValue(target: ShortcutSuggestionField): String {
-        return when (target) {
-            ShortcutSuggestionField.PackageName -> googleSystemServiceDraft.packageName
-            ShortcutSuggestionField.ClassName -> googleSystemServiceDraft.className
-            ShortcutSuggestionField.IntentAction -> googleSystemServiceDraft.intentAction
-            ShortcutSuggestionField.IntentCategory -> googleSystemServiceDraft.intentCategory
-            ShortcutSuggestionField.IntentFlags -> googleSystemServiceDraft.intentFlags
-            ShortcutSuggestionField.IntentUriData -> googleSystemServiceDraft.intentUriData
-            ShortcutSuggestionField.IntentMimeType -> googleSystemServiceDraft.intentMimeType
-        }
-    }
-
-    fun applyShortcutExplicitDefaults(
-        draft: OsGoogleSystemServiceConfig,
-        className: String
-    ): OsGoogleSystemServiceConfig {
-        return draft.copy(
-            className = className.trim(),
-            intentAction = Intent.ACTION_VIEW,
-            intentCategory = "",
-            intentFlags = draft.intentFlags.ifBlank { googleSystemServiceDefaultIntentFlags }
-        )
-    }
-
-    fun applyShortcutImplicitDefaults(
-        draft: OsGoogleSystemServiceConfig
-    ): OsGoogleSystemServiceConfig {
-        return draft.copy(
-            className = "",
-            intentAction = Intent.ACTION_MAIN,
-            intentCategory = Intent.CATEGORY_LAUNCHER,
-            intentFlags = draft.intentFlags.ifBlank { googleSystemServiceDefaultIntentFlags }
-        )
-    }
-
-    fun applyGoogleSystemServiceSuggestion(item: ShortcutSuggestionItem) {
-        when (googleSystemServiceSuggestionTarget) {
-            ShortcutSuggestionField.PackageName -> {
-                val nextPackageName = item.value.trim()
-                val nextAppName = item.relatedAppName.trim()
-                googleSystemServiceDraft = googleSystemServiceDraft.copy(
-                    packageName = nextPackageName,
-                    appName = if (nextAppName.isNotBlank()) nextAppName else googleSystemServiceDraft.appName
-                )
-            }
-
-            ShortcutSuggestionField.ClassName -> {
-                val nextClassName = item.value.trim()
-                googleSystemServiceDraft = if (nextClassName.isBlank()) {
-                    applyShortcutImplicitDefaults(googleSystemServiceDraft)
-                } else {
-                    applyShortcutExplicitDefaults(
-                        draft = googleSystemServiceDraft,
-                        className = nextClassName
-                    )
-                }
-            }
-
-            ShortcutSuggestionField.IntentAction -> {
-                googleSystemServiceDraft = googleSystemServiceDraft.copy(intentAction = item.value)
-            }
-
-            ShortcutSuggestionField.IntentCategory -> {
-                val next = mergeIntentTokenText(
-                    current = googleSystemServiceDraft.intentCategory,
-                    incoming = item.value,
-                    append = item.append
-                )
-                googleSystemServiceDraft = googleSystemServiceDraft.copy(intentCategory = next)
-            }
-
-            ShortcutSuggestionField.IntentFlags -> {
-                val next = mergeIntentTokenText(
-                    current = googleSystemServiceDraft.intentFlags,
-                    incoming = item.value,
-                    append = item.append
-                )
-                googleSystemServiceDraft = googleSystemServiceDraft.copy(intentFlags = next)
-            }
-
-            ShortcutSuggestionField.IntentUriData -> {
-                googleSystemServiceDraft = googleSystemServiceDraft.copy(intentUriData = item.value)
-            }
-
-            ShortcutSuggestionField.IntentMimeType -> {
-                googleSystemServiceDraft = googleSystemServiceDraft.copy(intentMimeType = item.value)
-            }
-        }
-        showGoogleSystemServiceSuggestionSheet = false
-    }
-
-    fun sectionKindByCard(card: OsSectionCard): SectionKind? = when (card) {
-        OsSectionCard.TOP_INFO -> null
-        OsSectionCard.GOOGLE_SYSTEM_SERVICE -> null
-        OsSectionCard.SYSTEM -> SectionKind.SYSTEM
-        OsSectionCard.SECURE -> SectionKind.SECURE
-        OsSectionCard.GLOBAL -> SectionKind.GLOBAL
-        OsSectionCard.ANDROID -> SectionKind.ANDROID
-        OsSectionCard.JAVA -> SectionKind.JAVA
-        OsSectionCard.LINUX -> SectionKind.LINUX
-    }
-
-    fun currentRowsForCard(card: OsSectionCard): List<InfoRow> {
-        return when (card) {
-            OsSectionCard.TOP_INFO -> {
-                val system = sectionStates[SectionKind.SYSTEM]?.rows ?: emptyList()
-                val secure = sectionStates[SectionKind.SECURE]?.rows ?: emptyList()
-                val global = sectionStates[SectionKind.GLOBAL]?.rows ?: emptyList()
-                val android = sectionStates[SectionKind.ANDROID]?.rows ?: emptyList()
-                val java = sectionStates[SectionKind.JAVA]?.rows ?: emptyList()
-                val linux = sectionStates[SectionKind.LINUX]?.rows ?: emptyList()
-                buildTopInfoRows(system, secure, global, android, java, linux)
-            }
-
-            OsSectionCard.GOOGLE_SYSTEM_SERVICE -> {
-                buildGoogleSystemServiceRows(googleSystemServiceConfig)
-            }
-
-            else -> {
-                val section = sectionKindByCard(card) ?: return emptyList()
-                removeTopInfoRows(section, sectionStates[section]?.rows ?: emptyList())
-            }
-        }
-    }
-
-    fun exportSlug(card: OsSectionCard): String = when (card) {
-        OsSectionCard.TOP_INFO -> "top-info"
-        OsSectionCard.GOOGLE_SYSTEM_SERVICE -> "google-system-service"
-        OsSectionCard.SYSTEM -> "system-table"
-        OsSectionCard.SECURE -> "secure-table"
-        OsSectionCard.GLOBAL -> "global-table"
-        OsSectionCard.ANDROID -> "android-properties"
-        OsSectionCard.JAVA -> "java-properties"
-        OsSectionCard.LINUX -> "linux-environment"
-    }
-
     suspend fun exportCard(card: OsSectionCard) {
         if (exportingCard != null) return
         exportingCard = card
         try {
             when (card) {
                 OsSectionCard.TOP_INFO -> {
-                    visibleSectionKinds().forEach { section ->
+                    visibleSectionKinds(visibleCards).forEach { section ->
                         ensureLoad(section, forceRefresh = false)
                     }
                 }
@@ -930,7 +650,13 @@ fun OsPage(
                 }
             }
 
-            val rows = currentRowsForCard(card)
+            val rows = currentRowsForCard(
+                card = card,
+                sectionStates = sectionStates,
+                googleSystemServiceConfig = googleSystemServiceConfig,
+                googleSystemServiceDefaults = googleSystemServiceDefaults,
+                context = context
+            )
             val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
             val payload = buildOsCardJson(
                 generatedAt = generatedAt,
@@ -949,26 +675,11 @@ fun OsPage(
         }
     }
 
-    @Composable
-    fun CardExportAction(card: OsSectionCard) {
-        val isExporting = exportingCard == card
-        val enabled = exportingCard == null || isExporting
-        val tint = if (enabled) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onBackgroundVariant
-        Icon(
-            imageVector = if (isExporting) MiuixIcons.Regular.Refresh else MiuixIcons.Regular.Download,
-            contentDescription = if (isExporting) "准备导出中" else "导出${card.title}",
-            tint = tint,
-            modifier = Modifier.clickable(enabled = enabled && !isExporting) {
-                scope.launch { exportCard(card) }
-            }
-        )
-    }
-
-    val visibleSectionKinds = visibleSectionKinds()
-    val visibleSectionStates = visibleSectionKinds.mapNotNull { sectionStates[it] }
+    val currentVisibleSectionKinds = visibleSectionKinds(visibleCards)
+    val visibleSectionStates = currentVisibleSectionKinds.mapNotNull { sectionStates[it] }
     val loadedFreshCount = visibleSectionStates.count { it.loadedFresh }
     val cachedSectionCount = visibleSectionStates.count { !it.loadedFresh && it.rows.isNotEmpty() }
-    val sectionCount = visibleSectionKinds.size
+    val sectionCount = currentVisibleSectionKinds.size
     val overviewState = when {
         refreshing -> SystemOverviewState.Refreshing
         loadedFreshCount == sectionCount && sectionCount > 0 -> SystemOverviewState.Completed
@@ -1091,7 +802,7 @@ fun OsPage(
             sheetBackdrop = sheetBackdrop,
             cardsHintText = "隐藏卡片后会清空对应缓存；重新显示时会立即重新获取并缓存。",
             onDismissRequest = { showCardManager = false },
-            isCardVisible = { card -> isCardVisible(card) },
+            isCardVisible = { card -> isCardVisible(visibleCards, card) },
             onCardVisibilityChange = { card, checked ->
                 scope.launch { applyCardVisibility(card, checked) }
             }
@@ -1104,984 +815,186 @@ fun OsPage(
             googleSystemServiceConfig = googleSystemServiceConfig,
             googleSystemServiceDefaults = googleSystemServiceDefaults,
             onDismissRequest = { showActivityVisibilityManager = false },
-            isCardVisible = { card -> isCardVisible(card) },
+            isCardVisible = { card -> isCardVisible(visibleCards, card) },
             onCardVisibilityChange = { card, checked ->
                 scope.launch { applyCardVisibility(card, checked) }
             }
         )
-        SnapshotWindowBottomSheet(
+        OsGoogleSystemServiceEditorSheet(
             show = showGoogleSystemServiceEditor,
-            title = stringResource(R.string.os_google_system_service_sheet_title),
+            sheetBackdrop = sheetBackdrop,
+            draft = googleSystemServiceDraft,
+            onDraftChange = { googleSystemServiceDraft = it },
+            onOpenSuggestionSheet = { target ->
+                googleSystemServiceSuggestionTarget = target
+                when (target) {
+                    ShortcutSuggestionField.PackageName -> googleSystemServicePackageSuggestionQuery = ""
+                    ShortcutSuggestionField.ClassName -> googleSystemServiceClassSuggestionQuery = ""
+                    else -> Unit
+                }
+                showGoogleSystemServiceSuggestionSheet = true
+            },
             onDismissRequest = { showGoogleSystemServiceEditor = false },
-            startAction = {
-                GlassIconButton(
-                    backdrop = sheetBackdrop,
-                    variant = GlassVariant.Bar,
-                    icon = MiuixIcons.Regular.Close,
-                    contentDescription = stringResource(R.string.common_close),
-                    onClick = { showGoogleSystemServiceEditor = false }
+            onSave = {
+                val normalized = googleSystemServiceDraft.normalized(googleSystemServiceDefaults)
+                googleSystemServiceConfig = normalized
+                scope.launch(Dispatchers.IO) {
+                    OsShortcutCardStore.saveGoogleSystemServiceConfig(
+                        normalized,
+                        defaults = googleSystemServiceDefaults
+                    )
+                }
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.os_google_system_service_toast_saved),
+                    Toast.LENGTH_SHORT
+                ).show()
+                showGoogleSystemServiceEditor = false
+            }
+        )
+        OsGoogleSystemServiceSuggestionSheet(
+            show = showGoogleSystemServiceSuggestionSheet,
+            target = googleSystemServiceSuggestionTarget,
+            draft = googleSystemServiceDraft,
+            sheetBackdrop = sheetBackdrop,
+            packageSuggestions = googleSystemServicePackageSuggestions,
+            packageSuggestionsLoading = googleSystemServicePackageSuggestionsLoading,
+            packageSuggestionQuery = googleSystemServicePackageSuggestionQuery,
+            onPackageSuggestionQueryChange = { googleSystemServicePackageSuggestionQuery = it },
+            classSuggestions = googleSystemServiceClassSuggestions,
+            classSuggestionsLoading = googleSystemServiceClassSuggestionsLoading,
+            classSuggestionQuery = googleSystemServiceClassSuggestionQuery,
+            onClassSuggestionQueryChange = { googleSystemServiceClassSuggestionQuery = it },
+            noMatchedResultsText = noMatchedResultsText,
+            onDismissRequest = { showGoogleSystemServiceSuggestionSheet = false },
+            onApplySuggestion = { suggestion ->
+                googleSystemServiceDraft = applyGoogleSystemServiceSuggestion(
+                    draft = googleSystemServiceDraft,
+                    target = googleSystemServiceSuggestionTarget,
+                    item = suggestion,
+                    defaultIntentFlags = googleSystemServiceDefaultIntentFlags
+                )
+                showGoogleSystemServiceSuggestionSheet = false
+            },
+            onApplyExplicitActionRecommendation = {
+                googleSystemServiceDraft = googleSystemServiceDraft.copy(
+                    intentAction = Intent.ACTION_VIEW
                 )
             },
-            endAction = {
-                GlassIconButton(
-                    backdrop = sheetBackdrop,
-                    variant = GlassVariant.Bar,
-                    icon = MiuixIcons.Regular.Ok,
-                    contentDescription = stringResource(R.string.common_save),
-                    onClick = {
-                        val normalized = googleSystemServiceDraft.normalized(googleSystemServiceDefaults)
-                        googleSystemServiceConfig = normalized
-                        scope.launch(Dispatchers.IO) {
-                            OsShortcutCardStore.saveGoogleSystemServiceConfig(
-                                normalized,
-                                defaults = googleSystemServiceDefaults
-                            )
-                        }
+            onApplyImplicitActionRecommendation = {
+                googleSystemServiceDraft = applyShortcutImplicitDefaults(
+                    draft = googleSystemServiceDraft,
+                    defaultIntentFlags = googleSystemServiceDefaultIntentFlags
+                )
+            },
+            onApplyExplicitCategoryRecommendation = {
+                googleSystemServiceDraft = googleSystemServiceDraft.copy(
+                    intentCategory = ""
+                )
+            },
+            onApplyImplicitCategoryRecommendation = {
+                googleSystemServiceDraft = applyShortcutImplicitDefaults(
+                    draft = googleSystemServiceDraft,
+                    defaultIntentFlags = googleSystemServiceDefaultIntentFlags
+                )
+            }
+        )
+        OsPageMainList(
+            context = context,
+            listState = listState,
+            innerPadding = innerPadding,
+            searchBarScrollConnection = searchBarScrollConnection,
+            scrollBehaviorConnection = scrollBehavior.nestedScrollConnection,
+            contentBackdrop = contentBackdrop,
+            isDark = isDark,
+            titleColor = titleColor,
+            cardPressFeedbackEnabled = cardPressFeedbackEnabled,
+            refreshing = refreshing,
+            overviewState = overviewState,
+            indicatorProgress = indicatorProgress,
+            statusColor = statusColor,
+            indicatorBg = indicatorBg,
+            statusLabel = statusLabel,
+            overviewCardColor = overviewCardColor,
+            overviewBorderColor = overviewBorderColor,
+            overviewMetrics = overviewMetrics,
+            noMatchedResultsText = noMatchedResultsText,
+            query = q,
+            displayedTopInfoRows = displayedTopInfoRows,
+            groupedTopInfoRows = groupedTopInfoRows,
+            topInfoExpanded = topInfoExpanded,
+            onTopInfoExpandedChange = { topInfoExpanded = it },
+            googleSystemServiceConfig = googleSystemServiceConfig,
+            googleSystemServiceDefaults = googleSystemServiceDefaults,
+            googleSystemServiceExpanded = googleSystemServiceExpanded,
+            onGoogleSystemServiceExpandedChange = { googleSystemServiceExpanded = it },
+            onOpenGoogleSystemServiceActivity = {
+                val normalized = googleSystemServiceConfig.normalized(googleSystemServiceDefaults)
+                if (normalized.packageName.isBlank()) {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.os_google_system_service_toast_invalid_target),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    runCatching {
+                        launchGoogleSystemServiceActivity(
+                            context = context,
+                            config = googleSystemServiceConfig,
+                            defaults = googleSystemServiceDefaults
+                        )
+                    }.onFailure { error ->
                         Toast.makeText(
                             context,
-                            context.getString(R.string.os_google_system_service_toast_saved),
+                            context.getString(
+                                R.string.os_google_system_service_toast_open_failed,
+                                error.javaClass.simpleName
+                            ),
                             Toast.LENGTH_SHORT
                         ).show()
-                        showGoogleSystemServiceEditor = false
-                    }
-                )
-            }
-        ) {
-            SheetContentColumn(verticalSpacing = 10.dp) {
-                SheetSectionTitle(stringResource(R.string.os_google_system_service_sheet_section_card))
-                SheetSectionCard(verticalSpacing = 10.dp) {
-                    SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_title)
-                    ) {
-                        GlassSearchField(
-                            value = googleSystemServiceDraft.title,
-                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(title = it) },
-                            label = stringResource(R.string.os_google_system_service_hint_title),
-                            backdrop = sheetBackdrop,
-                            variant = GlassVariant.SheetInput,
-                            textColor = MiuixTheme.colorScheme.primary,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_subtitle)
-                    ) {
-                        GlassSearchField(
-                            value = googleSystemServiceDraft.subtitle,
-                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(subtitle = it) },
-                            label = stringResource(R.string.os_google_system_service_hint_subtitle),
-                            backdrop = sheetBackdrop,
-                            variant = GlassVariant.SheetInput,
-                            textColor = MiuixTheme.colorScheme.primary,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
                     }
                 }
-
-                SheetSectionTitle(stringResource(R.string.os_google_system_service_sheet_section_target))
-                SheetSectionCard(verticalSpacing = 10.dp) {
-                    SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_app_name)
-                    ) {
-                        GlassSearchField(
-                            value = googleSystemServiceDraft.appName,
-                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(appName = it) },
-                            label = stringResource(R.string.os_google_system_service_hint_app_name),
-                            backdrop = sheetBackdrop,
-                            variant = GlassVariant.SheetInput,
-                            textColor = MiuixTheme.colorScheme.primary,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_package_name),
-                        trailing = {
-                            GlassIconButton(
-                                backdrop = sheetBackdrop,
-                                variant = GlassVariant.SheetAction,
-                                icon = MiuixIcons.Regular.AddCircle,
-                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
-                                width = 40.dp,
-                                height = 32.dp,
-                                onClick = {
-                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.PackageName)
-                                }
-                            )
-                        }
-                    ) {
-                        GlassSearchField(
-                            value = googleSystemServiceDraft.packageName,
-                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(packageName = it) },
-                            label = stringResource(R.string.os_google_system_service_hint_package_name),
-                            backdrop = sheetBackdrop,
-                            variant = GlassVariant.SheetInput,
-                            textColor = MiuixTheme.colorScheme.primary,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_class_name),
-                        trailing = {
-                            GlassIconButton(
-                                backdrop = sheetBackdrop,
-                                variant = GlassVariant.SheetAction,
-                                icon = MiuixIcons.Regular.AddCircle,
-                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
-                                width = 40.dp,
-                                height = 32.dp,
-                                onClick = {
-                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.ClassName)
-                                }
-                            )
-                        }
-                    ) {
-                        GlassSearchField(
-                            value = googleSystemServiceDraft.className,
-                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(className = it) },
-                            label = stringResource(R.string.os_google_system_service_hint_class_name),
-                            backdrop = sheetBackdrop,
-                            variant = GlassVariant.SheetInput,
-                            textColor = MiuixTheme.colorScheme.primary,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_intent_action),
-                        trailing = {
-                            GlassIconButton(
-                                backdrop = sheetBackdrop,
-                                variant = GlassVariant.SheetAction,
-                                icon = MiuixIcons.Regular.AddCircle,
-                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
-                                width = 40.dp,
-                                height = 32.dp,
-                                onClick = {
-                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentAction)
-                                }
-                            )
-                        }
-                    ) {
-                        GlassSearchField(
-                            value = googleSystemServiceDraft.intentAction,
-                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(intentAction = it) },
-                            label = stringResource(R.string.os_google_system_service_hint_intent_action),
-                            backdrop = sheetBackdrop,
-                            variant = GlassVariant.SheetInput,
-                            textColor = MiuixTheme.colorScheme.primary,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_intent_category),
-                        trailing = {
-                            GlassIconButton(
-                                backdrop = sheetBackdrop,
-                                variant = GlassVariant.SheetAction,
-                                icon = MiuixIcons.Regular.AddCircle,
-                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
-                                width = 40.dp,
-                                height = 32.dp,
-                                onClick = {
-                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentCategory)
-                                }
-                            )
-                        }
-                    ) {
-                        GlassSearchField(
-                            value = googleSystemServiceDraft.intentCategory,
-                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(intentCategory = it) },
-                            label = stringResource(R.string.os_google_system_service_hint_intent_category),
-                            backdrop = sheetBackdrop,
-                            variant = GlassVariant.SheetInput,
-                            textColor = MiuixTheme.colorScheme.primary,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_intent_flags),
-                        trailing = {
-                            GlassIconButton(
-                                backdrop = sheetBackdrop,
-                                variant = GlassVariant.SheetAction,
-                                icon = MiuixIcons.Regular.AddCircle,
-                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
-                                width = 40.dp,
-                                height = 32.dp,
-                                onClick = {
-                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentFlags)
-                                }
-                            )
-                        }
-                    ) {
-                        GlassSearchField(
-                            value = googleSystemServiceDraft.intentFlags,
-                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(intentFlags = it) },
-                            label = stringResource(R.string.os_google_system_service_hint_intent_flags),
-                            backdrop = sheetBackdrop,
-                            variant = GlassVariant.SheetInput,
-                            textColor = MiuixTheme.colorScheme.primary,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_intent_data),
-                        trailing = {
-                            GlassIconButton(
-                                backdrop = sheetBackdrop,
-                                variant = GlassVariant.SheetAction,
-                                icon = MiuixIcons.Regular.AddCircle,
-                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
-                                width = 40.dp,
-                                height = 32.dp,
-                                onClick = {
-                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentUriData)
-                                }
-                            )
-                        }
-                    ) {
-                        GlassSearchField(
-                            value = googleSystemServiceDraft.intentUriData,
-                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(intentUriData = it) },
-                            label = stringResource(R.string.os_google_system_service_hint_intent_data),
-                            backdrop = sheetBackdrop,
-                            variant = GlassVariant.SheetInput,
-                            textColor = MiuixTheme.colorScheme.primary,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_intent_mime_type),
-                        trailing = {
-                            GlassIconButton(
-                                backdrop = sheetBackdrop,
-                                variant = GlassVariant.SheetAction,
-                                icon = MiuixIcons.Regular.AddCircle,
-                                contentDescription = stringResource(R.string.os_google_system_service_chip_add),
-                                width = 40.dp,
-                                height = 32.dp,
-                                onClick = {
-                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentMimeType)
-                                }
-                            )
-                        }
-                    ) {
-                        GlassSearchField(
-                            value = googleSystemServiceDraft.intentMimeType,
-                            onValueChange = { googleSystemServiceDraft = googleSystemServiceDraft.copy(intentMimeType = it) },
-                            label = stringResource(R.string.os_google_system_service_hint_intent_mime_type),
-                            backdrop = sheetBackdrop,
-                            variant = GlassVariant.SheetInput,
-                            textColor = MiuixTheme.colorScheme.primary,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-                SheetDescriptionText(
-                    text = stringResource(R.string.os_google_system_service_sheet_desc)
-                )
-            }
-        }
-        SnapshotWindowBottomSheet(
-            show = showGoogleSystemServiceSuggestionSheet,
-            title = when (googleSystemServiceSuggestionTarget) {
-                ShortcutSuggestionField.PackageName ->
-                    stringResource(R.string.os_google_system_service_field_package_name)
-                ShortcutSuggestionField.ClassName ->
-                    stringResource(R.string.os_google_system_service_field_class_name)
-                ShortcutSuggestionField.IntentAction ->
-                    stringResource(R.string.os_google_system_service_field_intent_action)
-                ShortcutSuggestionField.IntentCategory ->
-                    stringResource(R.string.os_google_system_service_field_intent_category)
-                ShortcutSuggestionField.IntentFlags ->
-                    stringResource(R.string.os_google_system_service_field_intent_flags)
-                ShortcutSuggestionField.IntentUriData ->
-                    stringResource(R.string.os_google_system_service_field_intent_data)
-                ShortcutSuggestionField.IntentMimeType ->
-                    stringResource(R.string.os_google_system_service_field_intent_mime_type)
             },
-            onDismissRequest = { showGoogleSystemServiceSuggestionSheet = false },
-            startAction = {
-                GlassIconButton(
-                    backdrop = sheetBackdrop,
-                    variant = GlassVariant.Bar,
-                    icon = MiuixIcons.Regular.Close,
-                    contentDescription = stringResource(R.string.common_close),
-                    onClick = { showGoogleSystemServiceSuggestionSheet = false }
+            onOpenGoogleSystemServiceEditor = {
+                googleSystemServiceDraft = googleSystemServiceConfig.normalized(googleSystemServiceDefaults)
+                showGoogleSystemServiceEditor = true
+            },
+            displayedSystemRows = displayedSystemRows,
+            displayedSecureRows = displayedSecureRows,
+            displayedGlobalRows = displayedGlobalRows,
+            displayedAndroidRows = displayedAndroidRows,
+            displayedJavaRows = displayedJavaRows,
+            displayedLinuxRows = displayedLinuxRows,
+            prunedSystemRows = prunedSystemRows,
+            prunedSecureRows = prunedSecureRows,
+            prunedGlobalRows = prunedGlobalRows,
+            prunedAndroidRows = prunedAndroidRows,
+            prunedJavaRows = prunedJavaRows,
+            prunedLinuxRows = prunedLinuxRows,
+            systemTableExpanded = systemTableExpanded,
+            onSystemTableExpandedChange = { systemTableExpanded = it },
+            secureTableExpanded = secureTableExpanded,
+            onSecureTableExpandedChange = { secureTableExpanded = it },
+            globalTableExpanded = globalTableExpanded,
+            onGlobalTableExpandedChange = { globalTableExpanded = it },
+            androidPropsExpanded = androidPropsExpanded,
+            onAndroidPropsExpandedChange = { androidPropsExpanded = it },
+            javaPropsExpanded = javaPropsExpanded,
+            onJavaPropsExpandedChange = { javaPropsExpanded = it },
+            linuxEnvExpanded = linuxEnvExpanded,
+            onLinuxEnvExpandedChange = { linuxEnvExpanded = it },
+            isCardVisible = { card -> isCardVisible(visibleCards, card) },
+            sectionSubtitle = { section, size ->
+                sectionSubtitle(
+                    sectionStates = sectionStates,
+                    context = context,
+                    section = section,
+                    size = size
                 )
-            }
-        ) {
-            val packageSuggestionQuery = googleSystemServicePackageSuggestionQuery.trim()
-            val currentPackageName = googleSystemServiceDraft.packageName.trim()
-            val filteredInstalledApps = remember(
-                googleSystemServicePackageSuggestions,
-                packageSuggestionQuery,
-                currentPackageName
-            ) {
-                val filtered = if (packageSuggestionQuery.isBlank()) {
-                    googleSystemServicePackageSuggestions
-                } else {
-                    googleSystemServicePackageSuggestions.filter { app ->
-                        app.appName.contains(packageSuggestionQuery, ignoreCase = true) ||
-                            app.packageName.contains(packageSuggestionQuery, ignoreCase = true)
-                    }
-                }
-                if (currentPackageName.isBlank()) {
-                    filtered
-                } else {
-                    val selected = filtered.filter {
-                        it.packageName.equals(currentPackageName, ignoreCase = true)
-                    }
-                    val others = filtered.filterNot {
-                        it.packageName.equals(currentPackageName, ignoreCase = true)
-                    }
-                    selected + others
-                }
-            }
-            val classSuggestionQuery = googleSystemServiceClassSuggestionQuery.trim()
-            val currentClassName = googleSystemServiceDraft.className.trim()
-            val filteredActivityClasses = remember(
-                googleSystemServiceClassSuggestions,
-                classSuggestionQuery,
-                currentClassName
-            ) {
-                val filtered = if (classSuggestionQuery.isBlank()) {
-                    googleSystemServiceClassSuggestions
-                } else {
-                    googleSystemServiceClassSuggestions.filter { option ->
-                        option.className.contains(classSuggestionQuery, ignoreCase = true) ||
-                            option.activityName.contains(classSuggestionQuery, ignoreCase = true)
-                    }
-                }
-                if (currentClassName.isBlank()) {
-                    filtered
-                } else {
-                    val selected = filtered.filter { option ->
-                        option.className.equals(currentClassName, ignoreCase = true)
-                    }
-                    val others = filtered.filterNot { option ->
-                        option.className.equals(currentClassName, ignoreCase = true)
-                    }
-                    selected + others
-                }
-            }
-            val currentIntentAction = googleSystemServiceDraft.intentAction.trim()
-            val currentCategoryTokensUpper = remember(googleSystemServiceDraft.intentCategory) {
-                parseIntentTokenText(googleSystemServiceDraft.intentCategory)
-                    .map { it.uppercase(Locale.ROOT) }
-                    .toSet()
-            }
-            val explicitActionRecommendationSelected = currentClassName.isNotBlank() &&
-                currentIntentAction == Intent.ACTION_VIEW
-            val implicitActionRecommendationSelected = currentClassName.isBlank() &&
-                currentIntentAction == Intent.ACTION_MAIN
-            val explicitCategoryRecommendationSelected = currentClassName.isNotBlank() &&
-                currentCategoryTokensUpper.isEmpty()
-            val implicitCategoryRecommendationSelected = currentClassName.isBlank() &&
-                currentCategoryTokensUpper == setOf(Intent.CATEGORY_LAUNCHER.uppercase(Locale.ROOT))
-            val suggestions = when (googleSystemServiceSuggestionTarget) {
-                ShortcutSuggestionField.PackageName -> filteredInstalledApps.map { app ->
-                    ShortcutSuggestionItem(
-                        label = app.appName,
-                        value = app.packageName,
-                        summary = app.packageName,
-                        relatedAppName = app.appName
-                    )
-                }
-
-                ShortcutSuggestionField.ClassName -> {
-                    val implicitItem = ShortcutSuggestionItem(
-                        label = stringResource(R.string.os_google_system_service_class_suggestion_implicit_title),
-                        value = "",
-                        summary = stringResource(R.string.os_google_system_service_class_suggestion_implicit_summary)
-                    )
-                    listOf(implicitItem) + filteredActivityClasses.map { option ->
-                        ShortcutSuggestionItem(
-                            label = option.activityName,
-                            value = option.className,
-                            summary = option.className,
-                            classItemExported = option.isExported
-                        )
-                    }
-                }
-
-                ShortcutSuggestionField.IntentAction -> listOf(
-                    ShortcutSuggestionItem(
-                        label = stringResource(R.string.os_google_system_service_suggestion_clear),
-                        value = "",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_action_auto_summary),
-                        append = false
-                    ),
-                    ShortcutSuggestionItem(
-                        label = Intent.ACTION_MAIN,
-                        value = Intent.ACTION_MAIN,
-                        summary = stringResource(R.string.os_google_system_service_suggestion_action_main_summary)
-                    ),
-                    ShortcutSuggestionItem(
-                        label = Intent.ACTION_VIEW,
-                        value = Intent.ACTION_VIEW,
-                        summary = stringResource(R.string.os_google_system_service_suggestion_action_view_summary)
-                    ),
-                    ShortcutSuggestionItem(
-                        label = Intent.ACTION_SEND,
-                        value = Intent.ACTION_SEND,
-                        summary = stringResource(R.string.os_google_system_service_suggestion_action_send_summary)
-                    ),
-                    ShortcutSuggestionItem(
-                        label = Intent.ACTION_SEND_MULTIPLE,
-                        value = Intent.ACTION_SEND_MULTIPLE,
-                        summary = stringResource(R.string.os_google_system_service_suggestion_action_send_multiple_summary)
-                    ),
-                    ShortcutSuggestionItem(
-                        label = Intent.ACTION_EDIT,
-                        value = Intent.ACTION_EDIT,
-                        summary = stringResource(R.string.os_google_system_service_suggestion_action_edit_summary)
-                    ),
-                    ShortcutSuggestionItem(
-                        label = Intent.ACTION_PICK,
-                        value = Intent.ACTION_PICK,
-                        summary = stringResource(R.string.os_google_system_service_suggestion_action_pick_summary)
-                    )
-                )
-
-                ShortcutSuggestionField.IntentCategory -> listOf(
-                    ShortcutSuggestionItem(
-                        label = stringResource(R.string.os_google_system_service_suggestion_clear),
-                        value = "",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_category_clear_summary),
-                        append = false
-                    ),
-                    ShortcutSuggestionItem(
-                        label = Intent.CATEGORY_DEFAULT,
-                        value = Intent.CATEGORY_DEFAULT,
-                        summary = stringResource(R.string.os_google_system_service_suggestion_category_default_summary),
-                        append = true
-                    ),
-                    ShortcutSuggestionItem(
-                        label = Intent.CATEGORY_BROWSABLE,
-                        value = Intent.CATEGORY_BROWSABLE,
-                        summary = stringResource(R.string.os_google_system_service_suggestion_category_browsable_summary),
-                        append = true
-                    ),
-                    ShortcutSuggestionItem(
-                        label = Intent.CATEGORY_LAUNCHER,
-                        value = Intent.CATEGORY_LAUNCHER,
-                        summary = stringResource(R.string.os_google_system_service_suggestion_category_launcher_summary),
-                        append = true
-                    ),
-                    ShortcutSuggestionItem(
-                        label = Intent.CATEGORY_INFO,
-                        value = Intent.CATEGORY_INFO,
-                        summary = stringResource(R.string.os_google_system_service_suggestion_category_info_summary),
-                        append = true
-                    )
-                )
-
-                ShortcutSuggestionField.IntentFlags -> listOf(
-                    ShortcutSuggestionItem(
-                        label = stringResource(R.string.os_google_system_service_suggestion_clear),
-                        value = "",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_flags_auto_summary),
-                        append = false
-                    ),
-                    ShortcutSuggestionItem(
-                        label = "FLAG_ACTIVITY_NEW_TASK",
-                        value = "FLAG_ACTIVITY_NEW_TASK",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_flags_new_task_summary),
-                        append = true
-                    ),
-                    ShortcutSuggestionItem(
-                        label = "FLAG_ACTIVITY_CLEAR_TOP",
-                        value = "FLAG_ACTIVITY_CLEAR_TOP",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_flags_clear_top_summary),
-                        append = true
-                    ),
-                    ShortcutSuggestionItem(
-                        label = "FLAG_ACTIVITY_SINGLE_TOP",
-                        value = "FLAG_ACTIVITY_SINGLE_TOP",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_flags_single_top_summary),
-                        append = true
-                    ),
-                    ShortcutSuggestionItem(
-                        label = "FLAG_ACTIVITY_NEW_TASK, FLAG_ACTIVITY_CLEAR_TOP",
-                        value = "FLAG_ACTIVITY_NEW_TASK, FLAG_ACTIVITY_CLEAR_TOP",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_flags_combo_summary),
-                        append = true
-                    )
-                )
-
-                ShortcutSuggestionField.IntentUriData -> listOf(
-                    ShortcutSuggestionItem(
-                        label = stringResource(R.string.os_google_system_service_suggestion_clear),
-                        value = "",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_uri_clear_summary),
-                        append = false
-                    ),
-                    ShortcutSuggestionItem(
-                        label = "market://details?id=com.android.vending",
-                        value = "market://details?id=com.android.vending",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_uri_market_summary)
-                    ),
-                    ShortcutSuggestionItem(
-                        label = "https://play.google.com/store/apps/details?id=com.android.vending",
-                        value = "https://play.google.com/store/apps/details?id=com.android.vending",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_uri_https_summary)
-                    ),
-                    ShortcutSuggestionItem(
-                        label = "package:com.android.vending",
-                        value = "package:com.android.vending",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_uri_package_summary)
-                    )
-                )
-
-                ShortcutSuggestionField.IntentMimeType -> listOf(
-                    ShortcutSuggestionItem(
-                        label = stringResource(R.string.os_google_system_service_suggestion_clear),
-                        value = "",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_mime_clear_summary),
-                        append = false
-                    ),
-                    ShortcutSuggestionItem(
-                        label = "text/plain",
-                        value = "text/plain",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_mime_text_summary)
-                    ),
-                    ShortcutSuggestionItem(
-                        label = "application/vnd.android.package-archive",
-                        value = "application/vnd.android.package-archive",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_mime_apk_summary)
-                    ),
-                    ShortcutSuggestionItem(
-                        label = "*/*",
-                        value = "*/*",
-                        summary = stringResource(R.string.os_google_system_service_suggestion_mime_any_summary)
-                    )
-                )
-            }
-            val currentValue = currentGoogleSystemServiceSuggestionFieldValue(googleSystemServiceSuggestionTarget)
-            val isCurrentSuggestionSelected: (ShortcutSuggestionItem) -> Boolean = { suggestion ->
-                when (googleSystemServiceSuggestionTarget) {
-                    ShortcutSuggestionField.PackageName -> {
-                        currentValue.trim().equals(suggestion.value.trim(), ignoreCase = true)
-                    }
-
-                    ShortcutSuggestionField.ClassName -> {
-                        currentValue.trim().equals(suggestion.value.trim(), ignoreCase = true)
-                    }
-
-                    ShortcutSuggestionField.IntentAction,
-                    ShortcutSuggestionField.IntentUriData,
-                    ShortcutSuggestionField.IntentMimeType -> {
-                        currentValue.trim() == suggestion.value.trim()
-                    }
-
-                    ShortcutSuggestionField.IntentCategory,
-                    ShortcutSuggestionField.IntentFlags -> {
-                        val currentTokens = parseIntentTokenText(currentValue)
-                            .map { it.uppercase(Locale.ROOT) }
-                            .toSet()
-                        val suggestionTokens = parseIntentTokenText(suggestion.value)
-                            .map { it.uppercase(Locale.ROOT) }
-                            .toSet()
-                        if (suggestionTokens.isEmpty()) {
-                            currentTokens.isEmpty()
-                        } else {
-                            currentTokens.containsAll(suggestionTokens)
-                        }
-                    }
-                }
-            }
-            val orderedSuggestions = when (googleSystemServiceSuggestionTarget) {
-                ShortcutSuggestionField.ClassName -> suggestions
-                else -> {
-                    val selected = suggestions.filter(isCurrentSuggestionSelected)
-                    val others = suggestions.filterNot(isCurrentSuggestionSelected)
-                    selected + others
-                }
-            }
-            SheetContentColumn(verticalSpacing = 10.dp) {
-                if (googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName) {
-                    GlassSearchField(
-                        value = googleSystemServicePackageSuggestionQuery,
-                        onValueChange = { googleSystemServicePackageSuggestionQuery = it },
-                        label = stringResource(R.string.os_google_system_service_hint_package_suggestion_search),
-                        backdrop = sheetBackdrop,
-                        variant = GlassVariant.SheetInput,
-                        textColor = MiuixTheme.colorScheme.primary,
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                if (googleSystemServiceSuggestionTarget == ShortcutSuggestionField.ClassName) {
-                    GlassSearchField(
-                        value = googleSystemServiceClassSuggestionQuery,
-                        onValueChange = { googleSystemServiceClassSuggestionQuery = it },
-                        label = stringResource(R.string.os_google_system_service_hint_class_suggestion_search),
-                        backdrop = sheetBackdrop,
-                        variant = GlassVariant.SheetInput,
-                        textColor = MiuixTheme.colorScheme.primary,
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                if (googleSystemServiceSuggestionTarget == ShortcutSuggestionField.IntentAction) {
-                    SheetSectionTitle(
-                        text = stringResource(R.string.os_google_system_service_recommend_section)
-                    )
-                    SheetChoiceCard(
-                        title = stringResource(R.string.os_google_system_service_action_recommend_explicit_title),
-                        summary = stringResource(R.string.os_google_system_service_action_recommend_explicit_summary),
-                        selected = explicitActionRecommendationSelected,
-                        onSelect = {
-                            googleSystemServiceDraft = googleSystemServiceDraft.copy(
-                                intentAction = Intent.ACTION_VIEW
-                            )
-                        },
-                        accentColor = Color(0xFF16A34A),
-                        selectedAccentColor = MiuixTheme.colorScheme.primary,
-                        unselectedTitleColor = Color(0xFF16A34A),
-                        summaryColor = Color(0xFF16A34A),
-                        selectedLabel = null
-                    )
-                    SheetChoiceCard(
-                        title = stringResource(R.string.os_google_system_service_action_recommend_implicit_title),
-                        summary = stringResource(R.string.os_google_system_service_action_recommend_implicit_summary),
-                        selected = implicitActionRecommendationSelected,
-                        onSelect = {
-                            googleSystemServiceDraft = applyShortcutImplicitDefaults(googleSystemServiceDraft)
-                        },
-                        accentColor = Color(0xFF16A34A),
-                        selectedAccentColor = MiuixTheme.colorScheme.primary,
-                        unselectedTitleColor = Color(0xFF16A34A),
-                        summaryColor = Color(0xFF16A34A),
-                        selectedLabel = null
-                    )
-                }
-                if (googleSystemServiceSuggestionTarget == ShortcutSuggestionField.IntentCategory) {
-                    SheetSectionTitle(
-                        text = stringResource(R.string.os_google_system_service_recommend_section)
-                    )
-                    SheetChoiceCard(
-                        title = stringResource(R.string.os_google_system_service_category_recommend_explicit_title),
-                        summary = stringResource(R.string.os_google_system_service_category_recommend_explicit_summary),
-                        selected = explicitCategoryRecommendationSelected,
-                        onSelect = {
-                            googleSystemServiceDraft = googleSystemServiceDraft.copy(
-                                intentCategory = ""
-                            )
-                        },
-                        accentColor = Color(0xFF16A34A),
-                        selectedAccentColor = MiuixTheme.colorScheme.primary,
-                        unselectedTitleColor = Color(0xFF16A34A),
-                        summaryColor = Color(0xFF16A34A),
-                        selectedLabel = null
-                    )
-                    SheetChoiceCard(
-                        title = stringResource(R.string.os_google_system_service_category_recommend_implicit_title),
-                        summary = stringResource(R.string.os_google_system_service_category_recommend_implicit_summary),
-                        selected = implicitCategoryRecommendationSelected,
-                        onSelect = {
-                            googleSystemServiceDraft = applyShortcutImplicitDefaults(googleSystemServiceDraft)
-                        },
-                        accentColor = Color(0xFF16A34A),
-                        selectedAccentColor = MiuixTheme.colorScheme.primary,
-                        unselectedTitleColor = Color(0xFF16A34A),
-                        summaryColor = Color(0xFF16A34A),
-                        selectedLabel = null
-                    )
-                }
-                if (
-                    googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName &&
-                    googleSystemServicePackageSuggestionsLoading
-                ) {
-                    Text(
-                        text = stringResource(R.string.common_loading),
-                        color = MiuixTheme.colorScheme.onBackgroundVariant
-                    )
-                }
-                if (
-                    googleSystemServiceSuggestionTarget == ShortcutSuggestionField.ClassName &&
-                    googleSystemServiceClassSuggestionsLoading
-                ) {
-                    Text(
-                        text = stringResource(R.string.common_loading),
-                        color = MiuixTheme.colorScheme.onBackgroundVariant
-                    )
-                }
-                orderedSuggestions.forEach { suggestion ->
-                    val selected = isCurrentSuggestionSelected(suggestion)
-                    val leading = if (googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName) {
-                        @Composable {
-                            AppIcon(
-                                packageName = suggestion.value.trim(),
-                                size = 24.dp
-                            )
-                        }
-                    } else {
-                        null
-                    }
-                    SheetChoiceCard(
-                        title = suggestion.label,
-                        summary = suggestion.summary,
-                        selected = selected,
-                        onSelect = { applyGoogleSystemServiceSuggestion(suggestion) },
-                        selectedAccentColor = MiuixTheme.colorScheme.primary,
-                        unselectedTitleColor = when (googleSystemServiceSuggestionTarget) {
-                            ShortcutSuggestionField.ClassName -> {
-                                if (suggestion.value.trim().isBlank() || suggestion.classItemExported) {
-                                    Color(0xFFDC2626)
-                                } else {
-                                    Color(0xFF16A34A)
-                                }
-                            }
-                            else -> MiuixTheme.colorScheme.onBackground
-                        },
-                        summaryColor = when (googleSystemServiceSuggestionTarget) {
-                            ShortcutSuggestionField.ClassName -> {
-                                if (suggestion.value.trim().isBlank() || suggestion.classItemExported) {
-                                    Color(0xFFDC2626)
-                                } else {
-                                    Color(0xFF16A34A)
-                                }
-                            }
-                            else -> MiuixTheme.colorScheme.onBackgroundVariant
-                        },
-                        selectedLabel = null,
-                        leading = leading
-                    )
-                }
-                if (
-                    googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName &&
-                    !googleSystemServicePackageSuggestionsLoading &&
-                    suggestions.isEmpty()
-                ) {
-                    Text(
-                        text = noMatchedResultsText,
-                        color = MiuixTheme.colorScheme.onBackgroundVariant
-                    )
-                }
-                if (
-                    googleSystemServiceSuggestionTarget == ShortcutSuggestionField.ClassName &&
-                    !googleSystemServiceClassSuggestionsLoading &&
-                    suggestions.size <= 1
-                ) {
-                    Text(
-                        text = noMatchedResultsText,
-                        color = MiuixTheme.colorScheme.onBackgroundVariant
-                    )
-                }
-                SheetDescriptionText(
-                    text = stringResource(R.string.os_google_system_service_suggestion_sheet_desc)
-                )
-            }
-        }
-        AppPageLazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(searchBarScrollConnection)
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            state = listState,
-            innerPadding = innerPadding,
-            topExtra = 0.dp,
-            sectionSpacing = 0.dp
-        ) {
-            item {
-                AppOverviewCard(
-                    title = stringResource(R.string.os_overview_title),
-                    containerColor = overviewCardColor,
-                    borderColor = overviewBorderColor,
-                    contentColor = titleColor,
-                    showIndication = cardPressFeedbackEnabled,
-                    onClick = {
-                        if (refreshing) return@AppOverviewCard
-                        scope.launch { refreshAllSections() }
-                    },
-                    headerEndActions = {
-                        if (overviewState != SystemOverviewState.Idle) {
-                            CircularProgressIndicator(
-                                progress = indicatorProgress,
-                                size = 16.dp,
-                                strokeWidth = 2.dp,
-                                colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                    foregroundColor = statusColor,
-                                    backgroundColor = indicatorBg
-                                )
-                            )
-                        }
-                        StatusPill(
-                            label = statusLabel,
-                            color = statusColor,
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
-                            backgroundAlphaOverride = if (isDark) 0.24f else 0.34f,
-                            borderAlphaOverride = if (isDark) 0.42f else 0.52f
-                        )
-                    }
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.denseSectionGap)
-                    ) {
-                        overviewMetrics.chunked(2).forEach { pair ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(CardLayoutRhythm.metricRowGap)
-                            ) {
-                                GitHubOverviewMetricItem(
-                                    label = pair[0].label,
-                                    value = pair[0].value,
-                                    titleColor = if (isDark) Color.White else MiuixTheme.colorScheme.onBackgroundVariant,
-                                    valueColor = pair[0].valueColor ?: MiuixTheme.colorScheme.onBackground,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                if (pair.size > 1) {
-                                    GitHubOverviewMetricItem(
-                                        label = pair[1].label,
-                                        value = pair[1].value,
-                                        titleColor = if (isDark) Color.White else MiuixTheme.colorScheme.onBackgroundVariant,
-                                        valueColor = pair[1].valueColor ?: MiuixTheme.colorScheme.onBackground,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(AppChromeTokens.pageSectionGap)) }
-
-            addTopInfoCard(
-                visible = isCardVisible(OsSectionCard.TOP_INFO),
-                contentBackdrop = contentBackdrop,
-                displayedTopInfoRows = displayedTopInfoRows,
-                groupedTopInfoRows = groupedTopInfoRows,
-                query = q,
-                noMatchedResultsText = noMatchedResultsText,
-                expanded = topInfoExpanded,
-                onExpandedChange = { topInfoExpanded = it },
-                exportAction = { CardExportAction(card = OsSectionCard.TOP_INFO) }
-            )
-
-            val shortcutConfig = googleSystemServiceConfig.normalized(googleSystemServiceDefaults)
-            addGoogleSystemServiceCard(
-                visible = isCardVisible(OsSectionCard.GOOGLE_SYSTEM_SERVICE),
-                contentBackdrop = contentBackdrop,
-                shortcutConfig = shortcutConfig,
-                expanded = googleSystemServiceExpanded,
-                onExpandedChange = { googleSystemServiceExpanded = it },
-                onOpenActivity = { openGoogleSystemServiceActivity() },
-                onHeaderLongClick = {
-                    googleSystemServiceDraft = shortcutConfig
-                    showGoogleSystemServiceEditor = true
-                }
-            )
-
-            addKeyValueSectionCard(
-                visible = isCardVisible(OsSectionCard.SYSTEM),
-                card = OsSectionCard.SYSTEM,
-                contentBackdrop = contentBackdrop,
-                title = context.getString(R.string.os_section_system_title),
-                subtitle = sectionSubtitle(
-                    SectionKind.SYSTEM,
-                    if (q.isBlank()) prunedSystemRows.size else displayedSystemRows.size
-                ),
-                expanded = systemTableExpanded,
-                onExpandedChange = { systemTableExpanded = it },
-                rows = displayedSystemRows,
-                noMatchedResultsText = noMatchedResultsText,
-                exportAction = { CardExportAction(card = OsSectionCard.SYSTEM) }
-            )
-
-            addKeyValueSectionCard(
-                visible = isCardVisible(OsSectionCard.SECURE),
-                card = OsSectionCard.SECURE,
-                contentBackdrop = contentBackdrop,
-                title = context.getString(R.string.os_section_secure_title),
-                subtitle = sectionSubtitle(
-                    SectionKind.SECURE,
-                    if (q.isBlank()) prunedSecureRows.size else displayedSecureRows.size
-                ),
-                expanded = secureTableExpanded,
-                onExpandedChange = { secureTableExpanded = it },
-                rows = displayedSecureRows,
-                noMatchedResultsText = noMatchedResultsText,
-                exportAction = { CardExportAction(card = OsSectionCard.SECURE) }
-            )
-
-            addKeyValueSectionCard(
-                visible = isCardVisible(OsSectionCard.GLOBAL),
-                card = OsSectionCard.GLOBAL,
-                contentBackdrop = contentBackdrop,
-                title = context.getString(R.string.os_section_global_title),
-                subtitle = sectionSubtitle(
-                    SectionKind.GLOBAL,
-                    if (q.isBlank()) prunedGlobalRows.size else displayedGlobalRows.size
-                ),
-                expanded = globalTableExpanded,
-                onExpandedChange = { globalTableExpanded = it },
-                rows = displayedGlobalRows,
-                noMatchedResultsText = noMatchedResultsText,
-                exportAction = { CardExportAction(card = OsSectionCard.GLOBAL) }
-            )
-
-            addKeyValueSectionCard(
-                visible = isCardVisible(OsSectionCard.ANDROID),
-                card = OsSectionCard.ANDROID,
-                contentBackdrop = contentBackdrop,
-                title = context.getString(R.string.os_section_android_title),
-                subtitle = sectionSubtitle(
-                    SectionKind.ANDROID,
-                    if (q.isBlank()) prunedAndroidRows.size else displayedAndroidRows.size
-                ),
-                expanded = androidPropsExpanded,
-                onExpandedChange = { androidPropsExpanded = it },
-                rows = displayedAndroidRows,
-                noMatchedResultsText = noMatchedResultsText,
-                exportAction = { CardExportAction(card = OsSectionCard.ANDROID) }
-            )
-
-            addKeyValueSectionCard(
-                visible = isCardVisible(OsSectionCard.JAVA),
-                card = OsSectionCard.JAVA,
-                contentBackdrop = contentBackdrop,
-                title = context.getString(R.string.os_section_java_title),
-                subtitle = sectionSubtitle(
-                    SectionKind.JAVA,
-                    if (q.isBlank()) prunedJavaRows.size else displayedJavaRows.size
-                ),
-                expanded = javaPropsExpanded,
-                onExpandedChange = { javaPropsExpanded = it },
-                rows = displayedJavaRows,
-                noMatchedResultsText = noMatchedResultsText,
-                exportAction = { CardExportAction(card = OsSectionCard.JAVA) }
-            )
-
-            addKeyValueSectionCard(
-                visible = isCardVisible(OsSectionCard.LINUX),
-                card = OsSectionCard.LINUX,
-                contentBackdrop = contentBackdrop,
-                title = context.getString(R.string.os_section_linux_title),
-                subtitle = sectionSubtitle(
-                    SectionKind.LINUX,
-                    if (q.isBlank()) prunedLinuxRows.size else displayedLinuxRows.size
-                ),
-                expanded = linuxEnvExpanded,
-                onExpandedChange = { linuxEnvExpanded = it },
-                rows = displayedLinuxRows,
-                noMatchedResultsText = noMatchedResultsText,
-                exportAction = { CardExportAction(card = OsSectionCard.LINUX) }
-            )
-        }
+            },
+            exportingCard = exportingCard,
+            onExportCard = { card -> scope.launch { exportCard(card) } },
+            onRefreshAll = { scope.launch { refreshAllSections() } }
+        )
     }
 }
