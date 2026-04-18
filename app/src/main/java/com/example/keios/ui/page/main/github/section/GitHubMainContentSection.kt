@@ -209,7 +209,7 @@ internal fun GitHubMainContent(
                 innerPadding = innerPadding,
                 bottomExtra = appPageBottomPaddingWithFloatingOverlay(contentBottomPadding),
                 topExtra = 0.dp,
-                sectionSpacing = CardLayoutRhythm.sectionGap
+                sectionSpacing = CardLayoutRhythm.denseSectionGap
             ) {
                 item {
                     GitHubOverviewCard(
@@ -937,7 +937,6 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
