@@ -1,5 +1,6 @@
 package com.example.keios.ui.page.main.github.sheet
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +47,6 @@ import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.SheetContentColumn
-import com.example.keios.ui.page.main.widget.SheetChoiceCard
 import com.example.keios.ui.page.main.widget.SheetControlRow
 import com.example.keios.ui.page.main.widget.SheetDescriptionText
 import com.example.keios.ui.page.main.widget.SheetInputTitle
@@ -57,6 +57,7 @@ import com.example.keios.ui.page.main.widget.StatusPill
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.RadioButton
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -803,14 +804,19 @@ internal fun GitHubShareImportDialog(
                                 stringResource(R.string.github_asset_transport_direct)
                             }
                         )
-                        SheetChoiceCard(
-                            title = asset.name,
-                            summary = assetSummary,
-                            selected = safeSelectedIndex == index,
-                            onSelect = { selectedIndex = index },
-                            accentColor = GitHubStatusPalette.Active,
-                            selectedLabel = stringResource(R.string.github_strategy_status_selected)
-                        )
+                        val selected = safeSelectedIndex == index
+                        SheetControlRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedIndex = index },
+                            label = asset.name,
+                            summary = assetSummary
+                        ) {
+                            RadioButton(
+                                selected = selected,
+                                onClick = { selectedIndex = index }
+                            )
+                        }
                     }
                 }
             }

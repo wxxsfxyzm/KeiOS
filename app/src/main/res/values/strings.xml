@@ -330,7 +330,7 @@
     <string name="github_toast_no_apk_to_load">当前没有可加载的更新 APK</string>
     <string name="github_toast_share_import_failed">分享导入失败：%1$s</string>
     <string name="github_toast_share_import_no_apk">该链接对应的 release 暂无可用 APK</string>
-    <string name="github_toast_share_import_wait_install">已发送 %1$s，安装完成后会自动新增跟踪</string>
+    <string name="github_toast_share_import_wait_install">已发送 %1$s，安装或更新完成后会自动新增跟踪</string>
     <string name="github_toast_share_import_track_added">已新增跟踪：%1$s</string>
     <string name="github_msg_checking">检查中...</string>
     <string name="github_msg_assets_no_downloadable_except_source">%1$s 当前除了 Source code 外没有其它可下载资源</string>

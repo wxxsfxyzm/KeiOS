@@ -2,10 +2,10 @@ package com.example.keios.ui.page.main
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import com.example.keios.R
 import com.example.keios.core.system.AppPackageChangedEvent
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
-import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.ui.page.main.github.query.DownloaderOption
 import com.example.keios.ui.page.main.github.query.OnlineShareTargetOption
@@ -20,6 +20,11 @@ internal class GitHubPageActions(
     systemDmOption: DownloaderOption,
     openLinkFailureMessage: String
 ) {
+    private data class InstalledPackageSnapshot(
+        val appLabel: String,
+        val lastUpdateTimeMs: Long
+    )
+
     private val env = GitHubPageActionEnvironment(
         context = context,
         scope = scope,
@@ -35,6 +40,7 @@ internal class GitHubPageActions(
 
     private val minHandleIntervalMs = 1200L
     private val pendingShareImportTrackMaxAgeMs = 25 * 60 * 1000L
+    private val pendingShareImportUpdateToleranceMs = 2 * 60 * 1000L
     private val handledAtByPackage = mutableMapOf<String, Long>()
     private val packageUpdateActions = setOf(
         Intent.ACTION_PACKAGE_ADDED,
@@ -43,7 +49,8 @@ internal class GitHubPageActions(
     )
     private val packageInstallActions = setOf(
         Intent.ACTION_PACKAGE_ADDED,
-        Intent.ACTION_PACKAGE_REPLACED
+        Intent.ACTION_PACKAGE_REPLACED,
+        Intent.ACTION_PACKAGE_CHANGED
     )
 
     fun openStrategySheet() = configActions.openStrategySheet()
@@ -209,19 +216,16 @@ internal class GitHubPageActions(
     ) {
         val pending = env.state.pendingShareImportTrack ?: return
         if (event.action !in packageInstallActions) return
+        val packageSnapshot = loadInstalledPackageSnapshot(packageName) ?: return
+        if (!isTrackAttachEventValid(event, pending.armedAtMillis, packageSnapshot.lastUpdateTimeMs)) {
+            return
+        }
         val candidateId = "${pending.owner}/${pending.repo}|$packageName"
         if (env.state.trackedItems.any { it.id == candidateId }) {
             env.state.pendingShareImportTrack = null
             return
         }
-        val appLabel = withContext(Dispatchers.IO) {
-            GitHubVersionUtils.queryInstalledLaunchableApps(
-                context = env.context,
-                forceRefresh = true
-            ).firstOrNull { app ->
-                app.packageName == packageName
-            }?.label
-        }.orEmpty().ifBlank { packageName }
+        val appLabel = packageSnapshot.appLabel.ifBlank { packageName }
 
         env.state.trackedItems.add(
             GitHubTrackedApp(
@@ -238,6 +242,51 @@ internal class GitHubPageActions(
             R.string.github_toast_share_import_track_added,
             appLabel
         )
+    }
+
+    private fun isTrackAttachEventValid(
+        event: AppPackageChangedEvent,
+        armedAtMillis: Long,
+        packageLastUpdateTimeMs: Long
+    ): Boolean {
+        if (event.action == Intent.ACTION_PACKAGE_ADDED || event.action == Intent.ACTION_PACKAGE_REPLACED) {
+            return true
+        }
+        if (event.action != Intent.ACTION_PACKAGE_CHANGED) return false
+        if (packageLastUpdateTimeMs <= 0L) return false
+        return packageLastUpdateTimeMs >= (armedAtMillis - pendingShareImportUpdateToleranceMs)
+    }
+
+    private suspend fun loadInstalledPackageSnapshot(packageName: String): InstalledPackageSnapshot? {
+        return withContext(Dispatchers.IO) {
+            val pm = env.context.packageManager
+            val info = runCatching {
+                pm.getPackageInfo(
+                    packageName,
+                    PackageManager.PackageInfoFlags.of(0)
+                )
+            }.recoverCatching {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(packageName, 0)
+            }.getOrNull() ?: return@withContext null
+
+            val label = runCatching {
+                val appInfo = info.applicationInfo ?: pm.getApplicationInfo(
+                    packageName,
+                    PackageManager.ApplicationInfoFlags.of(0)
+                )
+                pm.getApplicationLabel(appInfo).toString().trim()
+            }.recoverCatching {
+                @Suppress("DEPRECATION")
+                val appInfo = info.applicationInfo ?: pm.getApplicationInfo(packageName, 0)
+                pm.getApplicationLabel(appInfo).toString().trim()
+            }.getOrDefault("")
+
+            InstalledPackageSnapshot(
+                appLabel = label,
+                lastUpdateTimeMs = info.lastUpdateTime
+            )
+        }
     }
 
     private fun clearExpiredPendingShareImportTrack(nowMillis: Long) {
