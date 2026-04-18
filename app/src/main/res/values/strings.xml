@@ -251,7 +251,7 @@
     <string name="os_google_system_service_hint_app_name">例如：Google Play 商店</string>
     <string name="os_google_system_service_hint_package_name">例如：com.android.vending</string>
     <string name="os_google_system_service_hint_class_name">可留空；留空时按包名优先拉起默认入口</string>
-    <string name="os_google_system_service_hint_class_suggestion_search">搜索类名</string>
+    <string name="os_google_system_service_hint_class_suggestion_search">搜索活动名称或类名</string>
     <string name="os_google_system_service_hint_intent_action">可留空；留空时自动按目标入口选择默认 Action</string>
     <string name="os_google_system_service_hint_intent_category">可留空，多个用逗号分隔，例如：android.intent.category.DEFAULT</string>
     <string name="os_google_system_service_hint_intent_flags">可留空；留空时自动补 FLAG_ACTIVITY_NEW_TASK，多个用逗号分隔</string>

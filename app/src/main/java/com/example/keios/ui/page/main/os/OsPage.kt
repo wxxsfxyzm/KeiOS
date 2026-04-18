@@ -1556,11 +1556,13 @@ fun OsPage(
                 }
             }
             val classSuggestionQuery = googleSystemServiceClassSuggestionQuery.trim()
+            val currentClassName = googleSystemServiceDraft.className.trim()
             val filteredActivityClasses = remember(
                 googleSystemServiceClassSuggestions,
-                classSuggestionQuery
+                classSuggestionQuery,
+                currentClassName
             ) {
-                if (classSuggestionQuery.isBlank()) {
+                val filtered = if (classSuggestionQuery.isBlank()) {
                     googleSystemServiceClassSuggestions
                 } else {
                     googleSystemServiceClassSuggestions.filter { option ->
@@ -1568,8 +1570,18 @@ fun OsPage(
                             option.activityName.contains(classSuggestionQuery, ignoreCase = true)
                     }
                 }
+                if (currentClassName.isBlank()) {
+                    filtered
+                } else {
+                    val selected = filtered.filter { option ->
+                        option.className.equals(currentClassName, ignoreCase = true)
+                    }
+                    val others = filtered.filterNot { option ->
+                        option.className.equals(currentClassName, ignoreCase = true)
+                    }
+                    selected + others
+                }
             }
-            val currentClassName = googleSystemServiceDraft.className.trim()
             val currentIntentAction = googleSystemServiceDraft.intentAction.trim()
             val currentCategoryTokensUpper = remember(googleSystemServiceDraft.intentCategory) {
                 parseIntentTokenText(googleSystemServiceDraft.intentCategory)
@@ -1763,6 +1775,46 @@ fun OsPage(
                 )
             }
             val currentValue = currentGoogleSystemServiceSuggestionFieldValue(googleSystemServiceSuggestionTarget)
+            val isCurrentSuggestionSelected: (ShortcutSuggestionItem) -> Boolean = { suggestion ->
+                when (googleSystemServiceSuggestionTarget) {
+                    ShortcutSuggestionField.PackageName -> {
+                        currentValue.trim().equals(suggestion.value.trim(), ignoreCase = true)
+                    }
+
+                    ShortcutSuggestionField.ClassName -> {
+                        currentValue.trim().equals(suggestion.value.trim(), ignoreCase = true)
+                    }
+
+                    ShortcutSuggestionField.IntentAction,
+                    ShortcutSuggestionField.IntentUriData,
+                    ShortcutSuggestionField.IntentMimeType -> {
+                        currentValue.trim() == suggestion.value.trim()
+                    }
+
+                    ShortcutSuggestionField.IntentCategory,
+                    ShortcutSuggestionField.IntentFlags -> {
+                        val currentTokens = parseIntentTokenText(currentValue)
+                            .map { it.uppercase(Locale.ROOT) }
+                            .toSet()
+                        val suggestionTokens = parseIntentTokenText(suggestion.value)
+                            .map { it.uppercase(Locale.ROOT) }
+                            .toSet()
+                        if (suggestionTokens.isEmpty()) {
+                            currentTokens.isEmpty()
+                        } else {
+                            currentTokens.containsAll(suggestionTokens)
+                        }
+                    }
+                }
+            }
+            val orderedSuggestions = when (googleSystemServiceSuggestionTarget) {
+                ShortcutSuggestionField.ClassName -> suggestions
+                else -> {
+                    val selected = suggestions.filter(isCurrentSuggestionSelected)
+                    val others = suggestions.filterNot(isCurrentSuggestionSelected)
+                    selected + others
+                }
+            }
             SheetContentColumn(verticalSpacing = 10.dp) {
                 if (googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName) {
                     GlassSearchField(
@@ -1812,9 +1864,7 @@ fun OsPage(
                         summary = stringResource(R.string.os_google_system_service_action_recommend_implicit_summary),
                         selected = implicitActionRecommendationSelected,
                         onSelect = {
-                            googleSystemServiceDraft = googleSystemServiceDraft.copy(
-                                intentAction = Intent.ACTION_MAIN
-                            )
+                            googleSystemServiceDraft = applyShortcutImplicitDefaults(googleSystemServiceDraft)
                         },
                         accentColor = Color(0xFF16A34A),
                         selectedAccentColor = MiuixTheme.colorScheme.primary,
@@ -1847,9 +1897,7 @@ fun OsPage(
                         summary = stringResource(R.string.os_google_system_service_category_recommend_implicit_summary),
                         selected = implicitCategoryRecommendationSelected,
                         onSelect = {
-                            googleSystemServiceDraft = googleSystemServiceDraft.copy(
-                                intentCategory = Intent.CATEGORY_LAUNCHER
-                            )
+                            googleSystemServiceDraft = applyShortcutImplicitDefaults(googleSystemServiceDraft)
                         },
                         accentColor = Color(0xFF16A34A),
                         selectedAccentColor = MiuixTheme.colorScheme.primary,
@@ -1876,37 +1924,8 @@ fun OsPage(
                         color = MiuixTheme.colorScheme.onBackgroundVariant
                     )
                 }
-                suggestions.forEach { suggestion ->
-                    val selected = when (googleSystemServiceSuggestionTarget) {
-                        ShortcutSuggestionField.PackageName -> {
-                            currentValue.trim().equals(suggestion.value.trim(), ignoreCase = true)
-                        }
-
-                        ShortcutSuggestionField.ClassName -> {
-                            currentValue.trim().equals(suggestion.value.trim(), ignoreCase = true)
-                        }
-
-                        ShortcutSuggestionField.IntentAction,
-                        ShortcutSuggestionField.IntentUriData,
-                        ShortcutSuggestionField.IntentMimeType -> {
-                            currentValue.trim() == suggestion.value.trim()
-                        }
-
-                        ShortcutSuggestionField.IntentCategory,
-                        ShortcutSuggestionField.IntentFlags -> {
-                            val currentTokens = parseIntentTokenText(currentValue)
-                                .map { it.uppercase(Locale.ROOT) }
-                                .toSet()
-                            val suggestionTokens = parseIntentTokenText(suggestion.value)
-                                .map { it.uppercase(Locale.ROOT) }
-                                .toSet()
-                            if (suggestionTokens.isEmpty()) {
-                                currentTokens.isEmpty()
-                            } else {
-                                currentTokens.containsAll(suggestionTokens)
-                            }
-                        }
-                    }
+                orderedSuggestions.forEach { suggestion ->
+                    val selected = isCurrentSuggestionSelected(suggestion)
                     val leading = if (googleSystemServiceSuggestionTarget == ShortcutSuggestionField.PackageName) {
                         @Composable {
                             AppIcon(
