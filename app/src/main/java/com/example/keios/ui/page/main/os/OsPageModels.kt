@@ -153,10 +153,10 @@ internal data class OsGoogleSystemServiceConfig(
             subtitle = subtitle.trim().ifBlank { defaults.subtitle },
             appName = appName.trim().ifBlank { defaults.appName },
             packageName = packageName.trim().ifBlank { defaults.packageName },
-            className = className.trim().ifBlank { defaults.className },
-            intentAction = intentAction.trim().ifBlank { defaults.intentAction },
+            className = className.trim(),
+            intentAction = intentAction.trim(),
             intentCategory = intentCategory.trim(),
-            intentFlags = intentFlags.trim().ifBlank { defaults.intentFlags },
+            intentFlags = intentFlags.trim(),
             intentUriData = intentUriData.trim(),
             intentMimeType = intentMimeType.trim()
         )

@@ -74,9 +74,11 @@ import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassSearchField
+import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixAccordionCard
 import com.example.keios.ui.page.main.widget.SheetContentColumn
+import com.example.keios.ui.page.main.widget.SheetChoiceCard
 import com.example.keios.ui.page.main.widget.SheetControlRow
 import com.example.keios.ui.page.main.widget.SheetFieldBlock
 import com.example.keios.ui.page.main.widget.SheetDescriptionText
@@ -198,6 +200,10 @@ fun OsPage(
     }
     var googleSystemServiceDraft by remember { mutableStateOf(googleSystemServiceConfig) }
     var showGoogleSystemServiceEditor by rememberSaveable { mutableStateOf(false) }
+    var showGoogleSystemServiceSuggestionSheet by rememberSaveable { mutableStateOf(false) }
+    var googleSystemServiceSuggestionTarget by remember {
+        mutableStateOf(ShortcutSuggestionField.IntentAction)
+    }
     var uiStatePersistenceReady by remember { mutableStateOf(false) }
     var showCardManager by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -598,6 +604,12 @@ fun OsPage(
     fun buildGoogleSystemServiceRows(config: OsGoogleSystemServiceConfig): List<InfoRow> {
         val normalized = config.normalized(googleSystemServiceDefaults)
         val emptyDataValue = context.getString(R.string.os_google_system_service_value_data_empty)
+        val actionValue = normalized.intentAction.ifBlank {
+            context.getString(R.string.os_google_system_service_value_action_auto_default)
+        }
+        val flagsValue = normalized.intentFlags.ifBlank {
+            context.getString(R.string.os_google_system_service_value_flags_auto_default)
+        }
         return listOf(
             InfoRow(
                 key = context.getString(R.string.os_google_system_service_label_app_name),
@@ -613,7 +625,7 @@ fun OsPage(
             ),
             InfoRow(
                 key = context.getString(R.string.os_google_system_service_label_intent_action),
-                value = normalized.intentAction
+                value = actionValue
             ),
             InfoRow(
                 key = context.getString(R.string.os_google_system_service_label_intent_category),
@@ -621,7 +633,7 @@ fun OsPage(
             ),
             InfoRow(
                 key = context.getString(R.string.os_google_system_service_label_intent_flags),
-                value = normalized.intentFlags.ifBlank { emptyDataValue }
+                value = flagsValue
             ),
             InfoRow(
                 key = context.getString(R.string.os_google_system_service_label_intent_data),
@@ -639,7 +651,7 @@ fun OsPage(
         val packageName = config.packageName.trim()
         val className = config.className.trim()
         val action = config.intentAction.trim()
-        if (packageName.isBlank() || className.isBlank() || action.isBlank()) {
+        if (packageName.isBlank()) {
             Toast.makeText(
                 context,
                 context.getString(R.string.os_google_system_service_toast_invalid_target),
@@ -648,8 +660,26 @@ fun OsPage(
             return
         }
         runCatching {
-            val intent = Intent(action).apply {
-                setClassName(packageName, className)
+            val intent = if (className.isBlank()) {
+                context.packageManager.getLaunchIntentForPackage(packageName)?.apply {
+                    if (action.isNotBlank()) {
+                        this.action = action
+                    }
+                } ?: if (action.isBlank()) {
+                    Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_LAUNCHER)
+                        setPackage(packageName)
+                    }
+                } else {
+                    Intent(action).apply { setPackage(packageName) }
+                }
+            } else {
+                Intent(action.ifBlank { Intent.ACTION_VIEW }).apply {
+                    setClassName(packageName, className)
+                }
+            }
+
+            intent.apply {
                 val dataText = config.intentUriData.trim()
                 val mimeType = config.intentMimeType.trim()
                 if (dataText.isNotBlank() && mimeType.isNotBlank()) {
@@ -676,6 +706,56 @@ fun OsPage(
                 Toast.LENGTH_SHORT
             ).show()
         }
+    }
+
+    fun openGoogleSystemServiceSuggestionSheet(target: ShortcutSuggestionField) {
+        googleSystemServiceSuggestionTarget = target
+        showGoogleSystemServiceSuggestionSheet = true
+    }
+
+    fun currentGoogleSystemServiceSuggestionFieldValue(target: ShortcutSuggestionField): String {
+        return when (target) {
+            ShortcutSuggestionField.IntentAction -> googleSystemServiceDraft.intentAction
+            ShortcutSuggestionField.IntentCategory -> googleSystemServiceDraft.intentCategory
+            ShortcutSuggestionField.IntentFlags -> googleSystemServiceDraft.intentFlags
+            ShortcutSuggestionField.IntentUriData -> googleSystemServiceDraft.intentUriData
+            ShortcutSuggestionField.IntentMimeType -> googleSystemServiceDraft.intentMimeType
+        }
+    }
+
+    fun applyGoogleSystemServiceSuggestion(item: ShortcutSuggestionItem) {
+        when (googleSystemServiceSuggestionTarget) {
+            ShortcutSuggestionField.IntentAction -> {
+                googleSystemServiceDraft = googleSystemServiceDraft.copy(intentAction = item.value)
+            }
+
+            ShortcutSuggestionField.IntentCategory -> {
+                val next = mergeIntentTokenText(
+                    current = googleSystemServiceDraft.intentCategory,
+                    incoming = item.value,
+                    append = item.append
+                )
+                googleSystemServiceDraft = googleSystemServiceDraft.copy(intentCategory = next)
+            }
+
+            ShortcutSuggestionField.IntentFlags -> {
+                val next = mergeIntentTokenText(
+                    current = googleSystemServiceDraft.intentFlags,
+                    incoming = item.value,
+                    append = item.append
+                )
+                googleSystemServiceDraft = googleSystemServiceDraft.copy(intentFlags = next)
+            }
+
+            ShortcutSuggestionField.IntentUriData -> {
+                googleSystemServiceDraft = googleSystemServiceDraft.copy(intentUriData = item.value)
+            }
+
+            ShortcutSuggestionField.IntentMimeType -> {
+                googleSystemServiceDraft = googleSystemServiceDraft.copy(intentMimeType = item.value)
+            }
+        }
+        showGoogleSystemServiceSuggestionSheet = false
     }
 
     fun sectionKindByCard(card: OsSectionCard): SectionKind? = when (card) {
@@ -1069,7 +1149,17 @@ fun OsPage(
                         )
                     }
                     SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_intent_action)
+                        title = stringResource(R.string.os_google_system_service_field_intent_action),
+                        trailing = {
+                            GlassTextButton(
+                                backdrop = sheetBackdrop,
+                                variant = GlassVariant.SheetAction,
+                                text = stringResource(R.string.os_google_system_service_chip_add),
+                                onClick = {
+                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentAction)
+                                }
+                            )
+                        }
                     ) {
                         GlassSearchField(
                             value = googleSystemServiceDraft.intentAction,
@@ -1083,7 +1173,17 @@ fun OsPage(
                         )
                     }
                     SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_intent_category)
+                        title = stringResource(R.string.os_google_system_service_field_intent_category),
+                        trailing = {
+                            GlassTextButton(
+                                backdrop = sheetBackdrop,
+                                variant = GlassVariant.SheetAction,
+                                text = stringResource(R.string.os_google_system_service_chip_add),
+                                onClick = {
+                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentCategory)
+                                }
+                            )
+                        }
                     ) {
                         GlassSearchField(
                             value = googleSystemServiceDraft.intentCategory,
@@ -1097,7 +1197,17 @@ fun OsPage(
                         )
                     }
                     SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_intent_flags)
+                        title = stringResource(R.string.os_google_system_service_field_intent_flags),
+                        trailing = {
+                            GlassTextButton(
+                                backdrop = sheetBackdrop,
+                                variant = GlassVariant.SheetAction,
+                                text = stringResource(R.string.os_google_system_service_chip_add),
+                                onClick = {
+                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentFlags)
+                                }
+                            )
+                        }
                     ) {
                         GlassSearchField(
                             value = googleSystemServiceDraft.intentFlags,
@@ -1111,7 +1221,17 @@ fun OsPage(
                         )
                     }
                     SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_intent_data)
+                        title = stringResource(R.string.os_google_system_service_field_intent_data),
+                        trailing = {
+                            GlassTextButton(
+                                backdrop = sheetBackdrop,
+                                variant = GlassVariant.SheetAction,
+                                text = stringResource(R.string.os_google_system_service_chip_add),
+                                onClick = {
+                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentUriData)
+                                }
+                            )
+                        }
                     ) {
                         GlassSearchField(
                             value = googleSystemServiceDraft.intentUriData,
@@ -1125,7 +1245,17 @@ fun OsPage(
                         )
                     }
                     SheetFieldBlock(
-                        title = stringResource(R.string.os_google_system_service_field_intent_mime_type)
+                        title = stringResource(R.string.os_google_system_service_field_intent_mime_type),
+                        trailing = {
+                            GlassTextButton(
+                                backdrop = sheetBackdrop,
+                                variant = GlassVariant.SheetAction,
+                                text = stringResource(R.string.os_google_system_service_chip_add),
+                                onClick = {
+                                    openGoogleSystemServiceSuggestionSheet(ShortcutSuggestionField.IntentMimeType)
+                                }
+                            )
+                        }
                     ) {
                         GlassSearchField(
                             value = googleSystemServiceDraft.intentMimeType,
@@ -1141,6 +1271,230 @@ fun OsPage(
                 }
                 SheetDescriptionText(
                     text = stringResource(R.string.os_google_system_service_sheet_desc)
+                )
+            }
+        }
+        SnapshotWindowBottomSheet(
+            show = showGoogleSystemServiceSuggestionSheet,
+            title = stringResource(R.string.os_google_system_service_suggestion_sheet_title),
+            onDismissRequest = { showGoogleSystemServiceSuggestionSheet = false },
+            startAction = {
+                GlassIconButton(
+                    backdrop = sheetBackdrop,
+                    variant = GlassVariant.Bar,
+                    icon = MiuixIcons.Regular.Close,
+                    contentDescription = stringResource(R.string.common_close),
+                    onClick = { showGoogleSystemServiceSuggestionSheet = false }
+                )
+            }
+        ) {
+            val targetLabel = when (googleSystemServiceSuggestionTarget) {
+                ShortcutSuggestionField.IntentAction ->
+                    stringResource(R.string.os_google_system_service_field_intent_action)
+                ShortcutSuggestionField.IntentCategory ->
+                    stringResource(R.string.os_google_system_service_field_intent_category)
+                ShortcutSuggestionField.IntentFlags ->
+                    stringResource(R.string.os_google_system_service_field_intent_flags)
+                ShortcutSuggestionField.IntentUriData ->
+                    stringResource(R.string.os_google_system_service_field_intent_data)
+                ShortcutSuggestionField.IntentMimeType ->
+                    stringResource(R.string.os_google_system_service_field_intent_mime_type)
+            }
+            val suggestions = when (googleSystemServiceSuggestionTarget) {
+                ShortcutSuggestionField.IntentAction -> listOf(
+                    ShortcutSuggestionItem(
+                        label = stringResource(R.string.os_google_system_service_suggestion_clear),
+                        value = "",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_action_auto_summary),
+                        append = false
+                    ),
+                    ShortcutSuggestionItem(
+                        label = Intent.ACTION_MAIN,
+                        value = Intent.ACTION_MAIN,
+                        summary = stringResource(R.string.os_google_system_service_suggestion_action_main_summary)
+                    ),
+                    ShortcutSuggestionItem(
+                        label = Intent.ACTION_VIEW,
+                        value = Intent.ACTION_VIEW,
+                        summary = stringResource(R.string.os_google_system_service_suggestion_action_view_summary)
+                    ),
+                    ShortcutSuggestionItem(
+                        label = Intent.ACTION_SEND,
+                        value = Intent.ACTION_SEND,
+                        summary = stringResource(R.string.os_google_system_service_suggestion_action_send_summary)
+                    ),
+                    ShortcutSuggestionItem(
+                        label = Intent.ACTION_SEND_MULTIPLE,
+                        value = Intent.ACTION_SEND_MULTIPLE,
+                        summary = stringResource(R.string.os_google_system_service_suggestion_action_send_multiple_summary)
+                    ),
+                    ShortcutSuggestionItem(
+                        label = Intent.ACTION_EDIT,
+                        value = Intent.ACTION_EDIT,
+                        summary = stringResource(R.string.os_google_system_service_suggestion_action_edit_summary)
+                    ),
+                    ShortcutSuggestionItem(
+                        label = Intent.ACTION_PICK,
+                        value = Intent.ACTION_PICK,
+                        summary = stringResource(R.string.os_google_system_service_suggestion_action_pick_summary)
+                    )
+                )
+
+                ShortcutSuggestionField.IntentCategory -> listOf(
+                    ShortcutSuggestionItem(
+                        label = stringResource(R.string.os_google_system_service_suggestion_clear),
+                        value = "",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_category_clear_summary),
+                        append = false
+                    ),
+                    ShortcutSuggestionItem(
+                        label = Intent.CATEGORY_DEFAULT,
+                        value = Intent.CATEGORY_DEFAULT,
+                        summary = stringResource(R.string.os_google_system_service_suggestion_category_default_summary),
+                        append = true
+                    ),
+                    ShortcutSuggestionItem(
+                        label = Intent.CATEGORY_BROWSABLE,
+                        value = Intent.CATEGORY_BROWSABLE,
+                        summary = stringResource(R.string.os_google_system_service_suggestion_category_browsable_summary),
+                        append = true
+                    ),
+                    ShortcutSuggestionItem(
+                        label = Intent.CATEGORY_LAUNCHER,
+                        value = Intent.CATEGORY_LAUNCHER,
+                        summary = stringResource(R.string.os_google_system_service_suggestion_category_launcher_summary),
+                        append = true
+                    ),
+                    ShortcutSuggestionItem(
+                        label = Intent.CATEGORY_INFO,
+                        value = Intent.CATEGORY_INFO,
+                        summary = stringResource(R.string.os_google_system_service_suggestion_category_info_summary),
+                        append = true
+                    )
+                )
+
+                ShortcutSuggestionField.IntentFlags -> listOf(
+                    ShortcutSuggestionItem(
+                        label = stringResource(R.string.os_google_system_service_suggestion_clear),
+                        value = "",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_flags_auto_summary),
+                        append = false
+                    ),
+                    ShortcutSuggestionItem(
+                        label = "FLAG_ACTIVITY_NEW_TASK",
+                        value = "FLAG_ACTIVITY_NEW_TASK",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_flags_new_task_summary),
+                        append = true
+                    ),
+                    ShortcutSuggestionItem(
+                        label = "FLAG_ACTIVITY_CLEAR_TOP",
+                        value = "FLAG_ACTIVITY_CLEAR_TOP",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_flags_clear_top_summary),
+                        append = true
+                    ),
+                    ShortcutSuggestionItem(
+                        label = "FLAG_ACTIVITY_SINGLE_TOP",
+                        value = "FLAG_ACTIVITY_SINGLE_TOP",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_flags_single_top_summary),
+                        append = true
+                    ),
+                    ShortcutSuggestionItem(
+                        label = "FLAG_ACTIVITY_NEW_TASK, FLAG_ACTIVITY_CLEAR_TOP",
+                        value = "FLAG_ACTIVITY_NEW_TASK, FLAG_ACTIVITY_CLEAR_TOP",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_flags_combo_summary),
+                        append = true
+                    )
+                )
+
+                ShortcutSuggestionField.IntentUriData -> listOf(
+                    ShortcutSuggestionItem(
+                        label = stringResource(R.string.os_google_system_service_suggestion_clear),
+                        value = "",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_uri_clear_summary),
+                        append = false
+                    ),
+                    ShortcutSuggestionItem(
+                        label = "market://details?id=com.android.vending",
+                        value = "market://details?id=com.android.vending",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_uri_market_summary)
+                    ),
+                    ShortcutSuggestionItem(
+                        label = "https://play.google.com/store/apps/details?id=com.android.vending",
+                        value = "https://play.google.com/store/apps/details?id=com.android.vending",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_uri_https_summary)
+                    ),
+                    ShortcutSuggestionItem(
+                        label = "package:com.android.vending",
+                        value = "package:com.android.vending",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_uri_package_summary)
+                    )
+                )
+
+                ShortcutSuggestionField.IntentMimeType -> listOf(
+                    ShortcutSuggestionItem(
+                        label = stringResource(R.string.os_google_system_service_suggestion_clear),
+                        value = "",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_mime_clear_summary),
+                        append = false
+                    ),
+                    ShortcutSuggestionItem(
+                        label = "text/plain",
+                        value = "text/plain",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_mime_text_summary)
+                    ),
+                    ShortcutSuggestionItem(
+                        label = "application/vnd.android.package-archive",
+                        value = "application/vnd.android.package-archive",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_mime_apk_summary)
+                    ),
+                    ShortcutSuggestionItem(
+                        label = "*/*",
+                        value = "*/*",
+                        summary = stringResource(R.string.os_google_system_service_suggestion_mime_any_summary)
+                    )
+                )
+            }
+            val currentValue = currentGoogleSystemServiceSuggestionFieldValue(googleSystemServiceSuggestionTarget)
+            SheetContentColumn(verticalSpacing = 10.dp) {
+                SheetSectionTitle(
+                    text = stringResource(
+                        R.string.os_google_system_service_suggestion_sheet_section,
+                        targetLabel
+                    )
+                )
+                suggestions.forEach { suggestion ->
+                    val selected = when (googleSystemServiceSuggestionTarget) {
+                        ShortcutSuggestionField.IntentAction,
+                        ShortcutSuggestionField.IntentUriData,
+                        ShortcutSuggestionField.IntentMimeType -> {
+                            currentValue.trim() == suggestion.value.trim()
+                        }
+
+                        ShortcutSuggestionField.IntentCategory,
+                        ShortcutSuggestionField.IntentFlags -> {
+                            val currentTokens = parseIntentTokenText(currentValue)
+                                .map { it.uppercase(Locale.ROOT) }
+                                .toSet()
+                            val suggestionTokens = parseIntentTokenText(suggestion.value)
+                                .map { it.uppercase(Locale.ROOT) }
+                                .toSet()
+                            if (suggestionTokens.isEmpty()) {
+                                currentTokens.isEmpty()
+                            } else {
+                                currentTokens.containsAll(suggestionTokens)
+                            }
+                        }
+                    }
+                    SheetChoiceCard(
+                        title = suggestion.label,
+                        summary = suggestion.summary,
+                        selected = selected,
+                        onSelect = { applyGoogleSystemServiceSuggestion(suggestion) },
+                        selectedLabel = StatusLabelText.Activated
+                    )
+                }
+                SheetDescriptionText(
+                    text = stringResource(R.string.os_google_system_service_suggestion_sheet_desc)
                 )
             }
         }
@@ -1535,11 +1889,50 @@ private fun OsSectionInfoRow(
     )
 }
 
+private enum class ShortcutSuggestionField {
+    IntentAction,
+    IntentCategory,
+    IntentFlags,
+    IntentUriData,
+    IntentMimeType
+}
+
+private data class ShortcutSuggestionItem(
+    val label: String,
+    val value: String,
+    val summary: String,
+    val append: Boolean = false
+)
+
 private fun parseIntentCategories(raw: String): List<String> {
-    return raw.split(',', ';', '\n')
+    return parseIntentTokenText(raw)
+}
+
+private fun parseIntentTokenText(raw: String): List<String> {
+    return raw.split(',', ';', '|', '\n')
         .map { it.trim() }
         .filter { it.isNotBlank() }
         .distinct()
+}
+
+private fun mergeIntentTokenText(
+    current: String,
+    incoming: String,
+    append: Boolean
+): String {
+    val normalizedIncoming = incoming.trim()
+    if (!append) return normalizedIncoming
+    if (normalizedIncoming.isBlank()) return ""
+
+    val mergedTokens = linkedSetOf<String>()
+    parseIntentTokenText(current).forEach { mergedTokens.add(it) }
+    parseIntentTokenText(normalizedIncoming).forEach { token ->
+        val duplicated = mergedTokens.any { it.equals(token, ignoreCase = true) }
+        if (!duplicated) {
+            mergedTokens.add(token)
+        }
+    }
+    return mergedTokens.joinToString(", ")
 }
 
 private fun parseIntentFlags(raw: String): Int {
