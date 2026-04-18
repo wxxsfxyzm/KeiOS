@@ -41,5 +41,6 @@ internal data class GitHubPendingShareImportAttachCandidate(
     val packageName: String,
     val appLabel: String,
     val eventAction: String,
-    val detectedAtMillis: Long = System.currentTimeMillis()
+    val detectedAtMillis: Long = System.currentTimeMillis(),
+    val firstInstallTimeMs: Long = -1L
 )

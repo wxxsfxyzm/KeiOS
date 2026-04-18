@@ -89,6 +89,7 @@ internal class GitHubPageState(
     val apkAssetExpanded = mutableStateMapOf<String, Boolean>()
     val apkAssetIncludeAll = mutableStateMapOf<String, Boolean>()
     val trackedCardExpanded = mutableStateMapOf<String, Boolean>()
+    val trackedFirstInstallAtByPackage = mutableStateMapOf<String, Long>()
 
     val addButtonScrollConnection = object : NestedScrollConnection {
         override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -155,6 +156,24 @@ internal class GitHubPageState(
         apkAssetLoading.keys.retainAll(validItemIds)
         apkAssetErrors.keys.retainAll(validItemIds)
         apkAssetBundles.keys.retainAll(validItemIds)
+    }
+
+    fun recordTrackedFirstInstallAt(packageName: String, firstInstallAtMillis: Long) {
+        val normalizedPackageName = packageName.trim()
+        if (normalizedPackageName.isBlank()) return
+        if (firstInstallAtMillis <= 0L) return
+        val current = trackedFirstInstallAtByPackage[normalizedPackageName]
+        if (current == null || current <= 0L || firstInstallAtMillis < current) {
+            trackedFirstInstallAtByPackage[normalizedPackageName] = firstInstallAtMillis
+        }
+    }
+
+    fun retainTrackedFirstInstallAtByTrackedItems() {
+        val trackedPackages = trackedItems
+            .map { it.packageName.trim() }
+            .filter { it.isNotBlank() }
+            .toSet()
+        trackedFirstInstallAtByPackage.keys.retainAll(trackedPackages)
     }
 
     fun dismissStrategySheet() {

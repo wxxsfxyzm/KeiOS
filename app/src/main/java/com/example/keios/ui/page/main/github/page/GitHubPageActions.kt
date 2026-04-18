@@ -12,6 +12,7 @@ import com.example.keios.ui.page.main.github.query.DownloaderOption
 import com.example.keios.ui.page.main.github.query.OnlineShareTargetOption
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 internal class GitHubPageActions(
@@ -23,7 +24,8 @@ internal class GitHubPageActions(
 ) {
     private data class InstalledPackageSnapshot(
         val appLabel: String,
-        val lastUpdateTimeMs: Long
+        val lastUpdateTimeMs: Long,
+        val firstInstallTimeMs: Long
     )
 
     private val env = GitHubPageActionEnvironment(
@@ -145,17 +147,26 @@ internal class GitHubPageActions(
             env.toast(R.string.github_toast_share_import_track_exists)
             return
         }
-        env.state.trackedItems.add(
-            GitHubTrackedApp(
-                repoUrl = candidate.projectUrl,
-                owner = candidate.owner,
-                repo = candidate.repo,
-                packageName = candidate.packageName,
-                appLabel = candidate.appLabel.ifBlank { candidate.packageName }
-            )
+        val trackedItem = GitHubTrackedApp(
+            repoUrl = candidate.projectUrl,
+            owner = candidate.owner,
+            repo = candidate.repo,
+            packageName = candidate.packageName,
+            appLabel = candidate.appLabel.ifBlank { candidate.packageName }
         )
+        env.state.recordTrackedFirstInstallAt(
+            packageName = candidate.packageName,
+            firstInstallAtMillis = candidate.firstInstallTimeMs
+                .takeIf { it > 0L }
+                ?: candidate.detectedAtMillis
+        )
+        env.state.trackedItems.add(trackedItem)
         env.saveTrackedItems()
         env.state.pendingShareImportAttachCandidate = null
+        env.scope.launch {
+            runCatching { refreshActions.reloadApps(forceRefresh = true) }
+            refreshActions.refreshItem(trackedItem, showToastOnError = true)
+        }
         env.toast(
             R.string.github_toast_share_import_track_added,
             candidate.appLabel.ifBlank { candidate.packageName }
@@ -285,7 +296,8 @@ internal class GitHubPageActions(
             packageName = packageName,
             appLabel = appLabel,
             eventAction = event.action,
-            detectedAtMillis = event.atMillis
+            detectedAtMillis = event.atMillis,
+            firstInstallTimeMs = packageSnapshot.firstInstallTimeMs
         )
         clearPendingShareImportTrack()
     }
@@ -330,7 +342,8 @@ internal class GitHubPageActions(
 
             InstalledPackageSnapshot(
                 appLabel = label,
-                lastUpdateTimeMs = info.lastUpdateTime
+                lastUpdateTimeMs = info.lastUpdateTime,
+                firstInstallTimeMs = info.firstInstallTime
             )
         }
     }

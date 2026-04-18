@@ -266,10 +266,19 @@ fun GitHubPage(
             )
         }
     }
-    val appLastUpdatedAtByPackage = remember(state.appListLoaded, state.appList) {
-        state.appList
-            .filter { it.packageName.isNotBlank() && it.lastUpdateTimeMs > 0L }
-            .associate { it.packageName to it.lastUpdateTimeMs }
+    val appLastUpdatedAtByPackage by remember {
+        derivedStateOf {
+            buildMap {
+                state.trackedFirstInstallAtByPackage.forEach { (packageName, firstInstallAtMillis) ->
+                    if (packageName.isNotBlank() && firstInstallAtMillis > 0L) {
+                        put(packageName, firstInstallAtMillis)
+                    }
+                }
+                state.appList
+                    .filter { it.packageName.isNotBlank() && it.lastUpdateTimeMs > 0L }
+                    .forEach { put(it.packageName, it.lastUpdateTimeMs) }
+            }
+        }
     }
     val checkLogicDownloaderOptions = remember(state.showCheckLogicSheet) {
         if (state.showCheckLogicSheet) {
