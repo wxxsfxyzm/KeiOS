@@ -360,6 +360,7 @@ internal fun GitHubTrackEditSheet(
     editingTrackedItem: GitHubTrackedApp?,
     repoUrlInput: String,
     appSearch: String,
+    packageNameInput: String,
     pickerExpanded: Boolean,
     selectedApp: InstalledAppItem?,
     appList: List<InstalledAppItem>,
@@ -369,6 +370,7 @@ internal fun GitHubTrackEditSheet(
     onApply: () -> Unit,
     onRepoUrlInputChange: (String) -> Unit,
     onAppSearchChange: (String) -> Unit,
+    onPackageNameInputChange: (String) -> Unit,
     onPickerExpandedChange: (Boolean) -> Unit,
     onSelectedAppChange: (InstalledAppItem?) -> Unit,
     onPreferPreReleaseInputChange: (Boolean) -> Unit,
@@ -412,20 +414,32 @@ internal fun GitHubTrackEditSheet(
         ) {
             SheetSectionTitle(stringResource(R.string.github_track_sheet_section_repo_app))
             SheetSectionCard {
-                SheetInputTitle(stringResource(R.string.github_track_sheet_input_repo))
-                GlassSearchField(
-                    value = repoUrlInput,
-                    onValueChange = onRepoUrlInputChange,
-                    label = stringResource(R.string.github_track_sheet_input_repo),
-                    backdrop = backdrop,
-                    variant = GlassVariant.SheetInput,
-                    singleLine = true
-                )
                 SheetInputTitle(stringResource(R.string.github_track_sheet_input_app_filter_title))
                 GlassSearchField(
                     value = appSearch,
                     onValueChange = onAppSearchChange,
                     label = stringResource(R.string.github_track_sheet_input_app_filter),
+                    backdrop = backdrop,
+                    variant = GlassVariant.SheetInput,
+                    singleLine = true
+                )
+                SheetInputTitle(stringResource(R.string.github_track_sheet_input_package_title))
+                GlassSearchField(
+                    value = packageNameInput,
+                    onValueChange = onPackageNameInputChange,
+                    label = stringResource(R.string.github_track_sheet_input_package),
+                    backdrop = backdrop,
+                    variant = GlassVariant.SheetInput,
+                    singleLine = true
+                )
+                SheetDescriptionText(
+                    text = stringResource(R.string.github_track_sheet_summary_package_optional)
+                )
+                SheetInputTitle(stringResource(R.string.github_track_sheet_input_repo))
+                GlassSearchField(
+                    value = repoUrlInput,
+                    onValueChange = onRepoUrlInputChange,
+                    label = stringResource(R.string.github_track_sheet_input_repo),
                     backdrop = backdrop,
                     variant = GlassVariant.SheetInput,
                     singleLine = true

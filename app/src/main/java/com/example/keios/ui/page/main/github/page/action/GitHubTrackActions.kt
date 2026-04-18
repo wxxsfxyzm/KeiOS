@@ -3,13 +3,13 @@ package com.example.keios.ui.page.main
 import com.example.keios.R
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.model.GitHubTrackedApp
-import com.example.keios.feature.github.model.InstalledAppItem
 
 internal class GitHubTrackActions(
     private val env: GitHubPageActionEnvironment,
     private val refreshActions: GitHubRefreshActions
 ) {
     private val state get() = env.state
+    private val packageNamePattern = Regex("""^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$""")
 
     fun openTrackSheetForAdd() {
         state.resetTrackEditor()
@@ -19,8 +19,10 @@ internal class GitHubTrackActions(
     fun openTrackSheetForEdit(item: GitHubTrackedApp) {
         state.editingTrackedItem = item
         state.repoUrlInput = item.repoUrl
-        state.selectedApp = state.appList.firstOrNull { it.packageName == item.packageName }
-            ?: InstalledAppItem(label = item.appLabel, packageName = item.packageName)
+        state.packageNameInput = item.packageName
+        state.selectedApp = state.appList.firstOrNull {
+            it.packageName.equals(item.packageName, ignoreCase = true)
+        }
         state.appSearch = ""
         state.pickerExpanded = false
         state.preferPreReleaseInput = item.preferPreRelease
@@ -38,18 +40,35 @@ internal class GitHubTrackActions(
     }
 
     fun applyTrackSheet() {
-        val app = state.selectedApp
         val parsed = GitHubVersionUtils.parseOwnerRepo(state.repoUrlInput)
-        if (app == null || parsed == null) {
+        if (parsed == null) {
             env.toast(R.string.github_toast_fill_repo_and_select_app)
             return
+        }
+        val manualPackage = state.packageNameInput.trim()
+        val resolvedPackageName = manualPackage
+        if (resolvedPackageName.isNotBlank() && !packageNamePattern.matches(resolvedPackageName)) {
+            env.toast(R.string.github_toast_invalid_package_name)
+            return
+        }
+        val matchedInstalledApp = resolvedPackageName
+            .takeIf { it.isNotBlank() }
+            ?.let { packageName ->
+                state.appList.firstOrNull { item ->
+                    item.packageName.equals(packageName, ignoreCase = true)
+                }
+            }
+        val resolvedAppLabel = when {
+            matchedInstalledApp != null -> matchedInstalledApp.label
+            resolvedPackageName.isNotBlank() -> resolvedPackageName
+            else -> "${parsed.first}/${parsed.second}"
         }
         val newItem = GitHubTrackedApp(
             repoUrl = state.repoUrlInput.trim(),
             owner = parsed.first,
             repo = parsed.second,
-            packageName = app.packageName,
-            appLabel = app.label,
+            packageName = resolvedPackageName,
+            appLabel = resolvedAppLabel,
             preferPreRelease = state.preferPreReleaseInput,
             alwaysShowLatestReleaseDownloadButton = state.alwaysShowLatestReleaseDownloadButtonInput
         )

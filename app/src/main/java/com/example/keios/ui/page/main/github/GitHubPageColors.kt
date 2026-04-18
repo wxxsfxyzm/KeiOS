@@ -25,6 +25,12 @@ internal object GitHubStatusPalette {
 internal fun VersionCheckUi.isFailed(): Boolean = failed ||
     message.startsWith(GitHubTrackedReleaseStatus.Failed.defaultMessage)
 
+internal fun VersionCheckUi.isLocalAppUninstalled(): Boolean {
+    val normalizedLocalVersion = localVersion.trim()
+    return localVersionCode < 0L &&
+        (normalizedLocalVersion.isBlank() || normalizedLocalVersion.equals("unknown", ignoreCase = true))
+}
+
 internal fun OverviewRefreshState.color(neutralColor: Color): Color {
     return when (this) {
         OverviewRefreshState.Refreshing -> GitHubStatusPalette.Active
@@ -75,6 +81,7 @@ internal fun OverviewRefreshState.indicatorBackground(neutralSurface: Color): Co
 internal fun VersionCheckUi.statusIcon(): ImageVector {
     return when {
         loading -> MiuixIcons.Regular.Refresh
+        isLocalAppUninstalled() -> MiuixIcons.Regular.Report
         isFailed() -> MiuixIcons.Regular.Report
         recommendsPreRelease -> MiuixIcons.Regular.Update
         hasPreReleaseUpdate -> MiuixIcons.Regular.Report
@@ -88,6 +95,7 @@ internal fun VersionCheckUi.statusIcon(): ImageVector {
 internal fun VersionCheckUi.statusColor(neutralColor: Color): Color {
     return when {
         loading -> GitHubStatusPalette.Active
+        isLocalAppUninstalled() -> neutralColor
         isFailed() -> GitHubStatusPalette.Error
         recommendsPreRelease -> GitHubStatusPalette.PreRelease
         hasPreReleaseUpdate -> GitHubStatusPalette.PreRelease

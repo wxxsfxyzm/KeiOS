@@ -73,7 +73,10 @@ internal class GitHubRefreshActions(
                 forceRefresh = forceRefresh
             )
         }
-        val trackedPackages = state.trackedItems.map { it.packageName }.distinct()
+        val trackedPackages = state.trackedItems
+            .map { it.packageName.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
         if (trackedPackages.isNotEmpty()) {
             withContext(Dispatchers.IO) {
                 AppIconCache.preload(context, trackedPackages)

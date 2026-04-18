@@ -485,6 +485,7 @@ fun GitHubPage(
         editingTrackedItem = state.editingTrackedItem,
         repoUrlInput = state.repoUrlInput,
         appSearch = state.appSearch,
+        packageNameInput = state.packageNameInput,
         pickerExpanded = state.pickerExpanded,
         selectedApp = state.selectedApp,
         appList = state.appList,
@@ -494,8 +495,25 @@ fun GitHubPage(
         onApply = actions::applyTrackSheet,
         onRepoUrlInputChange = { state.repoUrlInput = it },
         onAppSearchChange = { state.appSearch = it },
+        onPackageNameInputChange = { input ->
+            state.packageNameInput = input
+            val selected = state.selectedApp
+            val normalizedInput = input.trim()
+            if (selected != null) {
+                if (normalizedInput.isBlank()) {
+                    state.selectedApp = null
+                } else if (!selected.packageName.equals(normalizedInput, ignoreCase = true)) {
+                    state.selectedApp = null
+                }
+            }
+        },
         onPickerExpandedChange = { state.pickerExpanded = it },
-        onSelectedAppChange = { state.selectedApp = it },
+        onSelectedAppChange = { app ->
+            state.selectedApp = app
+            if (app != null) {
+                state.packageNameInput = app.packageName
+            }
+        },
         onPreferPreReleaseInputChange = { state.preferPreReleaseInput = it },
         onAlwaysShowLatestReleaseDownloadButtonInputChange = {
             state.alwaysShowLatestReleaseDownloadButtonInput = it

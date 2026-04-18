@@ -29,6 +29,7 @@ internal class GitHubPageState(
 ) {
     var trackedSearch by mutableStateOf("")
     var repoUrlInput by mutableStateOf("")
+    var packageNameInput by mutableStateOf("")
     var appSearch by mutableStateOf("")
     var pickerExpanded by mutableStateOf(false)
     var showAddSheet by mutableStateOf(false)
@@ -206,6 +207,7 @@ internal class GitHubPageState(
     fun resetTrackEditor() {
         editingTrackedItem = null
         repoUrlInput = ""
+        packageNameInput = ""
         selectedApp = null
         appSearch = ""
         pickerExpanded = false

@@ -400,15 +400,16 @@ object GitHubTrackStore {
         val repo = obj.optString("repo").trim()
         val packageName = obj.optString("packageName").trim()
         val appLabel = obj.optString("appLabel").trim()
-        if (repoUrl.isBlank() || owner.isBlank() || repo.isBlank() || packageName.isBlank()) {
+        if (repoUrl.isBlank() || owner.isBlank() || repo.isBlank()) {
             return null
         }
+        val fallbackLabel = packageName.ifBlank { "$owner/$repo" }
         return GitHubTrackedApp(
             repoUrl = repoUrl,
             owner = owner,
             repo = repo,
             packageName = packageName,
-            appLabel = appLabel.ifBlank { packageName },
+            appLabel = appLabel.ifBlank { fallbackLabel },
             preferPreRelease = when {
                 obj.has("preferPreRelease") -> obj.optBoolean("preferPreRelease", false)
                 obj.has("checkPreRelease") -> obj.optBoolean("checkPreRelease", false)

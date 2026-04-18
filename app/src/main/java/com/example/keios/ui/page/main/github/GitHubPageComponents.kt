@@ -471,11 +471,16 @@ internal fun AppIcon(
     packageName: String,
     size: Dp
 ) {
+    val normalizedPackageName = packageName.trim()
     val context = LocalContext.current
-    val bitmapState = produceState<Bitmap?>(initialValue = AppIconCache.get(packageName), packageName) {
+    val bitmapState = produceState<Bitmap?>(
+        initialValue = AppIconCache.get(normalizedPackageName),
+        normalizedPackageName
+    ) {
+        if (normalizedPackageName.isBlank()) return@produceState
         if (value == null) {
             value = withContext(Dispatchers.IO) {
-                AppIconCache.getOrLoad(context, packageName)
+                AppIconCache.getOrLoad(context, normalizedPackageName)
             }
         }
     }
@@ -483,7 +488,7 @@ internal fun AppIcon(
     if (bitmap != null) {
         Image(
             bitmap = bitmap.asImageBitmap(),
-            contentDescription = packageName,
+            contentDescription = normalizedPackageName,
             modifier = Modifier
                 .width(size)
                 .height(size)

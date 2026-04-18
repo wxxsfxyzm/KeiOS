@@ -58,6 +58,7 @@ import com.example.keios.ui.page.main.OverviewRefreshState
 import com.example.keios.ui.page.main.VersionCheckUi
 import com.example.keios.ui.page.main.VersionValueRow
 import com.example.keios.ui.page.main.formatReleaseValue
+import com.example.keios.ui.page.main.isLocalAppUninstalled
 import com.example.keios.ui.page.main.preReleaseVersionColor
 import com.example.keios.ui.page.main.stableVersionColor
 import com.example.keios.ui.page.main.statusActionUrl
@@ -409,7 +410,11 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                         VersionValueRow(
                             label = stringResource(R.string.github_item_label_local_version),
                             value = localText,
-                            valueColor = MiuixTheme.colorScheme.primary
+                            valueColor = if (state.isLocalAppUninstalled()) {
+                                MiuixTheme.colorScheme.onBackgroundVariant
+                            } else {
+                                MiuixTheme.colorScheme.primary
+                            }
                         )
                     }
                     if (state.hasStableRelease &&
@@ -901,9 +906,7 @@ private fun formatLocalVersionText(
     state: VersionCheckUi
 ): String? {
     val rawLocalVersion = state.localVersion.trim()
-    val hasUnknownPlaceholder = rawLocalVersion.equals("unknown", ignoreCase = true)
-    val uninstalled = state.localVersionCode < 0L && (rawLocalVersion.isBlank() || hasUnknownPlaceholder)
-    if (uninstalled) {
+    if (state.isLocalAppUninstalled()) {
         return context.getString(R.string.github_item_value_local_version_uninstalled)
     }
     if (rawLocalVersion.isBlank()) return null
