@@ -83,6 +83,7 @@ import com.example.keios.ui.page.main.widget.UiPerformanceBudget
 import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.LiquidGlassBottomBar
+import com.example.keios.ui.page.main.widget.LiquidGlassBottomBarItem
 import com.example.keios.ui.page.main.widget.LocalTransitionAnimationsEnabled
 import com.example.keios.ui.page.main.widget.appFloatingEnter
 import com.example.keios.ui.page.main.widget.appFloatingExit
@@ -590,42 +591,89 @@ private fun MainPagerLayout(
                         )
                     val bottomBarTabs: @Composable RowScope.() -> Unit = {
                         tabs.forEachIndexed { index, page ->
-                            FloatingBottomBarItem(
-                                onClick = { handlePageSelected(index) },
-                                modifier = Modifier.defaultMinSize(minWidth = 76.dp)
-                            ) {
-                                val tabIconModifier = Modifier
-                                    .size(20.dp)
-                                    .graphicsLayer {
-                                        scaleX = page.iconScale
-                                        scaleY = page.iconScale
-                                    }
-                                if (page.iconRes != null) {
-                                    Icon(
-                                        painter = painterResource(id = page.iconRes),
-                                        contentDescription = page.label,
-                                        tint = if (page.keepOriginalColors) Color.Unspecified else MiuixTheme.colorScheme.onSurface,
-                                        modifier = tabIconModifier
-                                    )
-                                } else {
-                                    page.icon?.let { icon ->
+                            val selected = pagerState.targetPage == index
+                            val tabColor = if (newBottomBarTransitionEnabled && selected) {
+                                MiuixTheme.colorScheme.primary
+                            } else {
+                                MiuixTheme.colorScheme.onSurface
+                            }
+                            if (newBottomBarTransitionEnabled) {
+                                LiquidGlassBottomBarItem(
+                                    selected = selected,
+                                    onClick = { handlePageSelected(index) },
+                                    modifier = Modifier.defaultMinSize(minWidth = 76.dp)
+                                ) {
+                                    val tabIconModifier = Modifier
+                                        .size(20.dp)
+                                        .graphicsLayer {
+                                            scaleX = page.iconScale
+                                            scaleY = page.iconScale
+                                        }
+                                    if (page.iconRes != null) {
                                         Icon(
-                                            imageVector = icon,
+                                            painter = painterResource(id = page.iconRes),
                                             contentDescription = page.label,
-                                            tint = MiuixTheme.colorScheme.onSurface,
+                                            tint = if (page.keepOriginalColors) Color.Unspecified else tabColor,
                                             modifier = tabIconModifier
                                         )
+                                    } else {
+                                        page.icon?.let { icon ->
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = page.label,
+                                                tint = tabColor,
+                                                modifier = tabIconModifier
+                                            )
+                                        }
                                     }
+                                    Text(
+                                        text = page.label,
+                                        fontSize = 11.sp,
+                                        lineHeight = 14.sp,
+                                        color = tabColor,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Visible
+                                    )
                                 }
-                                Text(
-                                    text = page.label,
-                                    fontSize = 11.sp,
-                                    lineHeight = 14.sp,
-                                    color = MiuixTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    overflow = TextOverflow.Visible
-                                )
+                            } else {
+                                FloatingBottomBarItem(
+                                    onClick = { handlePageSelected(index) },
+                                    modifier = Modifier.defaultMinSize(minWidth = 76.dp)
+                                ) {
+                                    val tabIconModifier = Modifier
+                                        .size(20.dp)
+                                        .graphicsLayer {
+                                            scaleX = page.iconScale
+                                            scaleY = page.iconScale
+                                        }
+                                    if (page.iconRes != null) {
+                                        Icon(
+                                            painter = painterResource(id = page.iconRes),
+                                            contentDescription = page.label,
+                                            tint = if (page.keepOriginalColors) Color.Unspecified else MiuixTheme.colorScheme.onSurface,
+                                            modifier = tabIconModifier
+                                        )
+                                    } else {
+                                        page.icon?.let { icon ->
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = page.label,
+                                                tint = MiuixTheme.colorScheme.onSurface,
+                                                modifier = tabIconModifier
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = page.label,
+                                        fontSize = 11.sp,
+                                        lineHeight = 14.sp,
+                                        color = MiuixTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Visible
+                                    )
+                                }
                             }
                         }
                     }
