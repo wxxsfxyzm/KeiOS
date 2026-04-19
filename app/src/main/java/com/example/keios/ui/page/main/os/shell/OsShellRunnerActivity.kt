@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.ScrollState
@@ -533,7 +534,7 @@ private fun OsShellRunnerPage(
                             value = commandInput,
                             onValueChange = { commandInput = it },
                             label = stringResource(R.string.os_shell_input_hint),
-                            minHeight = 102.dp,
+                            minHeight = 90.dp,
                             modifier = Modifier
                                 .fillMaxWidth()
                         )
@@ -587,7 +588,8 @@ private fun OsShellRunnerPage(
                         scrollState = outputScrollState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 192.dp, max = 420.dp)
+                            .animateContentSize()
+                            .heightIn(min = 160.dp, max = 320.dp)
                             .padding(horizontal = 14.dp)
                             .padding(bottom = 14.dp)
                     )
@@ -752,12 +754,12 @@ private fun ShellOutputGlassPanel(
                 } else {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         entries.forEach { entry ->
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
                                     text = "$ ${entry.command}",
