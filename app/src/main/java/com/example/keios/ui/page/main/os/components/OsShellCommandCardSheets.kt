@@ -1,15 +1,11 @@
 package com.example.keios.ui.page.main
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,13 +22,11 @@ import com.example.keios.ui.page.main.widget.SheetFieldBlock
 import com.example.keios.ui.page.main.widget.SheetSectionCard
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal fun LazyListScope.addShellCommandCards(
@@ -50,16 +44,6 @@ internal fun LazyListScope.addShellCommandCards(
                 subtitle = card.subtitle,
                 expanded = expandedStates[card.id] == true,
                 onExpandedChange = { expanded -> onExpandedChange(card.id, expanded) },
-                headerStartAction = {
-                    Icon(
-                        imageVector = MiuixIcons.Regular.Tasks,
-                        contentDescription = card.title,
-                        tint = MiuixTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .size(22.dp)
-                            .defaultMinSize(minHeight = 22.dp)
-                    )
-                },
                 onHeaderLongClick = { onHeaderLongClick(card) }
             ) {
                 OsSectionInfoRow(
@@ -112,26 +96,13 @@ internal fun OsShellCommandVisibilityManagerSheet(
                 cards.forEach { item ->
                     SheetControlRow(
                         labelContent = {
-                            Row(
-                                modifier = Modifier.defaultMinSize(minHeight = 24.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = MiuixIcons.Regular.Tasks,
-                                    contentDescription = item.title,
-                                    tint = MiuixTheme.colorScheme.onBackground,
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .defaultMinSize(minHeight = 18.dp)
-                                )
-                                Text(
-                                    text = item.title.ifBlank { defaultOsShellCommandCardTitle(item.command) },
-                                    color = MiuixTheme.colorScheme.onBackground,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                            Text(
+                                text = item.title.ifBlank { defaultOsShellCommandCardTitle(item.command) },
+                                color = MiuixTheme.colorScheme.onBackground,
+                                maxLines = Int.MAX_VALUE,
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     ) {
                         Switch(
