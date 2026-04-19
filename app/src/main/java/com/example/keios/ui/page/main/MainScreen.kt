@@ -689,6 +689,7 @@ private fun MainPagerLayout(
                             },
                             tabsCount = tabs.size,
                             isLiquidEffectEnabled = liquidBottomBarEnabled,
+                            onReselectCurrent = { handlePageSelected(pagerState.targetPage) },
                             content = bottomBarTabs
                         )
                     } else {
