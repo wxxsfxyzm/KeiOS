@@ -15,14 +15,19 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.border
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,8 +38,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
@@ -48,7 +58,6 @@ import com.example.keios.ui.page.main.widget.AppPageScaffold
 import com.example.keios.ui.page.main.widget.AppSurfaceCard
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.GlassIconButton
-import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassVariant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -57,9 +66,9 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -294,7 +303,7 @@ private fun OsShellRunnerPage(
                             )
                             GlassIconButton(
                                 backdrop = null,
-                                icon = MiuixIcons.Regular.Pause,
+                                icon = MiuixIcons.Regular.Close,
                                 contentDescription = stopActionDescription,
                                 onClick = { stopCommand() },
                                 iconTint = if (runningCommand) {
@@ -317,20 +326,14 @@ private fun OsShellRunnerPage(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 220.dp)
+                            .heightIn(min = 280.dp)
                             .padding(horizontal = 14.dp)
                             .padding(bottom = 14.dp)
                     ) {
-                        GlassSearchField(
+                        ShellCommandInputField(
                             value = commandInput,
                             onValueChange = { commandInput = it },
                             label = stringResource(R.string.os_shell_input_hint),
-                            backdrop = null,
-                            variant = GlassVariant.SheetInput,
-                            singleLine = false,
-                            onImeActionDone = { runCommand() },
-                            textColor = MiuixTheme.colorScheme.primary,
-                            minHeight = 220.dp,
                             modifier = Modifier
                                 .fillMaxWidth()
                         )
@@ -395,5 +398,76 @@ private fun OsShellRunnerPage(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ShellCommandInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val shape: CornerBasedShape = RoundedCornerShape(18.dp)
+    val textColor = MiuixTheme.colorScheme.onBackground
+    val placeholderColor = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = if (isDark) 0.72f else 0.64f)
+    val borderColor = if (isDark) {
+        Color(0xFF9CCBFF).copy(alpha = 0.30f)
+    } else {
+        Color(0xFFBFD8F8).copy(alpha = 0.92f)
+    }
+    val baseColor = if (isDark) {
+        Color(0xFF121A24).copy(alpha = 0.46f)
+    } else {
+        Color.White.copy(alpha = 0.72f)
+    }
+    val overlayColor = if (isDark) {
+        Color(0xFF82B6F5).copy(alpha = 0.09f)
+    } else {
+        Color(0xFFE4F1FF).copy(alpha = 0.26f)
+    }
+    val textStyle = TextStyle(
+        color = textColor,
+        fontSize = AppTypographyTokens.Body.fontSize,
+        lineHeight = AppTypographyTokens.Body.lineHeight,
+        platformStyle = PlatformTextStyle(includeFontPadding = false)
+    )
+
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(baseColor, shape)
+            .background(overlayColor, shape)
+            .border(width = 1.dp, color = borderColor, shape = shape)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = false,
+            textStyle = textStyle,
+            cursorBrush = SolidColor(MiuixTheme.colorScheme.primary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 240.dp),
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 240.dp)
+                ) {
+                    if (value.isBlank()) {
+                        BasicText(
+                            text = label,
+                            style = textStyle.copy(color = placeholderColor),
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    innerTextField()
+                }
+            }
+        )
     }
 }
