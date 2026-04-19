@@ -1,5 +1,6 @@
 package com.example.keios.ui.page.main
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -82,13 +83,14 @@ internal fun LazyListScope.addShellCommandCards(
                             )
                         )
                     } else {
-                        GlassIconButton(
-                            backdrop = contentBackdrop,
-                            variant = GlassVariant.Bar,
-                            icon = MiuixIcons.Regular.Play,
+                        Icon(
+                            imageVector = MiuixIcons.Regular.Play,
                             contentDescription = stringResource(R.string.os_shell_card_cd_run_saved),
-                            onClick = { onRunCard(card) },
-                            iconTint = MiuixTheme.colorScheme.primary
+                            tint = MiuixTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .size(20.dp)
+                                .defaultMinSize(minHeight = 20.dp)
+                                .clickable { onRunCard(card) }
                         )
                     }
                 },

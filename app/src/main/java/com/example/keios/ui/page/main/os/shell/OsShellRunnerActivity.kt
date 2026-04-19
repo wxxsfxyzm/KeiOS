@@ -235,6 +235,15 @@ private fun OsShellRunnerPage(
 
     var commandInput by rememberSaveable { mutableStateOf(initialCommandInput) }
     var outputText by rememberSaveable { mutableStateOf(initialOutputText) }
+    var latestRunResultOutput by rememberSaveable {
+        mutableStateOf(
+            extractLatestShellResultFromDisplay(
+                raw = initialOutputText,
+                outputResultLabel = outputResultLabel,
+                outputTimeLabel = outputTimeLabel
+            )
+        )
+    }
     var runningCommand by remember { mutableStateOf(false) }
     var runningJob by remember { mutableStateOf<Job?>(null) }
     var suppressStopOutputAppend by remember { mutableStateOf(false) }
@@ -250,6 +259,8 @@ private fun OsShellRunnerPage(
     BackHandler(enabled = !showSaveSheet && !showSettingsSheet, onBack = onClose)
 
     fun appendOutput(command: String, result: String) {
+        val normalizedResult = result.trimEnd()
+        latestRunResultOutput = normalizedResult
         val timestamp = SimpleDateFormat(
             "HH:mm:ss",
             Locale.getDefault()
@@ -265,7 +276,7 @@ private fun OsShellRunnerPage(
             appendLine("$ $command")
             appendLine()
             appendLine("$outputResultLabel:")
-            appendLine(result.trimEnd())
+            appendLine(normalizedResult)
             appendLine()
             append("$outputTimeLabel: $timestamp")
         })
@@ -345,7 +356,7 @@ private fun OsShellRunnerPage(
         }
         val title = saveTitleInput.trim().ifBlank { defaultOsShellCommandCardTitle(command) }
         val subtitle = saveSubtitleInput.trim()
-        val saved = onSaveShellCommand(command, title, subtitle, outputText)
+        val saved = onSaveShellCommand(command, title, subtitle, latestRunResultOutput)
         if (saved) {
             showSaveSheet = false
             Toast.makeText(context, commandSavedToast, Toast.LENGTH_SHORT).show()
@@ -377,6 +388,7 @@ private fun OsShellRunnerPage(
         stopCommand(showStoppedOutput = false)
         commandInput = ""
         outputText = ""
+        latestRunResultOutput = ""
         Toast.makeText(context, clearAllToast, Toast.LENGTH_SHORT).show()
     }
 
@@ -559,7 +571,10 @@ private fun OsShellRunnerPage(
                                 backdrop = null,
                                 icon = MiuixIcons.Regular.Close,
                                 contentDescription = clearOutputActionDescription,
-                                onClick = { outputText = "" },
+                                onClick = {
+                                    outputText = ""
+                                    latestRunResultOutput = ""
+                                },
                                 iconTint = MiuixTheme.colorScheme.onBackgroundVariant,
                                 variant = GlassVariant.Bar
                             )
@@ -785,4 +800,25 @@ private fun trimShellOutputHistory(raw: String): String {
     return normalized
         .takeLast(shellOutputMaxChars)
         .trimStart()
+}
+
+private fun extractLatestShellResultFromDisplay(
+    raw: String,
+    outputResultLabel: String,
+    outputTimeLabel: String
+): String {
+    val normalized = raw
+        .replace("\r\n", "\n")
+        .replace('\r', '\n')
+        .trim()
+    if (normalized.isBlank()) return ""
+    val resultHeader = "$outputResultLabel:"
+    val timeHeader = "$outputTimeLabel:"
+    val resultStart = normalized.lastIndexOf(resultHeader)
+    if (resultStart < 0) return ""
+    val resultBlock = normalized.substring(resultStart + resultHeader.length).trimStart('\n', ' ')
+    if (resultBlock.isBlank()) return ""
+    val timeStart = resultBlock.lastIndexOf("\n$timeHeader")
+    if (timeStart < 0) return resultBlock.trimEnd()
+    return resultBlock.substring(0, timeStart).trimEnd()
 }
