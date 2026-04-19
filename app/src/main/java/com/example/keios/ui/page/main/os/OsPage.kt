@@ -744,14 +744,27 @@ fun OsPage(
         SystemOverviewState.Idle -> MiuixTheme.colorScheme.surface
     }
     val totalParameterCardCount = remember {
-        OsSectionCard.entries.count { it != OsSectionCard.GOOGLE_SYSTEM_SERVICE }
+        OsSectionCard.entries.count {
+            it != OsSectionCard.GOOGLE_SYSTEM_SERVICE &&
+                it != OsSectionCard.SHELL_RUNNER
+        }
     }
     val visibleParameterCardCount = remember(visibleCards) {
-        visibleCards.count { it != OsSectionCard.GOOGLE_SYSTEM_SERVICE }
+        visibleCards.count {
+            it != OsSectionCard.GOOGLE_SYSTEM_SERVICE &&
+                it != OsSectionCard.SHELL_RUNNER
+        }
     }
     val activityOverviewStats = remember(activityShortcutCards) {
         buildOsActivityOverviewStats(
             cards = activityShortcutCards
+        )
+    }
+    val shellOverviewStats = remember(shellCommandCards, visibleCards) {
+        val shellRunnerVisible = visibleCards.contains(OsSectionCard.SHELL_RUNNER)
+        OsShellOverviewStats(
+            totalCount = shellCommandCards.size + 1,
+            visibleCount = shellCommandCards.count { it.visible } + if (shellRunnerVisible) 1 else 0
         )
     }
     val overviewMetrics = remember(
@@ -759,7 +772,8 @@ fun OsPage(
         visibleRowsCount,
         totalParameterCardCount,
         visibleParameterCardCount,
-        activityOverviewStats
+        activityOverviewStats,
+        shellOverviewStats
     ) {
         buildOsOverviewMetrics(
             context = context,
@@ -767,7 +781,8 @@ fun OsPage(
             visibleRowsCount = visibleRowsCount,
             visibleParameterCardCount = visibleParameterCardCount,
             totalParameterCardCount = totalParameterCardCount,
-            activityStats = activityOverviewStats
+            activityStats = activityOverviewStats,
+            shellStats = shellOverviewStats
         )
     }
 
@@ -853,6 +868,10 @@ fun OsPage(
             title = visibleShellCardsTitle,
             sheetBackdrop = sheetBackdrop,
             shellHintText = visibleShellCardsDesc,
+            shellRunnerVisible = visibleCards.contains(OsSectionCard.SHELL_RUNNER),
+            onShellRunnerVisibilityChange = { checked ->
+                scope.launch { applyCardVisibility(OsSectionCard.SHELL_RUNNER, checked) }
+            },
             cards = shellCommandCards,
             onDismissRequest = { showShellCardVisibilityManager = false },
             onCardVisibilityChange = { cardId, checked ->

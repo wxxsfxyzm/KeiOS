@@ -264,7 +264,10 @@ internal fun OsCardVisibilityManagerSheet(
             }
 
             SheetSectionCard(verticalSpacing = 10.dp) {
-                OsSectionCard.entries.filter { it != OsSectionCard.GOOGLE_SYSTEM_SERVICE }.forEach { card ->
+                OsSectionCard.entries.filter { card ->
+                    card != OsSectionCard.GOOGLE_SYSTEM_SERVICE &&
+                        card != OsSectionCard.SHELL_RUNNER
+                }.forEach { card ->
                     SheetControlRow(
                         labelContent = {
                             CardLabel(card = card, modifier = Modifier.defaultMinSize(minHeight = 24.dp))

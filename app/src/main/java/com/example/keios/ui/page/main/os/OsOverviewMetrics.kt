@@ -8,6 +8,11 @@ internal data class OsActivityOverviewStats(
     val visibleCount: Int
 )
 
+internal data class OsShellOverviewStats(
+    val totalCount: Int,
+    val visibleCount: Int
+)
+
 internal fun buildOsActivityOverviewStats(
     cards: List<OsActivityShortcutCard>
 ): OsActivityOverviewStats {
@@ -23,7 +28,8 @@ internal fun buildOsOverviewMetrics(
     visibleRowsCount: Int,
     visibleParameterCardCount: Int,
     totalParameterCardCount: Int,
-    activityStats: OsActivityOverviewStats
+    activityStats: OsActivityOverviewStats,
+    shellStats: OsShellOverviewStats
 ): List<OsOverviewMetric> {
     return listOf(
         OsOverviewMetric(
@@ -48,6 +54,14 @@ internal fun buildOsOverviewMetrics(
                 R.string.os_overview_metric_activity_cards_value,
                 activityStats.visibleCount,
                 activityStats.totalCount
+            )
+        ),
+        OsOverviewMetric(
+            label = context.getString(R.string.os_overview_metric_shell_cards),
+            value = context.getString(
+                R.string.os_overview_metric_shell_cards_value,
+                shellStats.visibleCount,
+                shellStats.totalCount
             )
         )
     )

@@ -2,8 +2,10 @@ package com.example.keios.ui.page.main
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -22,11 +24,13 @@ import com.example.keios.ui.page.main.widget.SheetFieldBlock
 import com.example.keios.ui.page.main.widget.SheetSectionCard
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal fun LazyListScope.addShellCommandCards(
@@ -44,6 +48,16 @@ internal fun LazyListScope.addShellCommandCards(
                 subtitle = card.subtitle,
                 expanded = expandedStates[card.id] == true,
                 onExpandedChange = { expanded -> onExpandedChange(card.id, expanded) },
+                headerStartAction = {
+                    Icon(
+                        imageVector = MiuixIcons.Regular.Tasks,
+                        contentDescription = card.title,
+                        tint = MiuixTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .defaultMinSize(minHeight = 22.dp)
+                    )
+                },
                 onHeaderLongClick = { onHeaderLongClick(card) }
             ) {
                 OsSectionInfoRow(
@@ -70,6 +84,8 @@ internal fun OsShellCommandVisibilityManagerSheet(
     title: String,
     sheetBackdrop: LayerBackdrop,
     shellHintText: String,
+    shellRunnerVisible: Boolean,
+    onShellRunnerVisibilityChange: (Boolean) -> Unit,
     cards: List<OsShellCommandCard>,
     onDismissRequest: () -> Unit,
     onCardVisibilityChange: (String, Boolean) -> Unit
@@ -93,6 +109,14 @@ internal fun OsShellCommandVisibilityManagerSheet(
             verticalSpacing = 10.dp
         ) {
             SheetSectionCard(verticalSpacing = 10.dp) {
+                SheetControlRow(
+                    label = stringResource(R.string.os_shell_card_title)
+                ) {
+                    Switch(
+                        checked = shellRunnerVisible,
+                        onCheckedChange = onShellRunnerVisibilityChange
+                    )
+                }
                 cards.forEach { item ->
                     SheetControlRow(
                         labelContent = {
