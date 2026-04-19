@@ -20,6 +20,7 @@ class ModernNotificationBuilder(
         private const val ICON_DEFAULT = R.drawable.ic_kei_logo_color
         private const val ICON_AP = R.drawable.ba_ap_icon
         private const val ICON_BA_CAFE_VISIT = R.drawable.ic_ba_schale
+        private const val ICON_BA_ARENA_REFRESH = R.drawable.ic_ba_schale
     }
 
     private val baseNotificationBuilder by lazy {
@@ -45,9 +46,11 @@ class ModernNotificationBuilder(
         val progress = computeProgress(state)
         val isBlueArchiveAp = McpNotificationPayload.isBaApServerName(state.serverName)
         val isBlueArchiveCafeVisit = McpNotificationPayload.isBaCafeVisitServerName(state.serverName)
+        val isBlueArchiveArenaRefresh = McpNotificationPayload.isBaArenaRefreshServerName(state.serverName)
         val iconRes = when {
             isBlueArchiveAp -> ICON_AP
             isBlueArchiveCafeVisit -> ICON_BA_CAFE_VISIT
+            isBlueArchiveArenaRefresh -> ICON_BA_ARENA_REFRESH
             else -> ICON_DEFAULT
         }
         val baseBuilder = baseNotificationBuilder
@@ -74,7 +77,10 @@ class ModernNotificationBuilder(
         baseBuilder.setContentTitle(state.title(context))
         baseBuilder.setContentText(state.content(context).ifBlank { " " })
         if (state.running) {
-            val shortCriticalText = if (McpNotificationPayload.isBaCafeVisitServerName(state.serverName)) {
+            val shortCriticalText = if (
+                McpNotificationPayload.isBaCafeVisitServerName(state.serverName) ||
+                McpNotificationPayload.isBaArenaRefreshServerName(state.serverName)
+            ) {
                 state.onlineText(context)
             } else {
                 state.shortText
@@ -88,7 +94,10 @@ class ModernNotificationBuilder(
     private fun computeProgress(state: McpNotificationPayload): Int {
         if (!state.running) return 0
         val isBlueArchiveAp = McpNotificationPayload.isBaApServerName(state.serverName)
-        if (McpNotificationPayload.isBaCafeVisitServerName(state.serverName)) {
+        if (
+            McpNotificationPayload.isBaCafeVisitServerName(state.serverName) ||
+            McpNotificationPayload.isBaArenaRefreshServerName(state.serverName)
+        ) {
             return 100
         }
         if (isBlueArchiveAp) {

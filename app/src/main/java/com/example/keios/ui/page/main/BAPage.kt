@@ -281,6 +281,7 @@ fun BAPage(
         backdrop = sheetBackdrop,
         state = settingsSheetState,
         onApNotifyEnabledChange = { ui.sheetApNotifyEnabled = it },
+        onArenaRefreshNotifyEnabledChange = { ui.sheetArenaRefreshNotifyEnabled = it },
         onCafeVisitNotifyEnabledChange = { ui.sheetCafeVisitNotifyEnabled = it },
         onApNotifyThresholdTextChange = { ui.sheetApNotifyThresholdText = it },
         onApNotifyThresholdDone = {

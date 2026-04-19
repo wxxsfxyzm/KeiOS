@@ -50,6 +50,7 @@ class McpKeepAliveService : Service() {
                 NotificationManagerCompat.from(this).cancel(resolvedNotificationId)
                 val shouldForceStop = resolvedNotificationId == McpNotificationHelper.BA_AP_NOTIFICATION_ID ||
                     resolvedNotificationId == McpNotificationHelper.BA_CAFE_VISIT_NOTIFICATION_ID ||
+                    resolvedNotificationId == McpNotificationHelper.BA_ARENA_REFRESH_NOTIFICATION_ID ||
                     intent.getBooleanExtra(EXTRA_FORCE_STOP_ON_DISMISS, false)
                 if (shouldForceStop || !currentRunning) {
                     stopHeartbeat()
@@ -211,7 +212,8 @@ class McpKeepAliveService : Service() {
                 putExtra(
                     EXTRA_FORCE_STOP_ON_DISMISS,
                     notificationId == McpNotificationHelper.BA_AP_NOTIFICATION_ID ||
-                        notificationId == McpNotificationHelper.BA_CAFE_VISIT_NOTIFICATION_ID
+                        notificationId == McpNotificationHelper.BA_CAFE_VISIT_NOTIFICATION_ID ||
+                        notificationId == McpNotificationHelper.BA_ARENA_REFRESH_NOTIFICATION_ID
                 )
             }
             ContextCompat.startForegroundService(context, intent)

@@ -29,15 +29,18 @@ class MiIslandNotificationBuilder(
         private const val ISLAND_ICON_RES_ID_DEFAULT = R.drawable.ic_kei_logo_island
         private const val ISLAND_ICON_RES_ID_AP = R.drawable.ic_ba_ap_island_shift
         private const val ISLAND_ICON_RES_ID_BA_CAFE_VISIT = R.drawable.ic_ba_schale
+        private const val ISLAND_ICON_RES_ID_BA_ARENA_REFRESH = R.drawable.ic_ba_schale
     }
 
     override fun build(payload: NotificationPayload): Notification {
         val state = payload.state
         val isBlueArchiveAp = McpNotificationPayload.isBaApServerName(state.serverName)
         val isBlueArchiveCafeVisit = McpNotificationPayload.isBaCafeVisitServerName(state.serverName)
+        val isBlueArchiveArenaRefresh = McpNotificationPayload.isBaArenaRefreshServerName(state.serverName)
         val islandIconResId = when {
             isBlueArchiveAp -> ISLAND_ICON_RES_ID_AP
             isBlueArchiveCafeVisit -> ISLAND_ICON_RES_ID_BA_CAFE_VISIT
+            isBlueArchiveArenaRefresh -> ISLAND_ICON_RES_ID_BA_ARENA_REFRESH
             else -> ISLAND_ICON_RES_ID_DEFAULT
         }
         val builder = NotificationCompat.Builder(context, payload.environment.channelId)
@@ -60,7 +63,8 @@ class MiIslandNotificationBuilder(
         val state = payload.state
         val isBlueArchiveAp = McpNotificationPayload.isBaApServerName(state.serverName)
         val isBlueArchiveCafeVisit = McpNotificationPayload.isBaCafeVisitServerName(state.serverName)
-        val isBlueArchiveNotification = isBlueArchiveAp || isBlueArchiveCafeVisit
+        val isBlueArchiveArenaRefresh = McpNotificationPayload.isBaArenaRefreshServerName(state.serverName)
+        val isBlueArchiveNotification = isBlueArchiveAp || isBlueArchiveCafeVisit || isBlueArchiveArenaRefresh
         val lightLogoIcon = if (isBlueArchiveNotification) {
             Icon.createWithResource(context, islandIconResId)
         } else {
@@ -75,6 +79,8 @@ class MiIslandNotificationBuilder(
             "${state.port.coerceAtLeast(0)}/${state.clients.coerceAtLeast(0)}"
         } else if (isBlueArchiveCafeVisit && state.running) {
             context.getString(R.string.ba_cafe_visit_notification_island_text)
+        } else if (isBlueArchiveArenaRefresh && state.running) {
+            context.getString(R.string.ba_arena_refresh_notification_island_text)
         } else {
             state.shortText.ifEmpty { state.title(context) }
         }

@@ -33,6 +33,7 @@ object McpNotificationHelper {
     const val KEEPALIVE_NOTIFICATION_ID = 38888
     const val BA_AP_NOTIFICATION_ID = 38889
     const val BA_CAFE_VISIT_NOTIFICATION_ID = 38890
+    const val BA_ARENA_REFRESH_NOTIFICATION_ID = 38891
     private const val TEST_NOTIFICATION_ID = KEEPALIVE_NOTIFICATION_ID
     private const val ACTION_DISMISS = "com.example.keios.mcp.keepalive.DISMISS"
     private const val EXTRA_NOTIFICATION_ID = "notification_id"
@@ -62,6 +63,8 @@ object McpNotificationHelper {
     private var baApSnapshot: CachedNotificationSnapshot? = null
     @Volatile
     private var baCafeVisitSnapshot: CachedNotificationSnapshot? = null
+    @Volatile
+    private var baArenaRefreshSnapshot: CachedNotificationSnapshot? = null
 
     private data class CachedNotificationSnapshot(
         val serverName: String,
@@ -135,6 +138,12 @@ object McpNotificationHelper {
             manager = manager,
             notificationId = BA_CAFE_VISIT_NOTIFICATION_ID,
             snapshot = baCafeVisitSnapshot
+        )
+        refreshCachedNotificationIfActive(
+            context = context,
+            manager = manager,
+            notificationId = BA_ARENA_REFRESH_NOTIFICATION_ID,
+            snapshot = baArenaRefreshSnapshot
         )
     }
 
@@ -256,11 +265,13 @@ object McpNotificationHelper {
     ) {
         val isBlueArchiveAp = McpNotificationPayload.isBaApServerName(serverName)
         val isBlueArchiveCafeVisit = McpNotificationPayload.isBaCafeVisitServerName(serverName)
-        val isBlueArchiveNotification = isBlueArchiveAp || isBlueArchiveCafeVisit
+        val isBlueArchiveArenaRefresh = McpNotificationPayload.isBaArenaRefreshServerName(serverName)
+        val isBlueArchiveNotification = isBlueArchiveAp || isBlueArchiveCafeVisit || isBlueArchiveArenaRefresh
         val runningForNotification = if (isBlueArchiveNotification) running else true
         val baNotificationId = when {
             isBlueArchiveAp -> BA_AP_NOTIFICATION_ID
             isBlueArchiveCafeVisit -> BA_CAFE_VISIT_NOTIFICATION_ID
+            isBlueArchiveArenaRefresh -> BA_ARENA_REFRESH_NOTIFICATION_ID
             else -> TEST_NOTIFICATION_ID
         }
         if (isBlueArchiveNotification) {
@@ -457,6 +468,7 @@ object McpNotificationHelper {
             KEEPALIVE_NOTIFICATION_ID -> keepAliveSnapshot = snapshot
             BA_AP_NOTIFICATION_ID -> baApSnapshot = snapshot
             BA_CAFE_VISIT_NOTIFICATION_ID -> baCafeVisitSnapshot = snapshot
+            BA_ARENA_REFRESH_NOTIFICATION_ID -> baArenaRefreshSnapshot = snapshot
         }
     }
 

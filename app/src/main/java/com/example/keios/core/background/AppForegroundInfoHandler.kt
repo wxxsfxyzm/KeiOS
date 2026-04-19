@@ -9,9 +9,11 @@ import com.example.keios.feature.github.notification.GitHubRefreshNotificationHe
 import com.example.keios.ui.page.main.ba.BASettingsStore
 import com.example.keios.ui.page.main.ba.BA_AP_MAX
 import com.example.keios.ui.page.main.ba.BaApNotificationDispatcher
+import com.example.keios.ui.page.main.ba.BaArenaRefreshNotificationDispatcher
 import com.example.keios.ui.page.main.ba.BaCafeVisitNotificationDispatcher
 import com.example.keios.ui.page.main.ba.BaPageSnapshot
 import com.example.keios.ui.page.main.ba.applyBaApRegenTick
+import com.example.keios.ui.page.main.ba.currentArenaRefreshSlotMs
 import com.example.keios.ui.page.main.ba.currentCafeStudentRefreshSlotMs
 import com.example.keios.ui.page.main.ba.displayAp
 import kotlinx.coroutines.Dispatchers
@@ -68,10 +70,12 @@ object AppForegroundInfoHandler {
         baApTickMutex.withLock {
             val snapshot = withContext(Dispatchers.IO) { BASettingsStore.loadSnapshot() }
             val shouldHandleApNotify = snapshot.apNotifyEnabled
+            val shouldHandleArenaRefreshNotify = snapshot.arenaRefreshNotifyEnabled
             val shouldHandleCafeVisitNotify = snapshot.cafeVisitNotifyEnabled
-            if (!shouldHandleApNotify && !shouldHandleCafeVisitNotify) {
+            if (!shouldHandleApNotify && !shouldHandleArenaRefreshNotify && !shouldHandleCafeVisitNotify) {
                 withContext(Dispatchers.IO) {
                     BASettingsStore.saveApLastNotifiedLevel(-1)
+                    BASettingsStore.saveArenaRefreshLastNotifiedSlotMs(0L)
                     BASettingsStore.saveCafeVisitLastNotifiedSlotMs(0L)
                 }
                 return
@@ -83,6 +87,14 @@ object AppForegroundInfoHandler {
             } else {
                 withContext(Dispatchers.IO) {
                     BASettingsStore.saveApLastNotifiedLevel(-1)
+                }
+            }
+
+            if (shouldHandleArenaRefreshNotify) {
+                handleBaArenaRefreshTick(context = context, snapshot = snapshot, nowMs = nowMs)
+            } else {
+                withContext(Dispatchers.IO) {
+                    BASettingsStore.saveArenaRefreshLastNotifiedSlotMs(0L)
                 }
             }
 
@@ -160,6 +172,34 @@ object AppForegroundInfoHandler {
         )
         if (sent) {
             withContext(Dispatchers.IO) { BASettingsStore.saveCafeVisitLastNotifiedSlotMs(currentSlotMs) }
+        }
+    }
+
+    private suspend fun handleBaArenaRefreshTick(
+        context: Context,
+        snapshot: BaPageSnapshot,
+        nowMs: Long,
+    ) {
+        val currentSlotMs = currentArenaRefreshSlotMs(
+            nowMs = nowMs,
+            serverIndex = snapshot.serverIndex
+        )
+        val lastSlotMs = withContext(Dispatchers.IO) { BASettingsStore.loadArenaRefreshLastNotifiedSlotMs() }
+        if (lastSlotMs <= 0L) {
+            withContext(Dispatchers.IO) { BASettingsStore.saveArenaRefreshLastNotifiedSlotMs(currentSlotMs) }
+            return
+        }
+        if (currentSlotMs <= lastSlotMs) {
+            return
+        }
+
+        val sent = BaArenaRefreshNotificationDispatcher.send(
+            context = context,
+            serverIndex = snapshot.serverIndex,
+            slotMs = currentSlotMs
+        )
+        if (sent) {
+            withContext(Dispatchers.IO) { BASettingsStore.saveArenaRefreshLastNotifiedSlotMs(currentSlotMs) }
         }
     }
 }

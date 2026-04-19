@@ -20,7 +20,9 @@ data class McpNotificationPayload(
     companion object {
         const val BA_AP_SERVER_NAME = "BlueArchive AP"
         const val BA_CAFE_VISIT_SERVER_NAME = "BlueArchive Cafe Visit"
+        const val BA_ARENA_REFRESH_SERVER_NAME = "BlueArchive Arena Refresh"
         const val BA_CAFE_VISIT_PATH = "student_visit"
+        const val BA_ARENA_REFRESH_PATH = "arena_refresh"
 
         fun isBaApServerName(serverName: String): Boolean {
             return serverName.trim() == BA_AP_SERVER_NAME
@@ -30,8 +32,14 @@ data class McpNotificationPayload(
             return serverName.trim() == BA_CAFE_VISIT_SERVER_NAME
         }
 
+        fun isBaArenaRefreshServerName(serverName: String): Boolean {
+            return serverName.trim() == BA_ARENA_REFRESH_SERVER_NAME
+        }
+
         fun isBaNotificationServerName(serverName: String): Boolean {
-            return isBaApServerName(serverName) || isBaCafeVisitServerName(serverName)
+            return isBaApServerName(serverName) ||
+                isBaCafeVisitServerName(serverName) ||
+                isBaArenaRefreshServerName(serverName)
         }
     }
 
@@ -44,10 +52,15 @@ data class McpNotificationPayload(
     private val isBlueArchiveCafeVisit: Boolean
         get() = isBaCafeVisitServerName(normalizedServerName)
 
+    private val isBlueArchiveArenaRefresh: Boolean
+        get() = isBaArenaRefreshServerName(normalizedServerName)
+
     fun title(context: Context): String {
         return if (running) {
             if (isBlueArchiveCafeVisit) {
                 context.getString(R.string.ba_cafe_visit_notification_title)
+            } else if (isBlueArchiveArenaRefresh) {
+                context.getString(R.string.ba_arena_refresh_notification_title)
             } else {
                 normalizedServerName
             }
@@ -61,6 +74,12 @@ data class McpNotificationPayload(
             if (isBlueArchiveCafeVisit) {
                 if (path.isBlank() || path == BA_CAFE_VISIT_PATH) {
                     context.getString(R.string.ba_cafe_visit_notification_content)
+                } else {
+                    path
+                }
+            } else if (isBlueArchiveArenaRefresh) {
+                if (path.isBlank() || path == BA_ARENA_REFRESH_PATH) {
+                    context.getString(R.string.ba_arena_refresh_notification_content)
                 } else {
                     path
                 }
@@ -85,6 +104,8 @@ data class McpNotificationPayload(
     fun onlineText(context: Context): String {
         return if (isBlueArchiveCafeVisit) {
             context.getString(R.string.ba_cafe_visit_notification_island_text)
+        } else if (isBlueArchiveArenaRefresh) {
+            context.getString(R.string.ba_arena_refresh_notification_island_text)
         } else if (isBlueArchiveAp) {
             context.getString(R.string.mcp_online_text_ap_limit, clients)
         } else {
@@ -112,7 +133,7 @@ data class McpNotificationPayload(
 
     fun stopActionTitle(context: Context): String {
         secondaryActionLabel?.takeIf { it.isNotBlank() }?.let { return it }
-        return if (isBlueArchiveAp || isBlueArchiveCafeVisit) {
+        return if (isBlueArchiveAp || isBlueArchiveCafeVisit || isBlueArchiveArenaRefresh) {
             context.getString(R.string.common_mark_read)
         } else {
             context.getString(R.string.mcp_action_toggle_service)
@@ -127,6 +148,12 @@ data class McpNotificationPayload(
             if (isBlueArchiveCafeVisit) {
                 if (path.isBlank() || path == BA_CAFE_VISIT_PATH) {
                     context.getString(R.string.ba_cafe_visit_notification_content)
+                } else {
+                    path
+                }
+            } else if (isBlueArchiveArenaRefresh) {
+                if (path.isBlank() || path == BA_ARENA_REFRESH_PATH) {
+                    context.getString(R.string.ba_arena_refresh_notification_content)
                 } else {
                     path
                 }

@@ -26,6 +26,8 @@ internal data class BaOfficeState(
     val apSyncMs: Long,
     val apNotifyEnabled: Boolean,
     val apNotifyThreshold: Int,
+    val arenaRefreshNotifyEnabled: Boolean,
+    val arenaRefreshLastNotifiedSlotMs: Long,
     val cafeVisitNotifyEnabled: Boolean,
     val cafeVisitLastNotifiedSlotMs: Long,
     val coffeeHeadpatMs: Long,
@@ -53,6 +55,8 @@ internal class BaOfficeController(
     var apSyncMs by mutableLongStateOf(snapshot.apSyncMs)
     var apNotifyEnabled by mutableStateOf(snapshot.apNotifyEnabled)
     var apNotifyThreshold by mutableIntStateOf(snapshot.apNotifyThreshold)
+    var arenaRefreshNotifyEnabled by mutableStateOf(snapshot.arenaRefreshNotifyEnabled)
+    var arenaRefreshLastNotifiedSlotMs by mutableLongStateOf(snapshot.arenaRefreshLastNotifiedSlotMs)
     var cafeVisitNotifyEnabled by mutableStateOf(snapshot.cafeVisitNotifyEnabled)
     var cafeVisitLastNotifiedSlotMs by mutableLongStateOf(snapshot.cafeVisitLastNotifiedSlotMs)
     var coffeeHeadpatMs by mutableLongStateOf(snapshot.coffeeHeadpatMs)
@@ -80,6 +84,8 @@ internal class BaOfficeController(
             apSyncMs = apSyncMs,
             apNotifyEnabled = apNotifyEnabled,
             apNotifyThreshold = apNotifyThreshold,
+            arenaRefreshNotifyEnabled = arenaRefreshNotifyEnabled,
+            arenaRefreshLastNotifiedSlotMs = arenaRefreshLastNotifiedSlotMs,
             cafeVisitNotifyEnabled = cafeVisitNotifyEnabled,
             cafeVisitLastNotifiedSlotMs = cafeVisitLastNotifiedSlotMs,
             coffeeHeadpatMs = coffeeHeadpatMs,
@@ -343,6 +349,40 @@ internal class BaOfficeController(
             Toast.makeText(
                 context,
                 context.getString(R.string.ba_toast_cafe_visit_notification_sent),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        return true
+    }
+
+    fun sendArenaRefreshTestNotification(
+        context: Context,
+        serverIndex: Int,
+        showToast: Boolean = true,
+    ): Boolean {
+        val slotMs = currentArenaRefreshSlotMs(
+            nowMs = System.currentTimeMillis(),
+            serverIndex = serverIndex
+        )
+        val sent = BaArenaRefreshNotificationDispatcher.send(
+            context = context,
+            serverIndex = serverIndex,
+            slotMs = slotMs
+        )
+        if (!sent) {
+            if (showToast) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.ba_toast_notification_permission_required),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            return false
+        }
+        if (showToast) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.ba_toast_arena_refresh_notification_sent),
                 Toast.LENGTH_SHORT
             ).show()
         }

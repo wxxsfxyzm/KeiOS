@@ -20,6 +20,7 @@ internal fun BaDebugCard(
     backdrop: Backdrop?,
     onSendApTestNotification: () -> Unit,
     onSendCafeVisitTestNotification: () -> Unit,
+    onSendArenaRefreshTestNotification: () -> Unit,
     onTestCafePlus3Hours: () -> Unit,
 ) {
     val accentAmber = Color(0xFFF59E0B)
@@ -54,7 +55,7 @@ internal fun BaDebugCard(
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 GlassTextButton(
@@ -63,6 +64,13 @@ internal fun BaDebugCard(
                     textColor = Color(0xFF3B82F6),
                     variant = GlassVariant.SheetPrimaryAction,
                     onClick = onTestCafePlus3Hours,
+                )
+                GlassTextButton(
+                    backdrop = backdrop,
+                    text = stringResource(R.string.ba_debug_action_arena_refresh_notification),
+                    textColor = Color(0xFF3B82F6),
+                    variant = GlassVariant.SheetPrimaryAction,
+                    onClick = onSendArenaRefreshTestNotification,
                 )
             }
         }

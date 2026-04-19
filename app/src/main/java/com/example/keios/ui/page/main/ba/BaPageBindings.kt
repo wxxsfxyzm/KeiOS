@@ -10,6 +10,7 @@ internal fun buildBaSettingsSheetState(
     return BaSettingsSheetState(
         cafeLevel = ui.sheetCafeLevel,
         apNotifyEnabled = ui.sheetApNotifyEnabled,
+        arenaRefreshNotifyEnabled = ui.sheetArenaRefreshNotifyEnabled,
         cafeVisitNotifyEnabled = ui.sheetCafeVisitNotifyEnabled,
         apNotifyThresholdText = ui.sheetApNotifyThresholdText,
         mediaAdaptiveRotationEnabled = ui.sheetMediaAdaptiveRotationEnabled,
@@ -79,10 +80,23 @@ internal fun saveBaPageSettings(
 
     office.cafeLevel = persisted.savedCafeLevel
     office.clampCafeStoredToCap()
+    val previousArenaRefreshNotifyEnabled = office.arenaRefreshNotifyEnabled
     val previousCafeVisitNotifyEnabled = office.cafeVisitNotifyEnabled
     office.apNotifyEnabled = settingsSheetState.apNotifyEnabled
+    office.arenaRefreshNotifyEnabled = persisted.arenaRefreshNotifyEnabled
     office.cafeVisitNotifyEnabled = persisted.cafeVisitNotifyEnabled
     office.apNotifyThreshold = persisted.savedThreshold
+    if (!office.arenaRefreshNotifyEnabled) {
+        office.arenaRefreshLastNotifiedSlotMs = 0L
+        BASettingsStore.saveArenaRefreshLastNotifiedSlotMs(0L)
+    } else if (!previousArenaRefreshNotifyEnabled) {
+        val baselineSlotMs = currentArenaRefreshSlotMs(
+            nowMs = System.currentTimeMillis(),
+            serverIndex = ui.serverIndex
+        )
+        office.arenaRefreshLastNotifiedSlotMs = baselineSlotMs
+        BASettingsStore.saveArenaRefreshLastNotifiedSlotMs(baselineSlotMs)
+    }
     if (!office.cafeVisitNotifyEnabled) {
         office.cafeVisitLastNotifiedSlotMs = 0L
         BASettingsStore.saveCafeVisitLastNotifiedSlotMs(0L)
@@ -167,6 +181,14 @@ internal fun buildBaPageContentActions(
                 office.cafeVisitLastNotifiedSlotMs = baselineSlotMs
                 BASettingsStore.saveCafeVisitLastNotifiedSlotMs(baselineSlotMs)
             }
+            if (office.arenaRefreshNotifyEnabled) {
+                val baselineSlotMs = currentArenaRefreshSlotMs(
+                    nowMs = System.currentTimeMillis(),
+                    serverIndex = selected
+                )
+                office.arenaRefreshLastNotifiedSlotMs = baselineSlotMs
+                BASettingsStore.saveArenaRefreshLastNotifiedSlotMs(baselineSlotMs)
+            }
             onRefreshCalendar()
             onRefreshPool()
             ui.showOverviewServerPopup = false
@@ -193,6 +215,13 @@ internal fun buildBaPageContentActions(
         },
         onSendCafeVisitTestNotification = {
             office.sendCafeVisitTestNotification(
+                context = context,
+                serverIndex = ui.serverIndex,
+                showToast = true
+            )
+        },
+        onSendArenaRefreshTestNotification = {
+            office.sendArenaRefreshTestNotification(
                 context = context,
                 serverIndex = ui.serverIndex,
                 showToast = true

@@ -14,6 +14,7 @@ class LegacyNotificationBuilder(
         private const val ICON_DEFAULT = R.drawable.ic_kei_logo_color
         private const val ICON_AP = R.drawable.ba_ap_icon
         private const val ICON_BA_CAFE_VISIT = R.drawable.ic_ba_schale
+        private const val ICON_BA_ARENA_REFRESH = R.drawable.ic_ba_schale
     }
 
     private data class LiveProgressState(
@@ -25,10 +26,12 @@ class LegacyNotificationBuilder(
         val state = payload.state
         val isBlueArchiveAp = McpNotificationPayload.isBaApServerName(state.serverName)
         val isBlueArchiveCafeVisit = McpNotificationPayload.isBaCafeVisitServerName(state.serverName)
+        val isBlueArchiveArenaRefresh = McpNotificationPayload.isBaArenaRefreshServerName(state.serverName)
         val progressState = computeProgressState(state = state, isBlueArchiveAp = isBlueArchiveAp)
         val iconRes = when {
             isBlueArchiveAp -> ICON_AP
             isBlueArchiveCafeVisit -> ICON_BA_CAFE_VISIT
+            isBlueArchiveArenaRefresh -> ICON_BA_ARENA_REFRESH
             else -> ICON_DEFAULT
         }
         val builder = NotificationCompat.Builder(context, payload.environment.channelId)
@@ -67,7 +70,10 @@ class LegacyNotificationBuilder(
         if (!state.running) {
             return LiveProgressState(current = 0, indeterminate = false)
         }
-        if (McpNotificationPayload.isBaCafeVisitServerName(state.serverName)) {
+        if (
+            McpNotificationPayload.isBaCafeVisitServerName(state.serverName) ||
+            McpNotificationPayload.isBaArenaRefreshServerName(state.serverName)
+        ) {
             return LiveProgressState(current = 100, indeterminate = false)
         }
         if (isBlueArchiveAp) {

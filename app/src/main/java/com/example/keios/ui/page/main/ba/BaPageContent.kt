@@ -73,6 +73,7 @@ internal data class BaPageContentActions(
     val onSaveIdFriendCode: () -> Unit,
     val onSendApTestNotification: () -> Unit,
     val onSendCafeVisitTestNotification: () -> Unit,
+    val onSendArenaRefreshTestNotification: () -> Unit,
     val onTestCafePlus3Hours: () -> Unit,
 )
 
@@ -220,6 +221,7 @@ internal fun BaPageContent(
                 backdrop = backdrop,
                 onSendApTestNotification = actions.onSendApTestNotification,
                 onSendCafeVisitTestNotification = actions.onSendCafeVisitTestNotification,
+                onSendArenaRefreshTestNotification = actions.onSendArenaRefreshTestNotification,
                 onTestCafePlus3Hours = actions.onTestCafePlus3Hours,
             )
         }
