@@ -65,6 +65,12 @@ internal fun LazyListScope.addShellCommandCards(
                     value = card.command
                 )
                 OsSectionInfoRow(
+                    label = stringResource(R.string.os_shell_card_run_output_label),
+                    value = card.runOutput.ifBlank {
+                        stringResource(R.string.os_shell_card_run_output_not_ran)
+                    }
+                )
+                OsSectionInfoRow(
                     label = stringResource(R.string.os_shell_card_updated_at_label),
                     value = if (card.updatedAtMillis > 0L) {
                         formatEpochMillis(card.updatedAtMillis)
@@ -203,14 +209,10 @@ internal fun OsShellCommandCardEditorSheet(
                     )
                 }
                 SheetFieldBlock(title = stringResource(R.string.os_shell_card_field_command)) {
-                    GlassSearchField(
+                    ShellCommandInputField(
                         value = draft.command,
                         onValueChange = { onDraftChange(draft.copy(command = it)) },
                         label = stringResource(R.string.os_shell_card_hint_command),
-                        backdrop = sheetBackdrop,
-                        variant = GlassVariant.SheetInput,
-                        textColor = MiuixTheme.colorScheme.primary,
-                        singleLine = false,
                         minHeight = 132.dp,
                         modifier = Modifier.fillMaxWidth()
                     )

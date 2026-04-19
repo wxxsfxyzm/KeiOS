@@ -12,6 +12,7 @@ internal data class OsShellCommandCard(
     val title: String,
     val subtitle: String = "",
     val command: String,
+    val runOutput: String = "",
     val createdAtMillis: Long = 0L,
     val updatedAtMillis: Long = 0L
 )
@@ -35,6 +36,7 @@ internal fun createDefaultShellCommandCardDraft(command: String = ""): OsShellCo
         title = defaultOsShellCommandCardTitle(normalizedCommand),
         subtitle = "",
         command = normalizedCommand,
+        runOutput = "",
         createdAtMillis = 0L,
         updatedAtMillis = 0L
     )
@@ -49,6 +51,7 @@ internal object OsShellCommandCardStore {
     private const val KEY_TITLE = "title"
     private const val KEY_SUBTITLE = "subtitle"
     private const val KEY_COMMAND = "command"
+    private const val KEY_RUN_OUTPUT = "runOutput"
     private const val KEY_CREATED_AT = "createdAtMillis"
     private const val KEY_UPDATED_AT = "updatedAtMillis"
 
@@ -81,7 +84,12 @@ internal object OsShellCommandCardStore {
         store.encode(KEY_SHELL_COMMAND_CARDS, encodeCards(normalized))
     }
 
-    fun createCard(command: String, title: String, subtitle: String): OsShellCommandCard? {
+    fun createCard(
+        command: String,
+        title: String,
+        subtitle: String,
+        runOutput: String = ""
+    ): OsShellCommandCard? {
         val now = System.currentTimeMillis()
         val card = normalizeCard(
             OsShellCommandCard(
@@ -90,6 +98,7 @@ internal object OsShellCommandCardStore {
                 title = title,
                 subtitle = subtitle,
                 command = command,
+                runOutput = runOutput,
                 createdAtMillis = now,
                 updatedAtMillis = now
             )
@@ -149,6 +158,7 @@ internal object OsShellCommandCardStore {
             title = card.title.trim().ifBlank { defaultOsShellCommandCardTitle(normalizedCommand) },
             subtitle = card.subtitle.trim(),
             command = normalizedCommand,
+            runOutput = normalizeRunOutput(card.runOutput),
             createdAtMillis = createdAt,
             updatedAtMillis = updatedAt
         )
@@ -164,6 +174,7 @@ internal object OsShellCommandCardStore {
                     put(KEY_TITLE, card.title)
                     put(KEY_SUBTITLE, card.subtitle)
                     put(KEY_COMMAND, card.command)
+                    put(KEY_RUN_OUTPUT, card.runOutput)
                     put(KEY_CREATED_AT, card.createdAtMillis)
                     put(KEY_UPDATED_AT, card.updatedAtMillis)
                 }
@@ -185,6 +196,7 @@ internal object OsShellCommandCardStore {
                             title = item.optString(KEY_TITLE),
                             subtitle = item.optString(KEY_SUBTITLE),
                             command = item.optString(KEY_COMMAND),
+                            runOutput = item.optString(KEY_RUN_OUTPUT),
                             createdAtMillis = item.optLong(KEY_CREATED_AT, 0L),
                             updatedAtMillis = item.optLong(KEY_UPDATED_AT, 0L)
                         )
@@ -209,6 +221,7 @@ internal object OsShellCommandCardStore {
                 title = title,
                 subtitle = subtitle,
                 command = command,
+                runOutput = "",
                 createdAtMillis = timestamp,
                 updatedAtMillis = timestamp
             )
@@ -221,4 +234,15 @@ internal object OsShellCommandCardStore {
         store.removeValueForKey(LEGACY_KEY_SHELL_COMMAND_SUBTITLE)
         store.removeValueForKey(LEGACY_KEY_SHELL_COMMAND_SAVED_AT)
     }
+
+    private fun normalizeRunOutput(output: String): String {
+        val normalized = output
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .trim()
+        if (normalized.length <= MAX_OUTPUT_LENGTH) return normalized
+        return normalized.takeLast(MAX_OUTPUT_LENGTH)
+    }
+
+    private const val MAX_OUTPUT_LENGTH = 24_000
 }
