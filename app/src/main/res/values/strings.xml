@@ -173,11 +173,11 @@
     <string name="os_sheet_visible_activities_title">活动card</string>
     <string name="os_sheet_visible_activities_desc">关闭活动后会隐藏对应快捷方式卡片，重新开启后会立即显示。</string>
     <string name="os_overview_title">OS 参数与活动总览</string>
-    <string name="os_overview_metric_rows_compact">参数card</string>
+    <string name="os_overview_metric_rows_compact">参数卡</string>
     <string name="os_overview_metric_rows_compact_value">%1$d/%2$d</string>
     <string name="os_overview_metric_top_info">Top条目</string>
     <string name="os_overview_metric_top_info_value">%1$d/%2$d</string>
-    <string name="os_overview_metric_activity_cards">活动card</string>
+    <string name="os_overview_metric_activity_cards">活动卡</string>
     <string name="os_overview_metric_activity_cards_value">%1$d/%2$d</string>
     <string name="os_toast_no_refreshable_card">当前没有可刷新的卡片</string>
     <string name="os_toast_refresh_completed">系统参数已刷新并缓存</string>
