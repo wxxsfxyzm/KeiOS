@@ -72,6 +72,7 @@ import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Play
+import top.yukonga.miuix.kmp.icon.extended.Replace
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
@@ -103,7 +104,7 @@ class OsShellRunnerActivity : ComponentActivity() {
                         shizukuApiUtils.canUseCommand(),
                     onRequestShizukuPermission = { shizukuApiUtils.requestPermissionIfNeeded() },
                     onRunShellCommand = { command ->
-                        shizukuApiUtils.execCommandCancellable(command = command, timeoutMs = 30_000L)
+                        shizukuApiUtils.execCommandCancellable(command = command, timeoutMs = 300_000L)
                     },
                     onSaveShellCommand = { command ->
                         OsShellCommandStore.saveCommand(command).command.isNotBlank()
@@ -163,6 +164,7 @@ private fun OsShellRunnerPage(
     val stopActionDescription = stringResource(R.string.os_shell_action_stop)
     val saveCommandActionDescription = stringResource(R.string.os_shell_action_save_command)
     val copyOutputActionDescription = stringResource(R.string.os_shell_action_copy_output)
+    val clearOutputActionDescription = stringResource(R.string.os_shell_action_clear_output_history)
     val outputRunningSubtitle = stringResource(R.string.os_shell_output_subtitle_running)
     val outputReadySubtitle = stringResource(R.string.os_shell_output_subtitle_ready)
     val noOutputText = stringResource(R.string.os_shell_run_empty_output)
@@ -363,6 +365,14 @@ private fun OsShellRunnerPage(
                                 contentDescription = copyOutputActionDescription,
                                 onClick = { copyOutput() },
                                 iconTint = MiuixTheme.colorScheme.primary,
+                                variant = GlassVariant.Bar
+                            )
+                            GlassIconButton(
+                                backdrop = null,
+                                icon = MiuixIcons.Regular.Replace,
+                                contentDescription = clearOutputActionDescription,
+                                onClick = { outputText = "" },
+                                iconTint = MiuixTheme.colorScheme.onBackgroundVariant,
                                 variant = GlassVariant.Bar
                             )
                         }

@@ -4,6 +4,7 @@ import android.content.pm.PackageManager
 import com.example.keios.core.log.AppLogger
 import kotlinx.coroutines.suspendCancellableCoroutine
 import rikka.shizuku.Shizuku
+import java.io.InputStream
 import java.lang.reflect.Method
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -103,26 +104,9 @@ class ShizukuApiUtils(
 
     fun execCommand(command: String, timeoutMs: Long = 2000L): String? {
         if (!canUseCommand()) return null
-        val resolved = rewriteUiAutomatorDumpCommand(command)
-        if (!resolved.redirectedPath.isNullOrBlank()) {
-            publishStatus("UI dump redirected: ${resolved.redirectedPath}")
-        }
-        val processMethod = resolveNewProcessMethod() ?: run {
-            publishStatus("Shizuku process API unavailable")
-            AppLogger.w(TAG, "execCommand skipped: Shizuku newProcess method unavailable")
-            return null
-        }
+        val process = createShellProcess(command) ?: return null
         return runCatching {
-            val process = processMethod.invoke(
-                null,
-                arrayOf("sh", "-c", resolved.command),
-                null,
-                null
-            ) as? Process ?: error("Shizuku newProcess did not return Process")
-            val out = process.inputStream.bufferedReader().use { it.readText() }
-            val err = process.errorStream.bufferedReader().use { it.readText() }
-            process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
-            (out.ifBlank { err }).trim().ifBlank { null }
+            executeProcessAndRead(process = process, timeoutMs = timeoutMs)
         }.onFailure {
             AppLogger.w(
                 TAG,
@@ -133,42 +117,12 @@ class ShizukuApiUtils(
 
     suspend fun execCommandCancellable(command: String, timeoutMs: Long = 2000L): String? {
         if (!canUseCommand()) return null
-        val resolved = rewriteUiAutomatorDumpCommand(command)
-        if (!resolved.redirectedPath.isNullOrBlank()) {
-            publishStatus("UI dump redirected: ${resolved.redirectedPath}")
-        }
-        val processMethod = resolveNewProcessMethod() ?: run {
-            publishStatus("Shizuku process API unavailable")
-            AppLogger.w(TAG, "execCommandCancellable skipped: Shizuku newProcess method unavailable")
-            return null
-        }
-        val process = runCatching {
-            processMethod.invoke(
-                null,
-                arrayOf("sh", "-c", resolved.command),
-                null,
-                null
-            ) as? Process
-        }.onFailure {
-            AppLogger.w(
-                TAG,
-                "execCommandCancellable start failed: ${it.javaClass.simpleName}${it.message?.let { msg -> ": $msg" }.orEmpty()}"
-            )
-        }.getOrNull() ?: return null
+        val process = createShellProcess(command) ?: return null
 
         return suspendCancellableCoroutine { continuation ->
             val worker = Thread(
                 {
-                    val result = runCatching {
-                        val finished = process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
-                        if (!finished) {
-                            process.destroy()
-                            process.destroyForcibly()
-                        }
-                        val out = process.inputStream.bufferedReader().use { it.readText() }
-                        val err = process.errorStream.bufferedReader().use { it.readText() }
-                        (out.ifBlank { err }).trim().ifBlank { null }
-                    }
+                    val result = runCatching { executeProcessAndRead(process = process, timeoutMs = timeoutMs) }
                     if (!continuation.isActive) return@Thread
                     result.onSuccess { output ->
                         continuation.resume(output)
@@ -185,6 +139,83 @@ class ShizukuApiUtils(
                 runCatching { process.destroyForcibly() }
                 runCatching { worker.interrupt() }
             }
+        }
+    }
+
+    private fun createShellProcess(command: String): Process? {
+        val resolved = rewriteUiAutomatorDumpCommand(command)
+        if (!resolved.redirectedPath.isNullOrBlank()) {
+            publishStatus("UI dump redirected: ${resolved.redirectedPath}")
+        }
+        val processMethod = resolveNewProcessMethod() ?: run {
+            publishStatus("Shizuku process API unavailable")
+            AppLogger.w(TAG, "createShellProcess skipped: Shizuku newProcess method unavailable")
+            return null
+        }
+        return runCatching {
+            processMethod.invoke(
+                null,
+                arrayOf("sh", "-c", resolved.command),
+                null,
+                null
+            ) as? Process ?: error("Shizuku newProcess did not return Process")
+        }.onFailure {
+            AppLogger.w(
+                TAG,
+                "createShellProcess failed: ${it.javaClass.simpleName}${it.message?.let { msg -> ": $msg" }.orEmpty()}"
+            )
+        }.getOrNull()
+    }
+
+    private fun executeProcessAndRead(process: Process, timeoutMs: Long): String? {
+        val stdout = StringBuilder()
+        val stderr = StringBuilder()
+        val stdoutReader = startStreamCollector(
+            name = "KeiOS-ShizukuStdout",
+            stream = process.inputStream,
+            sink = stdout
+        )
+        val stderrReader = startStreamCollector(
+            name = "KeiOS-ShizukuStderr",
+            stream = process.errorStream,
+            sink = stderr
+        )
+        val finished = process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
+        if (!finished) {
+            runCatching { process.destroy() }
+            runCatching {
+                if (!process.waitFor(200, TimeUnit.MILLISECONDS)) process.destroyForcibly()
+            }
+            stdoutReader.join(120)
+            stderrReader.join(120)
+            val partialOutput = stdout.toString().trim().ifBlank { stderr.toString().trim() }
+            if (partialOutput.isNotBlank()) return partialOutput
+            throw IllegalStateException("command timed out after ${timeoutMs}ms")
+        }
+        stdoutReader.join(220)
+        stderrReader.join(220)
+        return stdout.toString().trim().ifBlank { stderr.toString().trim() }.ifBlank { null }
+    }
+
+    private fun startStreamCollector(
+        name: String,
+        stream: InputStream,
+        sink: StringBuilder
+    ): Thread {
+        return Thread(
+            {
+                runCatching {
+                    stream.bufferedReader().useLines { lines ->
+                        lines.forEach { line ->
+                            sink.appendLine(line)
+                        }
+                    }
+                }
+            },
+            name
+        ).apply {
+            isDaemon = true
+            start()
         }
     }
 
