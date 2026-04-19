@@ -57,11 +57,14 @@ import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.LiquidActionBar
+import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.SheetContentColumn
 import com.example.keios.ui.page.main.widget.SheetFieldBlock
 import com.example.keios.ui.page.main.widget.SheetSectionCard
 import com.example.keios.ui.page.main.widget.SheetSectionTitle
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -79,6 +82,7 @@ import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Play
+import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Tune
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -180,6 +184,8 @@ private fun OsShellRunnerPage(
     val runActionDescription = stringResource(R.string.os_shell_action_run)
     val stopActionDescription = stringResource(R.string.os_shell_action_stop)
     val saveCommandActionDescription = stringResource(R.string.os_shell_action_save_command)
+    val clearAllActionDescription = stringResource(R.string.os_shell_action_clear_all)
+    val settingsActionDescription = stringResource(R.string.os_shell_action_settings)
     val formatOutputActionDescription = stringResource(R.string.os_shell_action_format_output)
     val copyOutputActionDescription = stringResource(R.string.os_shell_action_copy_output)
     val clearOutputActionDescription = stringResource(R.string.os_shell_action_clear_output_history)
@@ -199,18 +205,43 @@ private fun OsShellRunnerPage(
     val outputFormatEmptyToast = stringResource(R.string.os_shell_toast_output_format_empty)
     val outputCopiedToast = stringResource(R.string.os_shell_toast_output_copied)
     val outputCopyEmptyToast = stringResource(R.string.os_shell_toast_output_empty)
+    val clearAllToast = stringResource(R.string.os_shell_toast_cleared_all)
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val surfaceColor = MiuixTheme.colorScheme.surface
+    val topBarBackdrop = rememberLayerBackdrop {
+        drawRect(surfaceColor)
+        drawContent()
+    }
+    val initialPersistSettings = remember { OsShellRunnerPrefsStore.loadPersistSettings() }
+    val initialCommandInput = remember {
+        if (initialPersistSettings.persistInput) {
+            OsShellRunnerPrefsStore.loadSavedInput()
+        } else {
+            ""
+        }
+    }
+    val initialOutputText = remember {
+        if (initialPersistSettings.persistOutput) {
+            OsShellRunnerPrefsStore.loadSavedOutput()
+        } else {
+            ""
+        }
+    }
 
-    var commandInput by rememberSaveable { mutableStateOf("") }
-    var outputText by rememberSaveable { mutableStateOf("") }
+    var commandInput by rememberSaveable { mutableStateOf(initialCommandInput) }
+    var outputText by rememberSaveable { mutableStateOf(initialOutputText) }
     var runningCommand by remember { mutableStateOf(false) }
     var runningJob by remember { mutableStateOf<Job?>(null) }
     var showSaveSheet by rememberSaveable { mutableStateOf(false) }
+    var showSettingsSheet by rememberSaveable { mutableStateOf(false) }
     var saveTitleInput by rememberSaveable { mutableStateOf("") }
     var saveSubtitleInput by rememberSaveable { mutableStateOf("") }
+    var persistInputEnabled by rememberSaveable { mutableStateOf(initialPersistSettings.persistInput) }
+    var persistOutputEnabled by rememberSaveable { mutableStateOf(initialPersistSettings.persistOutput) }
     val outputScrollState = rememberScrollState()
     BackHandler(enabled = showSaveSheet) { showSaveSheet = false }
-    BackHandler(enabled = !showSaveSheet, onBack = onClose)
+    BackHandler(enabled = !showSaveSheet && showSettingsSheet) { showSettingsSheet = false }
+    BackHandler(enabled = !showSaveSheet && !showSettingsSheet, onBack = onClose)
 
     fun appendOutput(command: String, result: String) {
         val timestamp = SimpleDateFormat(
@@ -329,6 +360,35 @@ private fun OsShellRunnerPage(
         Toast.makeText(context, outputFormattedToast, Toast.LENGTH_SHORT).show()
     }
 
+    fun clearAllContent() {
+        commandInput = ""
+        outputText = ""
+        Toast.makeText(context, clearAllToast, Toast.LENGTH_SHORT).show()
+    }
+
+    LaunchedEffect(persistInputEnabled) {
+        OsShellRunnerPrefsStore.savePersistInput(persistInputEnabled)
+        if (!persistInputEnabled) {
+            OsShellRunnerPrefsStore.clearSavedInput()
+        }
+    }
+    LaunchedEffect(persistOutputEnabled) {
+        OsShellRunnerPrefsStore.savePersistOutput(persistOutputEnabled)
+        if (!persistOutputEnabled) {
+            OsShellRunnerPrefsStore.clearSavedOutput()
+        }
+    }
+    LaunchedEffect(commandInput, persistInputEnabled) {
+        if (persistInputEnabled) {
+            OsShellRunnerPrefsStore.saveInput(commandInput)
+        }
+    }
+    LaunchedEffect(outputText, persistOutputEnabled) {
+        if (persistOutputEnabled) {
+            OsShellRunnerPrefsStore.saveOutput(outputText)
+        }
+    }
+
     LaunchedEffect(outputText) {
         if (outputText.isNotBlank()) {
             outputScrollState.scrollTo(outputScrollState.maxValue)
@@ -345,6 +405,24 @@ private fun OsShellRunnerPage(
                 contentDescription = stringResource(R.string.common_close),
                 tint = MiuixTheme.colorScheme.primary,
                 modifier = Modifier.clickable { onClose() }
+            )
+        },
+        actions = {
+            LiquidActionBar(
+                backdrop = topBarBackdrop,
+                layeredStyleEnabled = true,
+                items = listOf(
+                    LiquidActionItem(
+                        icon = MiuixIcons.Regular.Close,
+                        contentDescription = clearAllActionDescription,
+                        onClick = { clearAllContent() }
+                    ),
+                    LiquidActionItem(
+                        icon = MiuixIcons.Regular.Settings,
+                        contentDescription = settingsActionDescription,
+                        onClick = { showSettingsSheet = true }
+                    )
+                )
             )
         }
     ) { innerPadding ->
@@ -425,7 +503,7 @@ private fun OsShellRunnerPage(
                             value = commandInput,
                             onValueChange = { commandInput = it },
                             label = stringResource(R.string.os_shell_input_hint),
-                            minHeight = 136.dp,
+                            minHeight = 118.dp,
                             modifier = Modifier
                                 .fillMaxWidth()
                         )
@@ -473,7 +551,7 @@ private fun OsShellRunnerPage(
                         scrollState = outputScrollState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 260.dp, max = 520.dp)
+                            .heightIn(min = 220.dp, max = 460.dp)
                             .padding(horizontal = 14.dp)
                             .padding(bottom = 14.dp)
                     )
@@ -544,6 +622,14 @@ private fun OsShellRunnerPage(
             }
         }
     }
+    OsShellSettingsSheet(
+        show = showSettingsSheet,
+        onDismissRequest = { showSettingsSheet = false },
+        persistInputEnabled = persistInputEnabled,
+        onPersistInputEnabledChange = { checked -> persistInputEnabled = checked },
+        persistOutputEnabled = persistOutputEnabled,
+        onPersistOutputEnabledChange = { checked -> persistOutputEnabled = checked }
+    )
 }
 
 @Composable
