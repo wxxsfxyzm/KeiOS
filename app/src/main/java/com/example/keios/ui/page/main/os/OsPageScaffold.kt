@@ -19,7 +19,6 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.GridView
 import top.yukonga.miuix.kmp.icon.extended.Layers
 import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Tasks
 
 @Composable
 internal fun OsPageScaffoldShell(
@@ -65,7 +64,7 @@ internal fun OsPageScaffoldShell(
                         onClick = onOpenActivityVisibilityManager
                     ),
                     LiquidActionItem(
-                        icon = MiuixIcons.Regular.Tasks,
+                        icon = osLucideShellIcon(),
                         contentDescription = manageShellCardsContentDescription,
                         onClick = onOpenShellCardVisibilityManager
                     ),

@@ -39,8 +39,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.icon.extended.Play
-import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal fun LazyListScope.addShellCommandCards(
@@ -63,7 +61,7 @@ internal fun LazyListScope.addShellCommandCards(
                 onExpandedChange = { expanded -> onExpandedChange(card.id, expanded) },
                 headerStartAction = {
                     Icon(
-                        imageVector = MiuixIcons.Regular.Tasks,
+                        imageVector = osLucideCardIcon(),
                         contentDescription = card.title,
                         tint = MiuixTheme.colorScheme.primary,
                         modifier = Modifier
@@ -84,7 +82,7 @@ internal fun LazyListScope.addShellCommandCards(
                         )
                     } else {
                         Icon(
-                            imageVector = MiuixIcons.Regular.Play,
+                            imageVector = osLucideRunIcon(),
                             contentDescription = stringResource(R.string.os_shell_card_cd_run_saved),
                             tint = MiuixTheme.colorScheme.primary,
                             modifier = Modifier.clickable { onRunCard(card) }

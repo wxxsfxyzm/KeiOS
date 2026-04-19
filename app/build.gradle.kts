@@ -71,6 +71,7 @@ val kxml2Version = "2.3.0"
 val media3Version = "1.10.0"
 val coil3Version = "3.4.0"
 val zoomImageVersion = "1.4.0"
+val lucideIconsVersion = "2.2.1"
 val documentFileVersion = "1.1.0"
 val uCropVersion = "2.2.11"
 val focusApiVersion = "1.4"
@@ -237,6 +238,7 @@ dependencies {
     implementation("io.github.panpf.zoomimage:zoomimage-compose-coil3:$zoomImageVersion")
     implementation("io.coil-kt.coil3:coil-compose:$coil3Version")
     implementation("io.coil-kt.coil3:coil-gif:$coil3Version")
+    implementation("com.composables:icons-lucide-android:$lucideIconsVersion")
     implementation("com.github.yalantis:ucrop:$uCropVersion")
     implementation("androidx.metrics:metrics-performance:$metricsPerformanceVersion")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleViewModelComposeVersion")

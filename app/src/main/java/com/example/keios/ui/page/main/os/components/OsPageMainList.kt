@@ -37,7 +37,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
-import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -231,7 +230,7 @@ internal fun OsPageMainList(
                 noMatchedResultsText = noMatchedResultsText,
                 exportAction = {
                     Icon(
-                        imageVector = MiuixIcons.Regular.Play,
+                        imageVector = osLucideEnterIcon(),
                         contentDescription = stringResource(R.string.os_shell_card_cd_open),
                         tint = MiuixTheme.colorScheme.primary,
                         modifier = Modifier.clickable { onOpenShellRunner() }

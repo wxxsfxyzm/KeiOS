@@ -77,12 +77,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Copy
-import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.icon.extended.Play
-import top.yukonga.miuix.kmp.icon.extended.Settings
-import top.yukonga.miuix.kmp.icon.extended.Tune
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
@@ -467,12 +462,12 @@ private fun OsShellRunnerPage(
                 layeredStyleEnabled = true,
                 items = listOf(
                     LiquidActionItem(
-                        icon = MiuixIcons.Regular.Close,
+                        icon = osLucideClearAllIcon(),
                         contentDescription = clearAllActionDescription,
                         onClick = { clearAllContent() }
                     ),
                     LiquidActionItem(
-                        icon = MiuixIcons.Regular.Settings,
+                        icon = osLucideSettingsIcon(),
                         contentDescription = settingsActionDescription,
                         onClick = { showSettingsSheet = true }
                     )
@@ -515,7 +510,7 @@ private fun OsShellRunnerPage(
                         endActions = {
                             GlassIconButton(
                                 backdrop = null,
-                                icon = MiuixIcons.Regular.Play,
+                                icon = osLucideRunIcon(),
                                 contentDescription = runActionDescription,
                                 onClick = { runCommand() },
                                 iconTint = if (runningCommand) {
@@ -527,7 +522,7 @@ private fun OsShellRunnerPage(
                             )
                             GlassIconButton(
                                 backdrop = null,
-                                icon = MiuixIcons.Regular.Close,
+                                icon = osLucideStopIcon(),
                                 contentDescription = stopActionDescription,
                                 onClick = { stopCommand() },
                                 iconTint = if (runningCommand) {
@@ -539,7 +534,7 @@ private fun OsShellRunnerPage(
                             )
                             GlassIconButton(
                                 backdrop = null,
-                                icon = MiuixIcons.Regular.Download,
+                                icon = osLucideSaveIcon(),
                                 contentDescription = saveCommandActionDescription,
                                 onClick = { openSaveCommandSheet() },
                                 iconTint = MiuixTheme.colorScheme.primary,
@@ -575,7 +570,7 @@ private fun OsShellRunnerPage(
                         endActions = {
                             GlassIconButton(
                                 backdrop = null,
-                                icon = MiuixIcons.Regular.Tune,
+                                icon = osLucideFormatIcon(),
                                 contentDescription = formatOutputActionDescription,
                                 onClick = { formatOutput() },
                                 iconTint = MiuixTheme.colorScheme.primary,
@@ -583,7 +578,7 @@ private fun OsShellRunnerPage(
                             )
                             GlassIconButton(
                                 backdrop = null,
-                                icon = MiuixIcons.Regular.Copy,
+                                icon = osLucideCopyIcon(),
                                 contentDescription = copyOutputActionDescription,
                                 onClick = { copyOutput() },
                                 iconTint = MiuixTheme.colorScheme.primary,
@@ -591,7 +586,7 @@ private fun OsShellRunnerPage(
                             )
                             GlassIconButton(
                                 backdrop = null,
-                                icon = MiuixIcons.Regular.Close,
+                                icon = osLucideClearIcon(),
                                 contentDescription = clearOutputActionDescription,
                                 onClick = {
                                     outputText = ""

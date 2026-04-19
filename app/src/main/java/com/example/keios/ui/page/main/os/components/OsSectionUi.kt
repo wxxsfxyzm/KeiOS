@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -20,7 +21,6 @@ import top.yukonga.miuix.kmp.icon.extended.Layers
 import top.yukonga.miuix.kmp.icon.extended.ListView
 import top.yukonga.miuix.kmp.icon.extended.Lock
 import top.yukonga.miuix.kmp.icon.extended.Tune
-import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.icon.extended.Update
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -30,9 +30,10 @@ internal data class OsOverviewMetric(
     val valueColor: Color? = null
 )
 
-internal fun sectionCardIcon(card: OsSectionCard) = when (card) {
+@Composable
+internal fun sectionCardIcon(card: OsSectionCard): ImageVector = when (card) {
     OsSectionCard.TOP_INFO -> MiuixIcons.Regular.Info
-    OsSectionCard.SHELL_RUNNER -> MiuixIcons.Regular.Tasks
+    OsSectionCard.SHELL_RUNNER -> osLucideConsoleIcon()
     OsSectionCard.GOOGLE_SYSTEM_SERVICE -> MiuixIcons.Regular.Update
     OsSectionCard.SYSTEM -> MiuixIcons.Regular.ListView
     OsSectionCard.SECURE -> MiuixIcons.Regular.Lock
