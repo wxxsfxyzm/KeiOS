@@ -122,15 +122,6 @@ internal fun BaSettingsSheet(
                         onCheckedChange = onApNotifyEnabledChange,
                     )
                 }
-                SheetControlRow(
-                    label = stringResource(R.string.ba_settings_label_cafe_visit_notify),
-                    summary = stringResource(R.string.ba_settings_summary_cafe_visit_notify),
-                ) {
-                    Switch(
-                        checked = state.cafeVisitNotifyEnabled,
-                        onCheckedChange = onCafeVisitNotifyEnabledChange,
-                    )
-                }
                 if (state.apNotifyEnabled) {
                     SheetControlRow(
                         label = stringResource(R.string.ba_settings_label_ap_threshold),
@@ -158,6 +149,15 @@ internal fun BaSettingsSheet(
                             textColor = Color(0xFF22C55E),
                         )
                     }
+                }
+                SheetControlRow(
+                    label = stringResource(R.string.ba_settings_label_cafe_visit_notify),
+                    summary = stringResource(R.string.ba_settings_summary_cafe_visit_notify),
+                ) {
+                    Switch(
+                        checked = state.cafeVisitNotifyEnabled,
+                        onCheckedChange = onCafeVisitNotifyEnabledChange,
+                    )
                 }
             }
             BaGlassPanel(

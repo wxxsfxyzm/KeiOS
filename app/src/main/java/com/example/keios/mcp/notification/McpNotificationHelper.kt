@@ -173,6 +173,8 @@ object McpNotificationHelper {
         notificationId: Int = KEEPALIVE_NOTIFICATION_ID
     ): SessionNotifier.NotificationBuildResult {
         val isBlueArchiveNotification = McpNotificationPayload.isBaNotificationServerName(serverName)
+        val openRequestCode = 110_100 + notificationId
+        val secondaryRequestCode = 110_200 + notificationId
         val openIntent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra(
@@ -186,7 +188,7 @@ object McpNotificationHelper {
         }
         val openPendingIntent = PendingIntent.getActivity(
             context,
-            1101,
+            openRequestCode,
             openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -197,7 +199,7 @@ object McpNotificationHelper {
             }
             PendingIntent.getService(
                 context,
-                1102,
+                secondaryRequestCode,
                 dismissIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             ) to context.getString(R.string.common_mark_read)
@@ -208,7 +210,7 @@ object McpNotificationHelper {
             }
             PendingIntent.getBroadcast(
                 context,
-                2102,
+                210_200 + notificationId,
                 readIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             ) to context.getString(R.string.common_acknowledge)
@@ -220,7 +222,7 @@ object McpNotificationHelper {
             }
             PendingIntent.getActivity(
                 context,
-                1102,
+                secondaryRequestCode,
                 toggleIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             ) to context.getString(R.string.mcp_action_toggle_service)

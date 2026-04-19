@@ -192,7 +192,11 @@ internal fun buildBaPageContentActions(
             office.sendApTestNotification(context = context, showToast = true)
         },
         onSendCafeVisitTestNotification = {
-            office.sendCafeVisitTestNotification(context = context, showToast = true)
+            office.sendCafeVisitTestNotification(
+                context = context,
+                serverIndex = ui.serverIndex,
+                showToast = true
+            )
         },
         onTestCafePlus3Hours = { office.testCafePlus3Hours(context) },
     )

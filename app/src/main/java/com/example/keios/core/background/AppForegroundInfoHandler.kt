@@ -153,7 +153,11 @@ object AppForegroundInfoHandler {
             return
         }
 
-        val sent = BaCafeVisitNotificationDispatcher.send(context)
+        val sent = BaCafeVisitNotificationDispatcher.send(
+            context = context,
+            serverIndex = snapshot.serverIndex,
+            slotMs = currentSlotMs
+        )
         if (sent) {
             withContext(Dispatchers.IO) { BASettingsStore.saveCafeVisitLastNotifiedSlotMs(currentSlotMs) }
         }

@@ -90,6 +90,14 @@ internal fun serverRefreshTimeZone(serverIndex: Int): TimeZone {
     return if (serverIndex == 0) TimeZone.getTimeZone("Asia/Shanghai") else TimeZone.getTimeZone("Asia/Tokyo")
 }
 
+internal fun baServerLabel(serverIndex: Int): String {
+    return when (serverIndex.coerceIn(0, 2)) {
+        0 -> "国服"
+        1 -> "国际服"
+        else -> "日服"
+    }
+}
+
 internal fun nextCafeStudentRefreshMs(fromMs: Long, serverIndex: Int): Long {
     val timeZone = serverRefreshTimeZone(serverIndex)
     val nowCal = Calendar.getInstance(timeZone).apply { timeInMillis = fromMs }

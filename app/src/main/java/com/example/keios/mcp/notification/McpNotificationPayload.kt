@@ -59,7 +59,11 @@ data class McpNotificationPayload(
     fun content(context: Context): String {
         return if (running) {
             if (isBlueArchiveCafeVisit) {
-                context.getString(R.string.ba_cafe_visit_notification_content)
+                if (path.isBlank() || path == BA_CAFE_VISIT_PATH) {
+                    context.getString(R.string.ba_cafe_visit_notification_content)
+                } else {
+                    path
+                }
             } else if (isBlueArchiveAp) {
                 context.getString(R.string.mcp_notification_content_ap, port, path, clients)
             } else {
@@ -121,7 +125,11 @@ data class McpNotificationPayload(
     fun expandedContent(context: Context): String {
         return if (running) {
             if (isBlueArchiveCafeVisit) {
-                context.getString(R.string.ba_cafe_visit_notification_content)
+                if (path.isBlank() || path == BA_CAFE_VISIT_PATH) {
+                    context.getString(R.string.ba_cafe_visit_notification_content)
+                } else {
+                    path
+                }
             } else if (isBlueArchiveAp) {
                 context.getString(R.string.mcp_notification_content_ap, port, path, clients)
             } else {

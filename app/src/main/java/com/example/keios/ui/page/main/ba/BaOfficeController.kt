@@ -317,9 +317,18 @@ internal class BaOfficeController(
 
     fun sendCafeVisitTestNotification(
         context: Context,
+        serverIndex: Int,
         showToast: Boolean = true,
     ): Boolean {
-        val sent = BaCafeVisitNotificationDispatcher.send(context)
+        val slotMs = currentCafeStudentRefreshSlotMs(
+            nowMs = System.currentTimeMillis(),
+            serverIndex = serverIndex
+        )
+        val sent = BaCafeVisitNotificationDispatcher.send(
+            context = context,
+            serverIndex = serverIndex,
+            slotMs = slotMs
+        )
         if (!sent) {
             if (showToast) {
                 Toast.makeText(
