@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +89,9 @@ import top.yukonga.miuix.kmp.theme.ThemeController
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 private val shellAnsiEscapeRegex = Regex("""\u001B\[[;\d]*[ -/]*[@-~]""")
 private val shellKeyValueRegex = Regex("""\b[^\s=]+=[^\s=]+\b""")
@@ -212,6 +216,19 @@ private fun OsShellRunnerPage(
     val shellSuccessAccentColor = if (isDark) Color(0xFF7EE7A8) else Color(0xFF15803D)
     val shellStoppedAccentColor = if (isDark) Color(0xFFFF9E9E) else Color(0xFFDC2626)
     val surfaceColor = MiuixTheme.colorScheme.surface
+    var liquidActionBarLayeredStyleEnabled by remember {
+        mutableStateOf(UiPrefs.isLiquidActionBarLayeredStyleEnabled())
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                liquidActionBarLayeredStyleEnabled = UiPrefs.isLiquidActionBarLayeredStyleEnabled()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val topBarBackdrop = rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
@@ -463,7 +480,7 @@ private fun OsShellRunnerPage(
         actions = {
             LiquidActionBar(
                 backdrop = topBarBackdrop,
-                layeredStyleEnabled = true,
+                layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                 items = listOf(
                     LiquidActionItem(
                         icon = osLucideClearAllIcon(),

@@ -193,6 +193,9 @@ fun LiquidActionBar(
     val viewConfiguration = LocalViewConfiguration.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
     val animationScope = rememberCoroutineScope()
+    val pressedScale = remember {
+        62f / 44f
+    }
 
     var tabWidthPx by remember { mutableFloatStateOf(0f) }
     var totalWidthPx by remember { mutableFloatStateOf(0f) }
@@ -225,7 +228,7 @@ fun LiquidActionBar(
             valueRange = 0f..(items.lastIndex).toFloat(),
             visibilityThreshold = 0.001f,
             initialScale = 1f,
-            pressedScale = 74f / 42f,
+            pressedScale = pressedScale,
             canDrag = { true },
             onDragStarted = {
                 gestureActive = true
@@ -328,6 +331,7 @@ fun LiquidActionBar(
 
     Box(
         modifier = modifier
+            .graphicsLayer { clip = false }
             .width(barWidth)
             .then(interactionLockModifier),
         contentAlignment = Alignment.CenterStart
@@ -339,7 +343,10 @@ fun LiquidActionBar(
                 val contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
                 tabWidthPx = contentWidthPx / items.size
             }
-            .graphicsLayer { translationX = effectivePanelOffset }
+            .graphicsLayer {
+                translationX = effectivePanelOffset
+                clip = false
+            }
             .drawBackdrop(
                 backdrop = backdrop,
                 shape = { ContinuousCapsule },
@@ -398,7 +405,10 @@ fun LiquidActionBar(
                     .clearAndSetSemantics {}
                     .alpha(0f)
                     .layerBackdrop(tabsBackdrop)
-                    .graphicsLayer { translationX = effectivePanelOffset }
+                    .graphicsLayer {
+                        translationX = effectivePanelOffset
+                        clip = false
+                    }
                     .drawBackdrop(
                         backdrop = backdrop,
                         shape = { ContinuousCapsule },
@@ -442,6 +452,7 @@ fun LiquidActionBar(
                             } else {
                                 -progressOffset + effectivePanelOffset
                             }
+                            clip = false
                         }
                         .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.gestureModifier else Modifier)
                         .then(dampedDragAnimation.modifier)
