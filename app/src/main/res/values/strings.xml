@@ -190,8 +190,10 @@
     <string name="os_shell_card_run_output_not_ran">未运行过</string>
     <string name="os_shell_card_saved_command_empty">暂无</string>
     <string name="os_shell_card_updated_at_label">最近更新</string>
+    <string name="os_shell_card_last_ran_at_label">最近运行</string>
     <string name="os_shell_card_builtin_badge">内置</string>
     <string name="os_shell_card_cd_open">打开 Shell 控制台</string>
+    <string name="os_shell_card_cd_run_saved">运行已保存命令</string>
     <string name="os_shell_card_sheet_title_edit">编辑 shell card</string>
     <string name="os_shell_card_field_title">标题</string>
     <string name="os_shell_card_field_subtitle">备注</string>
@@ -205,6 +207,7 @@
     <string name="os_shell_card_toast_saved">shell card 已保存</string>
     <string name="os_shell_card_toast_deleted">shell card 已删除</string>
     <string name="os_shell_card_toast_command_required">请填写有效的 shell 命令</string>
+    <string name="os_shell_card_toast_run_failed">运行失败: %1$s</string>
     <string name="os_shell_page_title">Shell</string>
     <string name="os_shell_input_title">shell 输入</string>
     <string name="os_shell_output_title">shell 输出</string>

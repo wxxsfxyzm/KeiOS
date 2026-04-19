@@ -58,11 +58,13 @@ internal fun OsSectionHeaderIcon(card: OsSectionCard, modifier: Modifier = Modif
 internal fun OsSectionInfoRow(
     label: String,
     value: String,
+    copyValueOnly: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val displayValue = value.ifBlank { "N/A" }
     AppInfoRow(
         label = label,
-        value = value.ifBlank { "N/A" },
+        value = displayValue,
         modifier = modifier,
         labelColor = MiuixTheme.colorScheme.onBackgroundVariant,
         valueColor = MiuixTheme.colorScheme.onBackground,
@@ -78,7 +80,8 @@ internal fun OsSectionInfoRow(
         labelLineHeight = AppTypographyTokens.Body.lineHeight,
         valueFontSize = AppTypographyTokens.Body.fontSize,
         valueLineHeight = AppTypographyTokens.Body.lineHeight,
-        emphasizedValue = true
+        emphasizedValue = true,
+        copyPayloadOverride = if (copyValueOnly) displayValue else null
     )
 }
 

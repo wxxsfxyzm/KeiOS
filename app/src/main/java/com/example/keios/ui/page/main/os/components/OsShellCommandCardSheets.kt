@@ -30,12 +30,15 @@ import com.example.keios.ui.page.main.widget.SheetSectionTitle
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -43,11 +46,14 @@ internal fun LazyListScope.addShellCommandCards(
     cards: List<OsShellCommandCard>,
     contentBackdrop: LayerBackdrop,
     expandedStates: Map<String, Boolean>,
+    runningCardIds: Set<String>,
     onExpandedChange: (String, Boolean) -> Unit,
-    onHeaderLongClick: (OsShellCommandCard) -> Unit
+    onHeaderLongClick: (OsShellCommandCard) -> Unit,
+    onRunCard: (OsShellCommandCard) -> Unit
 ) {
     cards.filter { it.visible }.forEach { card ->
         item(key = "os-shell-command-${card.id}") {
+            val cardIsRunning = runningCardIds.contains(card.id)
             MiuixAccordionCard(
                 backdrop = contentBackdrop,
                 title = card.title.ifBlank { defaultOsShellCommandCardTitle(card.command) },
@@ -64,17 +70,50 @@ internal fun LazyListScope.addShellCommandCards(
                             .defaultMinSize(minHeight = 22.dp)
                     )
                 },
+                headerActions = {
+                    if (cardIsRunning) {
+                        CircularProgressIndicator(
+                            progress = 0.42f,
+                            size = 16.dp,
+                            strokeWidth = 2.dp,
+                            colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                                foregroundColor = MiuixTheme.colorScheme.primary,
+                                backgroundColor = MiuixTheme.colorScheme.primary.copy(alpha = 0.24f)
+                            )
+                        )
+                    } else {
+                        GlassIconButton(
+                            backdrop = contentBackdrop,
+                            variant = GlassVariant.Bar,
+                            icon = MiuixIcons.Regular.Play,
+                            contentDescription = stringResource(R.string.os_shell_card_cd_run_saved),
+                            onClick = { onRunCard(card) },
+                            iconTint = MiuixTheme.colorScheme.primary
+                        )
+                    }
+                },
                 onHeaderLongClick = { onHeaderLongClick(card) }
             ) {
                 OsSectionInfoRow(
                     label = stringResource(R.string.os_shell_card_saved_command_label),
-                    value = card.command
+                    value = card.command,
+                    copyValueOnly = true
                 )
                 OsSectionInfoRow(
                     label = stringResource(R.string.os_shell_card_run_output_label),
                     value = card.runOutput.ifBlank {
                         stringResource(R.string.os_shell_card_run_output_not_ran)
-                    }
+                    },
+                    copyValueOnly = true
+                )
+                OsSectionInfoRow(
+                    label = stringResource(R.string.os_shell_card_last_ran_at_label),
+                    value = if (card.lastRunAtMillis > 0L) {
+                        formatEpochMillis(card.lastRunAtMillis)
+                    } else {
+                        stringResource(R.string.os_shell_card_run_output_not_ran)
+                    },
+                    copyValueOnly = true
                 )
                 OsSectionInfoRow(
                     label = stringResource(R.string.os_shell_card_updated_at_label),
@@ -82,7 +121,8 @@ internal fun LazyListScope.addShellCommandCards(
                         formatEpochMillis(card.updatedAtMillis)
                     } else {
                         stringResource(R.string.common_unknown)
-                    }
+                    },
+                    copyValueOnly = true
                 )
             }
         }

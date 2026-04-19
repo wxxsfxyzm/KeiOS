@@ -13,6 +13,7 @@ internal data class OsShellCommandCard(
     val subtitle: String = "",
     val command: String,
     val runOutput: String = "",
+    val lastRunAtMillis: Long = 0L,
     val createdAtMillis: Long = 0L,
     val updatedAtMillis: Long = 0L
 )
@@ -37,6 +38,7 @@ internal fun createDefaultShellCommandCardDraft(command: String = ""): OsShellCo
         subtitle = "",
         command = normalizedCommand,
         runOutput = "",
+        lastRunAtMillis = 0L,
         createdAtMillis = 0L,
         updatedAtMillis = 0L
     )
@@ -52,6 +54,7 @@ internal object OsShellCommandCardStore {
     private const val KEY_SUBTITLE = "subtitle"
     private const val KEY_COMMAND = "command"
     private const val KEY_RUN_OUTPUT = "runOutput"
+    private const val KEY_LAST_RUN_AT = "lastRunAtMillis"
     private const val KEY_CREATED_AT = "createdAtMillis"
     private const val KEY_UPDATED_AT = "updatedAtMillis"
 
@@ -99,6 +102,7 @@ internal object OsShellCommandCardStore {
                 subtitle = subtitle,
                 command = command,
                 runOutput = runOutput,
+                lastRunAtMillis = if (runOutput.isBlank()) 0L else now,
                 createdAtMillis = now,
                 updatedAtMillis = now
             )
@@ -149,6 +153,27 @@ internal object OsShellCommandCardStore {
         return updated
     }
 
+    fun updateCardRunResult(
+        cardId: String,
+        runOutput: String,
+        runAtMillis: Long = System.currentTimeMillis()
+    ): OsShellCommandCard? {
+        val targetId = cardId.trim()
+        if (targetId.isBlank()) return null
+        val current = loadCards()
+        val existing = current.firstOrNull { it.id == targetId } ?: return null
+        val resolvedRunAt = runAtMillis.takeIf { it > 0L } ?: System.currentTimeMillis()
+        val updated = normalizeCard(
+            existing.copy(
+                runOutput = runOutput,
+                lastRunAtMillis = resolvedRunAt,
+                updatedAtMillis = resolvedRunAt
+            )
+        ) ?: return null
+        saveCards(current.map { card -> if (card.id == targetId) updated else card })
+        return updated
+    }
+
     fun findLatestByCommand(command: String): OsShellCommandCard? {
         val normalized = command.trim()
         if (normalized.isBlank()) return null
@@ -161,12 +186,14 @@ internal object OsShellCommandCardStore {
         val now = System.currentTimeMillis()
         val updatedAt = card.updatedAtMillis.takeIf { it > 0L } ?: now
         val createdAt = card.createdAtMillis.takeIf { it > 0L } ?: updatedAt
+        val lastRunAt = card.lastRunAtMillis.takeIf { it > 0L } ?: 0L
         return card.copy(
             id = card.id.trim().ifBlank { newOsShellCommandCardId() },
             title = card.title.trim().ifBlank { defaultOsShellCommandCardTitle(normalizedCommand) },
             subtitle = card.subtitle.trim(),
             command = normalizedCommand,
             runOutput = normalizeRunOutput(card.runOutput),
+            lastRunAtMillis = lastRunAt,
             createdAtMillis = createdAt,
             updatedAtMillis = updatedAt
         )
@@ -183,6 +210,7 @@ internal object OsShellCommandCardStore {
                     put(KEY_SUBTITLE, card.subtitle)
                     put(KEY_COMMAND, card.command)
                     put(KEY_RUN_OUTPUT, card.runOutput)
+                    put(KEY_LAST_RUN_AT, card.lastRunAtMillis)
                     put(KEY_CREATED_AT, card.createdAtMillis)
                     put(KEY_UPDATED_AT, card.updatedAtMillis)
                 }
@@ -205,6 +233,7 @@ internal object OsShellCommandCardStore {
                             subtitle = item.optString(KEY_SUBTITLE),
                             command = item.optString(KEY_COMMAND),
                             runOutput = item.optString(KEY_RUN_OUTPUT),
+                            lastRunAtMillis = item.optLong(KEY_LAST_RUN_AT, 0L),
                             createdAtMillis = item.optLong(KEY_CREATED_AT, 0L),
                             updatedAtMillis = item.optLong(KEY_UPDATED_AT, 0L)
                         )
@@ -230,6 +259,7 @@ internal object OsShellCommandCardStore {
                 subtitle = subtitle,
                 command = command,
                 runOutput = "",
+                lastRunAtMillis = 0L,
                 createdAtMillis = timestamp,
                 updatedAtMillis = timestamp
             )

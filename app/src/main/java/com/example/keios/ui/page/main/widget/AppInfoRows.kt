@@ -46,13 +46,15 @@ fun AppInfoRow(
     valueFontSize: TextUnit = AppTypographyTokens.Body.fontSize,
     valueLineHeight: TextUnit = AppTypographyTokens.Body.lineHeight,
     emphasizedValue: Boolean = true,
+    copyPayloadOverride: String? = null,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null
 ) {
     val displayLabel = label.ifBlank { "信息" }
     val displayValue = value.ifBlank { "N/A" }
-    val copyPayload = remember(displayLabel, displayValue) {
-        buildTextCopyPayload(displayLabel, displayValue)
+    val copyPayload = remember(displayLabel, displayValue, copyPayloadOverride) {
+        copyPayloadOverride?.takeIf { it.isNotBlank() }
+            ?: buildTextCopyPayload(displayLabel, displayValue)
     }
     val rowModifier = modifier
         .fillMaxWidth()

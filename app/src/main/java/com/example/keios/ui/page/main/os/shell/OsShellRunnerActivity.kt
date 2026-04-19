@@ -523,7 +523,7 @@ private fun OsShellRunnerPage(
                             value = commandInput,
                             onValueChange = { commandInput = it },
                             label = stringResource(R.string.os_shell_input_hint),
-                            minHeight = 118.dp,
+                            minHeight = 102.dp,
                             modifier = Modifier
                                 .fillMaxWidth()
                         )
@@ -571,7 +571,7 @@ private fun OsShellRunnerPage(
                         scrollState = outputScrollState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 220.dp, max = 460.dp)
+                            .heightIn(min = 192.dp, max = 420.dp)
                             .padding(horizontal = 14.dp)
                             .padding(bottom = 14.dp)
                     )

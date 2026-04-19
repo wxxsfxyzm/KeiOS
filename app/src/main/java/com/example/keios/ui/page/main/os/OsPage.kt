@@ -40,6 +40,7 @@ import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -96,6 +97,8 @@ fun OsPage(
     val shellCardDeletedToast = stringResource(R.string.os_shell_card_toast_deleted)
     val shellCardCommandRequiredToast = stringResource(R.string.os_shell_card_toast_command_required)
     val shellCardDeleteDialogTitle = stringResource(R.string.os_shell_card_delete_dialog_title)
+    val shellRunNoPermissionText = stringResource(R.string.os_shell_run_requires_permission)
+    val shellRunNoOutputText = stringResource(R.string.os_shell_run_empty_output)
     val editShellCommandCardTitle = stringResource(R.string.os_shell_card_sheet_title_edit)
     val editActivityCardTitle = stringResource(R.string.os_activity_sheet_title_edit)
     val addActivityCardTitle = stringResource(R.string.os_activity_sheet_title_add)
@@ -174,6 +177,7 @@ fun OsPage(
     var refreshProgress by remember { mutableStateOf(0f) }
     var shellCommandCards by remember { mutableStateOf(OsShellCommandCardStore.loadCards()) }
     val shellCommandCardExpanded = remember { mutableStateMapOf<String, Boolean>() }
+    var runningShellCommandCardIds by remember { mutableStateOf(emptySet<String>()) }
     var showShellCommandCardEditor by rememberSaveable { mutableStateOf(false) }
     var editingShellCommandCardId by rememberSaveable { mutableStateOf<String?>(null) }
     var shellCommandCardDraft by remember { mutableStateOf(createDefaultShellCommandCardDraft()) }
@@ -377,6 +381,49 @@ fun OsPage(
             OsShellCommandCardStore.setCardVisible(cardId = cardId, visible = visible)
         }
         shellCommandCards = updatedCards
+    }
+
+    suspend fun runShellCommandCard(card: OsShellCommandCard) {
+        val command = card.command.trim()
+        if (command.isBlank()) {
+            Toast.makeText(context, shellCardCommandRequiredToast, Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (runningShellCommandCardIds.contains(card.id)) return
+        if (!shizukuApiUtils.canUseCommand()) {
+            shizukuApiUtils.requestPermissionIfNeeded()
+            Toast.makeText(context, shellRunNoPermissionText, Toast.LENGTH_SHORT).show()
+            return
+        }
+        runningShellCommandCardIds = runningShellCommandCardIds + card.id
+        try {
+            val output = withContext(Dispatchers.IO) {
+                shizukuApiUtils.execCommandCancellable(
+                    command = command,
+                    timeoutMs = 300_000L
+                )
+            }.orEmpty().trim().ifBlank { shellRunNoOutputText }
+            withContext(Dispatchers.IO) {
+                OsShellCommandCardStore.updateCardRunResult(
+                    cardId = card.id,
+                    runOutput = output
+                )
+            }
+            shellCommandCards = OsShellCommandCardStore.loadCards()
+        } catch (throwable: CancellationException) {
+            throw throwable
+        } catch (throwable: Throwable) {
+            Toast.makeText(
+                context,
+                context.getString(
+                    R.string.os_shell_card_toast_run_failed,
+                    throwable.javaClass.simpleName
+                ),
+                Toast.LENGTH_SHORT
+            ).show()
+        } finally {
+            runningShellCommandCardIds = runningShellCommandCardIds - card.id
+        }
     }
 
     suspend fun refreshAllSections() {
@@ -1103,6 +1150,7 @@ fun OsPage(
             onOpenShellRunner = { OsShellRunnerActivity.launch(context) },
             shellCommandCards = shellCommandCards,
             shellCommandCardExpanded = shellCommandCardExpanded,
+            runningShellCommandCardIds = runningShellCommandCardIds,
             onShellCommandCardExpandedChange = { cardId, expanded ->
                 shellCommandCardExpanded[cardId] = expanded
             },
@@ -1110,6 +1158,9 @@ fun OsPage(
                 editingShellCommandCardId = card.id
                 shellCommandCardDraft = card
                 showShellCommandCardEditor = true
+            },
+            onRunShellCommandCard = { card ->
+                scope.launch { runShellCommandCard(card) }
             },
             activityShortcutCards = activityShortcutCards,
             defaultActivityCardTitle = googleSystemServiceDefaultTitle,
