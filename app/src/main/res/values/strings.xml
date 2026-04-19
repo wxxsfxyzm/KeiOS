@@ -182,8 +182,11 @@
     <string name="os_shell_card_title">Shell 控制台</string>
     <string name="os_shell_card_subtitle">输入并运行 Shell 命令</string>
     <string name="os_shell_card_status_label">Shizuku 状态</string>
+    <string name="os_shell_card_saved_title_label">保存标题</string>
+    <string name="os_shell_card_saved_subtitle_label">保存备注</string>
     <string name="os_shell_card_saved_command_label">已保存命令</string>
     <string name="os_shell_card_saved_command_empty">暂无</string>
+    <string name="os_shell_card_saved_subtitle_empty">暂无备注</string>
     <string name="os_shell_card_cd_open">打开 Shell 控制台</string>
     <string name="os_shell_page_title">Shell</string>
     <string name="os_shell_input_title">shell 输入</string>
@@ -202,6 +205,12 @@
     <string name="os_shell_run_empty_output">命令执行完成，无输出。</string>
     <string name="os_shell_run_empty_command">请输入命令后再运行。</string>
     <string name="os_shell_run_stopped">命令已停止。</string>
+    <string name="os_shell_save_sheet_title">保存到参数 card</string>
+    <string name="os_shell_save_sheet_command_label">命令内容</string>
+    <string name="os_shell_save_sheet_field_title">标题</string>
+    <string name="os_shell_save_sheet_field_subtitle">备注</string>
+    <string name="os_shell_save_sheet_title_hint">例如：隐藏状态栏通知图标</string>
+    <string name="os_shell_save_sheet_subtitle_hint">例如：写入 system.status_bar_show_notification_icon = 2</string>
     <string name="os_shell_toast_command_saved">命令已保存到 OS 卡片</string>
     <string name="os_shell_toast_command_save_empty">请输入命令后再保存</string>
     <string name="os_shell_toast_output_formatted">输出已格式化</string>

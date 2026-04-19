@@ -87,8 +87,11 @@ fun OsPage(
     val googleSystemServiceDefaultTitle = stringResource(R.string.os_section_google_system_service_title)
     val googleSystemServiceDefaultSubtitle = stringResource(R.string.os_google_system_service_default_subtitle)
     val googleSystemServiceDefaultAppName = stringResource(R.string.os_google_system_service_default_app_name)
+    val shellSavedTitleLabel = stringResource(R.string.os_shell_card_saved_title_label)
+    val shellSavedSubtitleLabel = stringResource(R.string.os_shell_card_saved_subtitle_label)
     val shellSavedCommandLabel = stringResource(R.string.os_shell_card_saved_command_label)
     val shellSavedCommandEmpty = stringResource(R.string.os_shell_card_saved_command_empty)
+    val shellSavedSubtitleEmpty = stringResource(R.string.os_shell_card_saved_subtitle_empty)
     val editActivityCardTitle = stringResource(R.string.os_activity_sheet_title_edit)
     val addActivityCardTitle = stringResource(R.string.os_activity_sheet_title_add)
     val googleSystemServiceDefaultIntentFlags =
@@ -590,14 +593,27 @@ fun OsPage(
     val shellRunnerRows = remember(
         shizukuStatus,
         context,
+        shellSavedTitleLabel,
+        shellSavedSubtitleLabel,
         shellSavedCommandLabel,
         shellSavedCommandEmpty,
+        shellSavedSubtitleEmpty,
         savedShellCommand
     ) {
         listOf(
             InfoRow(
                 key = context.getString(R.string.os_shell_card_status_label),
                 value = shizukuStatus
+            ),
+            InfoRow(
+                key = shellSavedTitleLabel,
+                value = savedShellCommand.title.ifBlank {
+                    savedShellCommand.command.ifBlank { shellSavedCommandEmpty }
+                }
+            ),
+            InfoRow(
+                key = shellSavedSubtitleLabel,
+                value = savedShellCommand.subtitle.ifBlank { shellSavedSubtitleEmpty }
             ),
             InfoRow(
                 key = shellSavedCommandLabel,

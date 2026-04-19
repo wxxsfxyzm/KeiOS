@@ -60,8 +60,14 @@ import com.example.keios.ui.page.main.widget.AppPageLazyColumn
 import com.example.keios.ui.page.main.widget.AppPageScaffold
 import com.example.keios.ui.page.main.widget.AppSurfaceCard
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
+import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.SheetContentColumn
+import com.example.keios.ui.page.main.widget.SheetFieldBlock
+import com.example.keios.ui.page.main.widget.SheetSectionCard
+import com.example.keios.ui.page.main.widget.SheetSectionTitle
+import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -77,6 +83,7 @@ import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Download
+import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.icon.extended.Tune
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
@@ -115,8 +122,12 @@ class OsShellRunnerActivity : ComponentActivity() {
                     onRunShellCommand = { command ->
                         shizukuApiUtils.execCommandCancellable(command = command, timeoutMs = 300_000L)
                     },
-                    onSaveShellCommand = { command ->
-                        OsShellCommandStore.saveCommand(command).command.isNotBlank()
+                    onSaveShellCommand = { command, title, subtitle ->
+                        OsShellCommandStore.saveCommand(
+                            command = command,
+                            title = title,
+                            subtitle = subtitle
+                        ).command.isNotBlank()
                     },
                     onClose = { finish() }
                 )
@@ -157,10 +168,9 @@ private fun OsShellRunnerPage(
     canRunShellCommand: Boolean,
     onRequestShizukuPermission: () -> Unit,
     onRunShellCommand: suspend (String) -> String?,
-    onSaveShellCommand: (String) -> Boolean,
+    onSaveShellCommand: (String, String, String) -> Boolean,
     onClose: () -> Unit
 ) {
-    BackHandler(onBack = onClose)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pageListState = rememberLazyListState()
@@ -181,6 +191,12 @@ private fun OsShellRunnerPage(
     val commandStoppedText = stringResource(R.string.os_shell_run_stopped)
     val commandSavedToast = stringResource(R.string.os_shell_toast_command_saved)
     val commandSaveEmptyToast = stringResource(R.string.os_shell_toast_command_save_empty)
+    val saveSheetTitle = stringResource(R.string.os_shell_save_sheet_title)
+    val saveSheetCommandLabel = stringResource(R.string.os_shell_save_sheet_command_label)
+    val saveSheetFieldTitle = stringResource(R.string.os_shell_save_sheet_field_title)
+    val saveSheetFieldSubtitle = stringResource(R.string.os_shell_save_sheet_field_subtitle)
+    val saveSheetTitleHint = stringResource(R.string.os_shell_save_sheet_title_hint)
+    val saveSheetSubtitleHint = stringResource(R.string.os_shell_save_sheet_subtitle_hint)
     val outputFormattedToast = stringResource(R.string.os_shell_toast_output_formatted)
     val outputFormatEmptyToast = stringResource(R.string.os_shell_toast_output_format_empty)
     val outputCopiedToast = stringResource(R.string.os_shell_toast_output_copied)
@@ -191,7 +207,12 @@ private fun OsShellRunnerPage(
     var outputText by rememberSaveable { mutableStateOf("") }
     var runningCommand by remember { mutableStateOf(false) }
     var runningJob by remember { mutableStateOf<Job?>(null) }
+    var showSaveSheet by rememberSaveable { mutableStateOf(false) }
+    var saveTitleInput by rememberSaveable { mutableStateOf("") }
+    var saveSubtitleInput by rememberSaveable { mutableStateOf("") }
     val outputScrollState = rememberScrollState()
+    BackHandler(enabled = showSaveSheet) { showSaveSheet = false }
+    BackHandler(enabled = !showSaveSheet, onBack = onClose)
 
     fun appendOutput(command: String, result: String) {
         val timestamp = SimpleDateFormat(
@@ -249,14 +270,37 @@ private fun OsShellRunnerPage(
         job.cancel(CancellationException("user-stop"))
     }
 
+    fun openSaveCommandSheet() {
+        val command = commandInput.trim()
+        if (command.isBlank()) {
+            Toast.makeText(context, commandSaveEmptyToast, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val currentSnapshot = OsShellCommandStore.loadSnapshot()
+        saveTitleInput = if (currentSnapshot.command == command && currentSnapshot.title.isNotBlank()) {
+            currentSnapshot.title
+        } else {
+            defaultShellCommandCardTitle(command)
+        }
+        saveSubtitleInput = if (currentSnapshot.command == command) {
+            currentSnapshot.subtitle
+        } else {
+            ""
+        }
+        showSaveSheet = true
+    }
+
     fun saveCommandToCard() {
         val command = commandInput.trim()
         if (command.isBlank()) {
             Toast.makeText(context, commandSaveEmptyToast, Toast.LENGTH_SHORT).show()
             return
         }
-        val saved = onSaveShellCommand(command)
+        val title = saveTitleInput.trim().ifBlank { defaultShellCommandCardTitle(command) }
+        val subtitle = saveSubtitleInput.trim()
+        val saved = onSaveShellCommand(command, title, subtitle)
         if (saved) {
+            showSaveSheet = false
             Toast.makeText(context, commandSavedToast, Toast.LENGTH_SHORT).show()
         }
     }
@@ -362,7 +406,7 @@ private fun OsShellRunnerPage(
                                 backdrop = null,
                                 icon = MiuixIcons.Regular.Download,
                                 contentDescription = saveCommandActionDescription,
-                                onClick = { saveCommandToCard() },
+                                onClick = { openSaveCommandSheet() },
                                 iconTint = MiuixTheme.colorScheme.primary,
                                 variant = GlassVariant.Bar
                             )
@@ -429,6 +473,69 @@ private fun OsShellRunnerPage(
                             .heightIn(min = 260.dp, max = 520.dp)
                             .padding(horizontal = 14.dp)
                             .padding(bottom = 14.dp)
+                    )
+                }
+            }
+        }
+    }
+    SnapshotWindowBottomSheet(
+        show = showSaveSheet,
+        title = saveSheetTitle,
+        onDismissRequest = { showSaveSheet = false },
+        startAction = {
+            GlassIconButton(
+                backdrop = null,
+                variant = GlassVariant.Bar,
+                icon = MiuixIcons.Regular.Close,
+                contentDescription = stringResource(R.string.common_close),
+                onClick = { showSaveSheet = false }
+            )
+        },
+        endAction = {
+            GlassIconButton(
+                backdrop = null,
+                variant = GlassVariant.Bar,
+                icon = MiuixIcons.Regular.Ok,
+                contentDescription = stringResource(R.string.common_save),
+                onClick = { saveCommandToCard() }
+            )
+        }
+    ) {
+        SheetContentColumn(verticalSpacing = 10.dp) {
+            SheetSectionCard(verticalSpacing = 10.dp) {
+                SheetSectionTitle(text = saveSheetCommandLabel)
+                Text(
+                    text = commandInput.trim(),
+                    color = MiuixTheme.colorScheme.onBackground,
+                    fontSize = AppTypographyTokens.Body.fontSize,
+                    lineHeight = AppTypographyTokens.Body.lineHeight,
+                    maxLines = 5,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            SheetSectionCard(verticalSpacing = 10.dp) {
+                SheetFieldBlock(title = saveSheetFieldTitle) {
+                    GlassSearchField(
+                        value = saveTitleInput,
+                        onValueChange = { saveTitleInput = it },
+                        label = saveSheetTitleHint,
+                        backdrop = null,
+                        variant = GlassVariant.SheetInput,
+                        textColor = MiuixTheme.colorScheme.primary,
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                SheetFieldBlock(title = saveSheetFieldSubtitle) {
+                    GlassSearchField(
+                        value = saveSubtitleInput,
+                        onValueChange = { saveSubtitleInput = it },
+                        label = saveSheetSubtitleHint,
+                        backdrop = null,
+                        variant = GlassVariant.SheetInput,
+                        textColor = MiuixTheme.colorScheme.primary,
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -633,4 +740,9 @@ private fun lineLooksLikeSectionHeading(line: String): Boolean {
     if (line.length !in 2..80) return false
     if (line.startsWith(" ") || line.startsWith("\t")) return false
     return line.endsWith(":")
+}
+
+private fun defaultShellCommandCardTitle(command: String): String {
+    val normalized = command.trim().replace(Regex("\\s+"), " ")
+    return if (normalized.length <= 36) normalized else "${normalized.take(35)}…"
 }
