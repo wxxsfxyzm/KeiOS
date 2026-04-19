@@ -57,7 +57,6 @@ import com.example.keios.ui.page.main.os.appLucideNotesIcon
 import com.example.keios.ui.page.main.os.appLucidePackageIcon
 import com.example.keios.ui.page.main.os.appLucideTimeIcon
 import com.example.keios.ui.page.main.os.osLucideCopyIcon
-import com.example.keios.ui.page.main.os.osLucideSettingsIcon
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.example.keios.ui.page.main.widget.core.AppControlRow
@@ -333,13 +332,6 @@ fun SettingsPage(
                     tint = MiuixTheme.colorScheme.onSurface
                 )
             }
-        },
-        actions = {
-            Icon(
-                imageVector = osLucideSettingsIcon(),
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.primary
-            )
         }
     ) { innerPadding ->
         CompositionLocalProvider(
@@ -357,7 +349,6 @@ fun SettingsPage(
                 SettingsGroupCard(
                     header = stringResource(R.string.settings_group_visual_header),
                     title = stringResource(R.string.settings_group_visual_title),
-                    summary = stringResource(R.string.settings_group_visual_summary),
                     sectionIcon = appLucideLayersIcon(),
                     containerColor = if (visualGroupActive) enabledCardColor else disabledCardColor
                 ) {
@@ -413,7 +404,6 @@ fun SettingsPage(
                 SettingsGroupCard(
                     header = stringResource(R.string.settings_group_animation_header),
                     title = stringResource(R.string.settings_group_animation_title),
-                    summary = stringResource(R.string.settings_group_animation_summary),
                     sectionIcon = appLucideTimeIcon(),
                     containerColor = if (animationGroupActive) enabledCardColor else disabledCardColor
                 ) {
@@ -435,7 +425,6 @@ fun SettingsPage(
                 SettingsGroupCard(
                     header = stringResource(R.string.settings_group_component_effects_header),
                     title = stringResource(R.string.settings_group_component_effects_title),
-                    summary = stringResource(R.string.settings_group_component_effects_summary),
                     sectionIcon = appLucideConfigIcon(),
                     containerColor = if (componentEffectsGroupActive) enabledCardColor else disabledCardColor
                 ) {
@@ -490,7 +479,6 @@ fun SettingsPage(
                 SettingsGroupCard(
                     header = stringResource(R.string.settings_group_background_header),
                     title = stringResource(R.string.settings_group_background_title),
-                    summary = stringResource(R.string.settings_group_background_summary),
                     sectionIcon = appLucideMediaIcon(),
                     containerColor = if (backgroundGroupActive) enabledCardColor else disabledCardColor
                 ) {
@@ -585,7 +573,6 @@ fun SettingsPage(
                 SettingsGroupCard(
                     header = stringResource(R.string.settings_group_log_header),
                     title = stringResource(R.string.settings_group_log_title),
-                    summary = stringResource(R.string.settings_group_log_summary),
                     sectionIcon = appLucideNotesIcon(),
                     containerColor = if (logGroupActive) enabledCardColor else disabledCardColor
                 ) {
@@ -690,7 +677,6 @@ fun SettingsPage(
                 SettingsGroupCard(
                     header = stringResource(R.string.settings_group_notify_header),
                     title = stringResource(R.string.settings_group_notify_title),
-                    summary = stringResource(R.string.settings_group_notify_summary),
                     sectionIcon = appLucideAlertIcon(),
                     containerColor = if (notifyGroupActive) enabledCardColor else disabledCardColor
                 ) {
@@ -725,7 +711,6 @@ fun SettingsPage(
                 SettingsGroupCard(
                     header = stringResource(R.string.settings_group_copy_header),
                     title = stringResource(R.string.settings_group_copy_title),
-                    summary = stringResource(R.string.settings_group_copy_summary),
                     sectionIcon = osLucideCopyIcon(),
                     containerColor = if (textCopyCapabilityExpanded) enabledCardColor else disabledCardColor
                 ) {
@@ -751,11 +736,6 @@ fun SettingsPage(
                 SettingsGroupCard(
                     header = stringResource(R.string.settings_cache_header),
                     title = stringResource(R.string.settings_cache_diagnostics_title),
-                    summary = if (cacheDiagnosticsEnabled) {
-                        stringResource(R.string.settings_cache_diagnostics_summary_enabled)
-                    } else {
-                        stringResource(R.string.settings_cache_diagnostics_summary_disabled)
-                    },
                     sectionIcon = appLucidePackageIcon(),
                     containerColor = if (cacheDiagnosticsEnabled) enabledCardColor else disabledCardColor
                 ) {
@@ -840,14 +820,13 @@ fun SettingsPage(
 internal fun SettingsGroupCard(
     header: String,
     title: String,
-    summary: String,
     sectionIcon: ImageVector? = null,
     containerColor: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
     AppFeatureCard(
         title = title,
-        subtitle = summary,
+        subtitle = "",
         eyebrow = header,
         sectionIcon = sectionIcon,
         containerColor = containerColor,
