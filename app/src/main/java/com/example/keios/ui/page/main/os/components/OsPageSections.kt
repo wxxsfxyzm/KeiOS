@@ -2,13 +2,17 @@ package com.example.keios.ui.page.main
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -207,11 +211,29 @@ internal fun LazyListScope.addKeyValueSectionCard(
             if (rows.isEmpty()) {
                 Text(text = noMatchedResultsText, color = MiuixTheme.colorScheme.onBackgroundVariant)
             } else {
-                rows.forEach { row -> OsSectionInfoRow(label = row.key, value = row.value) }
+                OsVirtualizedInfoRows(rows = rows)
             }
         }
     }
     item { Spacer(modifier = Modifier.height(8.dp)) }
+}
+
+@Composable
+private fun OsVirtualizedInfoRows(rows: List<InfoRow>) {
+    val shouldEnableInnerScroll = rows.size > 42
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 520.dp),
+        userScrollEnabled = shouldEnableInnerScroll
+    ) {
+        itemsIndexed(
+            items = rows,
+            key = { index, row -> "${row.key}-${row.value}-$index" }
+        ) { _, row ->
+            OsSectionInfoRow(label = row.key, value = row.value)
+        }
+    }
 }
 
 @Composable

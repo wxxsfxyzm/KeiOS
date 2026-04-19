@@ -445,6 +445,17 @@ internal object OsUiStateStore {
         store.encode(KEY_LINUX_ENV, value)
     }
 
+    fun saveExpandedStates(snapshot: OsUiSnapshot) {
+        store.encode(KEY_TOP_INFO, snapshot.topInfoExpanded)
+        store.encode(KEY_SHELL_RUNNER, snapshot.shellRunnerExpanded)
+        store.encode(KEY_SYSTEM_TABLE, snapshot.systemTableExpanded)
+        store.encode(KEY_SECURE_TABLE, snapshot.secureTableExpanded)
+        store.encode(KEY_GLOBAL_TABLE, snapshot.globalTableExpanded)
+        store.encode(KEY_ANDROID_PROPS, snapshot.androidPropsExpanded)
+        store.encode(KEY_JAVA_PROPS, snapshot.javaPropsExpanded)
+        store.encode(KEY_LINUX_ENV, snapshot.linuxEnvExpanded)
+    }
+
     fun storageFootprintBytes(): Long = store.totalSize() + legacyStore.totalSize()
 
     fun actualDataBytes(): Long = store.actualSize() + legacyStore.actualSize()

@@ -5,10 +5,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,37 +20,22 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.keios.R
-import com.example.keios.ui.page.main.widget.AppChromeTokens
-import com.example.keios.ui.page.main.widget.AppPageScaffold
-import com.example.keios.ui.page.main.widget.AppTopBarSearchField
-import com.example.keios.ui.page.main.widget.LiquidActionBar
-import com.example.keios.ui.page.main.widget.LiquidActionItem
-import com.example.keios.ui.page.main.widget.StatusLabelText
 import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.ui.page.main.os.OsPageViewModel
 import com.rosan.installer.ui.library.effect.getMiuixAppBarColor
 import com.rosan.installer.ui.library.effect.rememberMiuixBlurBackdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.GridView
-import top.yukonga.miuix.kmp.icon.extended.Layers
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun OsPage(
@@ -178,6 +159,8 @@ fun OsPage(
     var shellCommandCards by remember { mutableStateOf(OsShellCommandCardStore.loadCards()) }
     val shellCommandCardExpanded = remember { mutableStateMapOf<String, Boolean>() }
     var runningShellCommandCardIds by remember { mutableStateOf(emptySet<String>()) }
+    val sectionLoadMutex = remember { Mutex() }
+    val sectionLoadDeferreds = remember { mutableStateMapOf<SectionKind, Deferred<List<InfoRow>>>() }
     var showShellCommandCardEditor by rememberSaveable { mutableStateOf(false) }
     var editingShellCommandCardId by rememberSaveable { mutableStateOf<String?>(null) }
     var shellCommandCardDraft by remember { mutableStateOf(createDefaultShellCommandCardDraft()) }
@@ -234,17 +217,10 @@ fun OsPage(
     DisposableEffect(Unit) {
         onDispose { onActionBarInteractingChanged(false) }
     }
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                shellCommandCards = OsShellCommandCardStore.loadCards()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
+    BindOsShellCardReloadOnResume(
+        lifecycleOwner = lifecycleOwner,
+        reloadCards = { shellCommandCards = OsShellCommandCardStore.loadCards() }
+    )
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -282,283 +258,139 @@ fun OsPage(
             map[section] = transform(old)
         }
     }
+
     suspend fun ensureLoad(section: SectionKind, forceRefresh: Boolean = false) {
-        if (!visibleSectionKinds(visibleCards).contains(section)) return
-        val current = sectionStates[section] ?: SectionState()
-        if (current.loading) return
-        if (!forceRefresh) {
-            if (current.loadedFresh) return
-            if (current.rows.isNotEmpty()) return
-        }
-        updateSection(section) { it.copy(loading = true) }
-        val fresh = withContext(Dispatchers.IO) {
-            buildSectionRows(section, context, shizukuStatus, shizukuApiUtils)
-        }
-        updateSection(section) { it.copy(rows = fresh, loading = false, loadedFresh = true) }
-        cachePersisted = withContext(Dispatchers.IO) {
-            OsInfoCache.write(section, fresh)
-            OsInfoCache.readSnapshot(visibleSectionKinds(visibleCards)).hasPersistedCache
-        }
+        ensureOsSectionLoaded(
+            section = section,
+            forceRefresh = forceRefresh,
+            visibleCardsProvider = { visibleCards },
+            sectionStatesProvider = { sectionStates },
+            sectionLoadMutex = sectionLoadMutex,
+            sectionLoadDeferreds = sectionLoadDeferreds,
+            scope = scope,
+            context = context,
+            shizukuStatus = shizukuStatus,
+            shizukuApiUtils = shizukuApiUtils,
+            updateSection = ::updateSection,
+            onCachePersistedChanged = { cachePersisted = it }
+        )
     }
 
     suspend fun applyCardVisibility(card: OsSectionCard, visible: Boolean) {
-        val updated = visibleCards.toMutableSet().apply {
-            if (visible) add(card) else remove(card)
-        }.toSet()
-        visibleCards = updated
-        withContext(Dispatchers.IO) { OsCardVisibilityStore.saveVisibleCards(updated) }
-        when (card) {
-            OsSectionCard.TOP_INFO -> {
-                if (!visible) topInfoExpanded = false
-            }
-            OsSectionCard.SHELL_RUNNER -> {
-                if (!visible) shellRunnerExpanded = false
-            }
-            OsSectionCard.GOOGLE_SYSTEM_SERVICE -> Unit
-            OsSectionCard.SYSTEM -> {
-                if (!visible) {
-                    systemTableExpanded = false
-                    updateSection(SectionKind.SYSTEM) { SectionState() }
-                    withContext(Dispatchers.IO) { OsInfoCache.clear(SectionKind.SYSTEM) }
-                } else ensureLoad(SectionKind.SYSTEM, forceRefresh = true)
-            }
-            OsSectionCard.SECURE -> {
-                if (!visible) {
-                    secureTableExpanded = false
-                    updateSection(SectionKind.SECURE) { SectionState() }
-                    withContext(Dispatchers.IO) { OsInfoCache.clear(SectionKind.SECURE) }
-                } else ensureLoad(SectionKind.SECURE, forceRefresh = true)
-            }
-            OsSectionCard.GLOBAL -> {
-                if (!visible) {
-                    globalTableExpanded = false
-                    updateSection(SectionKind.GLOBAL) { SectionState() }
-                    withContext(Dispatchers.IO) { OsInfoCache.clear(SectionKind.GLOBAL) }
-                } else ensureLoad(SectionKind.GLOBAL, forceRefresh = true)
-            }
-            OsSectionCard.ANDROID -> {
-                if (!visible) {
-                    androidPropsExpanded = false
-                    updateSection(SectionKind.ANDROID) { SectionState() }
-                    withContext(Dispatchers.IO) { OsInfoCache.clear(SectionKind.ANDROID) }
-                } else ensureLoad(SectionKind.ANDROID, forceRefresh = true)
-            }
-            OsSectionCard.JAVA -> {
-                if (!visible) {
-                    javaPropsExpanded = false
-                    updateSection(SectionKind.JAVA) { SectionState() }
-                    withContext(Dispatchers.IO) { OsInfoCache.clear(SectionKind.JAVA) }
-                } else ensureLoad(SectionKind.JAVA, forceRefresh = true)
-            }
-            OsSectionCard.LINUX -> {
-                if (!visible) {
-                    linuxEnvExpanded = false
-                    updateSection(SectionKind.LINUX) { SectionState() }
-                    withContext(Dispatchers.IO) { OsInfoCache.clear(SectionKind.LINUX) }
-                } else ensureLoad(SectionKind.LINUX, forceRefresh = true)
-            }
-        }
-        cachePersisted = withContext(Dispatchers.IO) {
-            OsInfoCache.readSnapshot(visibleSectionKinds(visibleCards)).hasPersistedCache
-        }
+        applyOsCardVisibility(
+            card = card,
+            visible = visible,
+            currentVisibleCards = visibleCards,
+            updateVisibleCards = { visibleCards = it },
+            setTopInfoExpanded = { topInfoExpanded = it },
+            setShellRunnerExpanded = { shellRunnerExpanded = it },
+            setSystemTableExpanded = { systemTableExpanded = it },
+            setSecureTableExpanded = { secureTableExpanded = it },
+            setGlobalTableExpanded = { globalTableExpanded = it },
+            setAndroidPropsExpanded = { androidPropsExpanded = it },
+            setJavaPropsExpanded = { javaPropsExpanded = it },
+            setLinuxEnvExpanded = { linuxEnvExpanded = it },
+            updateSection = ::updateSection,
+            ensureLoad = ::ensureLoad,
+            visibleCardsProvider = { visibleCards },
+            onCachePersistedChanged = { cachePersisted = it }
+        )
     }
 
     suspend fun applyActivityCardVisibility(cardId: String, visible: Boolean) {
-        val updatedCards = activityShortcutCards.map { card ->
-            if (card.id == cardId) card.copy(visible = visible) else card
-        }
-        activityShortcutCards = updatedCards
-        withContext(Dispatchers.IO) {
-            OsActivityShortcutCardStore.saveCards(
-                cards = updatedCards,
-                defaults = googleSystemServiceDefaults
-            )
-        }
+        applyOsActivityCardVisibility(
+            cardId = cardId,
+            visible = visible,
+            currentCards = activityShortcutCards,
+            defaults = googleSystemServiceDefaults,
+            updateCards = { activityShortcutCards = it }
+        )
     }
 
     suspend fun applyShellCommandCardVisibility(cardId: String, visible: Boolean) {
-        val updatedCards = withContext(Dispatchers.IO) {
-            OsShellCommandCardStore.setCardVisible(cardId = cardId, visible = visible)
-        }
-        shellCommandCards = updatedCards
+        applyOsShellCommandCardVisibility(
+            cardId = cardId,
+            visible = visible,
+            updateCards = { shellCommandCards = it }
+        )
     }
 
     suspend fun runShellCommandCard(card: OsShellCommandCard) {
-        val command = card.command.trim()
-        if (command.isBlank()) {
-            Toast.makeText(context, shellCardCommandRequiredToast, Toast.LENGTH_SHORT).show()
-            return
-        }
-        if (runningShellCommandCardIds.contains(card.id)) return
-        if (!shizukuApiUtils.canUseCommand()) {
-            shizukuApiUtils.requestPermissionIfNeeded()
-            Toast.makeText(context, shellRunNoPermissionText, Toast.LENGTH_SHORT).show()
-            return
-        }
-        runningShellCommandCardIds = runningShellCommandCardIds + card.id
-        try {
-            val output = withContext(Dispatchers.IO) {
-                shizukuApiUtils.execCommandCancellable(
-                    command = command,
-                    timeoutMs = 300_000L
-                )
-            }.orEmpty().trim().ifBlank { shellRunNoOutputText }
-            withContext(Dispatchers.IO) {
-                OsShellCommandCardStore.updateCardRunResult(
-                    cardId = card.id,
-                    runOutput = output
-                )
-            }
-            shellCommandCards = OsShellCommandCardStore.loadCards()
-        } catch (throwable: CancellationException) {
-            throw throwable
-        } catch (throwable: Throwable) {
-            Toast.makeText(
-                context,
+        runOsShellCommandCard(
+            card = card,
+            context = context,
+            shizukuApiUtils = shizukuApiUtils,
+            shellCardCommandRequiredToast = shellCardCommandRequiredToast,
+            shellRunNoPermissionToast = shellRunNoPermissionText,
+            shellRunNoOutputText = shellRunNoOutputText,
+            runningCardIdsProvider = { runningShellCommandCardIds },
+            updateRunningCardIds = { runningShellCommandCardIds = it },
+            onCardsReload = { shellCommandCards = OsShellCommandCardStore.loadCards() },
+            runFailedMessage = { throwable ->
                 context.getString(
                     R.string.os_shell_card_toast_run_failed,
                     throwable.javaClass.simpleName
-                ),
-                Toast.LENGTH_SHORT
-            ).show()
-        } finally {
-            runningShellCommandCardIds = runningShellCommandCardIds - card.id
-        }
+                )
+            }
+        )
     }
 
     suspend fun refreshAllSections() {
-        refreshing = true
-        refreshProgress = 0f
-        try {
-            val targets = SectionKind.entries.filter { visibleSectionKinds(visibleCards).contains(it) }
-            val sectionCount = targets.size.coerceAtLeast(1)
-            targets.forEachIndexed { index, section ->
-                ensureLoad(section, forceRefresh = true)
-                refreshProgress = (index + 1).toFloat() / sectionCount.toFloat()
-            }
-            Toast.makeText(
-                context,
-                if (targets.isEmpty()) noRefreshableCardText else refreshCompletedText,
-                Toast.LENGTH_SHORT
-            ).show()
-        } finally {
-            refreshing = false
-        }
-    }
-
-    LaunchedEffect(activityShortcutCards) {
-        val currentIds = activityShortcutCards.map { it.id }.toSet()
-        activityCardExpanded.keys.toList().forEach { id ->
-            if (!currentIds.contains(id)) {
-                activityCardExpanded.remove(id)
-            }
-        }
-        activityShortcutCards.forEachIndexed { index, card ->
-            if (!activityCardExpanded.containsKey(card.id)) {
-                activityCardExpanded[card.id] =
-                    if (index == 0 && card.id == LEGACY_GOOGLE_SYSTEM_SERVICE_CARD_ID) {
-                        initialUiSnapshot.googleSystemServiceExpanded
-                    } else {
-                        false
-                    }
-            }
-        }
-    }
-
-    LaunchedEffect(shellCommandCards) {
-        val currentIds = shellCommandCards.map { it.id }.toSet()
-        shellCommandCardExpanded.keys.toList().forEach { id ->
-            if (!currentIds.contains(id)) {
-                shellCommandCardExpanded.remove(id)
-            }
-        }
-        shellCommandCards.forEach { card ->
-            if (!shellCommandCardExpanded.containsKey(card.id)) {
-                shellCommandCardExpanded[card.id] = false
-            }
-        }
-    }
-
-    LaunchedEffect(scrollToTopSignal) {
-        if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
-    }
-
-    LaunchedEffect(Unit) {
-        var ensuredVisibleCards = visibleCards
-        if (!ensuredVisibleCards.contains(OsSectionCard.GOOGLE_SYSTEM_SERVICE)) {
-            ensuredVisibleCards = ensuredVisibleCards + OsSectionCard.GOOGLE_SYSTEM_SERVICE
-        }
-        if (!ensuredVisibleCards.contains(OsSectionCard.SHELL_RUNNER)) {
-            ensuredVisibleCards = ensuredVisibleCards + OsSectionCard.SHELL_RUNNER
-        }
-        if (ensuredVisibleCards != visibleCards) {
-            visibleCards = ensuredVisibleCards
-            withContext(Dispatchers.IO) {
-                OsCardVisibilityStore.saveVisibleCards(ensuredVisibleCards)
-            }
-        }
-        val visibleSections = visibleSectionKinds(ensuredVisibleCards)
-        val snapshot = withContext(Dispatchers.IO) {
-            OsInfoCache.readSnapshot(visibleSections)
-        }
-        val cached = snapshot.cached
-        sectionStates = mapOf(
-            SectionKind.SYSTEM to SectionState(rows = if (visibleSections.contains(SectionKind.SYSTEM)) cached.system else emptyList()),
-            SectionKind.SECURE to SectionState(rows = if (visibleSections.contains(SectionKind.SECURE)) cached.secure else emptyList()),
-            SectionKind.GLOBAL to SectionState(rows = if (visibleSections.contains(SectionKind.GLOBAL)) cached.global else emptyList()),
-            SectionKind.ANDROID to SectionState(rows = if (visibleSections.contains(SectionKind.ANDROID)) cached.android else emptyList()),
-            SectionKind.JAVA to SectionState(rows = if (visibleSections.contains(SectionKind.JAVA)) cached.java else emptyList()),
-            SectionKind.LINUX to SectionState(rows = if (visibleSections.contains(SectionKind.LINUX)) cached.linux else emptyList())
+        refreshAllOsSections(
+            context = context,
+            visibleCardsProvider = { visibleCards },
+            setRefreshing = { refreshing = it },
+            setRefreshProgress = { refreshProgress = it },
+            ensureLoad = ::ensureLoad,
+            noRefreshableCardText = noRefreshableCardText,
+            refreshCompletedText = refreshCompletedText
         )
-        cachePersisted = snapshot.hasPersistedCache
-        cacheLoaded = true
-        uiStatePersistenceReady = true
-        if (isPageActive) {
-            visibleSections.forEach { section ->
-                ensureLoad(section, forceRefresh = false)
-            }
+    }
+
+    BindOsCardExpandedStateMaps(
+        activityShortcutCards = activityShortcutCards,
+        activityCardExpanded = activityCardExpanded,
+        initialGoogleSystemServiceExpanded = initialUiSnapshot.googleSystemServiceExpanded,
+        shellCommandCards = shellCommandCards,
+        shellCommandCardExpanded = shellCommandCardExpanded
+    )
+
+    BindOsScrollToTopEffect(
+        scrollToTopSignal = scrollToTopSignal,
+        listState = listState
+    )
+
+    BindOsInitialCacheLoad(
+        visibleCards = visibleCards,
+        onVisibleCardsChange = { visibleCards = it },
+        onSectionStatesChange = { sectionStates = it },
+        onCachePersistedChange = { cachePersisted = it },
+        onCacheLoadedChange = { cacheLoaded = it },
+        onUiStatePersistenceReadyChange = { uiStatePersistenceReady = it },
+        isPageActive = isPageActive,
+        ensureLoad = ::ensureLoad
+    )
+
+    BindOsShizukuInvalidation(
+        shizukuReady = shizukuReady,
+        updateSection = ::updateSection
+    )
+
+    BindOsExpandedStatePersistence(
+        ready = uiStatePersistenceReady,
+        snapshotProvider = {
+            OsUiSnapshot(
+                topInfoExpanded = topInfoExpanded,
+                shellRunnerExpanded = shellRunnerExpanded,
+                systemTableExpanded = systemTableExpanded,
+                secureTableExpanded = secureTableExpanded,
+                globalTableExpanded = globalTableExpanded,
+                androidPropsExpanded = androidPropsExpanded,
+                javaPropsExpanded = javaPropsExpanded,
+                linuxEnvExpanded = linuxEnvExpanded
+            )
         }
-    }
-
-    LaunchedEffect(shizukuReady) {
-        updateSection(SectionKind.SYSTEM) { it.copy(loadedFresh = false) }
-        updateSection(SectionKind.SECURE) { it.copy(loadedFresh = false) }
-        updateSection(SectionKind.GLOBAL) { it.copy(loadedFresh = false) }
-        updateSection(SectionKind.LINUX) { it.copy(loadedFresh = false) }
-    }
-
-    LaunchedEffect(topInfoExpanded) {
-        if (!uiStatePersistenceReady) return@LaunchedEffect
-        withContext(Dispatchers.IO) { OsUiStateStore.setTopInfoExpanded(topInfoExpanded) }
-    }
-    LaunchedEffect(shellRunnerExpanded) {
-        if (!uiStatePersistenceReady) return@LaunchedEffect
-        withContext(Dispatchers.IO) { OsUiStateStore.setShellRunnerExpanded(shellRunnerExpanded) }
-    }
-    LaunchedEffect(systemTableExpanded) {
-        if (!uiStatePersistenceReady) return@LaunchedEffect
-        withContext(Dispatchers.IO) { OsUiStateStore.setOsSystemTableExpanded(systemTableExpanded) }
-    }
-    LaunchedEffect(secureTableExpanded) {
-        if (!uiStatePersistenceReady) return@LaunchedEffect
-        withContext(Dispatchers.IO) { OsUiStateStore.setSecureTableExpanded(secureTableExpanded) }
-    }
-    LaunchedEffect(globalTableExpanded) {
-        if (!uiStatePersistenceReady) return@LaunchedEffect
-        withContext(Dispatchers.IO) { OsUiStateStore.setGlobalTableExpanded(globalTableExpanded) }
-    }
-    LaunchedEffect(androidPropsExpanded) {
-        if (!uiStatePersistenceReady) return@LaunchedEffect
-        withContext(Dispatchers.IO) { OsUiStateStore.setAndroidPropsExpanded(androidPropsExpanded) }
-    }
-    LaunchedEffect(javaPropsExpanded) {
-        if (!uiStatePersistenceReady) return@LaunchedEffect
-        withContext(Dispatchers.IO) { OsUiStateStore.setJavaPropsExpanded(javaPropsExpanded) }
-    }
-    LaunchedEffect(linuxEnvExpanded) {
-        if (!uiStatePersistenceReady) return@LaunchedEffect
-        withContext(Dispatchers.IO) { OsUiStateStore.setLinuxEnvExpanded(linuxEnvExpanded) }
-    }
+    )
 
     LaunchedEffect(systemTableExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
@@ -708,190 +540,95 @@ fun OsPage(
     }
 
     suspend fun exportCard(card: OsSectionCard) {
-        if (exportingCard != null) return
-        exportingCard = card
-        try {
-            when (card) {
-                OsSectionCard.TOP_INFO -> {
-                    visibleSectionKinds(visibleCards).forEach { section ->
-                        ensureLoad(section, forceRefresh = false)
-                    }
-                }
-
-                else -> {
-                    sectionKindByCard(card)?.let { section ->
-                        ensureLoad(section, forceRefresh = false)
-                    }
-                }
+        exportOsSectionCard(
+            card = card,
+            currentExportingCard = exportingCard,
+            updateExportingCard = { exportingCard = it },
+            visibleCardsProvider = { visibleCards },
+            ensureLoad = ::ensureLoad,
+            sectionStatesProvider = { sectionStates },
+            activityShortcutCardsProvider = { activityShortcutCards },
+            googleSystemServiceDefaults = googleSystemServiceDefaults,
+            context = context,
+            shizukuStatus = shizukuStatus,
+            launchExport = { fileName, payload ->
+                pendingExportContent = payload
+                exportLauncher.launch(fileName)
+            },
+            onExportFailed = { throwable ->
+                Toast.makeText(
+                    context,
+                    "导出失败: ${throwable.javaClass.simpleName}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
-
-            val rows = currentRowsForCard(
-                card = card,
-                sectionStates = sectionStates,
-                googleSystemServiceConfig = activityShortcutCards.firstOrNull()?.config
-                    ?: googleSystemServiceDefaults,
-                googleSystemServiceDefaults = googleSystemServiceDefaults,
-                context = context
-            )
-            val generatedAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-            val payload = buildOsCardJson(
-                generatedAt = generatedAt,
-                shizukuStatus = shizukuStatus,
-                cardTitle = card.title,
-                rows = rows
-            )
-            val exportStamp = SimpleDateFormat("yyyyMMdd-HHmmss-SSS", Locale.getDefault()).format(Date())
-            val fileName = "keios-os-${exportSlug(card)}-$exportStamp.json"
-            pendingExportContent = payload
-            exportLauncher.launch(fileName)
-        } catch (t: Throwable) {
-            Toast.makeText(context, "导出失败: ${t.javaClass.simpleName}", Toast.LENGTH_SHORT).show()
-        } finally {
-            exportingCard = null
-        }
-    }
-
-    val currentVisibleSectionKinds = visibleSectionKinds(visibleCards)
-    val visibleSectionStates = currentVisibleSectionKinds.mapNotNull { sectionStates[it] }
-    val loadedFreshCount = visibleSectionStates.count { it.loadedFresh }
-    val cachedSectionCount = visibleSectionStates.count { !it.loadedFresh && it.rows.isNotEmpty() }
-    val sectionCount = currentVisibleSectionKinds.size
-    val overviewState = when {
-        refreshing -> SystemOverviewState.Refreshing
-        loadedFreshCount == sectionCount && sectionCount > 0 -> SystemOverviewState.Completed
-        cachePersisted || cachedSectionCount > 0 -> SystemOverviewState.Cached
-        else -> SystemOverviewState.Idle
-    }
-    val statusLabel = when (overviewState) {
-        SystemOverviewState.Cached -> StatusLabelText.Cached
-        SystemOverviewState.Refreshing -> StatusLabelText.Syncing
-        SystemOverviewState.Completed -> StatusLabelText.Synced
-        SystemOverviewState.Idle -> StatusLabelText.PendingSync
-    }
-    val statusColor = when (overviewState) {
-        SystemOverviewState.Cached -> cachedColor
-        SystemOverviewState.Refreshing -> refreshingColor
-        SystemOverviewState.Completed -> syncedColor
-        SystemOverviewState.Idle -> inactive
-    }
-    val overviewCardColor = if (isDark) {
-        statusColor.copy(alpha = 0.16f)
-    } else {
-        statusColor.copy(alpha = 0.09f)
-    }
-    val overviewBorderColor = if (isDark) {
-        statusColor.copy(alpha = 0.32f)
-    } else {
-        statusColor.copy(alpha = 0.26f)
-    }
-    val indicatorProgress = when (overviewState) {
-        SystemOverviewState.Refreshing -> refreshProgress.coerceIn(0f, 1f)
-        SystemOverviewState.Completed,
-        SystemOverviewState.Cached -> 1f
-        SystemOverviewState.Idle -> 0f
-    }
-    val indicatorBg = when (overviewState) {
-        SystemOverviewState.Refreshing -> Color(0x553B82F6)
-        SystemOverviewState.Completed -> Color(0x5522C55E)
-        SystemOverviewState.Cached -> Color(0x55F59E0B)
-        SystemOverviewState.Idle -> MiuixTheme.colorScheme.surface
-    }
-    val totalParameterCardCount = remember {
-        OsSectionCard.entries.count {
-            it != OsSectionCard.GOOGLE_SYSTEM_SERVICE &&
-                it != OsSectionCard.SHELL_RUNNER
-        }
-    }
-    val visibleParameterCardCount = remember(visibleCards) {
-        visibleCards.count {
-            it != OsSectionCard.GOOGLE_SYSTEM_SERVICE &&
-                it != OsSectionCard.SHELL_RUNNER
-        }
-    }
-    val activityOverviewStats = remember(activityShortcutCards) {
-        buildOsActivityOverviewStats(
-            cards = activityShortcutCards
         )
     }
-    val shellOverviewStats = remember(shellCommandCards, visibleCards) {
-        val shellRunnerVisible = visibleCards.contains(OsSectionCard.SHELL_RUNNER)
-        OsShellOverviewStats(
-            totalCount = shellCommandCards.size + 1,
-            visibleCount = shellCommandCards.count { it.visible } + if (shellRunnerVisible) 1 else 0
-        )
-    }
-    val overviewMetrics = remember(
+
+    val overviewUiState = remember(
+        isDark,
+        inactive,
+        cachedColor,
+        refreshingColor,
+        syncedColor,
+        refreshing,
+        refreshProgress,
+        cachePersisted,
+        visibleCards,
+        sectionStates,
         topInfoRows.size,
         visibleRowsCount,
-        totalParameterCardCount,
-        visibleParameterCardCount,
-        activityOverviewStats,
-        shellOverviewStats
+        activityShortcutCards,
+        shellCommandCards,
+        surfaceColor
     ) {
-        buildOsOverviewMetrics(
+        buildOsOverviewUiState(
             context = context,
+            isDark = isDark,
+            inactiveColor = inactive,
+            cachedColor = cachedColor,
+            refreshingColor = refreshingColor,
+            syncedColor = syncedColor,
+            surfaceColor = surfaceColor,
+            refreshing = refreshing,
+            refreshProgress = refreshProgress,
+            cachePersisted = cachePersisted,
+            visibleCards = visibleCards,
+            sectionStates = sectionStates,
             topInfoCount = topInfoRows.size,
             visibleRowsCount = visibleRowsCount,
-            visibleParameterCardCount = visibleParameterCardCount,
-            totalParameterCardCount = totalParameterCardCount,
-            activityStats = activityOverviewStats,
-            shellStats = shellOverviewStats
+            activityCards = activityShortcutCards,
+            shellCommandCards = shellCommandCards
         )
     }
+    val overviewState = overviewUiState.overviewState
+    val statusLabel = overviewUiState.statusLabel
+    val statusColor = overviewUiState.statusColor
+    val overviewCardColor = overviewUiState.overviewCardColor
+    val overviewBorderColor = overviewUiState.overviewBorderColor
+    val indicatorProgress = overviewUiState.indicatorProgress
+    val indicatorBg = overviewUiState.indicatorBg
+    val overviewMetrics = overviewUiState.metrics
 
-    AppPageScaffold(
-        title = "",
-        modifier = Modifier.fillMaxSize(),
-        largeTitle = "OS",
+    OsPageScaffoldShell(
         scrollBehavior = scrollBehavior,
         topBarColor = topBarMaterialBackdrop.getMiuixAppBarColor(),
-        actions = {
-            LiquidActionBar(
-                backdrop = topBarBackdrop,
-                layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                items = listOf(
-                    LiquidActionItem(
-                        icon = MiuixIcons.Regular.Layers,
-                        contentDescription = manageCardsContentDescription,
-                        onClick = { showCardManager = true }
-                    ),
-                    LiquidActionItem(
-                        icon = MiuixIcons.Regular.GridView,
-                        contentDescription = manageActivitiesContentDescription,
-                        onClick = { showActivityVisibilityManager = true }
-                    ),
-                    LiquidActionItem(
-                        icon = MiuixIcons.Regular.Tasks,
-                        contentDescription = manageShellCardsContentDescription,
-                        onClick = { showShellCardVisibilityManager = true }
-                    ),
-                    LiquidActionItem(
-                        icon = MiuixIcons.Regular.Refresh,
-                        contentDescription = refreshParamsContentDescription,
-                        onClick = {
-                            if (refreshing) return@LiquidActionItem
-                            scope.launch { refreshAllSections() }
-                        }
-                    )
-                ),
-                onInteractionChanged = onActionBarInteractingChanged
-            )
-        },
+        topBarBackdrop = topBarBackdrop,
+        layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
+        manageCardsContentDescription = manageCardsContentDescription,
+        manageActivitiesContentDescription = manageActivitiesContentDescription,
+        manageShellCardsContentDescription = manageShellCardsContentDescription,
+        refreshParamsContentDescription = refreshParamsContentDescription,
+        refreshing = refreshing,
+        onOpenCardManager = { showCardManager = true },
+        onOpenActivityVisibilityManager = { showActivityVisibilityManager = true },
+        onOpenShellCardVisibilityManager = { showShellCardVisibilityManager = true },
+        onRefresh = { scope.launch { refreshAllSections() } },
+        onActionBarInteractingChanged = onActionBarInteractingChanged,
         searchBarVisible = enableSearchBar && showSearchBar,
-        searchBarAnimationLabelPrefix = "osSearchBar",
-        searchBarContent = {
-            Column {
-                AppTopBarSearchField(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = AppChromeTokens.searchFieldHorizontalPadding),
-                    value = queryInput,
-                    onValueChange = { osPageViewModel.updateQueryInput(it) },
-                    label = searchLabel,
-                    backdrop = topBarBackdrop
-                )
-            }
-        }
+        queryInput = queryInput,
+        onQueryInputChange = osPageViewModel::updateQueryInput,
+        searchLabel = searchLabel
     ) { innerPadding ->
         OsPageOverlaySheets(
             showCardManager = showCardManager,

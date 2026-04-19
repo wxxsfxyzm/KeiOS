@@ -12,6 +12,11 @@ import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
 internal class OsPageViewModel : ViewModel() {
+    private companion object {
+        const val QUERY_DEBOUNCE_MS = 180L
+        const val MIN_FILTER_QUERY_LENGTH = 2
+    }
+
     private val _queryInput = MutableStateFlow("")
     val queryInput: StateFlow<String> = _queryInput.asStateFlow()
 
@@ -21,10 +26,15 @@ internal class OsPageViewModel : ViewModel() {
     init {
         viewModelScope.launch {
             _queryInput
-                .debounce(180)
+                .debounce(QUERY_DEBOUNCE_MS)
                 .distinctUntilChanged()
                 .collect { q ->
-                    _queryApplied.value = q
+                    val normalized = q.trim()
+                    _queryApplied.value = when {
+                        normalized.isBlank() -> ""
+                        normalized.length < MIN_FILTER_QUERY_LENGTH -> ""
+                        else -> normalized
+                    }
                 }
         }
     }

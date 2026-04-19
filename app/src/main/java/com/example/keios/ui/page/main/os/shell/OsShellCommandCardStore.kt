@@ -64,27 +64,19 @@ internal object OsShellCommandCardStore {
     private const val LEGACY_KEY_SHELL_COMMAND_SAVED_AT = "shell_runner_saved_command_saved_at"
 
     private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
+    private val storeLock = Any()
+    private var cachedCards: List<OsShellCommandCard>? = null
 
     fun loadCards(): List<OsShellCommandCard> {
-        val raw = store.decodeString(KEY_SHELL_COMMAND_CARDS).orEmpty().trim()
-        if (raw.isNotBlank()) {
-            decodeCards(raw).takeIf { it.isNotEmpty() }?.let { return it }
+        synchronized(storeLock) {
+            return readCachedCardsLocked().toList()
         }
-        val migrated = loadLegacySnapshot()?.let { legacy -> listOf(legacy) }.orEmpty()
-        if (migrated.isNotEmpty()) {
-            saveCards(migrated)
-            clearLegacySnapshot()
-        }
-        return migrated
     }
 
     fun saveCards(cards: List<OsShellCommandCard>) {
-        val normalized = cards.mapNotNull { normalizeCard(it) }
-        if (normalized.isEmpty()) {
-            store.removeValueForKey(KEY_SHELL_COMMAND_CARDS)
-            return
+        synchronized(storeLock) {
+            persistCardsLocked(cards.mapNotNull { normalizeCard(it) })
         }
-        store.encode(KEY_SHELL_COMMAND_CARDS, encodeCards(normalized))
     }
 
     fun createCard(
@@ -93,22 +85,24 @@ internal object OsShellCommandCardStore {
         subtitle: String,
         runOutput: String = ""
     ): OsShellCommandCard? {
-        val now = System.currentTimeMillis()
-        val card = normalizeCard(
-            OsShellCommandCard(
-                id = newOsShellCommandCardId(),
-                visible = true,
-                title = title,
-                subtitle = subtitle,
-                command = command,
-                runOutput = runOutput,
-                lastRunAtMillis = if (runOutput.isBlank()) 0L else now,
-                createdAtMillis = now,
-                updatedAtMillis = now
-            )
-        ) ?: return null
-        saveCards(loadCards() + card)
-        return card
+        synchronized(storeLock) {
+            val now = System.currentTimeMillis()
+            val card = normalizeCard(
+                OsShellCommandCard(
+                    id = newOsShellCommandCardId(),
+                    visible = true,
+                    title = title,
+                    subtitle = subtitle,
+                    command = command,
+                    runOutput = runOutput,
+                    lastRunAtMillis = if (runOutput.isBlank()) 0L else now,
+                    createdAtMillis = now,
+                    updatedAtMillis = now
+                )
+            ) ?: return null
+            persistCardsLocked(readCachedCardsLocked() + card)
+            return card
+        }
     }
 
     fun updateCard(
@@ -119,38 +113,43 @@ internal object OsShellCommandCardStore {
     ): OsShellCommandCard? {
         val targetId = cardId.trim()
         if (targetId.isBlank()) return null
-        val current = loadCards()
-        val existing = current.firstOrNull { it.id == targetId } ?: return null
-        val now = System.currentTimeMillis()
-        val updated = normalizeCard(
-            existing.copy(
-                title = title,
-                subtitle = subtitle,
-                command = command,
-                updatedAtMillis = now
-            )
-        ) ?: return null
-        val next = current.map { card -> if (card.id == targetId) updated else card }
-        saveCards(next)
-        return updated
+        synchronized(storeLock) {
+            val current = readCachedCardsLocked()
+            val existing = current.firstOrNull { it.id == targetId } ?: return null
+            val now = System.currentTimeMillis()
+            val updated = normalizeCard(
+                existing.copy(
+                    title = title,
+                    subtitle = subtitle,
+                    command = command,
+                    updatedAtMillis = now
+                )
+            ) ?: return null
+            persistCardsLocked(current.map { card -> if (card.id == targetId) updated else card })
+            return updated
+        }
     }
 
     fun setCardVisible(cardId: String, visible: Boolean): List<OsShellCommandCard> {
         val targetId = cardId.trim()
         if (targetId.isBlank()) return loadCards()
-        val updated = loadCards().map { card ->
-            if (card.id == targetId) card.copy(visible = visible) else card
+        synchronized(storeLock) {
+            val updated = readCachedCardsLocked().map { card ->
+                if (card.id == targetId) card.copy(visible = visible) else card
+            }
+            persistCardsLocked(updated)
+            return updated
         }
-        saveCards(updated)
-        return updated
     }
 
     fun deleteCard(cardId: String): List<OsShellCommandCard> {
         val targetId = cardId.trim()
         if (targetId.isBlank()) return loadCards()
-        val updated = loadCards().filterNot { card -> card.id == targetId }
-        saveCards(updated)
-        return updated
+        synchronized(storeLock) {
+            val updated = readCachedCardsLocked().filterNot { card -> card.id == targetId }
+            persistCardsLocked(updated)
+            return updated
+        }
     }
 
     fun updateCardRunResult(
@@ -160,28 +159,64 @@ internal object OsShellCommandCardStore {
     ): OsShellCommandCard? {
         val targetId = cardId.trim()
         if (targetId.isBlank()) return null
-        val current = loadCards()
-        val existing = current.firstOrNull { it.id == targetId } ?: return null
-        val resolvedRunAt = runAtMillis.takeIf { it > 0L } ?: System.currentTimeMillis()
-        val preservedUpdatedAt = existing.updatedAtMillis
-            .takeIf { it > 0L }
-            ?: existing.createdAtMillis.takeIf { it > 0L }
-            ?: resolvedRunAt
-        val updated = normalizeCard(
-            existing.copy(
-                runOutput = runOutput,
-                lastRunAtMillis = resolvedRunAt,
-                updatedAtMillis = preservedUpdatedAt
-            )
-        ) ?: return null
-        saveCards(current.map { card -> if (card.id == targetId) updated else card })
-        return updated
+        synchronized(storeLock) {
+            val current = readCachedCardsLocked()
+            val existing = current.firstOrNull { it.id == targetId } ?: return null
+            val resolvedRunAt = runAtMillis.takeIf { it > 0L } ?: System.currentTimeMillis()
+            val preservedUpdatedAt = existing.updatedAtMillis
+                .takeIf { it > 0L }
+                ?: existing.createdAtMillis.takeIf { it > 0L }
+                ?: resolvedRunAt
+            val updated = normalizeCard(
+                existing.copy(
+                    runOutput = runOutput,
+                    lastRunAtMillis = resolvedRunAt,
+                    updatedAtMillis = preservedUpdatedAt
+                )
+            ) ?: return null
+            persistCardsLocked(current.map { card -> if (card.id == targetId) updated else card })
+            return updated
+        }
     }
 
     fun findLatestByCommand(command: String): OsShellCommandCard? {
         val normalized = command.trim()
         if (normalized.isBlank()) return null
-        return loadCards().asReversed().firstOrNull { it.command == normalized }
+        synchronized(storeLock) {
+            return readCachedCardsLocked().asReversed().firstOrNull { it.command == normalized }
+        }
+    }
+
+    private fun readCachedCardsLocked(): List<OsShellCommandCard> {
+        cachedCards?.let { return it }
+        val raw = store.decodeString(KEY_SHELL_COMMAND_CARDS).orEmpty().trim()
+        val decoded = if (raw.isNotBlank()) {
+            decodeCards(raw)
+        } else {
+            emptyList()
+        }
+        if (decoded.isNotEmpty()) {
+            cachedCards = decoded
+            return decoded
+        }
+        val migrated = loadLegacySnapshot()?.let { legacy -> listOf(legacy) }.orEmpty()
+        if (migrated.isNotEmpty()) {
+            persistCardsLocked(migrated)
+            clearLegacySnapshot()
+            return migrated
+        }
+        cachedCards = emptyList()
+        return emptyList()
+    }
+
+    private fun persistCardsLocked(cards: List<OsShellCommandCard>) {
+        val normalized = cards.mapNotNull { normalizeCard(it) }
+        cachedCards = normalized
+        if (normalized.isEmpty()) {
+            store.removeValueForKey(KEY_SHELL_COMMAND_CARDS)
+            return
+        }
+        store.encode(KEY_SHELL_COMMAND_CARDS, encodeCards(normalized))
     }
 
     private fun normalizeCard(card: OsShellCommandCard): OsShellCommandCard? {
