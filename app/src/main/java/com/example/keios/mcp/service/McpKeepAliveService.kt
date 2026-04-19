@@ -1,4 +1,4 @@
-package com.example.keios.mcp
+package com.example.keios.mcp.service
 
 import android.app.Notification
 import android.app.Service
@@ -9,7 +9,8 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.example.keios.mcp.McpNotificationPayload
+import com.example.keios.mcp.notification.McpNotificationHelper
+import com.example.keios.mcp.notification.McpNotificationPayload
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

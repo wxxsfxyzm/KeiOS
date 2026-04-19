@@ -11,6 +11,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.keios.R
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.BA_AP_LIMIT_MAX
+import com.example.keios.ui.page.main.ba.support.BA_AP_MAX
+import com.example.keios.ui.page.main.ba.support.BA_DEFAULT_FRIEND_CODE
+import com.example.keios.ui.page.main.ba.support.BA_DEFAULT_NICKNAME
+import com.example.keios.ui.page.main.ba.support.BaPageSnapshot
+import com.example.keios.ui.page.main.ba.support.cafeStorageCap
+import com.example.keios.ui.page.main.ba.support.currentArenaRefreshSlotMs
+import com.example.keios.ui.page.main.ba.support.currentCafeStudentRefreshSlotMs
+import com.example.keios.ui.page.main.ba.support.displayAp
+import com.example.keios.ui.page.main.ba.support.floorToHourMs
+import com.example.keios.ui.page.main.ba.support.normalizeAp
 import kotlin.math.roundToInt
 
 @Stable

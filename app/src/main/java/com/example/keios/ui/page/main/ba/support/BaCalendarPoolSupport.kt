@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.ba
+package com.example.keios.ui.page.main.ba.support
 
 import android.content.Context
 import android.graphics.Bitmap

@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.mcp.section
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -7,11 +7,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
-import com.example.keios.mcp.McpServerManager
-import com.example.keios.mcp.McpServerUiState
+import com.example.keios.mcp.server.McpServerManager
+import com.example.keios.mcp.server.McpServerUiState
+import com.example.keios.ui.page.main.os.appLucideAppWindowIcon
+import com.example.keios.ui.page.main.os.appLucideConfigIcon
+import com.example.keios.ui.page.main.os.appLucideDownloadIcon
+import com.example.keios.ui.page.main.os.appLucideNotesIcon
+import com.example.keios.ui.page.main.os.appLucideRefreshIcon
 import com.example.keios.ui.page.main.widget.AppDualActionRow
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.GlassTextButton
@@ -19,6 +25,7 @@ import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -33,7 +40,7 @@ internal fun McpServiceControlSection(
     unknownText: String,
     onShowResetConfigConfirm: () -> Unit,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     MiuixExpandableSection(
         backdrop = backdrop,
         title = stringResource(R.string.mcp_section_service_control_title),
@@ -145,7 +152,7 @@ internal fun McpLogsSection(
             )
         },
         headerActions = {
-            top.yukonga.miuix.kmp.basic.Icon(
+            Icon(
                 imageVector = if (logsExporting) {
                     appLucideRefreshIcon()
                 } else {

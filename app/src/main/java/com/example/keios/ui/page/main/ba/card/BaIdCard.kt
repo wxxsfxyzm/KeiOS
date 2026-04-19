@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.ba
+package com.example.keios.ui.page.main.ba.card
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +17,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.ba.support.BA_DEFAULT_FRIEND_CODE
+import com.example.keios.ui.page.main.ba.support.BA_DEFAULT_NICKNAME
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassVariant
@@ -45,14 +47,14 @@ internal fun BaIdCard(
     )
     val accentBlue = Color(0xFF3B82F6)
 
-    BaGlassCard(
+    _root_ide_package_.com.example.keios.ui.page.main.ba.BaGlassCard(
         backdrop = backdrop,
         accentColor = accentBlue,
         accentAlpha = 0f,
     ) {
         BaCardHeader(title = "ID 卡")
 
-        BaGlassPanel(
+        _root_ide_package_.com.example.keios.ui.page.main.ba.BaGlassPanel(
             backdrop = backdrop,
             accentColor = accentBlue,
         ) {
@@ -102,7 +104,7 @@ internal fun BaIdCard(
             }
         }
 
-        BaGlassPanel(
+        _root_ide_package_.com.example.keios.ui.page.main.ba.BaGlassPanel(
             backdrop = backdrop,
             accentColor = accentBlue,
         ) {

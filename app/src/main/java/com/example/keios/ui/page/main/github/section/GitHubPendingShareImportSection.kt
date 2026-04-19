@@ -1,5 +1,6 @@
 package com.example.keios.ui.page.main.github.section
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,9 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.example.keios.R
-import com.example.keios.ui.page.main.GitHubCompactInfoRow
+import com.example.keios.ui.page.main.github.GitHubCompactInfoRow
 import com.example.keios.ui.page.main.github.share.GitHubPendingShareImportTrack
-import com.example.keios.ui.page.main.GitHubStatusPalette
+import com.example.keios.ui.page.main.github.GitHubStatusPalette
 import com.example.keios.ui.page.main.widget.AppStatusPillSize
 import com.example.keios.ui.page.main.widget.AppSurfaceCard
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
@@ -32,7 +33,7 @@ internal fun GitHubPendingShareImportCard(
     AppSurfaceCard(
         containerColor = GitHubStatusPalette.tonedSurface(
             GitHubStatusPalette.Active,
-            isDark = androidx.compose.foundation.isSystemInDarkTheme()
+            isDark = isSystemInDarkTheme()
         ).copy(alpha = 0.26f),
         borderColor = GitHubStatusPalette.Active.copy(alpha = 0.24f)
     ) {

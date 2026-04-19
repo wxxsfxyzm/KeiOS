@@ -1,10 +1,13 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.shortcut
 
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import com.example.keios.R
+import com.example.keios.ui.page.main.os.InfoRow
+import com.example.keios.ui.page.main.os.OsGoogleSystemServiceConfig
 import java.util.Locale
+import kotlin.collections.plus
 
 internal fun buildGoogleSystemServiceRows(
     context: Context,

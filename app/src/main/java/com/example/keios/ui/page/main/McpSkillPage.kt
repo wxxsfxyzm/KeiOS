@@ -28,7 +28,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.keios.R
-import com.example.keios.mcp.McpServerManager
+import com.example.keios.mcp.server.McpServerManager
 import com.example.keios.ui.page.main.widget.AppPageLazyColumn
 import com.example.keios.ui.page.main.widget.AppPageScaffold
 import com.example.keios.ui.page.main.widget.AppSurfaceCard

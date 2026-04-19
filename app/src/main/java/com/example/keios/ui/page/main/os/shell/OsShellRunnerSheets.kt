@@ -1,9 +1,10 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.shell
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
+import com.example.keios.ui.page.main.os.appLucideCloseIcon
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.SheetContentColumn

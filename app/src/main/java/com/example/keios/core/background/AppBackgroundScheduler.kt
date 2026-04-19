@@ -4,7 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import com.example.keios.feature.github.data.local.GitHubTrackStore
-import com.example.keios.ui.page.main.ba.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
 
 object AppBackgroundScheduler {
     private const val BA_AP_TICK_INTERVAL_MS = 6L * 60L * 1000L

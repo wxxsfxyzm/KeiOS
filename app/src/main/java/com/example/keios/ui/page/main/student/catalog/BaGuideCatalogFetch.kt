@@ -6,7 +6,7 @@ import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.example.keios.ui.page.main.student.BaStudentGuideInfo
 import com.example.keios.ui.page.main.student.BaStudentGuideStore
 import com.example.keios.ui.page.main.student.fetchGuideInfo
-import com.example.keios.ui.page.main.student.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay

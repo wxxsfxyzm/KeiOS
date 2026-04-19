@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.page.action
 
 import com.example.keios.R
 import com.example.keios.core.background.AppBackgroundScheduler
@@ -9,7 +9,11 @@ import com.example.keios.feature.github.data.local.GitHubTrackStoreSignals
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.domain.GitHubReleaseCheckService
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
+import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.feature.github.notification.GitHubRefreshNotificationHelper
+import com.example.keios.ui.page.main.github.OverviewRefreshState
+import com.example.keios.ui.page.main.github.VersionCheckUi
+import com.example.keios.ui.page.main.github.isLocalAppUninstalled
 import com.example.keios.ui.page.main.github.share.GitHubPendingShareImportTrack
 import com.example.keios.ui.page.main.github.state.toCacheEntry
 import com.example.keios.ui.page.main.github.state.toUi
@@ -173,7 +177,7 @@ internal class GitHubRefreshActions(
     }
 
     fun refreshItem(
-        item: com.example.keios.feature.github.model.GitHubTrackedApp,
+        item: GitHubTrackedApp,
         showToastOnError: Boolean = false,
         keepCurrentVisualWhileRefreshing: Boolean = false,
         onUpdated: ((VersionCheckUi) -> Unit)? = null
@@ -189,7 +193,7 @@ internal class GitHubRefreshActions(
     }
 
     suspend fun refreshItemNow(
-        item: com.example.keios.feature.github.model.GitHubTrackedApp,
+        item: GitHubTrackedApp,
         showToastOnError: Boolean = false,
         keepCurrentVisualWhileRefreshing: Boolean = false,
         onUpdated: ((VersionCheckUi) -> Unit)? = null
@@ -301,7 +305,7 @@ internal class GitHubRefreshActions(
     }
 
     private suspend fun resolveItemState(
-        item: com.example.keios.feature.github.model.GitHubTrackedApp
+        item: GitHubTrackedApp
     ): VersionCheckUi {
         return withContext(Dispatchers.IO) {
             GitHubReleaseCheckService.evaluateTrackedApp(context, item).toUi()

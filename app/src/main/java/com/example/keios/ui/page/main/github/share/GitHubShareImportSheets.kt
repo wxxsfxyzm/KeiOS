@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.DpSize
 import com.example.keios.R
 import com.example.keios.feature.github.data.local.GitHubPendingShareImportTrackRecord
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
-import com.example.keios.ui.page.main.GitHubStatusPalette
+import com.example.keios.ui.page.main.github.GitHubStatusPalette
 import com.example.keios.ui.page.main.github.asset.assetIsPreferredForDevice
 import com.example.keios.ui.page.main.github.asset.assetLikelyCompatibleWithDevice
 import com.example.keios.ui.page.main.github.asset.formatAssetSize

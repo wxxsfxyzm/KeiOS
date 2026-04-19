@@ -10,15 +10,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.BuildConfig
 import com.example.keios.R
-import com.example.keios.ui.page.main.appLucideAppWindowIcon
-import com.example.keios.ui.page.main.appLucideBranchIcon
-import com.example.keios.ui.page.main.appLucideInfoIcon
-import com.example.keios.ui.page.main.appLucideLayersIcon
-import com.example.keios.ui.page.main.appLucideLockIcon
-import com.example.keios.ui.page.main.appLucideMediaIcon
-import com.example.keios.ui.page.main.appLucideNotesIcon
-import com.example.keios.ui.page.main.appLucidePackageIcon
-import com.example.keios.ui.page.main.osLucideSettingsIcon
+import com.example.keios.ui.page.main.os.appLucideAppWindowIcon
+import com.example.keios.ui.page.main.os.appLucideBranchIcon
+import com.example.keios.ui.page.main.os.appLucideInfoIcon
+import com.example.keios.ui.page.main.os.appLucideLayersIcon
+import com.example.keios.ui.page.main.os.appLucideLockIcon
+import com.example.keios.ui.page.main.os.appLucideMediaIcon
+import com.example.keios.ui.page.main.os.appLucideNotesIcon
+import com.example.keios.ui.page.main.os.appLucidePackageIcon
+import com.example.keios.ui.page.main.os.osLucideSettingsIcon
 import com.example.keios.ui.page.main.about.ui.AboutCompactInfoRow
 import com.example.keios.ui.page.main.about.ui.AboutSectionCard
 

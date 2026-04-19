@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.tabcontent.simulate
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -22,10 +21,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.student.BaGuideRow
+import com.example.keios.ui.page.main.student.GuideRemoteIcon
+import com.example.keios.ui.page.main.student.GuideRemoteImage
+import com.example.keios.ui.page.main.student.tabcontent.simulate.GuideSimulateData
+import com.example.keios.ui.page.main.student.buildGuideTabCopyPayload
+import com.example.keios.ui.page.main.student.tabcontent.simulate.buildSimulateBondGroups
+import com.example.keios.ui.page.main.student.tabcontent.simulate.buildSimulateEquipmentGroups
+import com.example.keios.ui.page.main.student.tabcontent.simulate.buildSimulateMaxDeltaText
+import com.example.keios.ui.page.main.student.tabcontent.simulate.buildSimulateUnlockViewData
+import com.example.keios.ui.page.main.student.tabcontent.simulate.buildSimulateWeaponViewData
+import com.example.keios.ui.page.main.student.tabcontent.simulate.extractSimulateLevelCapsule
+import com.example.keios.ui.page.main.student.guideTabCopyable
+import com.example.keios.ui.page.main.student.tabcontent.simulate.isSimulateSubHeader
+import com.example.keios.ui.page.main.student.rememberGuideTabCopyAction
+import com.example.keios.ui.page.main.student.tabcontent.simulate.simulateStatGlyphForKey
+import com.example.keios.ui.page.main.student.tabcontent.profile.normalizeProfileFieldKey
 import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
-import com.example.keios.ui.page.main.widget.buildTextCopyPayload
 import com.example.keios.ui.page.main.widget.copyModeAwareRow
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.Card
@@ -96,7 +110,7 @@ internal fun GuideSimulateAbilityCard(
                     text = hint.trim('*').trim(),
                     color = Color(0xFF60A5FA),
                     style = MiuixTheme.textStyles.body2,
-                    modifier = Modifier.guideTabCopyable(
+                    modifier = Modifier.Companion.guideTabCopyable(
                         buildGuideTabCopyPayload("角色能力说明", hint)
                     )
                 )
@@ -562,7 +576,8 @@ internal fun GuideSimulateRowItem(
 ) {
     val key = row.key.trim().ifBlank { "信息" }
     val value = row.value.trim()
-    val rowCopyAction = rememberGuideTabCopyAction(buildGuideTabCopyPayload(key, value.ifBlank { "-" }))
+    val rowCopyAction =
+        rememberGuideTabCopyAction(buildGuideTabCopyPayload(key, value.ifBlank { "-" }))
     val iconUrl = row.imageUrl.trim().ifBlank { row.imageUrls.firstOrNull().orEmpty() }
     val statGlyph = simulateStatGlyphForKey(key)
     if (isSimulateSubHeader(key)) {

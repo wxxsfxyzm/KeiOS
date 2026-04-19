@@ -1,6 +1,7 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.shortcut
 
 import com.example.keios.R
+import com.example.keios.ui.page.main.os.OsGoogleSystemServiceConfig
 import java.util.Locale
 import java.util.UUID
 

@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.tabcontent.render
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +11,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.student.BaStudentGuideInfo
+import com.example.keios.ui.page.main.student.tabcontent.simulate.GuideSimulateAbilityCard
+import com.example.keios.ui.page.main.student.tabcontent.simulate.GuideSimulateBondCard
+import com.example.keios.ui.page.main.student.tabcontent.simulate.GuideSimulateEquipmentCard
+import com.example.keios.ui.page.main.student.tabcontent.simulate.GuideSimulateSectionCard
+import com.example.keios.ui.page.main.student.tabcontent.simulate.GuideSimulateUnlockCard
+import com.example.keios.ui.page.main.student.tabcontent.simulate.GuideSimulateWeaponCard
+import com.example.keios.ui.page.main.student.tabcontent.simulate.buildGuideSimulateData
+import com.example.keios.ui.page.main.student.simulateRowsForDisplay
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.Card

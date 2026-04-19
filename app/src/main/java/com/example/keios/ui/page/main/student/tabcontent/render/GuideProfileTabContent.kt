@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.tabcontent.render
 
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +17,45 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.student.BaGuideTempMediaCache
+import com.example.keios.ui.page.main.student.BaStudentGuideInfo
+import com.example.keios.ui.page.main.student.GuideRemoteIcon
+import com.example.keios.ui.page.main.student.buildGuideTabCopyPayload
+import com.example.keios.ui.page.main.student.guideTabCopyable
+import com.example.keios.ui.page.main.student.hasRenderableGalleryMedia
+import com.example.keios.ui.page.main.student.isChocolateGalleryItem
+import com.example.keios.ui.page.main.student.tabcontent.isGrowthTitleVoiceRow
+import com.example.keios.ui.page.main.student.isInteractiveFurnitureGalleryItem
+import com.example.keios.ui.page.main.student.tabcontent.isVoicePlaceholderRow
+import com.example.keios.ui.page.main.student.profileRowsForDisplay
+import com.example.keios.ui.page.main.student.section.GuideGalleryCardItem
+import com.example.keios.ui.page.main.student.shouldHideMovedHeaderRow
+import com.example.keios.ui.page.main.student.tabcontent.profile.GuideGiftPreferenceGrid
+import com.example.keios.ui.page.main.student.tabcontent.profile.GuideProfileInfoItem
+import com.example.keios.ui.page.main.student.tabcontent.profile.GuideProfileInfoRows
+import com.example.keios.ui.page.main.student.tabcontent.profile.GuideProfileRowsSection
+import com.example.keios.ui.page.main.student.tabcontent.profile.GuideProfileSectionHeader
+import com.example.keios.ui.page.main.student.tabcontent.profile.buildGiftPreferenceItems
+import com.example.keios.ui.page.main.student.tabcontent.profile.buildProfileCardRows
+import com.example.keios.ui.page.main.student.tabcontent.profile.buildSameNameRoleItems
+import com.example.keios.ui.page.main.student.tabcontent.profile.extractProfileExternalLink
+import com.example.keios.ui.page.main.student.tabcontent.profile.extractSameNameRoleHint
+import com.example.keios.ui.page.main.student.tabcontent.profile.fallbackProfileLinkTitle
+import com.example.keios.ui.page.main.student.tabcontent.profile.isGalleryRelatedProfileLinkRow
+import com.example.keios.ui.page.main.student.tabcontent.profile.isGiftPreferenceProfileRow
+import com.example.keios.ui.page.main.student.tabcontent.profile.isProfileSectionHeaderRow
+import com.example.keios.ui.page.main.student.tabcontent.profile.isSameNameRoleRow
+import com.example.keios.ui.page.main.student.tabcontent.profile.isSkillMigratedProfileRow
+import com.example.keios.ui.page.main.student.tabcontent.profile.isStructuredProfileCardRow
+import com.example.keios.ui.page.main.student.tabcontent.profile.normalizeProfileFieldKey
+import com.example.keios.ui.page.main.student.tabcontent.profile.profileHobbyFieldSpecs
+import com.example.keios.ui.page.main.student.tabcontent.profile.profileLinkTitleCache
+import com.example.keios.ui.page.main.student.tabcontent.profile.profileNicknameFieldSpecs
+import com.example.keios.ui.page.main.student.tabcontent.profile.profileRoleReferenceFieldKey
+import com.example.keios.ui.page.main.student.tabcontent.profile.profileStudentInfoFieldSpecs
+import com.example.keios.ui.page.main.student.tabcontent.profile.resolveProfileLinkTitle
+import com.example.keios.ui.page.main.student.tabcontent.profile.sortGalleryItemsByTitleNumbers
+import com.example.keios.ui.page.main.student.tabcontent.profile.sortProfileRowsByKeyNumbers
 import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.GlassTextButton
@@ -119,7 +158,7 @@ internal fun LazyListScope.renderGuideProfileTabContent(
         key.contains("巧克力", ignoreCase = true) ||
             key.contains("互动家具", ignoreCase = true) ||
             isGiftPreferenceProfileRow(row) ||
-            isStructuredProfileCardRow(row)
+                isStructuredProfileCardRow(row)
     }
     val chocolateGalleryItems = guide.galleryItems
         .filter(::isChocolateGalleryItem)
@@ -352,7 +391,7 @@ internal fun LazyListScope.renderGuideProfileTabContent(
                         Text(
                             text = hint,
                             color = MiuixTheme.colorScheme.onBackgroundVariant,
-                            modifier = Modifier.guideTabCopyable(
+                            modifier = Modifier.Companion.guideTabCopyable(
                                 buildGuideTabCopyPayload("相关同名角色", hint)
                             ),
                             maxLines = 2,

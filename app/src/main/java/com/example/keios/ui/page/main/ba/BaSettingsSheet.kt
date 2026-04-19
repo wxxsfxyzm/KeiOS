@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.keios.R
+import com.example.keios.ui.page.main.ba.support.BA_AP_MAX
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassSearchField
@@ -127,7 +128,9 @@ internal fun BaSettingsSheet(
                 if (state.apNotifyEnabled) {
                     SheetControlRow(
                         label = stringResource(R.string.ba_settings_label_ap_threshold),
-                        summary = stringResource(R.string.ba_settings_summary_ap_threshold, BA_AP_MAX),
+                        summary = stringResource(R.string.ba_settings_summary_ap_threshold,
+                            BA_AP_MAX
+                        ),
                     ) {
                         GlassSearchField(
                             modifier = Modifier.width(70.dp),

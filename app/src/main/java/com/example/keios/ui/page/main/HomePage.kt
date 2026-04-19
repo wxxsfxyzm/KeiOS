@@ -87,6 +87,11 @@ import com.example.keios.ui.page.main.widget.appMotionFloatState
 import com.example.keios.ui.page.main.widget.resolvedMotionDuration
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
+import com.example.keios.ui.page.main.mcp.util.formatMcpUptimeText
+import com.example.keios.ui.page.main.os.appLucideCloseIcon
+import com.example.keios.ui.page.main.os.appLucideInfoIcon
+import com.example.keios.ui.page.main.os.appLucideLayersIcon
+import com.example.keios.ui.page.main.os.osLucideSettingsIcon
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberActionBarBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -110,12 +115,9 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private fun formatGitHubCacheAgo(

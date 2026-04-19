@@ -1,6 +1,19 @@
 package com.example.keios.ui.page.main.ba
 
 import android.content.Context
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.BA_CALENDAR_CACHE_SCHEMA_VERSION
+import com.example.keios.ui.page.main.ba.support.BA_POOL_CACHE_SCHEMA_VERSION
+import com.example.keios.ui.page.main.ba.support.BaCalendarEntry
+import com.example.keios.ui.page.main.ba.support.BaPoolEntry
+import com.example.keios.ui.page.main.ba.support.decodeBaCalendarEntries
+import com.example.keios.ui.page.main.ba.support.decodeBaPoolEntries
+import com.example.keios.ui.page.main.ba.support.encodeBaCalendarEntries
+import com.example.keios.ui.page.main.ba.support.encodeBaPoolEntries
+import com.example.keios.ui.page.main.ba.support.fetchBaCalendarEntries
+import com.example.keios.ui.page.main.ba.support.fetchBaPoolEntries
+import com.example.keios.ui.page.main.ba.support.isNetworkAvailable
+import com.example.keios.ui.page.main.ba.support.runWithHardTimeout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -108,7 +121,8 @@ internal object BaCalendarPoolRepository {
             val entries = result.getOrThrow()
             if (entries.isNotEmpty()) {
                 val entriesWithLocalImages = withContext(Dispatchers.IO) {
-                    BASettingsStore.saveCalendarCache(serverIndex, encodeBaCalendarEntries(entries), now)
+                    BASettingsStore.saveCalendarCache(serverIndex,
+                        encodeBaCalendarEntries(entries), now)
                     BaCalendarPoolImageCache.prefetchForCalendar(
                         context = context,
                         serverIndex = serverIndex,

@@ -3,9 +3,11 @@ package com.example.keios.ui.page.main.ba
 import android.content.Context
 import android.content.pm.PackageManager
 import com.example.keios.R
-import com.example.keios.mcp.McpKeepAliveService
-import com.example.keios.mcp.McpNotificationHelper
-import com.example.keios.mcp.McpNotificationPayload
+import com.example.keios.mcp.service.McpKeepAliveService
+import com.example.keios.mcp.notification.McpNotificationHelper
+import com.example.keios.mcp.notification.McpNotificationPayload
+import com.example.keios.ui.page.main.ba.support.baServerLabel
+import com.example.keios.ui.page.main.ba.support.serverRefreshTimeZone
 
 internal object BaArenaRefreshNotificationDispatcher {
     fun send(

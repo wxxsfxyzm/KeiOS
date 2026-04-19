@@ -1,11 +1,10 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.section
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -30,7 +29,22 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
+import com.example.keios.ui.page.main.student.BaGuideGalleryItem
+import com.example.keios.ui.page.main.student.GuideBgmLoopStore
+import com.example.keios.ui.page.main.student.GuideBgmPlayerStore
+import com.example.keios.ui.page.main.student.GuideRemoteImageAdaptive
+import com.example.keios.ui.page.main.student.GuideVideoControlAction
+import com.example.keios.ui.page.main.student.GuideVideoFullscreenActivity
+import com.example.keios.ui.page.main.student.extractGuideWebLinks
+import com.example.keios.ui.page.main.student.isInteractiveFurnitureAnimatedGalleryItem
+import com.example.keios.ui.page.main.student.isInteractiveFurnitureGalleryItem
+import com.example.keios.ui.page.main.student.normalizeGalleryDisplayTitle
+import com.example.keios.ui.page.main.student.normalizeGuideMediaSource
+import com.example.keios.ui.page.main.student.section.gallery.GuideAudioSeekBar
+import com.example.keios.ui.page.main.student.section.gallery.GuideImageFullscreenDialog
+import com.example.keios.ui.page.main.student.section.gallery.GuideInlineVideoPlayer
+import com.example.keios.ui.page.main.student.section.gallery.formatAudioDuration
+import com.example.keios.ui.page.main.student.stripGuideWebLinks
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.kyant.backdrop.Backdrop
@@ -345,7 +359,7 @@ fun GuideGalleryCardItem(
                             if (normalized.isBlank()) {
                                 Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
                             } else {
-                                GuideVideoFullscreenActivity.launch(
+                                GuideVideoFullscreenActivity.Companion.launch(
                                     context = context,
                                     mediaUrl = normalized
                                 )
@@ -481,7 +495,8 @@ fun GuideGalleryCardItem(
                         runCatching { player.seekTo(targetMs) }
                         audioDurationMs = duration
                         audioPositionMs = targetMs
-                        audioPlayProgress = (targetMs.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                        audioPlayProgress =
+                            (targetMs.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                         audioSeekProgress = null
                     }
                 )

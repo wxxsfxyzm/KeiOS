@@ -1,8 +1,16 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.tabcontent
 
 import android.content.Context
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.ui.graphics.Color
+import com.example.keios.ui.page.main.student.BaStudentGuideInfo
+import com.example.keios.ui.page.main.student.GuideBottomTab
+import com.example.keios.ui.page.main.student.tabcontent.render.renderGuideArchiveTabContent
+import com.example.keios.ui.page.main.student.tabcontent.render.renderGuideGalleryTabContent
+import com.example.keios.ui.page.main.student.tabcontent.render.renderGuideProfileTabContent
+import com.example.keios.ui.page.main.student.tabcontent.render.renderGuideSimulateTabContent
+import com.example.keios.ui.page.main.student.tabcontent.render.renderGuideSkillsTabContent
+import com.example.keios.ui.page.main.student.tabcontent.render.renderGuideVoiceTabContent
 import com.kyant.backdrop.backdrops.LayerBackdrop
 
 internal fun LazyListScope.renderBaStudentGuideTabContent(

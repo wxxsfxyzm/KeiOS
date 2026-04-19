@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -21,6 +20,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
+import com.example.keios.ui.page.main.os.InfoRow
+import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCard
+import com.example.keios.ui.page.main.os.OsSectionCard
+import com.example.keios.ui.page.main.os.shortcut.ShortcutActivityIcon
+import com.example.keios.ui.page.main.os.appLucideCloseIcon
+import com.example.keios.ui.page.main.os.shortcut.normalizeShortcutIntentExtras
+import com.example.keios.ui.page.main.os.osLucideEnterIcon
 import com.example.keios.ui.page.main.widget.AppStatusPillSize
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.GlassIconButton

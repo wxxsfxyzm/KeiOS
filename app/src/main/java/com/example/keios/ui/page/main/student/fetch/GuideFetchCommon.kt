@@ -1,9 +1,9 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.fetch
 
 import android.net.Uri
-import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
-import org.json.JSONArray
-import org.json.JSONObject
+import com.example.keios.ui.page.main.student.BaGuideGalleryItem
+import com.example.keios.ui.page.main.student.BaGuideRow
+import com.example.keios.ui.page.main.student.BaGuideVoiceEntry
 
 fun normalizeGuideUrl(raw: String): String {
     val value = raw.trim()

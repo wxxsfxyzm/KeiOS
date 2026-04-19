@@ -1,6 +1,6 @@
 package com.example.keios.mcp.framework.notification.builder
 
-import com.example.keios.mcp.McpNotificationPayload
+import com.example.keios.mcp.notification.McpNotificationPayload
 
 data class NotificationPayload(
     val state: McpNotificationPayload,

@@ -1,17 +1,15 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
@@ -28,6 +26,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.feature.github.data.local.AppIconCache
+import com.example.keios.feature.github.model.GitHubApiAuthMode
 import com.example.keios.feature.github.model.GitHubApiCredentialStatus
 import com.example.keios.feature.github.model.GitHubStrategyBenchmarkResult
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
@@ -316,8 +315,8 @@ internal fun GitHubCredentialStatusCard(
 ) {
     val context = LocalContext.current
     val accent = when (status.authMode) {
-        com.example.keios.feature.github.model.GitHubApiAuthMode.Token -> GitHubStatusPalette.Update
-        com.example.keios.feature.github.model.GitHubApiAuthMode.Guest -> GitHubStatusPalette.PreRelease
+        GitHubApiAuthMode.Token -> GitHubStatusPalette.Update
+        GitHubApiAuthMode.Guest -> GitHubStatusPalette.PreRelease
     }
     SheetSummaryCard(
         title = stringResource(R.string.github_strategy_card_title_credential_status),
@@ -371,7 +370,7 @@ internal fun GitHubSelectedAppCard(
         modifier = Modifier.fillMaxWidth(),
         containerColor = GitHubStatusPalette.tonedSurface(
             GitHubStatusPalette.Update,
-            isDark = androidx.compose.foundation.isSystemInDarkTheme()
+            isDark = isSystemInDarkTheme()
         ),
         borderColor = GitHubStatusPalette.Update.copy(alpha = 0.28f),
         verticalSpacing = 0.dp
@@ -418,7 +417,7 @@ internal fun GitHubAppCandidateRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = isSystemInDarkTheme()
     val accent = if (selected) GitHubStatusPalette.Update else MiuixTheme.colorScheme.primary
     SheetSurfaceCard(
         modifier = Modifier.fillMaxWidth(),

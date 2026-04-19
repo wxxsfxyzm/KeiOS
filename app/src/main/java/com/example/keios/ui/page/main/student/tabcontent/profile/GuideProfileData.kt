@@ -1,9 +1,18 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.tabcontent.profile
 
 import android.net.Uri
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.student.BaGuideGalleryItem
+import com.example.keios.ui.page.main.student.BaGuideRow
+import com.example.keios.ui.page.main.student.containsGuideWebLink
+import com.example.keios.ui.page.main.student.fetch.extractGuideContentIdFromUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.tabcontent.simulate.isLikelySimulateStatLabel
+import com.example.keios.ui.page.main.student.isRenderableGalleryImageUrl
+import com.example.keios.ui.page.main.student.normalizeGalleryTitle
+import com.example.keios.ui.page.main.student.stripGuideInlineNotes
 import java.util.concurrent.ConcurrentHashMap
 
 internal fun extractOrderedNumbers(raw: String): List<Int> {

@@ -7,6 +7,19 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import com.example.keios.R
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.BA_AP_LIMIT_MAX
+import com.example.keios.ui.page.main.ba.support.BA_AP_MAX
+import com.example.keios.ui.page.main.ba.support.BA_AP_REGEN_INTERVAL_MS
+import com.example.keios.ui.page.main.ba.support.BA_CAFE_HOURLY_INTERVAL_MS
+import com.example.keios.ui.page.main.ba.support.cafeHourlyGain
+import com.example.keios.ui.page.main.ba.support.cafeStorageCap
+import com.example.keios.ui.page.main.ba.support.calculateInviteTicketAvailableMs
+import com.example.keios.ui.page.main.ba.support.calculateNextHeadpatAvailableMs
+import com.example.keios.ui.page.main.ba.support.floorToHourMs
+import com.example.keios.ui.page.main.ba.support.fractionalApPart
+import com.example.keios.ui.page.main.ba.support.normalizeAp
+import com.example.keios.ui.page.main.ba.support.normalizeGameKeeImageLink
 import org.json.JSONArray
 import kotlin.math.roundToInt
 

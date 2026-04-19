@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.ba
+package com.example.keios.ui.page.main.ba.card
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +18,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.ba.support.BaCalendarEntry
+import com.example.keios.ui.page.main.ba.BaGlassCard
+import com.example.keios.ui.page.main.ba.BaGlassPanel
+import com.example.keios.ui.page.main.ba.support.BaPoolEntry
+import com.example.keios.ui.page.main.ba.support.GameKeeCoverImage
+import com.example.keios.ui.page.main.ba.support.activityProgress
+import com.example.keios.ui.page.main.ba.support.formatBaDateTimeNoYearInTimeZone
+import com.example.keios.ui.page.main.ba.support.formatBaRemainingTime
+import com.example.keios.ui.page.main.ba.support.poolProgress
+import com.example.keios.ui.page.main.ba.support.serverRefreshTimeZone
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.kyant.backdrop.Backdrop
@@ -69,7 +79,10 @@ internal fun BaCalendarCard(
             title = "活动日历 · ${serverOptions[serverIndex]}",
             trailing = {
                 Text(
-                    text = if (baCalendarLoading) "同步中..." else formatBaDateTimeNoYearInTimeZone(baCalendarLastSyncMs, serverTimeZone),
+                    text = if (baCalendarLoading) "同步中..." else formatBaDateTimeNoYearInTimeZone(
+                        baCalendarLastSyncMs,
+                        serverTimeZone
+                    ),
                     color = countdownBlue,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -90,7 +103,12 @@ internal fun BaCalendarCard(
                     backdrop = backdrop,
                     accentColor = accentAmber,
                 ) {
-                    Text(text = baCalendarError.orEmpty(), color = accentAmber, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        text = baCalendarError.orEmpty(),
+                        color = accentAmber,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
@@ -110,8 +128,10 @@ internal fun BaCalendarCard(
                 visibleCalendarEntries.forEach { activity ->
                     key(activity.id, activity.beginAtMs, activity.endAtMs) {
                         val isEnded = activity.endAtMs <= uiNowMs
-                        val remainTarget = if (activity.isRunning || isEnded) activity.endAtMs else activity.beginAtMs
-                        val remainText = if (isEnded) "已结束" else formatBaRemainingTime(remainTarget, uiNowMs)
+                        val remainTarget =
+                            if (activity.isRunning || isEnded) activity.endAtMs else activity.beginAtMs
+                        val remainText =
+                            if (isEnded) "已结束" else formatBaRemainingTime(remainTarget, uiNowMs)
                         val statusText = when {
                             activity.isRunning -> "进行中"
                             isEnded -> "已结束"
@@ -135,8 +155,17 @@ internal fun BaCalendarCard(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(text = statusText, color = statusColor, fontWeight = FontWeight.Medium)
-                                Text(text = remainText, color = countdownBlue, fontWeight = FontWeight.Bold, maxLines = 1)
+                                Text(
+                                    text = statusText,
+                                    color = statusColor,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = remainText,
+                                    color = countdownBlue,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
                             }
                             Text(
                                 text = "${activity.kindName} · ${activity.title}",
@@ -153,7 +182,17 @@ internal fun BaCalendarCard(
                                 )
                             }
                             Text(
-                                text = "${formatBaDateTimeNoYearInTimeZone(activity.beginAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(activity.endAtMs, serverTimeZone)}",
+                                text = "${
+                                    formatBaDateTimeNoYearInTimeZone(
+                                        activity.beginAtMs,
+                                        serverTimeZone
+                                    )
+                                } - ${
+                                    formatBaDateTimeNoYearInTimeZone(
+                                        activity.endAtMs,
+                                        serverTimeZone
+                                    )
+                                }",
                                 color = countdownBlue.copy(alpha = 0.92f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -164,7 +203,9 @@ internal fun BaCalendarCard(
                                 height = 5.dp,
                                 colors = ProgressIndicatorDefaults.progressIndicatorColors(
                                     foregroundColor = if (activity.isRunning) accentGreen else accentBlue,
-                                    backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f),
+                                    backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(
+                                        alpha = 0.56f
+                                    ),
                                 ),
                             )
                         }
@@ -217,7 +258,10 @@ internal fun BaPoolCard(
             title = "卡池信息 · ${serverOptions[serverIndex]}",
             trailing = {
                 Text(
-                    text = if (baPoolLoading) "同步中..." else formatBaDateTimeNoYearInTimeZone(baPoolLastSyncMs, serverTimeZone),
+                    text = if (baPoolLoading) "同步中..." else formatBaDateTimeNoYearInTimeZone(
+                        baPoolLastSyncMs,
+                        serverTimeZone
+                    ),
                     color = countdownBlue,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -238,7 +282,12 @@ internal fun BaPoolCard(
                     backdrop = backdrop,
                     accentColor = accentAmber,
                 ) {
-                    Text(text = baPoolError.orEmpty(), color = accentAmber, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        text = baPoolError.orEmpty(),
+                        color = accentAmber,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
@@ -258,8 +307,10 @@ internal fun BaPoolCard(
                 visiblePoolEntries.forEach { pool ->
                     key(pool.id) {
                         val isEnded = pool.endAtMs <= uiNowMs
-                        val remainTarget = if (pool.isRunning || isEnded) pool.endAtMs else pool.startAtMs
-                        val remainText = if (isEnded) "已结束" else formatBaRemainingTime(remainTarget, uiNowMs)
+                        val remainTarget =
+                            if (pool.isRunning || isEnded) pool.endAtMs else pool.startAtMs
+                        val remainText =
+                            if (isEnded) "已结束" else formatBaRemainingTime(remainTarget, uiNowMs)
                         val statusText = when {
                             pool.isRunning -> "进行中"
                             isEnded -> "已结束"
@@ -270,7 +321,8 @@ internal fun BaPoolCard(
                             isEnded -> MiuixTheme.colorScheme.onBackgroundVariant
                             else -> accentBlue
                         }
-                        val showPoolCoverImage = showCalendarPoolImages && pool.imageUrl.isNotBlank()
+                        val showPoolCoverImage =
+                            showCalendarPoolImages && pool.imageUrl.isNotBlank()
 
                         BaGlassPanel(
                             backdrop = backdrop,
@@ -317,7 +369,17 @@ internal fun BaPoolCard(
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                     Text(
-                                        text = "${formatBaDateTimeNoYearInTimeZone(pool.startAtMs, serverTimeZone)} - ${formatBaDateTimeNoYearInTimeZone(pool.endAtMs, serverTimeZone)}",
+                                        text = "${
+                                            formatBaDateTimeNoYearInTimeZone(
+                                                pool.startAtMs,
+                                                serverTimeZone
+                                            )
+                                        } - ${
+                                            formatBaDateTimeNoYearInTimeZone(
+                                                pool.endAtMs,
+                                                serverTimeZone
+                                            )
+                                        }",
                                         color = countdownBlue.copy(alpha = 0.92f),
                                         maxLines = 3,
                                         overflow = TextOverflow.Clip,
@@ -337,7 +399,9 @@ internal fun BaPoolCard(
                                 height = 5.dp,
                                 colors = ProgressIndicatorDefaults.progressIndicatorColors(
                                     foregroundColor = if (pool.isRunning) accentGreen else accentBlue,
-                                    backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.56f),
+                                    backgroundColor = MiuixTheme.colorScheme.secondaryContainer.copy(
+                                        alpha = 0.56f
+                                    ),
                                 ),
                             )
                         }

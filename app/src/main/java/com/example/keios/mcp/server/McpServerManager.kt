@@ -1,7 +1,9 @@
-package com.example.keios.mcp
+package com.example.keios.mcp.server
 
 import android.content.Context
 import com.example.keios.core.log.AppLogger
+import com.example.keios.mcp.service.McpKeepAliveService
+import com.example.keios.mcp.notification.McpNotificationHelper
 import com.tencent.mmkv.MMKV
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCallPipeline
@@ -10,6 +12,7 @@ import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.request.path
 import io.ktor.server.response.respond
+import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.mcpStreamableHttp
 import java.net.Inet4Address
 import java.net.InetSocketAddress
@@ -368,7 +371,7 @@ class McpServerManager(
             connectedClients = 0,
             lastError = null
         )
-        runCatching { McpKeepAliveService.stop(appContext) }
+        runCatching { McpKeepAliveService.Companion.stop(appContext) }
         appendLog("INFO", "MCP server stopped")
     }
 
@@ -433,7 +436,7 @@ class McpServerManager(
         engine = null
     }
 
-    private fun startSessionMonitor(server: io.modelcontextprotocol.kotlin.sdk.server.Server) {
+    private fun startSessionMonitor(server: Server) {
         monitorJob?.cancel()
         monitorJob = scope.launch {
             while (true) {
@@ -509,7 +512,7 @@ class McpServerManager(
         val state = _uiState.value
         if (!state.running) return
         runCatching {
-            McpKeepAliveService.startOrUpdate(
+            McpKeepAliveService.Companion.startOrUpdate(
                 context = appContext,
                 serverName = state.serverName,
                 running = state.running,

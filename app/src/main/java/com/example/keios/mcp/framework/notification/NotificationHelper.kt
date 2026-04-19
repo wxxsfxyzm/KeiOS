@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.provider.Settings
 import com.example.keios.core.system.findPropString
-import com.example.keios.mcp.McpNotificationHelper
+import com.example.keios.mcp.notification.McpNotificationHelper
 import com.example.keios.mcp.framework.notification.builder.NotificationRenderStyle
 
 class NotificationHelper(

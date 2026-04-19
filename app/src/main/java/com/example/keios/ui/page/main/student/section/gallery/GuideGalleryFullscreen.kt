@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.section.gallery
 
 import android.graphics.Bitmap
 import android.os.SystemClock
@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -45,9 +46,22 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import com.example.keios.ui.page.main.ba.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
+import com.example.keios.ui.page.main.student.IMAGE_BACK_GESTURE_CONTENT_FADE_FACTOR
+import com.example.keios.ui.page.main.student.IMAGE_BACK_GESTURE_SCRIM_FADE_FACTOR
+import com.example.keios.ui.page.main.student.IMAGE_BACK_GESTURE_TRANSLATION_FACTOR
+import com.example.keios.ui.page.main.student.IMAGE_TAP_DISMISS_GESTURE_COOLDOWN_MS
+import com.example.keios.ui.page.main.student.IMAGE_TAP_DISMISS_OFFSET_EPSILON_PX
+import com.example.keios.ui.page.main.student.IMAGE_TAP_DISMISS_SCALE_EPSILON
+import com.example.keios.ui.page.main.student.detectMediaRatioFromUrl
+import com.example.keios.ui.page.main.student.isGifMediaSource
+import com.example.keios.ui.page.main.student.loadGuideBitmapSource
+import com.example.keios.ui.page.main.student.normalizeGuideMediaSource
+import com.example.keios.ui.page.main.student.rememberDeviceRotationDegrees
+import com.example.keios.ui.page.main.student.rememberSystemAutoRotateEnabled
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.LocalTransitionAnimationsEnabled
@@ -58,13 +72,13 @@ import com.github.panpf.zoomimage.zoom.ContinuousTransformType
 import com.github.panpf.zoomimage.zoom.GestureType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import kotlin.math.abs
 
 @OptIn(ExperimentalActivityApi::class)
 @Composable
@@ -76,7 +90,8 @@ internal fun GuideImageFullscreenDialog(
     val context = LocalContext.current
     val mediaAdaptiveRotationEnabled = remember { BASettingsStore.loadMediaAdaptiveRotationEnabled() }
     val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
-    val systemAutoRotateEnabled = rememberSystemAutoRotateEnabled(active = !mediaAdaptiveRotationEnabled)
+    val systemAutoRotateEnabled =
+        rememberSystemAutoRotateEnabled(active = !mediaAdaptiveRotationEnabled)
     val systemRotationDegrees = rememberDeviceRotationDegrees(
         active = !mediaAdaptiveRotationEnabled && systemAutoRotateEnabled
     )
@@ -172,7 +187,7 @@ internal fun GuideImageFullscreenDialog(
         else -> 0f
     }
     val backTranslationX = dialogWidthPx.toFloat() *
-        IMAGE_BACK_GESTURE_TRANSLATION_FACTOR *
+            IMAGE_BACK_GESTURE_TRANSLATION_FACTOR *
         backEdgeDirection *
         easedBackProgress
     val backContentAlpha = (1f - easedBackProgress * IMAGE_BACK_GESTURE_CONTENT_FADE_FACTOR).coerceIn(0f, 1f)
@@ -303,10 +318,10 @@ internal fun GuideImageFullscreenDialog(
                             return@CoilZoomAsyncImage
                         }
                         val userTransform = zoomState.zoomable.userTransform
-                        val scaleNearBase = kotlin.math.abs(userTransform.scaleX - 1f) <= IMAGE_TAP_DISMISS_SCALE_EPSILON &&
-                            kotlin.math.abs(userTransform.scaleY - 1f) <= IMAGE_TAP_DISMISS_SCALE_EPSILON
-                        val offsetNearBase = kotlin.math.abs(userTransform.offsetX) <= IMAGE_TAP_DISMISS_OFFSET_EPSILON_PX &&
-                            kotlin.math.abs(userTransform.offsetY) <= IMAGE_TAP_DISMISS_OFFSET_EPSILON_PX
+                        val scaleNearBase = abs(userTransform.scaleX - 1f) <= IMAGE_TAP_DISMISS_SCALE_EPSILON &&
+                            abs(userTransform.scaleY - 1f) <= IMAGE_TAP_DISMISS_SCALE_EPSILON
+                        val offsetNearBase = abs(userTransform.offsetX) <= IMAGE_TAP_DISMISS_OFFSET_EPSILON_PX &&
+                            abs(userTransform.offsetY) <= IMAGE_TAP_DISMISS_OFFSET_EPSILON_PX
                         if (!scaleNearBase || !offsetNearBase) {
                             return@CoilZoomAsyncImage
                         }
@@ -385,7 +400,7 @@ internal fun GuideVideoFullscreenDialog(
     DisposableEffect(player) {
         val boundPlayer = player ?: return@DisposableEffect onDispose { }
         val listener = object : Player.Listener {
-            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
                 if (videoSize.width > 0 && videoSize.height > 0) {
                     videoRatio = videoSize.width.toFloat() / videoSize.height.toFloat()
                 }
@@ -423,7 +438,7 @@ internal fun GuideVideoFullscreenDialog(
                     val safeRatio = videoRatio.coerceAtLeast(0.2f)
                     val shouldRotateLandscape = forceLandscape && maxHeight > maxWidth
 
-                    fun fitSize(targetRatio: Float): Pair<androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp> {
+                    fun fitSize(targetRatio: Float): Pair<Dp, Dp> {
                         val normalizedRatio = targetRatio.coerceAtLeast(0.2f)
                         val viewportRatio = if (maxHeight.value > 0f) maxWidth.value / maxHeight.value else 1f
                         return if (viewportRatio >= normalizedRatio) {

@@ -7,7 +7,7 @@ import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFetchSourc
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetRepository
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
-import com.example.keios.ui.page.main.VersionCheckUi
+import com.example.keios.ui.page.main.github.VersionCheckUi
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

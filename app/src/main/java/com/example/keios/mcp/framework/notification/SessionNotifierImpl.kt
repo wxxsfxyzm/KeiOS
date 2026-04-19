@@ -1,7 +1,7 @@
 package com.example.keios.mcp.framework.notification
 
 import com.example.keios.core.prefs.UiPrefs
-import com.example.keios.mcp.McpNotificationPayload
+import com.example.keios.mcp.notification.McpNotificationPayload
 import com.example.keios.mcp.domain.notification.SessionNotifier
 import com.example.keios.mcp.framework.notification.builder.EnvironmentContext
 import com.example.keios.mcp.framework.notification.builder.LegacyNotificationBuilder

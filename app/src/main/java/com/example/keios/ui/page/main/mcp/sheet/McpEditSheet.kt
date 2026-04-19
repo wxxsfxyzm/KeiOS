@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.mcp.sheet
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
@@ -7,9 +7,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import com.example.keios.R
-import com.example.keios.mcp.McpServerManager
+import com.example.keios.mcp.server.McpServerManager
+import com.example.keios.ui.page.main.os.appLucideCloseIcon
+import com.example.keios.ui.page.main.os.appLucideConfirmIcon
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassTextButton
@@ -31,10 +35,10 @@ internal fun McpEditServiceSheet(
     backdrop: LayerBackdrop,
     serverName: String,
     onServerNameChange: (String) -> Unit,
-    serverNameFieldWidth: androidx.compose.ui.unit.Dp,
+    serverNameFieldWidth: Dp,
     portText: String,
     onPortTextChange: (String) -> Unit,
-    portFieldWidth: androidx.compose.ui.unit.Dp,
+    portFieldWidth: Dp,
     allowExternal: Boolean,
     onAllowExternalChange: (Boolean) -> Unit,
     mcpServerManager: McpServerManager,
@@ -42,7 +46,7 @@ internal fun McpEditServiceSheet(
     onDismissRequest: () -> Unit,
     onShowResetTokenConfirm: () -> Unit,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     SnapshotWindowBottomSheet(
         show = show,
         title = stringResource(R.string.mcp_sheet_edit_service_title),
@@ -169,7 +173,7 @@ private fun McpNetworkModeOption(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val selectedColor = androidx.compose.ui.graphics.Color(0xFF22C55E)
+    val selectedColor = Color(0xFF22C55E)
     SheetChoiceCard(
         title = title,
         summary = summary,

@@ -1,6 +1,7 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.mcp.section
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -13,6 +14,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
+import com.example.keios.ui.page.main.mcp.model.McpOverviewMetric
 import com.example.keios.ui.page.main.widget.AppOverviewCard
 import com.example.keios.ui.page.main.widget.AppOverviewInlineMetricTile
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
@@ -57,7 +59,7 @@ internal fun McpOverviewCardSection(
             )
         }
     ) {
-        androidx.compose.foundation.layout.Column(
+        Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.denseSectionGap)
         ) {

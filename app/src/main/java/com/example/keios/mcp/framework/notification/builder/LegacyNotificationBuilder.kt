@@ -3,7 +3,7 @@ package com.example.keios.mcp.framework.notification.builder
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import com.example.keios.R
-import com.example.keios.mcp.McpNotificationPayload
+import com.example.keios.mcp.notification.McpNotificationPayload
 import kotlin.math.roundToInt
 
 class LegacyNotificationBuilder(
@@ -64,7 +64,7 @@ class LegacyNotificationBuilder(
     }
 
     private fun computeProgressState(
-        state: com.example.keios.mcp.McpNotificationPayload,
+        state: McpNotificationPayload,
         isBlueArchiveAp: Boolean
     ): LiveProgressState {
         if (!state.running) {

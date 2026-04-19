@@ -1,9 +1,15 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.keios.feature.github.model.GitHubTrackedReleaseStatus
 import androidx.compose.runtime.Composable
+import com.example.keios.ui.page.main.os.appLucideAlertIcon
+import com.example.keios.ui.page.main.os.appLucideConfirmIcon
+import com.example.keios.ui.page.main.os.appLucideDownloadIcon
+import com.example.keios.ui.page.main.os.appLucideMoreIcon
+import com.example.keios.ui.page.main.os.appLucideRefreshIcon
+import com.example.keios.ui.page.main.os.appLucideWarningIcon
 
 internal object GitHubStatusPalette {
     val Active = Color(0xFF3B82F6)

@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.page
 
 import android.content.Context
 import android.content.Intent

@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.shell
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -40,7 +41,7 @@ internal fun ShellOutputGlassPanel(
     scrollState: ScrollState,
     modifier: Modifier = Modifier
 ) {
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = isSystemInDarkTheme()
     val shape: CornerBasedShape = RoundedCornerShape(18.dp)
     val borderColor = if (isDark) {
         Color(0xFF9CCBFF).copy(alpha = 0.24f)

@@ -1,4 +1,4 @@
-package com.example.keios.mcp
+package com.example.keios.mcp.notification
 
 import android.app.PendingIntent
 import android.content.Context

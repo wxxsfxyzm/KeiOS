@@ -2,7 +2,14 @@ package com.example.keios.ui.page.main.student
 
 import android.net.Uri
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
-import org.json.JSONArray
+import com.example.keios.ui.page.main.student.fetch.extractGuideContentIdFromUrl
+import com.example.keios.ui.page.main.student.fetch.extractMeta
+import com.example.keios.ui.page.main.student.fetch.extractStatsFromHtml
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeImageUrl
+import com.example.keios.ui.page.main.student.fetch.parseGuideDetailFromContentJson
+import com.example.keios.ui.page.main.student.fetch.parser.firstImageFromAny
+import com.example.keios.ui.page.main.student.fetch.stripHtml
 import org.json.JSONObject
 
 private fun fetchGuideInfoByApi(sourceUrl: String): BaStudentGuideInfo {

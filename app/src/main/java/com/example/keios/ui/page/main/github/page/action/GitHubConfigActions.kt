@@ -1,6 +1,7 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.page.action
 
 import com.example.keios.R
+import com.example.keios.core.background.AppBackgroundScheduler
 import com.example.keios.feature.github.data.local.GitHubReleaseAssetCacheStore
 import com.example.keios.feature.github.data.local.GitHubTrackedItemsImportPayload
 import com.example.keios.feature.github.data.local.GitHubTrackStore
@@ -11,6 +12,8 @@ import com.example.keios.feature.github.model.GitHubApiCredentialStatus
 import com.example.keios.feature.github.model.GitHubLookupConfig
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.feature.github.model.GitHubStrategyLoadTrace
+import com.example.keios.feature.github.model.GitHubTrackedApp
+import com.example.keios.ui.page.main.github.OverviewRefreshState
 import com.example.keios.ui.page.main.github.query.OnlineShareTargetOption
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -177,7 +180,7 @@ internal class GitHubConfigActions(
         GitHubTrackStore.saveRefreshIntervalHours(state.refreshIntervalHoursInput)
         state.lookupConfig = newConfig
         state.refreshIntervalHours = state.refreshIntervalHoursInput
-        com.example.keios.core.background.AppBackgroundScheduler.scheduleGitHubRefresh(context)
+        AppBackgroundScheduler.scheduleGitHubRefresh(context)
         closeCheckLogicSheet()
 
         val checkScopeChanged =
@@ -294,7 +297,7 @@ internal class GitHubConfigActions(
         val indexById = mergedItems.withIndex()
             .associate { it.value.id to it.index }
             .toMutableMap()
-        val touchedItems = mutableListOf<com.example.keios.feature.github.model.GitHubTrackedApp>()
+        val touchedItems = mutableListOf<GitHubTrackedApp>()
         var addedCount = 0
         var updatedCount = 0
         var unchangedCount = 0

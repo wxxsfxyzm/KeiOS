@@ -1,7 +1,7 @@
 package com.example.keios.mcp.domain.notification
 
 import android.app.Notification
-import com.example.keios.mcp.McpNotificationPayload
+import com.example.keios.mcp.notification.McpNotificationPayload
 import com.example.keios.mcp.framework.notification.builder.NotificationRenderStyle
 
 interface SessionNotifier {

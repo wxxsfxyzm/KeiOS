@@ -1,4 +1,4 @@
-package com.example.keios.mcp
+package com.example.keios.mcp.server
 
 import android.content.Context
 import android.net.Uri
@@ -8,27 +8,28 @@ import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.domain.GitHubReleaseCheckService
 import com.example.keios.feature.github.model.GitHubTrackedApp
-import com.example.keios.ui.page.main.ba.BASettingsStore
-import com.example.keios.ui.page.main.ba.calculateApFullAtMs
-import com.example.keios.ui.page.main.ba.calculateApNextPointAtMs
-import com.example.keios.ui.page.main.ba.calculateInviteTicketAvailableMs
-import com.example.keios.ui.page.main.ba.calculateNextHeadpatAvailableMs
-import com.example.keios.ui.page.main.ba.cafeDailyCapacity
-import com.example.keios.ui.page.main.ba.cafeHourlyGain
-import com.example.keios.ui.page.main.ba.cafeStorageCap
-import com.example.keios.ui.page.main.ba.decodeBaCalendarEntries
-import com.example.keios.ui.page.main.ba.decodeBaPoolEntries
-import com.example.keios.ui.page.main.ba.displayAp
-import com.example.keios.ui.page.main.ba.fractionalApPart
-import com.example.keios.ui.page.main.ba.gameKeeServerId
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.calculateApFullAtMs
+import com.example.keios.ui.page.main.ba.support.calculateApNextPointAtMs
+import com.example.keios.ui.page.main.ba.support.calculateInviteTicketAvailableMs
+import com.example.keios.ui.page.main.ba.support.calculateNextHeadpatAvailableMs
+import com.example.keios.ui.page.main.ba.support.cafeDailyCapacity
+import com.example.keios.ui.page.main.ba.support.cafeHourlyGain
+import com.example.keios.ui.page.main.ba.support.cafeStorageCap
+import com.example.keios.ui.page.main.ba.support.decodeBaCalendarEntries
+import com.example.keios.ui.page.main.ba.support.decodeBaPoolEntries
+import com.example.keios.ui.page.main.ba.support.displayAp
+import com.example.keios.ui.page.main.ba.support.fractionalApPart
+import com.example.keios.ui.page.main.ba.support.gameKeeServerId
 import com.example.keios.ui.page.main.student.BaStudentGuideStore
-import com.example.keios.ui.page.main.student.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogStore
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogTab
 import com.example.keios.ui.page.main.student.catalog.clearBaGuideCatalogCache
 import com.example.keios.ui.page.main.student.catalog.isBaGuideCatalogBundleComplete
 import com.example.keios.ui.page.main.student.catalog.isBaGuideCatalogCacheExpired
 import com.example.keios.ui.page.main.student.catalog.loadCachedBaGuideCatalogBundle
+import com.tencent.mmkv.MMKV
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -45,7 +46,6 @@ import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.put
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -1402,8 +1402,8 @@ class LocalMcpService(
         maxCount: Int,
         query: String?
     ): List<InfoRow> {
-        val kv = com.tencent.mmkv.MMKV.mmkvWithID(OS_CACHE_KV_ID)
-        val legacyKv = com.tencent.mmkv.MMKV.mmkvWithID(LEGACY_SYSTEM_CACHE_KV_ID)
+        val kv = MMKV.mmkvWithID(OS_CACHE_KV_ID)
+        val legacyKv = MMKV.mmkvWithID(LEGACY_SYSTEM_CACHE_KV_ID)
         val readRaw: (String, String) -> String? = { newKey, legacyKey ->
             val newRaw = kv.decodeString(newKey)
             if (!newRaw.isNullOrBlank()) newRaw else legacyKv.decodeString(legacyKey)

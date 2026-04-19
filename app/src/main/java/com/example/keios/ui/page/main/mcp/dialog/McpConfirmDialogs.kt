@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.mcp.dialog
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -9,10 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
-import com.example.keios.mcp.McpServerManager
+import com.example.keios.mcp.server.McpServerManager
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -24,7 +25,7 @@ internal fun McpResetConfigDialog(
     mcpServerManager: McpServerManager,
     onDismissRequest: () -> Unit,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     WindowDialog(
         show = show,
         title = stringResource(R.string.mcp_action_reset_service_config),
@@ -76,7 +77,7 @@ internal fun McpResetTokenDialog(
     mcpServerManager: McpServerManager,
     onDismissRequest: () -> Unit,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     WindowDialog(
         show = show,
         title = stringResource(R.string.mcp_action_reset_token),

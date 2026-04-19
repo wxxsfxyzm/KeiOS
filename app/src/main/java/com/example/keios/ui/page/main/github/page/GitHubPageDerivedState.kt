@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.page
 
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.ui.page.main.github.section.GitHubOverviewMetrics

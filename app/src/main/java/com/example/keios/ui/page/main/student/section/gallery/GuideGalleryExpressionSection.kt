@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.section.gallery
 
 import android.widget.SeekBar
 import android.widget.Toast
@@ -32,6 +32,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.keios.ui.page.main.student.BaGuideGalleryItem
+import com.example.keios.ui.page.main.student.section.GuidePressableMediaSurface
+import com.example.keios.ui.page.main.student.GuideRemoteImageAdaptive
+import com.example.keios.ui.page.main.student.GuideVideoControlAction
+import com.example.keios.ui.page.main.student.GuideVideoFullscreenActivity
+import com.example.keios.ui.page.main.student.normalizeGalleryTitle
+import com.example.keios.ui.page.main.student.normalizeGuideMediaSource
 import com.example.keios.ui.page.main.widget.AppDropdownAnchorButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
 import com.example.keios.ui.page.main.widget.GlassVariant
@@ -54,6 +61,7 @@ import top.yukonga.miuix.kmp.icon.extended.ExpandMore
 import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.math.abs
 
 @Composable
 internal fun GuideAudioSeekBar(
@@ -97,7 +105,7 @@ internal fun GuideAudioSeekBar(
         update = { seekBar ->
             seekBar.isEnabled = enabled
             val targetProgress = (normalizedProgress * 1000f).toInt().coerceIn(0, 1000)
-            if (kotlin.math.abs(seekBar.progress - targetProgress) > 2) {
+            if (abs(seekBar.progress - targetProgress) > 2) {
                 seekBar.progress = targetProgress
             }
         }
@@ -285,7 +293,7 @@ fun GuideGalleryExpressionCardItem(
                             if (normalized.isBlank()) {
                                 Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
                             } else {
-                                GuideVideoFullscreenActivity.launch(
+                                GuideVideoFullscreenActivity.Companion.launch(
                                     context = context,
                                     mediaUrl = normalized
                                 )
@@ -340,6 +348,7 @@ fun GuideGalleryExpressionCardItem(
                                     selectedIndex += 1
                                     showPicker = false
                                 }
+
                                 shouldGoPrev && selectedIndex > 0 -> {
                                     selectedIndex -= 1
                                     showPicker = false

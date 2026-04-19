@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.shortcut
 
 import android.content.ComponentName
 import android.content.Context
@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import com.example.keios.R
+import com.example.keios.ui.page.main.github.AppIcon
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.kyant.capsule.ContinuousCapsule
 import kotlinx.coroutines.Dispatchers

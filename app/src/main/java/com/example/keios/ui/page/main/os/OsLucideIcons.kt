@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os
 
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable

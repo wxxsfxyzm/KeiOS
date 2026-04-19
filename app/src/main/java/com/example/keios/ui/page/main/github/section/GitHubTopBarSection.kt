@@ -2,21 +2,18 @@ package com.example.keios.ui.page.main.github.section
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.example.keios.R
-import com.example.keios.ui.page.main.GitHubSortMode
-import com.example.keios.ui.page.main.appLucideConfigIcon
-import com.example.keios.ui.page.main.appLucideEditIcon
-import com.example.keios.ui.page.main.appLucideRefreshIcon
-import com.example.keios.ui.page.main.appLucideSortIcon
+import com.example.keios.ui.page.main.github.GitHubSortMode
+import com.example.keios.ui.page.main.os.appLucideConfigIcon
+import com.example.keios.ui.page.main.os.appLucideEditIcon
+import com.example.keios.ui.page.main.os.appLucideRefreshIcon
+import com.example.keios.ui.page.main.os.appLucideSortIcon
 import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppTopBarSearchField
 import com.example.keios.ui.page.main.widget.AppTopBarSection

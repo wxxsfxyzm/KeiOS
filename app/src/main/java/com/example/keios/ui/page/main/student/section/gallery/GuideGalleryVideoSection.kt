@@ -1,20 +1,15 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.section.gallery
 
 import android.content.Context
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,9 +34,18 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.example.keios.ui.page.main.student.BaGuideGalleryItem
+import com.example.keios.ui.page.main.student.GuideRemoteImageAdaptive
+import com.example.keios.ui.page.main.student.GuideVideoControlAction
+import com.example.keios.ui.page.main.student.GuideVideoFullscreenActivity
+import com.example.keios.ui.page.main.student.section.buildGuideCopyPayload
+import com.example.keios.ui.page.main.student.createGameKeeMediaSourceFactory
+import com.example.keios.ui.page.main.student.section.guideCopyable
+import com.example.keios.ui.page.main.student.normalizeGuideMediaSource
 import com.example.keios.ui.page.main.widget.AppDropdownAnchorButton
 import com.example.keios.ui.page.main.widget.AppFeatureCard
 import com.example.keios.ui.page.main.widget.AppSurfaceCard
@@ -186,7 +189,7 @@ fun GuideGalleryVideoGroupCardItem(
                         if (normalized.isBlank()) {
                             Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
                         } else {
-                            GuideVideoFullscreenActivity.launch(
+                            GuideVideoFullscreenActivity.Companion.launch(
                                 context = context,
                                 mediaUrl = normalized
                             )
@@ -298,7 +301,7 @@ internal fun GuideInlineVideoPlayer(
             if (normalizedUrl.isBlank()) {
                 Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
             } else {
-                GuideVideoFullscreenActivity.launch(
+                GuideVideoFullscreenActivity.Companion.launch(
                     context = context,
                     mediaUrl = normalizedUrl
                 )
@@ -337,7 +340,7 @@ internal fun GuideInlineVideoPlayer(
     DisposableEffect(player) {
         val boundPlayer = player ?: return@DisposableEffect onDispose { }
         val listener = object : Player.Listener {
-            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
                 if (videoSize.width > 0 && videoSize.height > 0) {
                     videoRatio = videoSize.width.toFloat() / videoSize.height.toFloat()
                 }

@@ -1,10 +1,11 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os
 
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.keios.R
+import com.example.keios.ui.page.main.os.shortcut.buildGoogleSystemServiceRows
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 

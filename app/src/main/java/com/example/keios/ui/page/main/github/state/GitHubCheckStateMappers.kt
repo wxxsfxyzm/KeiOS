@@ -3,7 +3,7 @@ package com.example.keios.ui.page.main.github.state
 import com.example.keios.feature.github.model.GitHubCheckCacheEntry
 import com.example.keios.feature.github.model.GitHubTrackedReleaseStatus
 import com.example.keios.feature.github.model.GitHubTrackedReleaseCheck
-import com.example.keios.ui.page.main.VersionCheckUi
+import com.example.keios.ui.page.main.github.VersionCheckUi
 
 internal fun VersionCheckUi.toCacheEntry(): GitHubCheckCacheEntry = GitHubCheckCacheEntry(
     loading = false,

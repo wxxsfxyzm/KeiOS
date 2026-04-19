@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.tabcontent.render
 
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +12,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.student.BaGuideTempMediaCache
+import com.example.keios.ui.page.main.student.BaStudentGuideInfo
+import com.example.keios.ui.page.main.student.tabcontent.buildDubbingHeadersForVoiceCard
+import com.example.keios.ui.page.main.student.tabcontent.buildGrowthTitleVoiceEntries
+import com.example.keios.ui.page.main.student.buildGuideTabCopyPayload
+import com.example.keios.ui.page.main.student.tabcontent.buildVoiceCvDisplayMap
+import com.example.keios.ui.page.main.student.tabcontent.buildVoiceLanguageHeadersForDisplay
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.tabcontent.isGrowthTitleVoiceRow
+import com.example.keios.ui.page.main.student.tabcontent.normalizeGuidePlaybackSource
+import com.example.keios.ui.page.main.student.profileRowsForDisplay
+import com.example.keios.ui.page.main.student.rememberGuideTabCopyAction
+import com.example.keios.ui.page.main.student.tabcontent.resolveVoicePlaybackUrl
+import com.example.keios.ui.page.main.student.section.GuideVoiceEntryCard
+import com.example.keios.ui.page.main.student.section.GuideVoiceLanguageCard
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.backdrops.LayerBackdrop

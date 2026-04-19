@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.page.action
 
 import com.example.keios.R
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils

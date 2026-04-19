@@ -1,5 +1,6 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.tabcontent.render
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.student.BaStudentGuideInfo
+import com.example.keios.ui.page.main.student.section.GuideSkillCardItem
+import com.example.keios.ui.page.main.student.section.GuideWeaponCardItem
+import com.example.keios.ui.page.main.student.skillCardsForDisplay
+import com.example.keios.ui.page.main.student.weaponCardForDisplay
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.Card
@@ -65,7 +71,7 @@ internal fun LazyListScope.renderGuideSkillsTabContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = error.orEmpty(),
@@ -105,7 +111,7 @@ internal fun LazyListScope.renderGuideSkillsTabContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "暂未解析到结构化技能卡数据。",

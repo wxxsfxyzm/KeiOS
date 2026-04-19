@@ -1,6 +1,37 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.fetch.parser
 
+import com.example.keios.ui.page.main.student.BaGuideGalleryItem
+import com.example.keios.ui.page.main.student.BaGuideRow
+import com.example.keios.ui.page.main.student.fetch.GuideBaseRow
+import com.example.keios.ui.page.main.student.fetch.GuideDetailExtract
+import com.example.keios.ui.page.main.student.GuideTab
+import com.example.keios.ui.page.main.student.fetch.deriveVoiceCvLegacyFields
+import com.example.keios.ui.page.main.student.fetch.extractImageUrlsFromAny
+import com.example.keios.ui.page.main.student.fetch.extractImageUrlsFromHtml
+import com.example.keios.ui.page.main.student.fetch.extractVideoUrlsFromAny
+import com.example.keios.ui.page.main.student.fetch.isAudioUrl
+import com.example.keios.ui.page.main.student.fetch.isMeaningfulGuideRowValue
+import com.example.keios.ui.page.main.student.fetch.isPlaceholderMediaToken
+import com.example.keios.ui.page.main.student.fetch.isTopDataStatKey
+import com.example.keios.ui.page.main.student.fetch.isVoiceBlockTailKey
+import com.example.keios.ui.page.main.student.fetch.isVoiceCategoryKey
+import com.example.keios.ui.page.main.student.fetch.isWeaponExtraAttributeKey
+import com.example.keios.ui.page.main.student.fetch.looksLikeImageUrl
+import com.example.keios.ui.page.main.student.fetch.looksLikeVideoUrl
+import com.example.keios.ui.page.main.student.fetch.mergeVoiceLanguageHeaders
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideRowKey
+import com.example.keios.ui.page.main.student.fetch.normalizeImageUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeMediaUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeVoiceEntriesWithHeaderCount
+import com.example.keios.ui.page.main.student.fetch.parseGalleryItemsFromBaseData
+import com.example.keios.ui.page.main.student.fetch.parseGalleryItemsFromStyleData
+import com.example.keios.ui.page.main.student.fetch.parseGiftPreferenceRowsFromBaseData
+import com.example.keios.ui.page.main.student.fetch.parseSimulateRowsFromBaseData
+import com.example.keios.ui.page.main.student.fetch.parseVoiceCvByLanguageFromBaseData
+import com.example.keios.ui.page.main.student.fetch.parseVoiceDataFromBaseData
+import com.example.keios.ui.page.main.student.fetch.stripHtml
 import org.json.JSONObject
+import kotlin.collections.plusAssign
 
 internal fun parseGuideDetailFromObjectContentJson(raw: String, sourceUrl: String): GuideDetailExtract {
     return runCatching {
@@ -17,7 +48,10 @@ internal fun parseGuideDetailFromObjectContentJson(raw: String, sourceUrl: Strin
                 tabGalleryIconUrl = tabIcons[GuideTab.Gallery].orEmpty(),
                 tabSimulateIconUrl = tabIcons[GuideTab.Simulate].orEmpty()
             )
-        val (rawVoiceLanguageHeaders, rawVoiceEntries) = parseVoiceDataFromBaseData(baseData, sourceUrl)
+        val (rawVoiceLanguageHeaders, rawVoiceEntries) = parseVoiceDataFromBaseData(
+            baseData,
+            sourceUrl
+        )
         val voiceCvByLanguage = parseVoiceCvByLanguageFromBaseData(baseData)
         val voiceLanguageHeaders = mergeVoiceLanguageHeaders(
             rawHeaders = rawVoiceLanguageHeaders,
@@ -209,7 +243,7 @@ internal fun parseGuideDetailFromObjectContentJson(raw: String, sourceUrl: Strin
                 key == "配音大类" ||
                 key == "初始数据" ||
                 key == "顶级数据" ||
-                isVoiceCategoryKey(key) ||
+                    isVoiceCategoryKey(key) ||
                 galleryContextStartKeywords.any { keyword ->
                     key.contains(keyword, ignoreCase = true)
                 }
@@ -370,7 +404,11 @@ internal fun parseGuideDetailFromObjectContentJson(raw: String, sourceUrl: Strin
                                 mediaType = if (row.mediaTypes.contains("live2d")) "live2d" else "image",
                                 mediaUrl = url,
                                 memoryUnlockLevel = if (guideRow.key.startsWith("回忆大厅")) memoryUnlockLevel else "",
-                                note = noteForGalleryImage(row.textValues, index, row.imageValues.size)
+                                note = noteForGalleryImage(
+                                    row.textValues,
+                                    index,
+                                    row.imageValues.size
+                                )
                             )
                         }
                     }
@@ -389,7 +427,9 @@ internal fun parseGuideDetailFromObjectContentJson(raw: String, sourceUrl: Strin
                     }
                     val isPureMediaText = row.textValues.any { text ->
                         val normalized = normalizeMediaUrl(sourceUrl, text)
-                        isAudioUrl(normalized) || looksLikeVideoUrl(normalized) || looksLikeImageUrl(normalized)
+                        isAudioUrl(normalized) || looksLikeVideoUrl(normalized) || looksLikeImageUrl(
+                            normalized
+                        )
                     }
                     if (row.imageValues.isEmpty() &&
                         row.videoValues.isEmpty() &&

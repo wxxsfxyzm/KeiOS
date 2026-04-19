@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os
 
 import android.content.Intent
 import android.widget.Toast
@@ -8,12 +8,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -23,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.keios.R
 import com.example.keios.core.system.ShizukuApiUtils
-import com.example.keios.ui.page.main.os.OsPageViewModel
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
@@ -34,6 +30,28 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.keios.ui.page.main.os.components.OsPageMainList
+import com.example.keios.ui.page.main.os.components.OsPageOverlaySheets
+import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
+import com.example.keios.ui.page.main.os.shell.OsShellCommandCardStore
+import com.example.keios.ui.page.main.os.shell.OsShellRunnerActivity
+import com.example.keios.ui.page.main.os.shell.createDefaultShellCommandCardDraft
+import com.example.keios.ui.page.main.os.shell.defaultOsShellCommandCardTitle
+import com.example.keios.ui.page.main.os.shortcut.OsActivityCardEditMode
+import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCard
+import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCardStore
+import com.example.keios.ui.page.main.os.shortcut.ShortcutActivityClassOption
+import com.example.keios.ui.page.main.os.shortcut.ShortcutInstalledAppOption
+import com.example.keios.ui.page.main.os.shortcut.ShortcutSuggestionField
+import com.example.keios.ui.page.main.os.shortcut.applyGoogleSystemServiceSuggestion
+import com.example.keios.ui.page.main.os.shortcut.applyShortcutImplicitDefaults
+import com.example.keios.ui.page.main.os.shortcut.createDefaultActivityShortcutDraft
+import com.example.keios.ui.page.main.os.shortcut.ensureEditorActivityShortcutDraft
+import com.example.keios.ui.page.main.os.shortcut.launchGoogleSystemServiceActivity
+import com.example.keios.ui.page.main.os.shortcut.loadActivityClassOptions
+import com.example.keios.ui.page.main.os.shortcut.loadInstalledAppOptions
+import com.example.keios.ui.page.main.os.shortcut.newOsActivityShortcutCardId
+import com.example.keios.ui.page.main.os.shortcut.normalizeActivityShortcutConfig
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -424,27 +442,45 @@ fun OsPage(
 
     LaunchedEffect(systemTableExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && systemTableExpanded && isCardVisible(visibleCards, OsSectionCard.SYSTEM)) ensureLoad(SectionKind.SYSTEM)
+        if (isPageActive && systemTableExpanded && isCardVisible(
+                visibleCards,
+                OsSectionCard.SYSTEM
+            )
+        ) ensureLoad(SectionKind.SYSTEM)
     }
     LaunchedEffect(secureTableExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && secureTableExpanded && isCardVisible(visibleCards, OsSectionCard.SECURE)) ensureLoad(SectionKind.SECURE)
+        if (isPageActive && secureTableExpanded && isCardVisible(
+                visibleCards,
+                OsSectionCard.SECURE
+            )
+        ) ensureLoad(SectionKind.SECURE)
     }
     LaunchedEffect(globalTableExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && globalTableExpanded && isCardVisible(visibleCards, OsSectionCard.GLOBAL)) ensureLoad(SectionKind.GLOBAL)
+        if (isPageActive && globalTableExpanded && isCardVisible(
+                visibleCards,
+                OsSectionCard.GLOBAL
+            )
+        ) ensureLoad(SectionKind.GLOBAL)
     }
     LaunchedEffect(androidPropsExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && androidPropsExpanded && isCardVisible(visibleCards, OsSectionCard.ANDROID)) ensureLoad(SectionKind.ANDROID)
+        if (isPageActive && androidPropsExpanded && isCardVisible(
+                visibleCards,
+                OsSectionCard.ANDROID
+            )
+        ) ensureLoad(SectionKind.ANDROID)
     }
     LaunchedEffect(javaPropsExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && javaPropsExpanded && isCardVisible(visibleCards, OsSectionCard.JAVA)) ensureLoad(SectionKind.JAVA)
+        if (isPageActive && javaPropsExpanded && isCardVisible(visibleCards, OsSectionCard.JAVA)) ensureLoad(
+            SectionKind.JAVA)
     }
     LaunchedEffect(linuxEnvExpanded, visibleCards, cacheLoaded, isPageActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isPageActive && linuxEnvExpanded && isCardVisible(visibleCards, OsSectionCard.LINUX)) ensureLoad(SectionKind.LINUX)
+        if (isPageActive && linuxEnvExpanded && isCardVisible(visibleCards, OsSectionCard.LINUX)) ensureLoad(
+            SectionKind.LINUX)
     }
     LaunchedEffect(
         showActivitySuggestionSheet,
@@ -502,34 +538,89 @@ fun OsPage(
         buildTopInfoRows(systemRows, secureRows, globalRows, androidRows, javaRows, linuxRows)
     }
 
-    val prunedSystemRows = remember(systemRows) { removeTopInfoRows(SectionKind.SYSTEM, systemRows) }
-    val prunedSecureRows = remember(secureRows) { removeTopInfoRows(SectionKind.SECURE, secureRows) }
-    val prunedGlobalRows = remember(globalRows) { removeTopInfoRows(SectionKind.GLOBAL, globalRows) }
-    val prunedAndroidRows = remember(androidRows) { removeTopInfoRows(SectionKind.ANDROID, androidRows) }
+    val prunedSystemRows = remember(systemRows) {
+        removeTopInfoRows(
+            SectionKind.SYSTEM,
+            systemRows
+        )
+    }
+    val prunedSecureRows = remember(secureRows) {
+        removeTopInfoRows(
+            SectionKind.SECURE,
+            secureRows
+        )
+    }
+    val prunedGlobalRows = remember(globalRows) {
+        removeTopInfoRows(
+            SectionKind.GLOBAL,
+            globalRows
+        )
+    }
+    val prunedAndroidRows = remember(androidRows) {
+        removeTopInfoRows(
+            SectionKind.ANDROID,
+            androidRows
+        )
+    }
     val prunedJavaRows = remember(javaRows) { removeTopInfoRows(SectionKind.JAVA, javaRows) }
     val prunedLinuxRows = remember(linuxRows) { removeTopInfoRows(SectionKind.LINUX, linuxRows) }
 
     val q = queryApplied.trim()
     val displayedTopInfoRows = remember(q, topInfoRows, topInfoExpanded) {
-        if (q.isBlank() && !topInfoExpanded) topInfoRows else sortRowsByType(filterRows(topInfoRows, q))
+        if (q.isBlank() && !topInfoExpanded) topInfoRows else sortRowsByType(
+            filterRows(
+                topInfoRows,
+                q
+            )
+        )
     }
     val displayedSystemRows = remember(q, prunedSystemRows, systemTableExpanded) {
-        if (q.isBlank() && !systemTableExpanded) prunedSystemRows else sortRowsByType(filterRows(prunedSystemRows, q))
+        if (q.isBlank() && !systemTableExpanded) prunedSystemRows else sortRowsByType(
+            filterRows(
+                prunedSystemRows,
+                q
+            )
+        )
     }
     val displayedSecureRows = remember(q, prunedSecureRows, secureTableExpanded) {
-        if (q.isBlank() && !secureTableExpanded) prunedSecureRows else sortRowsByType(filterRows(prunedSecureRows, q))
+        if (q.isBlank() && !secureTableExpanded) prunedSecureRows else sortRowsByType(
+            filterRows(
+                prunedSecureRows,
+                q
+            )
+        )
     }
     val displayedGlobalRows = remember(q, prunedGlobalRows, globalTableExpanded) {
-        if (q.isBlank() && !globalTableExpanded) prunedGlobalRows else sortRowsByType(filterRows(prunedGlobalRows, q))
+        if (q.isBlank() && !globalTableExpanded) prunedGlobalRows else sortRowsByType(
+            filterRows(
+                prunedGlobalRows,
+                q
+            )
+        )
     }
     val displayedAndroidRows = remember(q, prunedAndroidRows, androidPropsExpanded) {
-        if (q.isBlank() && !androidPropsExpanded) prunedAndroidRows else sortRowsByType(filterRows(prunedAndroidRows, q))
+        if (q.isBlank() && !androidPropsExpanded) prunedAndroidRows else sortRowsByType(
+            filterRows(
+                prunedAndroidRows,
+                q
+            )
+        )
     }
     val displayedJavaRows = remember(q, prunedJavaRows, javaPropsExpanded) {
-        if (q.isBlank() && !javaPropsExpanded) prunedJavaRows else sortRowsByType(filterRows(prunedJavaRows, q))
+        if (q.isBlank() && !javaPropsExpanded) prunedJavaRows else sortRowsByType(
+            filterRows(
+                prunedJavaRows,
+                q
+            )
+        )
     }
     val displayedLinuxRows = remember(q, prunedLinuxRows, linuxEnvExpanded) {
-        if (q.isBlank() && !linuxEnvExpanded) prunedLinuxRows else sortRowsByType(filterRows(prunedLinuxRows, q))
+        if (q.isBlank() && !linuxEnvExpanded) prunedLinuxRows else sortRowsByType(
+            filterRows(
+                prunedLinuxRows,
+                q
+            )
+        )
     }
     val groupedTopInfoRows = remember(displayedTopInfoRows, topInfoExpanded, q) {
         if (q.isBlank() && !topInfoExpanded) emptyList() else groupTopInfoRows(displayedTopInfoRows)
@@ -712,7 +803,8 @@ fun OsPage(
             onSaveShellCommandCard = {
                 val targetId = editingShellCommandCardId.orEmpty().trim()
                 if (targetId.isBlank()) {
-                    Toast.makeText(context, shellCardCommandRequiredToast, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, shellCardCommandRequiredToast, Toast.LENGTH_SHORT)
+                        .show()
                     return@OsPageOverlaySheets
                 }
                 val updated = OsShellCommandCardStore.updateCard(
@@ -722,7 +814,8 @@ fun OsPage(
                     command = shellCommandCardDraft.command
                 )
                 if (updated == null) {
-                    Toast.makeText(context, shellCardCommandRequiredToast, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, shellCardCommandRequiredToast, Toast.LENGTH_SHORT)
+                        .show()
                     return@OsPageOverlaySheets
                 }
                 shellCommandCards = OsShellCommandCardStore.loadCards()
@@ -741,15 +834,19 @@ fun OsPage(
             onOpenActivitySuggestionSheet = { target ->
                 googleSystemServiceSuggestionTarget = target
                 when (target) {
-                    ShortcutSuggestionField.PackageName -> googleSystemServicePackageSuggestionQuery = ""
-                    ShortcutSuggestionField.ClassName -> googleSystemServiceClassSuggestionQuery = ""
+                    ShortcutSuggestionField.PackageName -> googleSystemServicePackageSuggestionQuery =
+                        ""
+
+                    ShortcutSuggestionField.ClassName -> googleSystemServiceClassSuggestionQuery =
+                        ""
+
                     else -> Unit
                 }
                 showActivitySuggestionSheet = true
             },
             showBuiltInActivityCardBadge = editingActivityShortcutBuiltIn,
             showDeleteActivityAction = activityCardEditMode == OsActivityCardEditMode.Edit &&
-                !editingActivityShortcutCardId.isNullOrBlank(),
+                    !editingActivityShortcutCardId.isNullOrBlank(),
             onDeleteActivityCard = {
                 val targetId = editingActivityShortcutCardId.orEmpty().trim()
                 if (targetId.isBlank()) {
@@ -1021,14 +1118,15 @@ fun OsPage(
             onRefreshAll = { scope.launch { refreshAllSections() } },
             contentBottomPadding = contentBottomPadding,
             showFloatingAddButton = !showActivityShortcutEditor &&
-                !showActivitySuggestionSheet &&
-                !showShellCommandCardEditor &&
-                !showShellCardVisibilityManager,
+                    !showActivitySuggestionSheet &&
+                    !showShellCommandCardEditor &&
+                    !showShellCardVisibilityManager,
             onOpenAddActivityShortcutCard = {
                 activityCardEditMode = OsActivityCardEditMode.Add
                 editingActivityShortcutCardId = null
                 editingActivityShortcutBuiltIn = false
-                activityShortcutDraft = createDefaultActivityShortcutDraft(googleSystemServiceDefaults)
+                activityShortcutDraft =
+                    createDefaultActivityShortcutDraft(googleSystemServiceDefaults)
                 showActivityShortcutEditor = true
             }
         )

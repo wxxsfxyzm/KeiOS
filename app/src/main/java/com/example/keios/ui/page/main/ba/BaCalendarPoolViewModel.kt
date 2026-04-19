@@ -3,6 +3,8 @@ package com.example.keios.ui.page.main.ba
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.keios.ui.page.main.ba.support.BaCalendarEntry
+import com.example.keios.ui.page.main.ba.support.BaPoolEntry
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

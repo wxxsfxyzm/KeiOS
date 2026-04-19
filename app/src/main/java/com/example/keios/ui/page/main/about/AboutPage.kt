@@ -34,7 +34,7 @@ import com.example.keios.ui.page.main.about.section.AboutPermissionCardSection
 import com.example.keios.ui.page.main.about.section.AboutRuntimeStatusCardSection
 import com.example.keios.ui.page.main.about.section.AboutUiFrameworkCardSection
 import com.example.keios.ui.page.main.about.util.openExternalUrl
-import com.example.keios.ui.page.main.appLucideBackIcon
+import com.example.keios.ui.page.main.os.appLucideBackIcon
 import com.example.keios.ui.page.main.widget.AppPageLazyColumn
 import com.example.keios.ui.page.main.widget.AppPageScaffold
 import top.yukonga.miuix.kmp.basic.Icon

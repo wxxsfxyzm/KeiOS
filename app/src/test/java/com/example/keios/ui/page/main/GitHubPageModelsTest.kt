@@ -1,5 +1,9 @@
 package com.example.keios.ui.page.main
 
+import com.example.keios.ui.page.main.github.VersionCheckUi
+import com.example.keios.ui.page.main.github.formatReleaseValue
+import com.example.keios.ui.page.main.github.statusActionUrl
+import com.example.keios.ui.page.main.github.statusIcon
 import org.junit.Test
 import kotlin.test.assertEquals
 import top.yukonga.miuix.kmp.icon.MiuixIcons

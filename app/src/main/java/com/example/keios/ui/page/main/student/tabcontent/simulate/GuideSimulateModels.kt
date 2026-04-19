@@ -1,11 +1,16 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.tabcontent.simulate
 
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.tabcontent.profile.normalizeProfileFieldKey
+import com.example.keios.ui.page.main.student.tabcontent.profile.normalizedTopDataStatKeys
+import com.example.keios.ui.page.main.student.tabcontent.profile.splitGuideCompositeValues
 import java.util.LinkedHashMap
 import java.util.Locale
+import kotlin.collections.plusAssign
 import kotlin.math.abs
 
 internal const val GUIDE_SIMULATE_CACHE_MAX_SIZE = 96
-internal val guideSimulateDataCache = object : LinkedHashMap<String, GuideSimulateData>(
+internal val guideSimulateDataCache = object : java.util.LinkedHashMap<String, GuideSimulateData>(
     GUIDE_SIMULATE_CACHE_MAX_SIZE,
     0.75f,
     true
@@ -17,19 +22,19 @@ internal val guideSimulateDataCache = object : LinkedHashMap<String, GuideSimula
 
 internal data class GuideSimulateData(
     val initialHint: String = "",
-    val initialRows: List<BaGuideRow> = emptyList(),
+    val initialRows: List<com.example.keios.ui.page.main.student.BaGuideRow> = emptyList(),
     val maxHint: String = "",
-    val maxRows: List<BaGuideRow> = emptyList(),
+    val maxRows: List<com.example.keios.ui.page.main.student.BaGuideRow> = emptyList(),
     val weaponHint: String = "",
-    val weaponRows: List<BaGuideRow> = emptyList(),
+    val weaponRows: List<com.example.keios.ui.page.main.student.BaGuideRow> = emptyList(),
     val equipmentHint: String = "",
-    val equipmentRows: List<BaGuideRow> = emptyList(),
+    val equipmentRows: List<com.example.keios.ui.page.main.student.BaGuideRow> = emptyList(),
     val favorHint: String = "",
-    val favorRows: List<BaGuideRow> = emptyList(),
+    val favorRows: List<com.example.keios.ui.page.main.student.BaGuideRow> = emptyList(),
     val unlockHint: String = "",
-    val unlockRows: List<BaGuideRow> = emptyList(),
+    val unlockRows: List<com.example.keios.ui.page.main.student.BaGuideRow> = emptyList(),
     val bondHint: String = "",
-    val bondRows: List<BaGuideRow> = emptyList()
+    val bondRows: List<com.example.keios.ui.page.main.student.BaGuideRow> = emptyList()
 )
 
 internal data class SimulateEquipmentGroup(
@@ -37,26 +42,26 @@ internal data class SimulateEquipmentGroup(
     val itemName: String,
     val tierText: String,
     val iconUrl: String,
-    val statRows: List<BaGuideRow>
+    val statRows: List<com.example.keios.ui.page.main.student.BaGuideRow>
 )
 
 internal data class SimulateBondGroup(
     val roleLabel: String,
     val iconUrl: String,
-    val statRows: List<BaGuideRow>
+    val statRows: List<com.example.keios.ui.page.main.student.BaGuideRow>
 )
 
 internal data class SimulateUnlockViewData(
     val levelCapsule: String,
-    val rows: List<BaGuideRow>
+    val rows: List<com.example.keios.ui.page.main.student.BaGuideRow>
 )
 
 internal data class SimulateWeaponViewData(
     val imageUrl: String,
-    val statRows: List<BaGuideRow>
+    val statRows: List<com.example.keios.ui.page.main.student.BaGuideRow>
 )
 
-internal fun sanitizeSimulateFavorRows(rows: List<BaGuideRow>): List<BaGuideRow> {
+internal fun sanitizeSimulateFavorRows(rows: List<com.example.keios.ui.page.main.student.BaGuideRow>): List<com.example.keios.ui.page.main.student.BaGuideRow> {
     if (rows.isEmpty()) return emptyList()
     return rows
         .filterNot { row ->
@@ -97,7 +102,7 @@ internal fun sanitizeSimulateFavorRows(rows: List<BaGuideRow>): List<BaGuideRow>
         }
 }
 
-internal fun sanitizeSimulateBondRows(rows: List<BaGuideRow>): List<BaGuideRow> {
+internal fun sanitizeSimulateBondRows(rows: List<com.example.keios.ui.page.main.student.BaGuideRow>): List<com.example.keios.ui.page.main.student.BaGuideRow> {
     if (rows.isEmpty()) return emptyList()
     return rows.filterNot { row ->
         val normalizedKey = normalizeProfileFieldKey(row.key)
@@ -108,7 +113,7 @@ internal fun sanitizeSimulateBondRows(rows: List<BaGuideRow>): List<BaGuideRow> 
     }
 }
 
-internal fun parseSimulateEquipmentGhostMediaUrl(row: BaGuideRow): String {
+internal fun parseSimulateEquipmentGhostMediaUrl(row: com.example.keios.ui.page.main.student.BaGuideRow): String {
     val key = row.key.trim()
     if (key.isBlank()) return ""
     if (row.value.trim().isNotBlank()) return ""
@@ -123,11 +128,11 @@ internal fun parseSimulateEquipmentGhostMediaUrl(row: BaGuideRow): String {
     return normalizeGuideUrl(key)
 }
 
-internal fun isSimulateEquipmentGhostMediaRow(row: BaGuideRow): Boolean {
+internal fun isSimulateEquipmentGhostMediaRow(row: com.example.keios.ui.page.main.student.BaGuideRow): Boolean {
     return parseSimulateEquipmentGhostMediaUrl(row).isNotBlank()
 }
 
-internal fun buildSimulateEquipmentGroups(rows: List<BaGuideRow>): List<SimulateEquipmentGroup> {
+internal fun buildSimulateEquipmentGroups(rows: List<com.example.keios.ui.page.main.student.BaGuideRow>): List<SimulateEquipmentGroup> {
     if (rows.isEmpty()) return emptyList()
 
     val groups = mutableListOf<SimulateEquipmentGroup>()
@@ -135,7 +140,7 @@ internal fun buildSimulateEquipmentGroups(rows: List<BaGuideRow>): List<Simulate
     var currentItemName = ""
     var currentTierText = ""
     var currentIcon = ""
-    val currentStats = mutableListOf<BaGuideRow>()
+    val currentStats = mutableListOf<com.example.keios.ui.page.main.student.BaGuideRow>()
 
     fun commitGroup() {
         if (currentSlot.isBlank() && currentItemName.isBlank() && currentStats.isEmpty()) return
@@ -192,7 +197,7 @@ internal fun buildSimulateEquipmentGroups(rows: List<BaGuideRow>): List<Simulate
 }
 
 internal fun buildSimulateUnlockViewData(
-    rows: List<BaGuideRow>,
+    rows: List<com.example.keios.ui.page.main.student.BaGuideRow>,
     hint: String
 ): SimulateUnlockViewData {
     if (rows.isEmpty()) {
@@ -220,13 +225,13 @@ internal fun buildSimulateUnlockViewData(
     )
 }
 
-internal fun buildSimulateBondGroups(rows: List<BaGuideRow>): List<SimulateBondGroup> {
+internal fun buildSimulateBondGroups(rows: List<com.example.keios.ui.page.main.student.BaGuideRow>): List<SimulateBondGroup> {
     if (rows.isEmpty()) return emptyList()
 
     val groups = mutableListOf<SimulateBondGroup>()
     var currentRole = ""
     var currentIcon = ""
-    val currentRows = mutableListOf<BaGuideRow>()
+    val currentRows = mutableListOf<com.example.keios.ui.page.main.student.BaGuideRow>()
 
     fun commitGroup() {
         if (currentRole.isBlank() && currentRows.isEmpty()) return
@@ -263,7 +268,7 @@ internal fun buildSimulateBondGroups(rows: List<BaGuideRow>): List<SimulateBondG
     return groups
 }
 
-internal fun buildSimulateWeaponViewData(rows: List<BaGuideRow>): SimulateWeaponViewData {
+internal fun buildSimulateWeaponViewData(rows: List<com.example.keios.ui.page.main.student.BaGuideRow>): SimulateWeaponViewData {
     if (rows.isEmpty()) return SimulateWeaponViewData("", emptyList())
     val imageUrl = rows.firstNotNullOfOrNull { row ->
         row.imageUrl.trim().ifBlank { row.imageUrls.firstOrNull().orEmpty() }.takeIf { it.isNotBlank() }
@@ -383,7 +388,7 @@ internal fun extractComparableNumber(raw: String): Double? {
     return numberText.toDoubleOrNull()
 }
 
-internal fun buildGuideSimulateCacheKey(rows: List<BaGuideRow>): String {
+internal fun buildGuideSimulateCacheKey(rows: List<com.example.keios.ui.page.main.student.BaGuideRow>): String {
     var hash = 17
     rows.forEach { row ->
         hash = 31 * hash + normalizeProfileFieldKey(row.key).hashCode()
@@ -396,13 +401,13 @@ internal fun buildGuideSimulateCacheKey(rows: List<BaGuideRow>): String {
     return "${rows.size}|$hash"
 }
 
-internal fun buildGuideSimulateData(rows: List<BaGuideRow>): GuideSimulateData {
+internal fun buildGuideSimulateData(rows: List<com.example.keios.ui.page.main.student.BaGuideRow>): GuideSimulateData {
     if (rows.isEmpty()) return GuideSimulateData()
     val cacheKey = buildGuideSimulateCacheKey(rows)
     synchronized(guideSimulateDataCache) {
         guideSimulateDataCache[cacheKey]?.let { return it }
     }
-    val sections = linkedMapOf<String, MutableList<BaGuideRow>>()
+    val sections = linkedMapOf<String, MutableList<com.example.keios.ui.page.main.student.BaGuideRow>>()
     val hints = mutableMapOf<String, String>()
     var currentSection = ""
 
@@ -486,9 +491,9 @@ internal fun isLikelySimulateStatLabel(raw: String): Boolean {
     return normalized.endsWith("值") || normalized.endsWith("率")
 }
 
-internal fun expandSimulateRows(rows: List<BaGuideRow>): List<BaGuideRow> {
+internal fun expandSimulateRows(rows: List<com.example.keios.ui.page.main.student.BaGuideRow>): List<com.example.keios.ui.page.main.student.BaGuideRow> {
     if (rows.isEmpty()) return emptyList()
-    val expanded = mutableListOf<BaGuideRow>()
+    val expanded = mutableListOf<com.example.keios.ui.page.main.student.BaGuideRow>()
     rows.forEach { row ->
         val key = row.key.trim()
         val value = row.value.trim()
@@ -498,7 +503,7 @@ internal fun expandSimulateRows(rows: List<BaGuideRow>): List<BaGuideRow> {
 
         if (value.isBlank()) {
             if (key.isNotBlank() || icon.isNotBlank()) {
-                expanded += BaGuideRow(
+                expanded += _root_ide_package_.com.example.keios.ui.page.main.student.BaGuideRow(
                     key = key.ifBlank { "信息" },
                     value = "",
                     imageUrl = icon,
@@ -510,7 +515,7 @@ internal fun expandSimulateRows(rows: List<BaGuideRow>): List<BaGuideRow> {
 
         val tokens = splitGuideCompositeValues(value)
         if (tokens.isEmpty()) {
-            expanded += BaGuideRow(
+            expanded += _root_ide_package_.com.example.keios.ui.page.main.student.BaGuideRow(
                 key = key.ifBlank { "信息" },
                 value = value,
                 imageUrl = icon,
@@ -522,7 +527,7 @@ internal fun expandSimulateRows(rows: List<BaGuideRow>): List<BaGuideRow> {
         val firstTokenLooksLikeStat = isLikelySimulateStatLabel(tokens.first())
         var index = 0
         if (!firstTokenLooksLikeStat) {
-            expanded += BaGuideRow(
+            expanded += _root_ide_package_.com.example.keios.ui.page.main.student.BaGuideRow(
                 key = key.ifBlank { "等级" },
                 value = tokens.first().trim(),
                 imageUrl = icon,
@@ -530,14 +535,14 @@ internal fun expandSimulateRows(rows: List<BaGuideRow>): List<BaGuideRow> {
             )
             index = 1
         } else if (key.isNotBlank() && !isLikelySimulateStatLabel(key) && !isSimulateSubHeader(key)) {
-            expanded += BaGuideRow(
+            expanded += _root_ide_package_.com.example.keios.ui.page.main.student.BaGuideRow(
                 key = key,
                 value = "",
                 imageUrl = icon,
                 imageUrls = images
             )
         } else if (icon.isNotBlank() && key.isNotBlank()) {
-            expanded += BaGuideRow(
+            expanded += _root_ide_package_.com.example.keios.ui.page.main.student.BaGuideRow(
                 key = key,
                 value = "",
                 imageUrl = icon,
@@ -551,7 +556,7 @@ internal fun expandSimulateRows(rows: List<BaGuideRow>): List<BaGuideRow> {
             val statValue = tokens[index + 1].trim()
             if (statKey.isNotBlank() && statValue.isNotBlank()) {
                 val pairIcon = if (images.size > 1) images.getOrNull(pairIndex).orEmpty() else ""
-                expanded += BaGuideRow(
+                expanded += _root_ide_package_.com.example.keios.ui.page.main.student.BaGuideRow(
                     key = statKey,
                     value = statValue,
                     imageUrl = pairIcon,

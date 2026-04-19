@@ -68,15 +68,15 @@ import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.example.keios.R
-import com.example.keios.mcp.McpNotificationHelper
-import com.example.keios.mcp.McpServerManager
+import com.example.keios.mcp.notification.McpNotificationHelper
+import com.example.keios.mcp.server.McpServerManager
 import com.example.keios.ui.navigation.KeiosRoute
 import com.example.keios.ui.navigation.Navigator
 import com.example.keios.ui.page.main.about.AboutPage
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.student.BaStudentGuideStore
-import com.example.keios.ui.page.main.student.extractGuideContentIdFromUrl
-import com.example.keios.ui.page.main.student.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.fetch.extractGuideContentIdFromUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import com.example.keios.ui.perf.ReportPagerPerformanceState
 import com.example.keios.ui.page.main.widget.AppMotionTokens
 import com.example.keios.ui.page.main.widget.UiPerformanceBudget
@@ -84,6 +84,7 @@ import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.LiquidGlassBottomBar
 import com.example.keios.ui.page.main.widget.LiquidGlassBottomBarItem
+import com.example.keios.ui.page.main.widget.liquidGlassBottomBarItemContentColor
 import com.example.keios.ui.page.main.widget.LocalTransitionAnimationsEnabled
 import com.example.keios.ui.page.main.widget.appFloatingEnter
 import com.example.keios.ui.page.main.widget.appFloatingExit
@@ -99,6 +100,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.size.Precision
 import coil3.size.Scale
+import com.example.keios.ui.page.main.mcp.McpPage
+import com.example.keios.ui.page.main.os.OsPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -514,22 +517,13 @@ private fun MainPagerLayout(
 
     val handlePageSelected: (Int) -> Unit = { index ->
         if (index in tabs.indices) {
-            val selected = tabs[index]
             val stablePageIndex = if (pagerState.isScrollInProgress) {
                 pagerState.targetPage
             } else {
                 pagerState.settledPage
             }
             showBottomBar = true
-            if (index == stablePageIndex && !pagerState.isScrollInProgress) {
-                when (selected) {
-                    BottomPage.Os -> osScrollToTopSignal++
-                    BottomPage.Ba -> baScrollToTopSignal++
-                    BottomPage.Mcp -> mcpScrollToTopSignal++
-                    BottomPage.GitHub -> githubScrollToTopSignal++
-                    else -> {}
-                }
-            } else {
+            if (index != stablePageIndex || pagerState.isScrollInProgress) {
                 tabJumpJob?.cancel()
                 tabJumpJob = coroutineScope.launch {
                     pagerState.animateTabSwitch(
@@ -592,14 +586,15 @@ private fun MainPagerLayout(
                     val bottomBarTabs: @Composable RowScope.() -> Unit = {
                         tabs.forEachIndexed { index, page ->
                             val selected = pagerState.targetPage == index
-                            val tabColor = if (newBottomBarTransitionEnabled && selected) {
-                                MiuixTheme.colorScheme.primary
+                            val tabColor = if (newBottomBarTransitionEnabled) {
+                                liquidGlassBottomBarItemContentColor(index)
                             } else {
                                 MiuixTheme.colorScheme.onSurface
                             }
                             if (newBottomBarTransitionEnabled) {
                                 LiquidGlassBottomBarItem(
                                     selected = selected,
+                                    tabIndex = index,
                                     onClick = { handlePageSelected(index) },
                                     modifier = Modifier.defaultMinSize(minWidth = 76.dp)
                                 ) {
@@ -689,7 +684,6 @@ private fun MainPagerLayout(
                             },
                             tabsCount = tabs.size,
                             isLiquidEffectEnabled = liquidBottomBarEnabled,
-                            onReselectCurrent = { handlePageSelected(pagerState.targetPage) },
                             content = bottomBarTabs
                         )
                     } else {
@@ -698,7 +692,6 @@ private fun MainPagerLayout(
                             selectedIndex = { pagerState.targetPage },
                             onSelected = { index ->
                                 // Ignore mirror callbacks emitted after pager page sync.
-                                // Keep explicit tab click behavior (including reselect-to-top) unchanged.
                                 if (index != pagerState.targetPage) {
                                     handlePageSelected(index)
                                 }

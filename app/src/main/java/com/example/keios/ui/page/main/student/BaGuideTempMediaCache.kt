@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import com.tencent.mmkv.MMKV
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async

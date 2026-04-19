@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os
 
 internal data class TopInfoTopic(
     val order: Int,

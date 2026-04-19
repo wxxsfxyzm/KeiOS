@@ -8,7 +8,7 @@ import android.graphics.drawable.Icon
 import androidx.core.app.NotificationCompat
 import com.example.keios.R
 import com.example.keios.core.log.AppLogger
-import com.example.keios.mcp.McpNotificationPayload
+import com.example.keios.mcp.notification.McpNotificationPayload
 import com.xzakota.hyper.notification.focus.FocusNotification
 
 class MiIslandNotificationBuilder(

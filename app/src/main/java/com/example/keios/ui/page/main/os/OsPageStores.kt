@@ -1,97 +1,12 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os
 
-import android.app.ActivityManager
-import android.content.Context
-import android.content.pm.FeatureInfo
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import com.example.keios.ui.page.main.widget.LiquidActionBar
-import com.example.keios.ui.page.main.widget.LiquidActionItem
-import com.example.keios.ui.page.main.widget.GlassIconButton
-import com.example.keios.ui.page.main.widget.GlassSearchField
-import com.example.keios.ui.page.main.widget.MiuixExpandableSection
-import com.example.keios.ui.page.main.widget.MiuixInfoItem
-import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
-import com.example.keios.ui.page.main.widget.StatusPill
-import com.example.keios.core.system.ShizukuApiUtils
-import com.example.keios.core.system.getAllJavaPropString
-import com.example.keios.core.system.getAllSystemProperties
-import com.example.keios.core.ui.effect.getMiuixAppBarColor
-import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
-import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.example.keios.ui.page.main.os.shortcut.ShortcutIntentExtra
+import com.example.keios.ui.page.main.os.shortcut.ShortcutIntentExtraType
+import com.example.keios.ui.page.main.os.shortcut.normalizeShortcutIntentExtras
 import com.tencent.mmkv.MMKV
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
-import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Switch
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.Edit
-import top.yukonga.miuix.kmp.icon.extended.Filter
-import top.yukonga.miuix.kmp.icon.extended.GridView
-import top.yukonga.miuix.kmp.icon.extended.Info
-import top.yukonga.miuix.kmp.icon.extended.Layers
-import top.yukonga.miuix.kmp.icon.extended.ListView
-import top.yukonga.miuix.kmp.icon.extended.Lock
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Tune
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import org.json.JSONArray
 import org.json.JSONObject
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 internal object OsInfoCache {
     private const val KV_ID = "os_info_cache"
@@ -144,12 +59,54 @@ internal object OsInfoCache {
         val kv = store
         val legacyKv = legacyStore
         return CachedSections(
-            system = if (visibleSections.contains(SectionKind.SYSTEM)) decodeRows(readRaw(kv, legacyKv, KEY_OS_SYSTEM, LEGACY_KEY_SYSTEM)) else emptyList(),
-            secure = if (visibleSections.contains(SectionKind.SECURE)) decodeRows(readRaw(kv, legacyKv, KEY_OS_SECURE, LEGACY_KEY_SECURE)) else emptyList(),
-            global = if (visibleSections.contains(SectionKind.GLOBAL)) decodeRows(readRaw(kv, legacyKv, KEY_OS_GLOBAL, LEGACY_KEY_GLOBAL)) else emptyList(),
-            android = if (visibleSections.contains(SectionKind.ANDROID)) decodeRows(readRaw(kv, legacyKv, KEY_OS_ANDROID, LEGACY_KEY_ANDROID)) else emptyList(),
-            java = if (visibleSections.contains(SectionKind.JAVA)) decodeRows(readRaw(kv, legacyKv, KEY_OS_JAVA, LEGACY_KEY_JAVA)) else emptyList(),
-            linux = if (visibleSections.contains(SectionKind.LINUX)) decodeRows(readRaw(kv, legacyKv, KEY_OS_LINUX, LEGACY_KEY_LINUX)) else emptyList()
+            system = if (visibleSections.contains(SectionKind.SYSTEM)) decodeRows(
+                readRaw(
+                    kv,
+                    legacyKv,
+                    KEY_OS_SYSTEM,
+                    LEGACY_KEY_SYSTEM
+                )
+            ) else emptyList(),
+            secure = if (visibleSections.contains(SectionKind.SECURE)) decodeRows(
+                readRaw(
+                    kv,
+                    legacyKv,
+                    KEY_OS_SECURE,
+                    LEGACY_KEY_SECURE
+                )
+            ) else emptyList(),
+            global = if (visibleSections.contains(SectionKind.GLOBAL)) decodeRows(
+                readRaw(
+                    kv,
+                    legacyKv,
+                    KEY_OS_GLOBAL,
+                    LEGACY_KEY_GLOBAL
+                )
+            ) else emptyList(),
+            android = if (visibleSections.contains(SectionKind.ANDROID)) decodeRows(
+                readRaw(
+                    kv,
+                    legacyKv,
+                    KEY_OS_ANDROID,
+                    LEGACY_KEY_ANDROID
+                )
+            ) else emptyList(),
+            java = if (visibleSections.contains(SectionKind.JAVA)) decodeRows(
+                readRaw(
+                    kv,
+                    legacyKv,
+                    KEY_OS_JAVA,
+                    LEGACY_KEY_JAVA
+                )
+            ) else emptyList(),
+            linux = if (visibleSections.contains(SectionKind.LINUX)) decodeRows(
+                readRaw(
+                    kv,
+                    legacyKv,
+                    KEY_OS_LINUX,
+                    LEGACY_KEY_LINUX
+                )
+            ) else emptyList()
         )
     }
 
@@ -377,11 +334,41 @@ internal object OsUiStateStore {
                 LEGACY_KEY_GOOGLE_SYSTEM_SERVICE,
                 false
             ),
-            systemTableExpanded = readBool(kv, legacyKv, KEY_SYSTEM_TABLE, LEGACY_KEY_SYSTEM_TABLE, false),
-            secureTableExpanded = readBool(kv, legacyKv, KEY_SECURE_TABLE, LEGACY_KEY_SECURE_TABLE, false),
-            globalTableExpanded = readBool(kv, legacyKv, KEY_GLOBAL_TABLE, LEGACY_KEY_GLOBAL_TABLE, false),
-            androidPropsExpanded = readBool(kv, legacyKv, KEY_ANDROID_PROPS, LEGACY_KEY_ANDROID_PROPS, false),
-            javaPropsExpanded = readBool(kv, legacyKv, KEY_JAVA_PROPS, LEGACY_KEY_JAVA_PROPS, false),
+            systemTableExpanded = readBool(
+                kv,
+                legacyKv,
+                KEY_SYSTEM_TABLE,
+                LEGACY_KEY_SYSTEM_TABLE,
+                false
+            ),
+            secureTableExpanded = readBool(
+                kv,
+                legacyKv,
+                KEY_SECURE_TABLE,
+                LEGACY_KEY_SECURE_TABLE,
+                false
+            ),
+            globalTableExpanded = readBool(
+                kv,
+                legacyKv,
+                KEY_GLOBAL_TABLE,
+                LEGACY_KEY_GLOBAL_TABLE,
+                false
+            ),
+            androidPropsExpanded = readBool(
+                kv,
+                legacyKv,
+                KEY_ANDROID_PROPS,
+                LEGACY_KEY_ANDROID_PROPS,
+                false
+            ),
+            javaPropsExpanded = readBool(
+                kv,
+                legacyKv,
+                KEY_JAVA_PROPS,
+                LEGACY_KEY_JAVA_PROPS,
+                false
+            ),
             linuxEnvExpanded = readBool(kv, legacyKv, KEY_LINUX_ENV, LEGACY_KEY_LINUX_ENV, false),
             visibleCards = OsCardVisibilityStore.loadVisibleCards()
         )
@@ -504,18 +491,29 @@ internal object OsShortcutCardStore {
     ): OsGoogleSystemServiceConfig {
         return OsGoogleSystemServiceConfig(
             title = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_TITLE, defaults.title).orEmpty(),
-            subtitle = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_SUBTITLE, defaults.subtitle).orEmpty(),
-            appName = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_APP_NAME, defaults.appName).orEmpty(),
-            packageName = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_PACKAGE, defaults.packageName).orEmpty(),
-            className = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_CLASS, defaults.className).orEmpty(),
-            intentAction = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_ACTION, defaults.intentAction).orEmpty(),
+            subtitle = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_SUBTITLE, defaults.subtitle)
+                .orEmpty(),
+            appName = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_APP_NAME, defaults.appName)
+                .orEmpty(),
+            packageName = store.decodeString(
+                KEY_GOOGLE_SYSTEM_SERVICE_PACKAGE,
+                defaults.packageName
+            ).orEmpty(),
+            className = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_CLASS, defaults.className)
+                .orEmpty(),
+            intentAction = store.decodeString(
+                KEY_GOOGLE_SYSTEM_SERVICE_ACTION,
+                defaults.intentAction
+            ).orEmpty(),
             intentCategory = store.decodeString(
                 KEY_GOOGLE_SYSTEM_SERVICE_CATEGORY,
                 defaults.intentCategory
             ).orEmpty(),
-            intentFlags = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_FLAGS, defaults.intentFlags).orEmpty(),
+            intentFlags = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_FLAGS, defaults.intentFlags)
+                .orEmpty(),
             intentUriData = store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_URI_DATA)
-                ?: store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_DATA, defaults.intentUriData).orEmpty(),
+                ?: store.decodeString(KEY_GOOGLE_SYSTEM_SERVICE_DATA, defaults.intentUriData)
+                    .orEmpty(),
             intentMimeType = store.decodeString(
                 KEY_GOOGLE_SYSTEM_SERVICE_MIME_TYPE,
                 defaults.intentMimeType

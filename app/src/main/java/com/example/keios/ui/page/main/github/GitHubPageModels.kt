@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github
 
 import android.content.Context
 import androidx.annotation.StringRes

@@ -9,7 +9,7 @@ import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.database.StandaloneDatabaseProvider
-import com.example.keios.ui.page.main.ba.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
 import com.tencent.mmkv.MMKV
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean

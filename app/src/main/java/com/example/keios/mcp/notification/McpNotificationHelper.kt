@@ -1,5 +1,6 @@
-package com.example.keios.mcp
+package com.example.keios.mcp.notification
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -12,6 +13,7 @@ import com.example.keios.R
 import com.example.keios.core.log.AppLogger
 import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.feature.notification.NotificationActionReceiver
+import com.example.keios.mcp.service.McpKeepAliveService
 import com.example.keios.mcp.domain.notification.SessionNotifier
 import com.example.keios.mcp.framework.notification.NotificationHelper
 import com.example.keios.mcp.framework.notification.SessionNotifierImpl
@@ -157,7 +159,7 @@ object McpNotificationHelper {
         ongoing: Boolean,
         onlyAlertOnce: Boolean = true,
         notificationId: Int = KEEPALIVE_NOTIFICATION_ID,
-    ): android.app.Notification {
+    ): Notification {
         return buildForegroundNotificationResult(
             context = context,
             serverName = serverName,
@@ -183,7 +185,7 @@ object McpNotificationHelper {
         secondaryActionMode: SecondaryActionMode = SecondaryActionMode.DEFAULT,
         notificationId: Int = KEEPALIVE_NOTIFICATION_ID
     ): SessionNotifier.NotificationBuildResult {
-        val isBlueArchiveNotification = McpNotificationPayload.isBaNotificationServerName(serverName)
+        val isBlueArchiveNotification = McpNotificationPayload.Companion.isBaNotificationServerName(serverName)
         val openRequestCode = 110_100 + notificationId
         val secondaryRequestCode = 110_200 + notificationId
         val openIntent = Intent(context, MainActivity::class.java).apply {
@@ -263,9 +265,9 @@ object McpNotificationHelper {
         path: String,
         clients: Int
     ) {
-        val isBlueArchiveAp = McpNotificationPayload.isBaApServerName(serverName)
-        val isBlueArchiveCafeVisit = McpNotificationPayload.isBaCafeVisitServerName(serverName)
-        val isBlueArchiveArenaRefresh = McpNotificationPayload.isBaArenaRefreshServerName(serverName)
+        val isBlueArchiveAp = McpNotificationPayload.Companion.isBaApServerName(serverName)
+        val isBlueArchiveCafeVisit = McpNotificationPayload.Companion.isBaCafeVisitServerName(serverName)
+        val isBlueArchiveArenaRefresh = McpNotificationPayload.Companion.isBaArenaRefreshServerName(serverName)
         val isBlueArchiveNotification = isBlueArchiveAp || isBlueArchiveCafeVisit || isBlueArchiveArenaRefresh
         val runningForNotification = if (isBlueArchiveNotification) running else true
         val baNotificationId = when {
@@ -276,7 +278,7 @@ object McpNotificationHelper {
         }
         if (isBlueArchiveNotification) {
             runCatching {
-                McpKeepAliveService.startOrUpdate(
+                McpKeepAliveService.Companion.startOrUpdate(
                     context = context,
                     serverName = serverName,
                     running = running,
@@ -475,7 +477,7 @@ object McpNotificationHelper {
     private fun notifyWithResolvedDispatcher(
         context: Context,
         notificationId: Int,
-        notification: android.app.Notification,
+        notification: Notification,
         useXiaomiMagic: Boolean
     ) {
         if (useXiaomiMagic) {
@@ -502,7 +504,7 @@ object McpNotificationHelper {
     private fun notifyWithXiaomiMagic(
         context: Context,
         notificationId: Int,
-        notification: android.app.Notification
+        notification: Notification
     ) {
         val notificationManager = NotificationManagerCompat.from(context)
         val targetUid = resolveXmsfUid(context)

@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -33,7 +32,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import com.example.keios.ui.page.main.ba.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
 import top.yukonga.miuix.kmp.basic.Text
 
 class GuideVideoFullscreenActivity : ComponentActivity() {

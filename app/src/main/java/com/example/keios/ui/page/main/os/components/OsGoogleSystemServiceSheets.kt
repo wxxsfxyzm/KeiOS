@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.components
 
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +14,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
+import com.example.keios.ui.page.main.os.OsGoogleSystemServiceConfig
+import com.example.keios.ui.page.main.os.shortcut.ShortcutActivityClassOption
+import com.example.keios.ui.page.main.os.shortcut.ShortcutActivityIcon
+import com.example.keios.ui.page.main.os.shortcut.ShortcutInstalledAppOption
+import com.example.keios.ui.page.main.os.shortcut.ShortcutIntentExtra
+import com.example.keios.ui.page.main.os.shortcut.ShortcutIntentExtraType
+import com.example.keios.ui.page.main.os.shortcut.ShortcutSuggestionField
+import com.example.keios.ui.page.main.os.shortcut.ShortcutSuggestionItem
+import com.example.keios.ui.page.main.os.appLucideAddIcon
+import com.example.keios.ui.page.main.os.appLucideCloseIcon
+import com.example.keios.ui.page.main.os.appLucideConfirmIcon
+import com.example.keios.ui.page.main.os.shortcut.currentGoogleSystemServiceSuggestionFieldValue
+import com.example.keios.ui.page.main.os.shortcut.ensureEditorShortcutIntentExtras
+import com.example.keios.ui.page.main.github.AppIcon
+import com.example.keios.ui.page.main.os.shortcut.parseIntentTokenText
 import com.example.keios.ui.page.main.widget.AppDropdownSelector
 import com.example.keios.ui.page.main.widget.AppStatusPillSize
 import com.example.keios.ui.page.main.widget.GlassIconButton
@@ -32,6 +47,7 @@ import com.kyant.backdrop.backdrops.LayerBackdrop
 import java.util.Locale
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.collections.plus
 
 @Composable
 internal fun OsGoogleSystemServiceEditorSheet(

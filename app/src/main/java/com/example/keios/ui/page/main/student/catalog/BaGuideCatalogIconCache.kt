@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.LruCache
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
-import com.example.keios.ui.page.main.ba.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
 import java.io.File
 import java.security.MessageDigest
 

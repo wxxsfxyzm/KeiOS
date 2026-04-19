@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.ba
+package com.example.keios.ui.page.main.ba.support
 
 internal enum class BAInitState {
     Empty,

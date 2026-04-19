@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.IntRect
+import com.example.keios.ui.page.main.ba.support.BAInitState
+import com.example.keios.ui.page.main.ba.support.BaPageSnapshot
 
 @Stable
 internal data class BaPageUiState(

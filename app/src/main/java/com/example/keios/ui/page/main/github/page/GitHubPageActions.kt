@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.page
 
 import android.content.Context
 import android.content.Intent
@@ -7,6 +7,13 @@ import com.example.keios.core.system.AppPackageChangedEvent
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetFile
 import com.example.keios.feature.github.model.GitHubTrackedApp
+import com.example.keios.ui.page.main.github.VersionCheckUi
+import com.example.keios.ui.page.main.github.page.action.GitHubAssetActions
+import com.example.keios.ui.page.main.github.page.action.GitHubConfigActions
+import com.example.keios.ui.page.main.github.page.action.GitHubPageActionEnvironment
+import com.example.keios.ui.page.main.github.page.action.GitHubRefreshActions
+import com.example.keios.ui.page.main.github.page.action.GitHubTrackActions
+import com.example.keios.ui.page.main.github.page.action.GitHubTrackImportPreview
 import com.example.keios.ui.page.main.github.query.DownloaderOption
 import com.example.keios.ui.page.main.github.query.OnlineShareTargetOption
 import kotlinx.coroutines.CoroutineScope

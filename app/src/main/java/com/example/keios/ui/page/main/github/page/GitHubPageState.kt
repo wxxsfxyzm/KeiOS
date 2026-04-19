@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.page
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.Composable
@@ -15,9 +15,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import com.example.keios.feature.github.data.remote.GitHubReleaseAssetBundle
+import com.example.keios.feature.github.model.GitHubApiCredentialStatus
 import com.example.keios.feature.github.model.GitHubLookupConfig
+import com.example.keios.feature.github.model.GitHubStrategyBenchmarkReport
 import com.example.keios.feature.github.model.GitHubTrackedApp
 import com.example.keios.feature.github.model.InstalledAppItem
+import com.example.keios.ui.page.main.github.GitHubSortMode
+import com.example.keios.ui.page.main.github.OverviewRefreshState
+import com.example.keios.ui.page.main.github.VersionCheckUi
+import com.example.keios.ui.page.main.github.page.action.GitHubTrackImportPreview
 import com.example.keios.ui.page.main.github.share.GitHubPendingShareImportAttachCandidate
 import com.example.keios.ui.page.main.github.share.GitHubPendingShareImportTrack
 import com.example.keios.ui.page.main.github.share.GitHubShareImportPreview
@@ -74,10 +80,10 @@ internal class GitHubPageState(
     var showApiTokenPlainText by mutableStateOf(false)
     var strategyBenchmarkRunning by mutableStateOf(false)
     var strategyBenchmarkError by mutableStateOf<String?>(null)
-    var strategyBenchmarkReport by mutableStateOf<com.example.keios.feature.github.model.GitHubStrategyBenchmarkReport?>(null)
+    var strategyBenchmarkReport by mutableStateOf<GitHubStrategyBenchmarkReport?>(null)
     var credentialCheckRunning by mutableStateOf(false)
     var credentialCheckError by mutableStateOf<String?>(null)
-    var credentialCheckStatus by mutableStateOf<com.example.keios.feature.github.model.GitHubApiCredentialStatus?>(null)
+    var credentialCheckStatus by mutableStateOf<GitHubApiCredentialStatus?>(null)
     var recommendedTokenGuideExpanded by mutableStateOf(false)
     var assetSourceSignature by mutableStateOf("")
     var refreshAllJob by mutableStateOf<Job?>(null)

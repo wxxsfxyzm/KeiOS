@@ -1,6 +1,15 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.components
 
 import androidx.compose.runtime.Composable
+import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCard
+import com.example.keios.ui.page.main.os.OsGoogleSystemServiceConfig
+import com.example.keios.ui.page.main.os.OsSectionCard
+import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
+import com.example.keios.ui.page.main.os.shortcut.ShortcutActivityClassOption
+import com.example.keios.ui.page.main.os.shortcut.ShortcutInstalledAppOption
+import com.example.keios.ui.page.main.os.shortcut.ShortcutSuggestionField
+import com.example.keios.ui.page.main.os.shortcut.ShortcutSuggestionItem
+import com.example.keios.ui.page.main.os.isCardVisible
 import com.kyant.backdrop.backdrops.LayerBackdrop
 
 @Composable

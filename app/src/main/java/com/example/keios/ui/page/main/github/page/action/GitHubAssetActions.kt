@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.page.action
 
 import android.app.DownloadManager
 import android.content.Context
@@ -14,7 +14,9 @@ import com.example.keios.feature.github.data.remote.GitHubReleaseAssetRepository
 import com.example.keios.feature.github.data.remote.GitHubVersionUtils
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.feature.github.model.GitHubTrackedApp
+import com.example.keios.ui.page.main.github.VersionCheckUi
 import com.example.keios.ui.page.main.github.asset.apkAssetTarget
+import com.example.keios.ui.page.main.github.statusActionUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

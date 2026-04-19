@@ -1,8 +1,11 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
 import com.example.keios.R
+import com.example.keios.ui.page.main.os.components.OsOverviewMetric
+import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
+import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCard
 import com.example.keios.ui.page.main.widget.StatusLabelText
 
 internal data class OsActivityOverviewStats(

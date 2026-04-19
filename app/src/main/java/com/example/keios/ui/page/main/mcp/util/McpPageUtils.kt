@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.mcp.util
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -6,7 +6,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.example.keios.R
-import com.example.keios.mcp.McpServerUiState
+import com.example.keios.mcp.server.McpServerUiState
 import org.json.JSONArray
 import org.json.JSONObject
 

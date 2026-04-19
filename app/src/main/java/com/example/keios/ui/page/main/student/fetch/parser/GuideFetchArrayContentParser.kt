@@ -1,7 +1,28 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.fetch.parser
 
+import com.example.keios.ui.page.main.student.BaGuideGalleryItem
+import com.example.keios.ui.page.main.student.BaGuideRow
+import com.example.keios.ui.page.main.student.BaGuideVoiceEntry
+import com.example.keios.ui.page.main.student.fetch.GuideDetailExtract
+import com.example.keios.ui.page.main.student.fetch.canonicalVoiceLanguageLabel
+import com.example.keios.ui.page.main.student.fetch.deriveVoiceCvLegacyFields
+import com.example.keios.ui.page.main.student.fetch.extractAudioUrlsFromAny
+import com.example.keios.ui.page.main.student.fetch.extractImageUrlsFromAny
+import com.example.keios.ui.page.main.student.fetch.extractVideoUrlsFromAny
+import com.example.keios.ui.page.main.student.fetch.extractWebUrlsFromAny
+import com.example.keios.ui.page.main.student.fetch.isAudioUrl
+import com.example.keios.ui.page.main.student.fetch.isMeaningfulGuideRowValue
+import com.example.keios.ui.page.main.student.fetch.looksLikeImageUrl
+import com.example.keios.ui.page.main.student.fetch.mergeVoiceLanguageHeaders
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeImageUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeMediaUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeVoiceEntriesWithHeaderCount
+import com.example.keios.ui.page.main.student.fetch.sortVoiceLinePairsForDisplay
+import com.example.keios.ui.page.main.student.fetch.stripHtml
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.collections.plusAssign
 
 internal data class ArrayVoiceEntryAccumulator(
     val section: String,
@@ -403,7 +424,7 @@ internal fun parseGuideDetailFromArrayContentJson(raw: String, sourceUrl: String
                     audioUrls = audioUrls,
                     audioUrl = audioUrls.firstOrNull { it.isNotBlank() }
                         ?: acc.audioByLanguage.values.firstOrNull { it.isNotBlank() }
-                        .orEmpty()
+                            .orEmpty()
                 )
             }
             .filter { entry ->

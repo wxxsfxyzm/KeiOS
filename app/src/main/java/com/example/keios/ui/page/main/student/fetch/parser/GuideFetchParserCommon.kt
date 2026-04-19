@@ -1,5 +1,12 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.fetch.parser
 
+import com.example.keios.ui.page.main.student.BaGuideGalleryItem
+import com.example.keios.ui.page.main.student.GuideTab
+import com.example.keios.ui.page.main.student.fetch.canonicalVoiceLanguageLabel
+import com.example.keios.ui.page.main.student.isExpressionGalleryItem
+import com.example.keios.ui.page.main.student.fetch.looksLikeImageUrl
+import com.example.keios.ui.page.main.student.fetch.normalizeImageUrl
+import com.example.keios.ui.page.main.student.fetch.stripHtml
 import org.json.JSONArray
 import org.json.JSONObject
 

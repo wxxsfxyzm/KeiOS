@@ -1,9 +1,11 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.fetch
 
 import android.net.Uri
-import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
+import com.example.keios.ui.page.main.student.BaGuideGalleryItem
+import com.example.keios.ui.page.main.student.BaGuideRow
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.collections.plusAssign
 
 internal fun extractImageUrlsFromHtml(sourceUrl: String, raw: String): List<String> {
     if (raw.isBlank()) return emptyList()
@@ -585,7 +587,9 @@ internal fun parseSimulateRowsFromBaseData(
                 val slotIcon = supplementIcons.equipmentSlotIcons[currentEquipmentSlot].orEmpty()
                 if (slotIcon.isNotBlank() && patched.imageUrl.isBlank()) {
                     val keyAsMediaUrl = normalizeMediaUrl(sourceUrl, patched.key)
-                    val keyLooksLikeMedia = looksLikeImageUrl(keyAsMediaUrl) || looksLikeVideoUrl(keyAsMediaUrl)
+                    val keyLooksLikeMedia = looksLikeImageUrl(keyAsMediaUrl) || looksLikeVideoUrl(
+                        keyAsMediaUrl
+                    )
                     val shouldAttachSlotIcon =
                         (slot.isNotBlank() || !isTopDataStatKey(patched.key)) &&
                             !keyLooksLikeMedia

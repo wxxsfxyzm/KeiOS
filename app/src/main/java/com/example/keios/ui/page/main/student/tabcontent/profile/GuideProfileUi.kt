@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.tabcontent.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,9 +26,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.student.BaGuideRow
+import com.example.keios.ui.page.main.student.GuideRemoteIcon
+import com.example.keios.ui.page.main.student.GuideRemoteImage
+import com.example.keios.ui.page.main.student.buildGuideTabCopyPayload
+import com.example.keios.ui.page.main.student.extractGuideWebLinks
+import com.example.keios.ui.page.main.student.guideTabCopyable
+import com.example.keios.ui.page.main.student.rememberGuideTabCopyAction
+import com.example.keios.ui.page.main.student.stripGuideWebLinks
 import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
-import com.example.keios.ui.page.main.widget.buildTextCopyPayload
 import com.example.keios.ui.page.main.widget.copyModeAwareRow
 import com.kyant.capsule.ContinuousCapsule
 import top.yukonga.miuix.kmp.basic.Text
@@ -70,8 +78,13 @@ internal fun GuideProfileInfoItem(
 ) {
     val displayKey = key.ifBlank { "信息" }
     val displayValue = value.ifBlank { "-" }
-    val rowCopyAction = rememberGuideTabCopyAction(buildGuideTabCopyPayload(displayKey, displayValue))
-    val showCapsule = preferCapsule && shouldUseProfileValueCapsule(displayKey, displayValue, onClick)
+    val rowCopyAction =
+        rememberGuideTabCopyAction(buildGuideTabCopyPayload(displayKey, displayValue))
+    val showCapsule = preferCapsule && shouldUseProfileValueCapsule(
+        displayKey,
+        displayValue,
+        onClick
+    )
     CopyModeSelectionContainer {
         BoxWithConstraints(
             modifier = Modifier
@@ -171,7 +184,7 @@ internal fun GuideProfileValueCapsule(
 internal fun GuideProfileRowsSection(
     rows: List<BaGuideRow>,
     emptyText: String,
-    imageHeight: androidx.compose.ui.unit.Dp = 96.dp
+    imageHeight: Dp = 96.dp
 ) {
     if (rows.isEmpty()) {
         Text(emptyText, color = MiuixTheme.colorScheme.onBackgroundVariant)
@@ -294,7 +307,8 @@ internal fun GuideGalleryRelatedLinkRows(
                             )
                         }
                         links.forEach { link ->
-                            val linkCopyAction = rememberGuideTabCopyAction(buildGuideTabCopyPayload(keyText, link))
+                            val linkCopyAction =
+                                rememberGuideTabCopyAction(buildGuideTabCopyPayload(keyText, link))
                             Text(
                                 text = link,
                                 color = Color(0xFF3B82F6),

@@ -1,10 +1,11 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.components
 
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -22,6 +24,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
+import com.example.keios.ui.page.main.os.InfoRow
+import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCard
+import com.example.keios.ui.page.main.os.OsCardExportAction
+import com.example.keios.ui.page.main.os.OsSectionCard
+import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
+import com.example.keios.ui.page.main.os.SectionKind
+import com.example.keios.ui.page.main.os.SystemOverviewState
+import com.example.keios.ui.page.main.os.appLucideAddIcon
+import com.example.keios.ui.page.main.github.GitHubOverviewMetricItem
+import com.example.keios.ui.page.main.os.osLucideEnterIcon
 import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppOverviewCard
 import com.example.keios.ui.page.main.widget.AppPageLazyColumn
@@ -40,7 +52,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 internal fun OsPageMainList(
     context: Context,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyListState,
     innerPadding: PaddingValues,
     searchBarScrollConnection: NestedScrollConnection,
     scrollBehaviorConnection: NestedScrollConnection,
@@ -155,7 +167,7 @@ internal fun OsPageMainList(
                         )
                     }
                 ) {
-                    androidx.compose.foundation.layout.Column(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.denseSectionGap)
                     ) {
@@ -168,7 +180,8 @@ internal fun OsPageMainList(
                                     label = pair[0].label,
                                     value = pair[0].value,
                                     titleColor = if (isDark) Color.White else MiuixTheme.colorScheme.onBackgroundVariant,
-                                    valueColor = pair[0].valueColor ?: MiuixTheme.colorScheme.onBackground,
+                                    valueColor = pair[0].valueColor
+                                        ?: MiuixTheme.colorScheme.onBackground,
                                     labelMaxLines = 1,
                                     valueMaxLines = 1,
                                     labelWeight = 0.56f,
@@ -180,7 +193,8 @@ internal fun OsPageMainList(
                                         label = pair[1].label,
                                         value = pair[1].value,
                                         titleColor = if (isDark) Color.White else MiuixTheme.colorScheme.onBackgroundVariant,
-                                        valueColor = pair[1].valueColor ?: MiuixTheme.colorScheme.onBackground,
+                                        valueColor = pair[1].valueColor
+                                            ?: MiuixTheme.colorScheme.onBackground,
                                         labelMaxLines = 1,
                                         valueMaxLines = 1,
                                         labelWeight = 0.56f,

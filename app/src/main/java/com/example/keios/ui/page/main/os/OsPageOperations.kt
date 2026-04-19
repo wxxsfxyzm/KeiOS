@@ -1,8 +1,12 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os
 
 import android.content.Context
 import android.widget.Toast
 import com.example.keios.core.system.ShizukuApiUtils
+import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
+import com.example.keios.ui.page.main.os.shell.OsShellCommandCardStore
+import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCard
+import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCardStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred

@@ -16,10 +16,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -38,7 +37,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -65,7 +63,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -97,6 +94,7 @@ import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.LiquidGlassBottomBar
+import com.example.keios.ui.page.main.widget.LiquidGlassBottomBarItem
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionBarPopupAnchors
 import com.example.keios.ui.page.main.widget.LiquidActionItem
@@ -109,14 +107,18 @@ import com.example.keios.ui.page.main.widget.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.example.keios.ui.page.main.widget.UiPerformanceBudget
+import com.example.keios.ui.page.main.widget.liquidGlassBottomBarItemContentColor
 import com.example.keios.ui.page.main.widget.resolvedMotionDuration
 import com.example.keios.core.prefs.UiPrefs
-import com.example.keios.ui.page.main.ba.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
+import com.example.keios.ui.page.main.os.appLucideBackIcon
+import com.example.keios.ui.page.main.os.appLucideRefreshIcon
+import com.example.keios.ui.page.main.os.appLucideSortIcon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -468,14 +470,17 @@ fun BaGuideCatalogPage(
                     )
                     val bottomBarTabs: @Composable RowScope.() -> Unit = {
                         tabs.forEachIndexed { index, tab ->
-                            FloatingBottomBarItem(
-                                onClick = { selectCatalogTab(index) },
-                                modifier = Modifier.defaultMinSize(minWidth = 76.dp)
-                            ) {
+                            val selected = pagerState.targetPage == index
+                            val tabColor = if (newBottomBarTransitionEnabled) {
+                                liquidGlassBottomBarItemContentColor(index)
+                            } else {
+                                MiuixTheme.colorScheme.onSurface
+                            }
+                            val tabContent: @Composable ColumnScope.() -> Unit = {
                                 Icon(
                                     painter = painterResource(id = tab.iconRes),
                                     contentDescription = tab.label,
-                                    tint = MiuixTheme.colorScheme.onSurface,
+                                    tint = tabColor,
                                     modifier = Modifier
                                         .size(20.dp)
                                         .graphicsLayer {
@@ -487,10 +492,25 @@ fun BaGuideCatalogPage(
                                     text = tab.label,
                                     fontSize = 11.sp,
                                     lineHeight = 14.sp,
-                                    color = MiuixTheme.colorScheme.onSurface,
+                                    color = tabColor,
                                     maxLines = 1,
                                     softWrap = false,
                                     overflow = TextOverflow.Visible
+                                )
+                            }
+                            if (newBottomBarTransitionEnabled) {
+                                LiquidGlassBottomBarItem(
+                                    selected = selected,
+                                    tabIndex = index,
+                                    onClick = { selectCatalogTab(index) },
+                                    modifier = Modifier.defaultMinSize(minWidth = 76.dp),
+                                    content = tabContent
+                                )
+                            } else {
+                                FloatingBottomBarItem(
+                                    onClick = { selectCatalogTab(index) },
+                                    modifier = Modifier.defaultMinSize(minWidth = 76.dp),
+                                    content = tabContent
                                 )
                             }
                         }

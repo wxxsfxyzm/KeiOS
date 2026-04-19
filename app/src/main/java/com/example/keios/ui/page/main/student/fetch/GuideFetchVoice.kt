@@ -1,9 +1,8 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.fetch
 
-import android.net.Uri
-import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
+import com.example.keios.ui.page.main.student.BaGuideVoiceEntry
 import org.json.JSONArray
-import org.json.JSONObject
+import kotlin.collections.plusAssign
 
 internal fun normalizeVoiceLanguageLabelRaw(raw: String): String {
     return stripHtml(raw)

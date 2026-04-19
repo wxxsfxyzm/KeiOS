@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.tabcontent.render
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.student.BaStudentGuideInfo
+import com.example.keios.ui.page.main.student.GuideRemoteImage
+import com.example.keios.ui.page.main.student.buildCombatMetaItems
+import com.example.keios.ui.page.main.student.buildProfileMetaItems
+import com.example.keios.ui.page.main.student.isNpcSatelliteGuideSource
+import com.example.keios.ui.page.main.student.section.GuideCombatMetaTile
+import com.example.keios.ui.page.main.student.section.GuideProfileMetaLine
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text

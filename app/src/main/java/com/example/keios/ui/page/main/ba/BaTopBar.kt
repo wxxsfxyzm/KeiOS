@@ -5,10 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.example.keios.R
-import com.example.keios.ui.page.main.appLucideConfigIcon
-import com.example.keios.ui.page.main.appLucideEditIcon
-import com.example.keios.ui.page.main.appLucideRefreshIcon
-import com.example.keios.ui.page.main.osLucideCopyIcon
+import com.example.keios.ui.page.main.os.appLucideConfigIcon
+import com.example.keios.ui.page.main.os.appLucideEditIcon
+import com.example.keios.ui.page.main.os.appLucideRefreshIcon
+import com.example.keios.ui.page.main.ba.support.BaCalendarRefreshIntervalOption
+import com.example.keios.ui.page.main.os.osLucideCopyIcon
 import com.example.keios.ui.page.main.widget.AppTopBarSection
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionBarPopupAnchors

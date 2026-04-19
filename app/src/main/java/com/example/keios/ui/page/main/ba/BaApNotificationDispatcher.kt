@@ -2,9 +2,9 @@ package com.example.keios.ui.page.main.ba
 
 import android.content.Context
 import android.content.pm.PackageManager
-import com.example.keios.mcp.McpKeepAliveService
-import com.example.keios.mcp.McpNotificationHelper
-import com.example.keios.mcp.McpNotificationPayload
+import com.example.keios.mcp.service.McpKeepAliveService
+import com.example.keios.mcp.notification.McpNotificationHelper
+import com.example.keios.mcp.notification.McpNotificationPayload
 
 internal object BaApNotificationDispatcher {
     fun send(

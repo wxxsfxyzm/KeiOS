@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.mcp
 
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -35,10 +35,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
-import com.example.keios.mcp.McpServerManager
+import com.example.keios.mcp.server.McpServerManager
 import com.example.keios.ui.page.main.widget.AppPageLazyColumn
 import com.example.keios.ui.page.main.widget.AppPageScaffold
-import com.example.keios.ui.page.main.widget.AppTopBarSection
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.LiquidActionBar
@@ -50,6 +49,24 @@ import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
+import com.example.keios.ui.page.main.os.appLucideEditIcon
+import com.example.keios.ui.page.main.os.appLucideNotesIcon
+import com.example.keios.ui.page.main.os.appLucidePauseIcon
+import com.example.keios.ui.page.main.os.appLucideRefreshIcon
+import com.example.keios.ui.page.main.mcp.dialog.McpResetConfigDialog
+import com.example.keios.ui.page.main.mcp.dialog.McpResetTokenDialog
+import com.example.keios.ui.page.main.mcp.model.McpOverviewMetric
+import com.example.keios.ui.page.main.mcp.model.toMcpTokenPreview
+import com.example.keios.ui.page.main.mcp.section.McpLogsSection
+import com.example.keios.ui.page.main.mcp.section.McpOverviewCardSection
+import com.example.keios.ui.page.main.mcp.section.McpServiceControlSection
+import com.example.keios.ui.page.main.mcp.section.McpToolsSection
+import com.example.keios.ui.page.main.mcp.sheet.McpEditServiceSheet
+import com.example.keios.ui.page.main.mcp.util.buildMcpLogsExportJson
+import com.example.keios.ui.page.main.mcp.util.copyToClipboard
+import com.example.keios.ui.page.main.mcp.util.formatMcpUptimeText
+import com.example.keios.ui.page.main.os.osLucideCopyIcon
+import com.example.keios.ui.page.main.os.osLucideRunIcon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

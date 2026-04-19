@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.mcp.model
 
 import androidx.compose.ui.graphics.Color
 

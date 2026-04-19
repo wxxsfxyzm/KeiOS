@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.components
 
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
@@ -9,6 +9,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.keios.ui.page.main.os.OsSectionCard
+import com.example.keios.ui.page.main.os.appLucideAppWindowIcon
+import com.example.keios.ui.page.main.os.appLucideConfigIcon
+import com.example.keios.ui.page.main.os.appLucideFilterIcon
+import com.example.keios.ui.page.main.os.appLucideInfoIcon
+import com.example.keios.ui.page.main.os.appLucideLayersIcon
+import com.example.keios.ui.page.main.os.appLucideListIcon
+import com.example.keios.ui.page.main.os.appLucideLockIcon
+import com.example.keios.ui.page.main.os.appLucidePackageIcon
+import com.example.keios.ui.page.main.os.osLucideConsoleIcon
 import com.example.keios.ui.page.main.widget.AppInfoRow
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm

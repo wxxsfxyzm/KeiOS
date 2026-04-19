@@ -1,5 +1,6 @@
 package com.example.keios.ui.page.main.student
 
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import com.tencent.mmkv.MMKV
 import org.json.JSONArray
 import org.json.JSONObject

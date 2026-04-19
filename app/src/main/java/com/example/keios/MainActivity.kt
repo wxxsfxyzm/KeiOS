@@ -26,9 +26,9 @@ import com.example.keios.core.prefs.AppThemeMode
 import com.example.keios.core.prefs.UiPrefs
 import com.example.keios.core.perf.AppJankMonitor
 import com.example.keios.core.system.ShizukuApiUtils
-import com.example.keios.mcp.LocalMcpService
-import com.example.keios.mcp.McpNotificationHelper
-import com.example.keios.mcp.McpServerManager
+import com.example.keios.mcp.server.LocalMcpService
+import com.example.keios.mcp.notification.McpNotificationHelper
+import com.example.keios.mcp.server.McpServerManager
 import com.example.keios.ui.page.main.MainScreen
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme

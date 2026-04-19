@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.ba
+package com.example.keios.ui.page.main.ba.card
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -10,15 +10,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
+import com.example.keios.ui.page.main.ba.BaGlassCard
+import com.example.keios.ui.page.main.ba.BaGlassMetricPanel
+import com.example.keios.ui.page.main.ba.support.calculateInviteTicketAvailableMs
+import com.example.keios.ui.page.main.ba.support.calculateNextHeadpatAvailableMs
+import com.example.keios.ui.page.main.ba.support.formatBaDateTimeNoSeconds
+import com.example.keios.ui.page.main.ba.support.formatBaRemainingTime
+import com.example.keios.ui.page.main.ba.support.nextArenaRefreshMs
+import com.example.keios.ui.page.main.ba.support.nextCafeStudentRefreshMs
 import com.example.keios.ui.page.main.widget.AppDropdownSelector
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassVariant
 import com.kyant.backdrop.Backdrop
-import top.yukonga.miuix.kmp.basic.Text
 
 @Composable
 internal fun BaCafeCard(
@@ -47,7 +53,10 @@ internal fun BaCafeCard(
     val nextHeadpatAt = calculateNextHeadpatAvailableMs(coffeeHeadpatMs, serverIndex)
     val nextStudentRefreshAt = nextCafeStudentRefreshMs(uiNowMs, serverIndex)
     val nextArenaRefreshAt = nextArenaRefreshMs(uiNowMs, serverIndex)
-    val nextHeadpatText = if (coffeeHeadpatMs <= 0L || nextHeadpatAt <= uiNowMs) "0s" else formatBaRemainingTime(nextHeadpatAt, uiNowMs)
+    val nextHeadpatText = if (coffeeHeadpatMs <= 0L || nextHeadpatAt <= uiNowMs) "0s" else formatBaRemainingTime(
+        nextHeadpatAt,
+        uiNowMs
+    )
     val nextStudentRefreshText = formatBaRemainingTime(nextStudentRefreshAt, uiNowMs)
     val nextArenaRefreshText = formatBaRemainingTime(nextArenaRefreshAt, uiNowMs)
     val invite1AvailableAt = calculateInviteTicketAvailableMs(coffeeInvite1UsedMs)
@@ -58,8 +67,10 @@ internal fun BaCafeCard(
     val invite2Color = accentPink
     val invite1Text = if (invite1Ready) "0s" else formatBaRemainingTime(invite1AvailableAt, uiNowMs)
     val invite2Text = if (invite2Ready) "0s" else formatBaRemainingTime(invite2AvailableAt, uiNowMs)
-    val invite1TimeText = formatBaDateTimeNoSeconds(if (invite1Ready) uiNowMs else invite1AvailableAt)
-    val invite2TimeText = formatBaDateTimeNoSeconds(if (invite2Ready) uiNowMs else invite2AvailableAt)
+    val invite1TimeText =
+        formatBaDateTimeNoSeconds(if (invite1Ready) uiNowMs else invite1AvailableAt)
+    val invite2TimeText =
+        formatBaDateTimeNoSeconds(if (invite2Ready) uiNowMs else invite2AvailableAt)
     val headpatTimeText = if (coffeeHeadpatMs > 0L) formatBaDateTimeNoSeconds(coffeeHeadpatMs) else "-"
 
     BaGlassCard(

@@ -74,7 +74,7 @@
         </activity>
 
         <activity
-            android:name=".ui.page.main.OsShellRunnerActivity"
+            android:name=".ui.page.main.os.shell.OsShellRunnerActivity"
             android:configChanges="keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:exported="false" />
 
@@ -91,7 +91,7 @@
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
         <service
-            android:name=".mcp.McpKeepAliveService"
+            android:name=".mcp.service.McpKeepAliveService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">

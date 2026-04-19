@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.page.action
 
 import android.content.Context
 import android.widget.Toast
@@ -6,6 +6,7 @@ import androidx.annotation.StringRes
 import com.example.keios.core.background.AppBackgroundScheduler
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.data.local.GitHubTrackStoreSignals
+import com.example.keios.ui.page.main.github.page.GitHubPageState
 import com.example.keios.ui.page.main.github.query.DownloaderOption
 import kotlinx.coroutines.CoroutineScope
 

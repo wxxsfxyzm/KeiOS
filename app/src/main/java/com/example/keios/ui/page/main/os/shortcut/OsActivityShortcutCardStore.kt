@@ -1,5 +1,7 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.shortcut
 
+import com.example.keios.ui.page.main.os.OsGoogleSystemServiceConfig
+import com.example.keios.ui.page.main.os.OsShortcutCardStore
 import com.tencent.mmkv.MMKV
 import org.json.JSONArray
 import org.json.JSONObject
@@ -147,7 +149,8 @@ internal object OsActivityShortcutCardStore {
                     )
                     add(
                         OsActivityShortcutCard(
-                            id = item.optString(KEY_ID).trim().ifBlank { newOsActivityShortcutCardId() },
+                            id = item.optString(KEY_ID).trim()
+                                .ifBlank { newOsActivityShortcutCardId() },
                             visible = item.optBoolean(KEY_VISIBLE, true),
                             isBuiltInSample = item.optBoolean(KEY_IS_BUILT_IN_SAMPLE, false),
                             config = normalizeActivityShortcutConfig(config, defaults)
@@ -181,7 +184,11 @@ internal object OsActivityShortcutCardStore {
                 add(
                     ShortcutIntentExtra(
                         key = item.optString(KEY_EXTRA_KEY),
-                        type = ShortcutIntentExtraType.fromRaw(item.optString(KEY_EXTRA_TYPE)),
+                        type = ShortcutIntentExtraType.Companion.fromRaw(
+                            item.optString(
+                                KEY_EXTRA_TYPE
+                            )
+                        ),
                         value = item.optString(KEY_EXTRA_VALUE)
                     )
                 )

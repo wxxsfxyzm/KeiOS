@@ -1,4 +1,7 @@
-package com.example.keios.ui.page.main.student
+package com.example.keios.ui.page.main.student.fetch
+
+import com.example.keios.ui.page.main.student.fetch.parser.parseGuideDetailFromArrayContentJson
+import com.example.keios.ui.page.main.student.fetch.parser.parseGuideDetailFromObjectContentJson
 
 internal fun parseGuideDetailFromContentJson(raw: String, sourceUrl: String): GuideDetailExtract {
     if (raw.isBlank()) return GuideDetailExtract()

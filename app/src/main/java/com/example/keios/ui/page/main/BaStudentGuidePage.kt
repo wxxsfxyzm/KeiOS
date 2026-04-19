@@ -21,6 +21,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -34,7 +35,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -71,39 +71,20 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.keios.R
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
-import com.example.keios.ui.page.main.ba.BASettingsStore
+import com.example.keios.ui.page.main.ba.support.BASettingsStore
 import com.example.keios.ui.page.main.student.BaStudentGuideInfo
 import com.example.keios.ui.page.main.student.BaGuideGalleryItem
 import com.example.keios.ui.page.main.student.BaGuideTempMediaCache
 import com.example.keios.ui.page.main.student.BaStudentGuideStore
 import com.example.keios.ui.page.main.student.createGameKeeMediaSourceFactory
 import com.example.keios.ui.page.main.student.GuideBottomTab
-import com.example.keios.ui.page.main.student.GuideTab
-import com.example.keios.ui.page.main.student.GuideCombatMetaTile
-import com.example.keios.ui.page.main.student.GuideGalleryCardItem
-import com.example.keios.ui.page.main.student.GuideGalleryExpressionCardItem
-import com.example.keios.ui.page.main.student.GuideGalleryUnlockLevelCardItem
-import com.example.keios.ui.page.main.student.GuideGalleryVideoGroupCardItem
-import com.example.keios.ui.page.main.student.GuideProfileMetaLine
-import com.example.keios.ui.page.main.student.GuideRemoteImage
-import com.example.keios.ui.page.main.student.GuideRowsSection
-import com.example.keios.ui.page.main.student.GuideSkillCardItem
-import com.example.keios.ui.page.main.student.GuideVoiceEntryCard
-import com.example.keios.ui.page.main.student.GuideWeaponCardItem
-import com.example.keios.ui.page.main.student.buildCombatMetaItems
-import com.example.keios.ui.page.main.student.buildProfileMetaItems
 import com.example.keios.ui.page.main.student.fetchGuideInfo
-import com.example.keios.ui.page.main.student.growthRowsForDisplay
 import com.example.keios.ui.page.main.student.hasRenderableGalleryMedia
 import com.example.keios.ui.page.main.student.isMemoryHallFileGalleryItem
 import com.example.keios.ui.page.main.student.isRenderableGalleryStaticImageUrl
-import com.example.keios.ui.page.main.student.normalizeGuideUrl
-import com.example.keios.ui.page.main.student.extractGuideContentIdFromUrl
-import com.example.keios.ui.page.main.student.profileRowsForDisplay
-import com.example.keios.ui.page.main.student.renderBaStudentGuideTabContent
-import com.example.keios.ui.page.main.student.shouldHideMovedHeaderRow
-import com.example.keios.ui.page.main.student.skillCardsForDisplay
-import com.example.keios.ui.page.main.student.weaponCardForDisplay
+import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
+import com.example.keios.ui.page.main.student.fetch.extractGuideContentIdFromUrl
+import com.example.keios.ui.page.main.student.tabcontent.renderBaStudentGuideTabContent
 import com.example.keios.ui.page.main.student.clearGuideBgmLoopScope
 import com.example.keios.ui.page.main.student.clearGuideBgmPlaybackScope
 import com.example.keios.ui.perf.ReportPagerPerformanceState
@@ -113,16 +94,20 @@ import com.example.keios.ui.page.main.widget.FloatingBottomBar
 import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.LiquidGlassBottomBar
+import com.example.keios.ui.page.main.widget.LiquidGlassBottomBarItem
 import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.example.keios.ui.page.main.widget.LocalTransitionAnimationsEnabled
-import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.example.keios.ui.page.main.widget.appFloatingEnter
 import com.example.keios.ui.page.main.widget.appFloatingExit
+import com.example.keios.ui.page.main.widget.liquidGlassBottomBarItemContentColor
 import com.example.keios.core.prefs.UiPrefs
 import com.example.keios.ui.page.main.widget.resolvedMotionDuration
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
+import com.example.keios.ui.page.main.os.appLucideBackIcon
+import com.example.keios.ui.page.main.os.appLucideRefreshIcon
+import com.example.keios.ui.page.main.os.appLucideShareIcon
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -1090,10 +1075,13 @@ fun BaStudentGuidePage(
                         )
                     val bottomBarTabs: @Composable RowScope.() -> Unit = {
                         bottomTabs.forEachIndexed { index, tab ->
-                            FloatingBottomBarItem(
-                                onClick = { selectBottomTab(index) },
-                                modifier = Modifier.defaultMinSize(minWidth = 76.dp)
-                            ) {
+                            val selected = pagerState.targetPage == index
+                            val tabColor = if (newBottomBarTransitionEnabled) {
+                                liquidGlassBottomBarItemContentColor(index)
+                            } else {
+                                MiuixTheme.colorScheme.onSurface
+                            }
+                            val tabContent: @Composable ColumnScope.() -> Unit = {
                                 val tabIconModifier = Modifier
                                     .size(20.dp)
                                     .graphicsLayer {
@@ -1107,7 +1095,7 @@ fun BaStudentGuidePage(
                                         painter = painterResource(id = tab.localLogoRes),
                                         contentDescription = tab.label,
                                         tint = if (useThemeTintForLocalLogo) {
-                                            MiuixTheme.colorScheme.onSurface
+                                            tabColor
                                         } else {
                                             Color.Unspecified
                                         },
@@ -1117,7 +1105,7 @@ fun BaStudentGuidePage(
                                     Icon(
                                         imageVector = tab.icon,
                                         contentDescription = tab.label,
-                                        tint = MiuixTheme.colorScheme.onSurface,
+                                        tint = tabColor,
                                         modifier = tabIconModifier
                                     )
                                 }
@@ -1125,10 +1113,25 @@ fun BaStudentGuidePage(
                                     text = tab.label,
                                     fontSize = 11.sp,
                                     lineHeight = 14.sp,
-                                    color = MiuixTheme.colorScheme.onSurface,
+                                    color = tabColor,
                                     maxLines = 1,
                                     softWrap = false,
                                     overflow = TextOverflow.Visible
+                                )
+                            }
+                            if (newBottomBarTransitionEnabled) {
+                                LiquidGlassBottomBarItem(
+                                    selected = selected,
+                                    tabIndex = index,
+                                    onClick = { selectBottomTab(index) },
+                                    modifier = Modifier.defaultMinSize(minWidth = 76.dp),
+                                    content = tabContent
+                                )
+                            } else {
+                                FloatingBottomBarItem(
+                                    onClick = { selectBottomTab(index) },
+                                    modifier = Modifier.defaultMinSize(minWidth = 76.dp),
+                                    content = tabContent
                                 )
                             }
                         }

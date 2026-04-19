@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.shell
 
 import android.app.Activity
 import android.content.ClipData
@@ -13,10 +13,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -33,18 +32,27 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.core.prefs.AppThemeMode
 import com.example.keios.core.prefs.UiPrefs
 import com.example.keios.core.system.ShizukuApiUtils
+import com.example.keios.ui.page.main.os.appLucideBackIcon
+import com.example.keios.ui.page.main.os.appLucideCloseIcon
+import com.example.keios.ui.page.main.os.appLucideConfirmIcon
+import com.example.keios.ui.page.main.os.osLucideClearAllIcon
+import com.example.keios.ui.page.main.os.osLucideClearIcon
+import com.example.keios.ui.page.main.os.osLucideCopyIcon
+import com.example.keios.ui.page.main.os.osLucideFormatIcon
+import com.example.keios.ui.page.main.os.osLucideRunIcon
+import com.example.keios.ui.page.main.os.osLucideSaveIcon
+import com.example.keios.ui.page.main.os.osLucideSettingsIcon
+import com.example.keios.ui.page.main.os.osLucideStopIcon
 import com.example.keios.ui.page.main.widget.AppCardHeader
 import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppPageLazyColumn
@@ -199,7 +207,7 @@ private fun OsShellRunnerPage(
     val outputCopiedToast = stringResource(R.string.os_shell_toast_output_copied)
     val outputCopyEmptyToast = stringResource(R.string.os_shell_toast_output_empty)
     val clearAllToast = stringResource(R.string.os_shell_toast_cleared_all)
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = isSystemInDarkTheme()
     val shellCommandAccentColor = if (isDark) Color(0xFF7AB8FF) else Color(0xFF2563EB)
     val shellSuccessAccentColor = if (isDark) Color(0xFF7EE7A8) else Color(0xFF15803D)
     val shellStoppedAccentColor = if (isDark) Color(0xFFFF9E9E) else Color(0xFFDC2626)

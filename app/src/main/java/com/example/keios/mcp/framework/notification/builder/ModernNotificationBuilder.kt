@@ -6,8 +6,8 @@ import android.app.Notification
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import com.example.keios.R
-import com.example.keios.mcp.McpNotificationHelper
-import com.example.keios.mcp.McpNotificationPayload
+import com.example.keios.mcp.notification.McpNotificationHelper
+import com.example.keios.mcp.notification.McpNotificationPayload
 import kotlin.math.roundToInt
 
 class ModernNotificationBuilder(

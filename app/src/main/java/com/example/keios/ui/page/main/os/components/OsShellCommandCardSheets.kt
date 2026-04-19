@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.os.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +16,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
+import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
+import com.example.keios.ui.page.main.os.shell.ShellCommandInputField
+import com.example.keios.ui.page.main.os.appLucideCloseIcon
+import com.example.keios.ui.page.main.os.appLucideConfirmIcon
+import com.example.keios.ui.page.main.os.shell.defaultOsShellCommandCardTitle
+import com.example.keios.ui.page.main.os.formatEpochMillis
+import com.example.keios.ui.page.main.os.osLucideCardIcon
+import com.example.keios.ui.page.main.os.osLucideRunIcon
 import com.example.keios.ui.page.main.widget.AppStatusPillSize
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassTextButton
