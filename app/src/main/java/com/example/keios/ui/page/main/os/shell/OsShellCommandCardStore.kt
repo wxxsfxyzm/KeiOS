@@ -166,8 +166,7 @@ internal object OsShellCommandCardStore {
         val updated = normalizeCard(
             existing.copy(
                 runOutput = runOutput,
-                lastRunAtMillis = resolvedRunAt,
-                updatedAtMillis = resolvedRunAt
+                lastRunAtMillis = resolvedRunAt
             )
         ) ?: return null
         saveCards(current.map { card -> if (card.id == targetId) updated else card })
