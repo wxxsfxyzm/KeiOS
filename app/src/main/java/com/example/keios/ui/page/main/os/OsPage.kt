@@ -679,30 +679,30 @@ fun OsPage(
         SystemOverviewState.Cached -> Color(0x55F59E0B)
         SystemOverviewState.Idle -> MiuixTheme.colorScheme.surface
     }
+    val activityOverviewStats = remember(activityShortcutCards, googleSystemServiceDefaults) {
+        buildOsActivityOverviewStats(
+            cards = activityShortcutCards,
+            defaults = googleSystemServiceDefaults
+        )
+    }
     val overviewMetrics = remember(
         topInfoRows.size,
         totalRowsCount,
         visibleRowsCount,
         sectionCount,
-        loadedFreshCount
+        loadedFreshCount,
+        cachedSectionCount,
+        activityOverviewStats
     ) {
-        listOf(
-            OsOverviewMetric(
-                label = context.getString(R.string.os_overview_metric_visible_rows),
-                value = "$visibleRowsCount/$totalRowsCount"
-            ),
-            OsOverviewMetric(
-                label = context.getString(R.string.os_overview_metric_top_info),
-                value = context.getString(R.string.common_item_count, topInfoRows.size)
-            ),
-            OsOverviewMetric(
-                label = context.getString(R.string.os_overview_metric_fresh_coverage),
-                value = "$loadedFreshCount/$sectionCount"
-            ),
-            OsOverviewMetric(
-                label = context.getString(R.string.os_overview_metric_visible_sections),
-                value = context.getString(R.string.os_overview_metric_visible_sections_value, sectionCount)
-            )
+        buildOsOverviewMetrics(
+            context = context,
+            visibleRowsCount = visibleRowsCount,
+            totalRowsCount = totalRowsCount,
+            topInfoCount = topInfoRows.size,
+            loadedFreshCount = loadedFreshCount,
+            cachedSectionCount = cachedSectionCount,
+            sectionCount = sectionCount,
+            activityStats = activityOverviewStats
         )
     }
 
