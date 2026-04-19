@@ -24,9 +24,6 @@ import com.example.keios.ui.page.main.widget.StatusLabelText
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Ok
 
 @Composable
 internal fun McpEditServiceSheet(
@@ -54,7 +51,7 @@ internal fun McpEditServiceSheet(
             GlassIconButton(
                 backdrop = backdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
+                icon = appLucideCloseIcon(),
                 contentDescription = stringResource(R.string.common_close),
                 onClick = onDismissRequest
             )
@@ -63,7 +60,7 @@ internal fun McpEditServiceSheet(
             GlassIconButton(
                 backdrop = backdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Ok,
+                icon = appLucideConfirmIcon(),
                 contentDescription = stringResource(R.string.common_save),
                 onClick = {
                     val port = portText.toIntOrNull()

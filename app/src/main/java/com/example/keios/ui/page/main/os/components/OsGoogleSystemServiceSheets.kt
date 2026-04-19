@@ -31,10 +31,6 @@ import com.example.keios.ui.page.main.widget.StatusPill
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import java.util.Locale
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.AddCircle
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -88,7 +84,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
             GlassIconButton(
                 backdrop = sheetBackdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
+                icon = appLucideCloseIcon(),
                 contentDescription = stringResource(R.string.common_close),
                 onClick = onDismissRequest
             )
@@ -97,7 +93,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
             GlassIconButton(
                 backdrop = sheetBackdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Ok,
+                icon = appLucideConfirmIcon(),
                 contentDescription = stringResource(R.string.common_save),
                 onClick = onSave
             )
@@ -173,7 +169,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
                         GlassIconButton(
                             backdrop = sheetBackdrop,
                             variant = GlassVariant.SheetAction,
-                            icon = MiuixIcons.Regular.AddCircle,
+                            icon = appLucideAddIcon(),
                             contentDescription = stringResource(R.string.os_google_system_service_chip_add),
                             width = 40.dp,
                             height = 32.dp,
@@ -200,7 +196,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
                         GlassIconButton(
                             backdrop = sheetBackdrop,
                             variant = GlassVariant.SheetAction,
-                            icon = MiuixIcons.Regular.AddCircle,
+                            icon = appLucideAddIcon(),
                             contentDescription = stringResource(R.string.os_google_system_service_chip_add),
                             width = 40.dp,
                             height = 32.dp,
@@ -227,7 +223,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
                         GlassIconButton(
                             backdrop = sheetBackdrop,
                             variant = GlassVariant.SheetAction,
-                            icon = MiuixIcons.Regular.AddCircle,
+                            icon = appLucideAddIcon(),
                             contentDescription = stringResource(R.string.os_google_system_service_chip_add),
                             width = 40.dp,
                             height = 32.dp,
@@ -254,7 +250,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
                         GlassIconButton(
                             backdrop = sheetBackdrop,
                             variant = GlassVariant.SheetAction,
-                            icon = MiuixIcons.Regular.AddCircle,
+                            icon = appLucideAddIcon(),
                             contentDescription = stringResource(R.string.os_google_system_service_chip_add),
                             width = 40.dp,
                             height = 32.dp,
@@ -281,7 +277,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
                         GlassIconButton(
                             backdrop = sheetBackdrop,
                             variant = GlassVariant.SheetAction,
-                            icon = MiuixIcons.Regular.AddCircle,
+                            icon = appLucideAddIcon(),
                             contentDescription = stringResource(R.string.os_google_system_service_chip_add),
                             width = 40.dp,
                             height = 32.dp,
@@ -308,7 +304,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
                         GlassIconButton(
                             backdrop = sheetBackdrop,
                             variant = GlassVariant.SheetAction,
-                            icon = MiuixIcons.Regular.AddCircle,
+                            icon = appLucideAddIcon(),
                             contentDescription = stringResource(R.string.os_google_system_service_chip_add),
                             width = 40.dp,
                             height = 32.dp,
@@ -335,7 +331,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
                         GlassIconButton(
                             backdrop = sheetBackdrop,
                             variant = GlassVariant.SheetAction,
-                            icon = MiuixIcons.Regular.AddCircle,
+                            icon = appLucideAddIcon(),
                             contentDescription = stringResource(R.string.os_google_system_service_chip_add),
                             width = 40.dp,
                             height = 32.dp,
@@ -362,7 +358,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
                         GlassIconButton(
                             backdrop = sheetBackdrop,
                             variant = GlassVariant.SheetAction,
-                            icon = MiuixIcons.Regular.AddCircle,
+                            icon = appLucideAddIcon(),
                             contentDescription = stringResource(R.string.os_google_system_service_chip_add),
                             width = 40.dp,
                             height = 32.dp,
@@ -427,7 +423,7 @@ internal fun OsGoogleSystemServiceEditorSheet(
                                     GlassIconButton(
                                         backdrop = sheetBackdrop,
                                         variant = GlassVariant.SheetDangerAction,
-                                        icon = MiuixIcons.Regular.Close,
+                                        icon = appLucideCloseIcon(),
                                         contentDescription = stringResource(
                                             R.string.os_google_system_service_cd_remove_intent_extra
                                         ),
@@ -528,7 +524,7 @@ internal fun OsGoogleSystemServiceSuggestionSheet(
             GlassIconButton(
                 backdrop = sheetBackdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
+                icon = appLucideCloseIcon(),
                 contentDescription = stringResource(R.string.common_close),
                 onClick = onDismissRequest
             )

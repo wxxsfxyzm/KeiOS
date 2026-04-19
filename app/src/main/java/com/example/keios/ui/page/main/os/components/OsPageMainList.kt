@@ -35,8 +35,6 @@ import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -396,13 +394,13 @@ internal fun OsPageMainList(
             enter = appFloatingEnter(),
             exit = appFloatingExit(),
             modifier = Modifier.align(Alignment.BottomEnd)
-        ) {
-            GlassIconButton(
-                backdrop = contentBackdrop,
-                icon = MiuixIcons.Regular.AddCircle,
-                contentDescription = stringResource(R.string.os_cd_add_activity_card),
-                onClick = onOpenAddActivityShortcutCard,
-                modifier = Modifier.padding(end = 14.dp, bottom = contentBottomPadding - 24.dp),
+            ) {
+                GlassIconButton(
+                    backdrop = contentBackdrop,
+                    icon = appLucideAddIcon(),
+                    contentDescription = stringResource(R.string.os_cd_add_activity_card),
+                    onClick = onOpenAddActivityShortcutCard,
+                    modifier = Modifier.padding(end = 14.dp, bottom = contentBottomPadding - 24.dp),
                 width = 60.dp,
                 height = 44.dp,
                 containerColor = MiuixTheme.colorScheme.primary,

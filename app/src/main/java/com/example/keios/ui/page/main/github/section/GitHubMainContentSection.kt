@@ -57,6 +57,11 @@ import com.example.keios.ui.page.main.GitHubStatusPalette
 import com.example.keios.ui.page.main.OverviewRefreshState
 import com.example.keios.ui.page.main.VersionCheckUi
 import com.example.keios.ui.page.main.VersionValueRow
+import com.example.keios.ui.page.main.appLucideAddIcon
+import com.example.keios.ui.page.main.appLucideCloseIcon
+import com.example.keios.ui.page.main.appLucideDownloadIcon
+import com.example.keios.ui.page.main.appLucideRefreshIcon
+import com.example.keios.ui.page.main.appLucideShareIcon
 import com.example.keios.ui.page.main.formatReleaseValue
 import com.example.keios.ui.page.main.isLocalAppUninstalled
 import com.example.keios.ui.page.main.preReleaseVersionColor
@@ -103,14 +108,6 @@ import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.AddCircle
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.More
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Share
-import top.yukonga.miuix.kmp.icon.extended.Update
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -268,7 +265,7 @@ internal fun GitHubMainContent(
             ) {
                 GlassIconButton(
                     backdrop = contentBackdrop,
-                    icon = MiuixIcons.Regular.AddCircle,
+                    icon = appLucideAddIcon(),
                     contentDescription = stringResource(R.string.github_cd_add_track),
                     onClick = onOpenTrackSheetForAdd,
                     modifier = Modifier.padding(end = 14.dp, bottom = contentBottomPadding - 24.dp),
@@ -368,11 +365,11 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                     val isAssetPanelExpanded = apkAssetExpanded[item.id] == true
                     val isAssetPanelLoading = apkAssetLoading[item.id] == true
                     val statusIcon = when {
-                        alwaysLatestReleaseDownload && isAssetPanelLoading -> MiuixIcons.Regular.Refresh
-                        alwaysLatestReleaseDownload && isAssetPanelExpanded -> MiuixIcons.Regular.Close
-                        alwaysLatestReleaseDownload -> MiuixIcons.Regular.Download
-                        isAssetPanelLoading -> MiuixIcons.Regular.Refresh
-                        canLoadApkAssets && isAssetPanelExpanded -> MiuixIcons.Regular.Close
+                        alwaysLatestReleaseDownload && isAssetPanelLoading -> appLucideRefreshIcon()
+                        alwaysLatestReleaseDownload && isAssetPanelExpanded -> appLucideCloseIcon()
+                        alwaysLatestReleaseDownload -> appLucideDownloadIcon()
+                        isAssetPanelLoading -> appLucideRefreshIcon()
+                        canLoadApkAssets && isAssetPanelExpanded -> appLucideCloseIcon()
                         else -> state.statusIcon()
                     }
                     val iconTint = if (alwaysLatestReleaseDownload) latestReleaseAccent else statusColor
@@ -424,7 +421,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                             Modifier.clickable { onRefreshTrackedItem(item) }
                         }
                         top.yukonga.miuix.kmp.basic.Icon(
-                            imageVector = MiuixIcons.Regular.Refresh,
+                            imageVector = appLucideRefreshIcon(),
                             contentDescription = stringResource(R.string.common_refresh),
                             tint = if (state.loading) iconTint.copy(alpha = 0.68f) else iconTint,
                             modifier = refreshModifier
@@ -902,7 +899,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                     GlassTextButton(
                                                         backdrop = contentBackdrop,
                                                         text = sizeLabel,
-                                                        leadingIcon = MiuixIcons.Regular.Download,
+                                                        leadingIcon = appLucideDownloadIcon(),
                                                         onClick = { onOpenApkInDownloader(asset) },
                                                         modifier = Modifier.widthIn(min = assetDownloadButtonMinWidth),
                                                         variant = GlassVariant.SheetAction,
@@ -915,7 +912,7 @@ private fun LazyListScope.GitHubTrackedItemsSection(
                                                     )
                                                     GlassIconButton(
                                                         backdrop = contentBackdrop,
-                                                        icon = MiuixIcons.Regular.Share,
+                                                        icon = appLucideShareIcon(),
                                                         contentDescription = context.getString(
                                                             R.string.github_cd_share_asset,
                                                             asset.name

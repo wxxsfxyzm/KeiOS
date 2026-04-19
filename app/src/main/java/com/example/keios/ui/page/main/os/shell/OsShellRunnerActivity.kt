@@ -76,8 +76,6 @@ import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
@@ -622,7 +620,7 @@ private fun OsShellRunnerPage(
             GlassIconButton(
                 backdrop = null,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
+                icon = appLucideCloseIcon(),
                 contentDescription = stringResource(R.string.common_close),
                 onClick = { showSaveSheet = false }
             )
@@ -631,7 +629,7 @@ private fun OsShellRunnerPage(
             GlassIconButton(
                 backdrop = null,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Ok,
+                icon = appLucideConfirmIcon(),
                 contentDescription = stringResource(R.string.common_save),
                 onClick = { saveCommandToCard() }
             )

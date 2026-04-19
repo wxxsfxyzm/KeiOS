@@ -15,10 +15,6 @@ import com.example.keios.ui.page.main.widget.LiquidActionBar
 import com.example.keios.ui.page.main.widget.LiquidActionItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.GridView
-import top.yukonga.miuix.kmp.icon.extended.Layers
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 
 @Composable
 internal fun OsPageScaffoldShell(
@@ -54,12 +50,12 @@ internal fun OsPageScaffoldShell(
                 layeredStyleEnabled = layeredStyleEnabled,
                 items = listOf(
                     LiquidActionItem(
-                        icon = MiuixIcons.Regular.Layers,
+                        icon = appLucideLayersIcon(),
                         contentDescription = manageCardsContentDescription,
                         onClick = onOpenCardManager
                     ),
                     LiquidActionItem(
-                        icon = MiuixIcons.Regular.GridView,
+                        icon = appLucideAppWindowIcon(),
                         contentDescription = manageActivitiesContentDescription,
                         onClick = onOpenActivityVisibilityManager
                     ),
@@ -69,7 +65,7 @@ internal fun OsPageScaffoldShell(
                         onClick = onOpenShellCardVisibilityManager
                     ),
                     LiquidActionItem(
-                        icon = MiuixIcons.Regular.Refresh,
+                        icon = appLucideRefreshIcon(),
                         contentDescription = refreshParamsContentDescription,
                         onClick = {
                             if (refreshing) return@LiquidActionItem

@@ -6,9 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.keios.R
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal fun visibleSectionKinds(visibleCards: Set<OsSectionCard>): Set<SectionKind> = buildSet {
@@ -110,7 +107,7 @@ internal fun OsCardExportAction(
     val enabled = exportingCard == null || isExporting
     val tint = if (enabled) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onBackgroundVariant
     Icon(
-        imageVector = if (isExporting) MiuixIcons.Regular.Refresh else MiuixIcons.Regular.Download,
+        imageVector = if (isExporting) appLucideRefreshIcon() else appLucideDownloadIcon(),
         contentDescription = if (isExporting) "准备导出中" else "导出${card.title}",
         tint = tint,
         modifier = Modifier.clickable(enabled = enabled && !isExporting) {

@@ -55,13 +55,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Copy
-import top.yukonga.miuix.kmp.icon.extended.Edit
-import top.yukonga.miuix.kmp.icon.extended.Notes
-import top.yukonga.miuix.kmp.icon.extended.Pause
-import top.yukonga.miuix.kmp.icon.extended.Play
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -317,17 +310,17 @@ fun McpPage(
                 layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                 items = listOf(
                     LiquidActionItem(
-                        icon = MiuixIcons.Regular.Edit,
+                        icon = appLucideEditIcon(),
                         contentDescription = stringResource(R.string.mcp_action_edit_service_params),
                         onClick = { showEditSheet = true }
                     ),
                     LiquidActionItem(
-                        icon = MiuixIcons.Regular.Notes,
+                        icon = appLucideNotesIcon(),
                         contentDescription = stringResource(R.string.mcp_action_open_skill_md),
                         onClick = onOpenSkill
                     ),
                     LiquidActionItem(
-                        icon = MiuixIcons.Regular.Copy,
+                        icon = osLucideCopyIcon(),
                         contentDescription = stringResource(R.string.mcp_action_copy_current_config),
                         onClick = {
                             val endpoint = if (allowExternal && uiState.addresses.isNotEmpty()) {
@@ -345,7 +338,7 @@ fun McpPage(
                         }
                     ),
                     LiquidActionItem(
-                        icon = MiuixIcons.Regular.Refresh,
+                        icon = appLucideRefreshIcon(),
                         contentDescription = stringResource(R.string.common_refresh),
                         onClick = {
                             mcpServerManager.refreshNow()
@@ -450,7 +443,7 @@ fun McpPage(
             ) {
                 GlassIconButton(
                     backdrop = contentBackdrop,
-                    icon = if (uiState.running) MiuixIcons.Regular.Pause else MiuixIcons.Regular.Play,
+                    icon = if (uiState.running) appLucidePauseIcon() else osLucideRunIcon(),
                     contentDescription = if (uiState.running) {
                         stringResource(R.string.mcp_action_stop_service)
                     } else {

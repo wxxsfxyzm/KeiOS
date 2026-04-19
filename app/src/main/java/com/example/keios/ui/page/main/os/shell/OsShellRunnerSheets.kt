@@ -12,8 +12,6 @@ import com.example.keios.ui.page.main.widget.SheetSectionCard
 import com.example.keios.ui.page.main.widget.SheetDescriptionText
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import top.yukonga.miuix.kmp.basic.Switch
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
 
 @Composable
 internal fun OsShellSettingsSheet(
@@ -32,7 +30,7 @@ internal fun OsShellSettingsSheet(
             GlassIconButton(
                 backdrop = null,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
+                icon = appLucideCloseIcon(),
                 contentDescription = stringResource(R.string.common_close),
                 onClick = onDismissRequest
             )

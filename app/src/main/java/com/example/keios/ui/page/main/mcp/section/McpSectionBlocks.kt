@@ -19,12 +19,6 @@ import com.example.keios.ui.page.main.widget.GlassVariant
 import com.example.keios.ui.page.main.widget.MiuixExpandableSection
 import com.example.keios.ui.page.main.widget.MiuixInfoItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.GridView
-import top.yukonga.miuix.kmp.icon.extended.Notes
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Tune
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -48,7 +42,7 @@ internal fun McpServiceControlSection(
         onExpandedChange = onExpandedChange,
         headerStartAction = {
             McpSectionHeaderIcon(
-                icon = MiuixIcons.Regular.Tune,
+                icon = appLucideConfigIcon(),
                 contentDescription = stringResource(R.string.mcp_section_service_control_title)
             )
         }
@@ -113,7 +107,7 @@ internal fun McpToolsSection(
         onExpandedChange = onExpandedChange,
         headerStartAction = {
             McpSectionHeaderIcon(
-                icon = MiuixIcons.Regular.GridView,
+                icon = appLucideAppWindowIcon(),
                 contentDescription = stringResource(R.string.mcp_section_tools_title)
             )
         }
@@ -146,16 +140,16 @@ internal fun McpLogsSection(
         onExpandedChange = onExpandedChange,
         headerStartAction = {
             McpSectionHeaderIcon(
-                icon = MiuixIcons.Regular.Notes,
+                icon = appLucideNotesIcon(),
                 contentDescription = stringResource(R.string.mcp_section_logs_title)
             )
         },
         headerActions = {
             top.yukonga.miuix.kmp.basic.Icon(
                 imageVector = if (logsExporting) {
-                    MiuixIcons.Regular.Refresh
+                    appLucideRefreshIcon()
                 } else {
-                    MiuixIcons.Regular.Download
+                    appLucideDownloadIcon()
                 },
                 contentDescription = stringResource(R.string.mcp_action_export_logs),
                 tint = if (logsExporting) {

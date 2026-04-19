@@ -13,15 +13,6 @@ import com.example.keios.ui.page.main.widget.AppInfoRow
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.CardLayoutRhythm
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Filter
-import top.yukonga.miuix.kmp.icon.extended.GridView
-import top.yukonga.miuix.kmp.icon.extended.Info
-import top.yukonga.miuix.kmp.icon.extended.Layers
-import top.yukonga.miuix.kmp.icon.extended.ListView
-import top.yukonga.miuix.kmp.icon.extended.Lock
-import top.yukonga.miuix.kmp.icon.extended.Tune
-import top.yukonga.miuix.kmp.icon.extended.Update
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal data class OsOverviewMetric(
@@ -32,15 +23,15 @@ internal data class OsOverviewMetric(
 
 @Composable
 internal fun sectionCardIcon(card: OsSectionCard): ImageVector = when (card) {
-    OsSectionCard.TOP_INFO -> MiuixIcons.Regular.Info
+    OsSectionCard.TOP_INFO -> appLucideInfoIcon()
     OsSectionCard.SHELL_RUNNER -> osLucideConsoleIcon()
-    OsSectionCard.GOOGLE_SYSTEM_SERVICE -> MiuixIcons.Regular.Update
-    OsSectionCard.SYSTEM -> MiuixIcons.Regular.ListView
-    OsSectionCard.SECURE -> MiuixIcons.Regular.Lock
-    OsSectionCard.GLOBAL -> MiuixIcons.Regular.Layers
-    OsSectionCard.ANDROID -> MiuixIcons.Regular.GridView
-    OsSectionCard.JAVA -> MiuixIcons.Regular.Tune
-    OsSectionCard.LINUX -> MiuixIcons.Regular.Filter
+    OsSectionCard.GOOGLE_SYSTEM_SERVICE -> appLucidePackageIcon()
+    OsSectionCard.SYSTEM -> appLucideListIcon()
+    OsSectionCard.SECURE -> appLucideLockIcon()
+    OsSectionCard.GLOBAL -> appLucideLayersIcon()
+    OsSectionCard.ANDROID -> appLucideAppWindowIcon()
+    OsSectionCard.JAVA -> appLucideConfigIcon()
+    OsSectionCard.LINUX -> appLucideFilterIcon()
 }
 
 @Composable

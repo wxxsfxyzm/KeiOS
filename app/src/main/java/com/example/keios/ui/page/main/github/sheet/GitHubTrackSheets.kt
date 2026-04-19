@@ -38,6 +38,8 @@ import com.example.keios.ui.page.main.GitHubAppCandidateRow
 import com.example.keios.ui.page.main.GitHubSelectedAppCard
 import com.example.keios.ui.page.main.GitHubStatusPalette
 import com.example.keios.ui.page.main.GitHubTrackImportPreview
+import com.example.keios.ui.page.main.appLucideCloseIcon
+import com.example.keios.ui.page.main.appLucideConfirmIcon
 import com.example.keios.ui.page.main.github.asset.formatAssetSize
 import com.example.keios.ui.page.main.github.asset.assetIsPreferredForDevice
 import com.example.keios.ui.page.main.github.asset.assetLikelyCompatibleWithDevice
@@ -67,9 +69,6 @@ import top.yukonga.miuix.kmp.basic.RadioButton
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
@@ -122,7 +121,7 @@ internal fun GitHubCheckLogicSheet(
             GlassIconButton(
                 backdrop = backdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
+                icon = appLucideCloseIcon(),
                 contentDescription = stringResource(R.string.common_close),
                 onClick = onDismissRequest
             )
@@ -131,7 +130,7 @@ internal fun GitHubCheckLogicSheet(
             GlassIconButton(
                 backdrop = backdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Ok,
+                icon = appLucideConfirmIcon(),
                 contentDescription = stringResource(R.string.github_check_sheet_cd_save),
                 onClick = onApply
             )
@@ -389,7 +388,7 @@ internal fun GitHubTrackEditSheet(
             GlassIconButton(
                 backdrop = backdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
+                icon = appLucideCloseIcon(),
                 contentDescription = stringResource(R.string.common_close),
                 onClick = onDismissRequest
             )
@@ -398,7 +397,7 @@ internal fun GitHubTrackEditSheet(
             GlassIconButton(
                 backdrop = backdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Ok,
+                icon = appLucideConfirmIcon(),
                 contentDescription = if (editingTrackedItem == null) {
                     stringResource(R.string.github_track_sheet_cd_confirm_add)
                 } else {

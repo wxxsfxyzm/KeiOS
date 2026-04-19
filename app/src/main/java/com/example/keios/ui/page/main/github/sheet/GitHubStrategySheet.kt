@@ -21,6 +21,8 @@ import com.example.keios.ui.page.main.GitHubStatusPalette
 import com.example.keios.ui.page.main.GitHubStrategyBenchmarkCard
 import com.example.keios.ui.page.main.GitHubStrategyDraftSummaryCard
 import com.example.keios.ui.page.main.GitHubStrategyGuideCard
+import com.example.keios.ui.page.main.appLucideCloseIcon
+import com.example.keios.ui.page.main.appLucideConfirmIcon
 import com.example.keios.ui.page.main.buildGitHubFineGrainedTokenTemplateUrl
 import com.example.keios.ui.page.main.githubFineGrainedPatDocsUrl
 import com.example.keios.ui.page.main.githubRecommendedTokenGuide
@@ -39,9 +41,6 @@ import com.example.keios.ui.page.main.widget.SheetSectionTitle
 import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
 import com.example.keios.ui.page.main.widget.StatusPill
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -81,7 +80,7 @@ internal fun GitHubStrategySheet(
             GlassIconButton(
                 backdrop = backdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
+                icon = appLucideCloseIcon(),
                 contentDescription = stringResource(R.string.common_close),
                 onClick = onDismissRequest
             )
@@ -90,7 +89,7 @@ internal fun GitHubStrategySheet(
             GlassIconButton(
                 backdrop = backdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Ok,
+                icon = appLucideConfirmIcon(),
                 contentDescription = stringResource(R.string.github_strategy_sheet_cd_save),
                 onClick = onApply
             )

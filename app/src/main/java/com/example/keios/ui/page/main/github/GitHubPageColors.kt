@@ -3,12 +3,7 @@ package com.example.keios.ui.page.main
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.keios.feature.github.model.GitHubTrackedReleaseStatus
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.More
-import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Report
-import top.yukonga.miuix.kmp.icon.extended.Update
+import androidx.compose.runtime.Composable
 
 internal object GitHubStatusPalette {
     val Active = Color(0xFF3B82F6)
@@ -78,17 +73,18 @@ internal fun OverviewRefreshState.indicatorBackground(neutralSurface: Color): Co
     }
 }
 
+@Composable
 internal fun VersionCheckUi.statusIcon(): ImageVector {
     return when {
-        loading -> MiuixIcons.Regular.Refresh
-        isLocalAppUninstalled() -> MiuixIcons.Regular.Report
-        isFailed() -> MiuixIcons.Regular.Report
-        recommendsPreRelease -> MiuixIcons.Regular.Update
-        hasPreReleaseUpdate -> MiuixIcons.Regular.Report
-        hasUpdate == true -> MiuixIcons.Regular.Update
-        hasUpdate == false -> MiuixIcons.Regular.Ok
-        isPreRelease -> MiuixIcons.Regular.Report
-        else -> MiuixIcons.Regular.More
+        loading -> appLucideRefreshIcon()
+        isLocalAppUninstalled() -> appLucideAlertIcon()
+        isFailed() -> appLucideWarningIcon()
+        recommendsPreRelease -> appLucideUpdateIcon()
+        hasPreReleaseUpdate -> appLucideAlertIcon()
+        hasUpdate == true -> appLucideUpdateIcon()
+        hasUpdate == false -> appLucideConfirmIcon()
+        isPreRelease -> appLucideAlertIcon()
+        else -> appLucideMoreIcon()
     }
 }
 

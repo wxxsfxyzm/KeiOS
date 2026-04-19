@@ -36,9 +36,6 @@ import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal fun LazyListScope.addTopInfoCard(
@@ -121,7 +118,7 @@ internal fun LazyListScope.addShortcutActivityCards(
                 },
                 headerActions = {
                     Icon(
-                        imageVector = MiuixIcons.Regular.Play,
+                        imageVector = osLucideEnterIcon(),
                         contentDescription = stringResource(R.string.os_google_system_service_cd_open_activity),
                         tint = MiuixTheme.colorScheme.primary,
                         modifier = Modifier.clickable { onOpenActivity(card) }
@@ -257,7 +254,7 @@ internal fun OsCardVisibilityManagerSheet(
             GlassIconButton(
                 backdrop = sheetBackdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
+                icon = appLucideCloseIcon(),
                 contentDescription = stringResource(R.string.common_close),
                 onClick = onDismissRequest
             )
@@ -330,7 +327,7 @@ internal fun OsActivityVisibilityManagerSheet(
             GlassIconButton(
                 backdrop = sheetBackdrop,
                 variant = GlassVariant.Bar,
-                icon = MiuixIcons.Regular.Close,
+                icon = appLucideCloseIcon(),
                 contentDescription = stringResource(R.string.common_close),
                 onClick = onDismissRequest
             )
@@ -367,7 +364,7 @@ internal fun OsActivityVisibilityManagerSheet(
                                     )
                                 } else {
                                     Icon(
-                                        imageVector = MiuixIcons.Regular.Play,
+                                        imageVector = osLucideEnterIcon(),
                                         contentDescription = item.title,
                                         tint = MiuixTheme.colorScheme.onBackground,
                                         modifier = Modifier

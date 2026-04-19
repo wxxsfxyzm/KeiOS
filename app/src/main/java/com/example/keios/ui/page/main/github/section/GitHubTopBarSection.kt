@@ -13,6 +13,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.ui.page.main.GitHubSortMode
+import com.example.keios.ui.page.main.appLucideConfigIcon
+import com.example.keios.ui.page.main.appLucideEditIcon
+import com.example.keios.ui.page.main.appLucideRefreshIcon
+import com.example.keios.ui.page.main.appLucideSortIcon
 import com.example.keios.ui.page.main.widget.AppChromeTokens
 import com.example.keios.ui.page.main.widget.AppTopBarSearchField
 import com.example.keios.ui.page.main.widget.AppTopBarSection
@@ -26,11 +30,6 @@ import com.example.keios.ui.page.main.widget.SnapshotWindowListPopup
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Edit
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Sort
-import top.yukonga.miuix.kmp.icon.extended.Tune
 
 @Composable
 internal fun GitHubTopBarSection(
@@ -64,22 +63,22 @@ internal fun GitHubTopBarSection(
                     layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                     items = listOf(
                         LiquidActionItem(
-                            icon = MiuixIcons.Regular.Edit,
+                            icon = appLucideEditIcon(),
                             contentDescription = stringResource(R.string.github_topbar_cd_edit_strategy),
                             onClick = onOpenStrategySheet
                         ),
                         LiquidActionItem(
-                            icon = MiuixIcons.Regular.Tune,
+                            icon = appLucideConfigIcon(),
                             contentDescription = stringResource(R.string.github_topbar_cd_check_logic),
                             onClick = onOpenCheckLogicSheet
                         ),
                         LiquidActionItem(
-                            icon = MiuixIcons.Regular.Sort,
+                            icon = appLucideSortIcon(),
                             contentDescription = stringResource(R.string.github_topbar_cd_sort),
                             onClick = { onShowSortPopupChange(!showSortPopup) }
                         ),
                         LiquidActionItem(
-                            icon = MiuixIcons.Regular.Refresh,
+                            icon = appLucideRefreshIcon(),
                             contentDescription = stringResource(R.string.github_topbar_cd_check),
                             onClick = onRefreshAllTracked,
                             enabled = !deleteInProgress
