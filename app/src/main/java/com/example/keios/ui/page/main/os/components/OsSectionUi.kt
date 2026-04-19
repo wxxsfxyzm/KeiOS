@@ -19,9 +19,9 @@ import com.example.keios.ui.page.main.os.appLucideListIcon
 import com.example.keios.ui.page.main.os.appLucideLockIcon
 import com.example.keios.ui.page.main.os.appLucidePackageIcon
 import com.example.keios.ui.page.main.os.osLucideConsoleIcon
-import com.example.keios.ui.page.main.widget.AppInfoRow
-import com.example.keios.ui.page.main.widget.AppTypographyTokens
-import com.example.keios.ui.page.main.widget.CardLayoutRhythm
+import com.example.keios.ui.page.main.widget.core.AppInfoRow
+import com.example.keios.ui.page.main.widget.core.AppTypographyTokens
+import com.example.keios.ui.page.main.widget.core.CardLayoutRhythm
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 

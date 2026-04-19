@@ -24,10 +24,10 @@ import com.example.keios.ui.page.main.github.overviewApiLabel
 import com.example.keios.ui.page.main.github.overviewLabel
 import com.example.keios.ui.page.main.github.borderColor
 import com.example.keios.ui.page.main.github.surfaceColor
-import com.example.keios.ui.page.main.widget.AppOverviewCard
-import com.example.keios.ui.page.main.widget.CardLayoutRhythm
-import com.example.keios.ui.page.main.widget.StatusLabelText
-import com.example.keios.ui.page.main.widget.StatusPill
+import com.example.keios.ui.page.main.widget.core.AppOverviewCard
+import com.example.keios.ui.page.main.widget.core.CardLayoutRhythm
+import com.example.keios.ui.page.main.widget.status.StatusLabelText
+import com.example.keios.ui.page.main.widget.status.StatusPill
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode

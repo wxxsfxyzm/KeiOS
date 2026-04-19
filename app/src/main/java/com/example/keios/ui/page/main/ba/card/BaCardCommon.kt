@@ -15,9 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.ba.BaGlassPanel
-import com.example.keios.ui.page.main.widget.GlassIconButton
-import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.GlassIconButton
+import com.example.keios.ui.page.main.widget.glass.GlassTextButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import com.kyant.backdrop.Backdrop
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme

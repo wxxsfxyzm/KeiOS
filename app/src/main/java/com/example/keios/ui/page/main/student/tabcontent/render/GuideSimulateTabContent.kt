@@ -20,7 +20,7 @@ import com.example.keios.ui.page.main.student.tabcontent.simulate.GuideSimulateU
 import com.example.keios.ui.page.main.student.tabcontent.simulate.GuideSimulateWeaponCard
 import com.example.keios.ui.page.main.student.tabcontent.simulate.buildGuideSimulateData
 import com.example.keios.ui.page.main.student.simulateRowsForDisplay
-import com.example.keios.ui.page.main.widget.FrostedBlock
+import com.example.keios.ui.page.main.widget.glass.FrostedBlock
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults

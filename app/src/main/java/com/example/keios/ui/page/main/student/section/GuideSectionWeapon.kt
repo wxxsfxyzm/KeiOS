@@ -1,6 +1,6 @@
 package com.example.keios.ui.page.main.student.section
 
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -56,13 +56,13 @@ import com.example.keios.ui.page.main.student.GuideWeaponCardModel
 import com.example.keios.ui.page.main.student.GuideWeaponStarEffect
 import com.example.keios.ui.page.main.student.GuideWeaponStatRow
 import com.example.keios.ui.page.main.student.section.gallery.GuideImageFullscreenDialog
-import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.appMotionFloatState
-import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
+import com.example.keios.ui.page.main.widget.glass.GlassTextButton
+import com.example.keios.ui.page.main.widget.motion.appMotionFloatState
+import com.example.keios.ui.page.main.widget.support.CopyModeSelectionContainer
 import com.kyant.backdrop.Backdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import com.example.keios.ui.page.main.widget.AppDropdownSelector
+import com.example.keios.ui.page.main.widget.glass.AppDropdownSelector
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 

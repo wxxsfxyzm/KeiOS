@@ -27,8 +27,8 @@ import com.example.keios.ui.page.main.student.rememberGuideTabCopyAction
 import com.example.keios.ui.page.main.student.tabcontent.resolveVoicePlaybackUrl
 import com.example.keios.ui.page.main.student.section.GuideVoiceEntryCard
 import com.example.keios.ui.page.main.student.section.GuideVoiceLanguageCard
-import com.example.keios.ui.page.main.widget.FrostedBlock
-import com.example.keios.ui.page.main.widget.MiuixInfoItem
+import com.example.keios.ui.page.main.widget.glass.FrostedBlock
+import com.example.keios.ui.page.main.widget.core.MiuixInfoItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults

@@ -1,6 +1,6 @@
 package com.example.keios.ui.page.main.student.section
 
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,8 +18,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.student.BaGuideVoiceEntry
 import com.example.keios.ui.page.main.student.normalizeGuideMediaSource
-import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
+import com.example.keios.ui.page.main.widget.glass.GlassTextButton
+import com.example.keios.ui.page.main.widget.support.CopyModeSelectionContainer
 import com.kyant.backdrop.Backdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults

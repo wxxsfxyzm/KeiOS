@@ -39,7 +39,7 @@ import com.example.keios.ui.page.main.student.tabcontent.profile.GuideGalleryRel
 import com.example.keios.ui.page.main.student.tabcontent.profile.GuideProfileSectionHeader
 import com.example.keios.ui.page.main.student.tabcontent.profile.isGalleryRelatedProfileLinkRow
 import com.example.keios.ui.page.main.student.tabcontent.profile.normalizeProfileFieldKey
-import com.example.keios.ui.page.main.widget.FrostedBlock
+import com.example.keios.ui.page.main.widget.glass.FrostedBlock
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults

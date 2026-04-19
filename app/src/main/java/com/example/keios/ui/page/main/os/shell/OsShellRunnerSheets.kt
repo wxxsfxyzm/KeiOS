@@ -5,13 +5,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.ui.page.main.os.appLucideCloseIcon
-import com.example.keios.ui.page.main.widget.GlassIconButton
-import com.example.keios.ui.page.main.widget.GlassVariant
-import com.example.keios.ui.page.main.widget.SheetContentColumn
-import com.example.keios.ui.page.main.widget.SheetControlRow
-import com.example.keios.ui.page.main.widget.SheetSectionCard
-import com.example.keios.ui.page.main.widget.SheetDescriptionText
-import com.example.keios.ui.page.main.widget.SnapshotWindowBottomSheet
+import com.example.keios.ui.page.main.widget.glass.GlassIconButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
+import com.example.keios.ui.page.main.widget.sheet.SheetContentColumn
+import com.example.keios.ui.page.main.widget.sheet.SheetControlRow
+import com.example.keios.ui.page.main.widget.sheet.SheetSectionCard
+import com.example.keios.ui.page.main.widget.sheet.SheetDescriptionText
+import com.example.keios.ui.page.main.widget.sheet.SnapshotWindowBottomSheet
 import top.yukonga.miuix.kmp.basic.Switch
 
 @Composable

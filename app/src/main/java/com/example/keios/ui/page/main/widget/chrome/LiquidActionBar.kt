@@ -1,0 +1,557 @@
+package com.example.keios.ui.page.main.widget.chrome
+
+import android.os.Build
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastCoerceIn
+import androidx.compose.ui.util.fastRoundToInt
+import com.example.keios.ui.animation.DampedDragAnimation
+import com.example.keios.ui.animation.InteractiveHighlight
+import com.example.keios.ui.page.main.widget.glass.UiPerformanceBudget
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.InnerShadow
+import com.kyant.backdrop.shadow.Shadow
+import com.kyant.capsule.ContinuousCapsule
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlin.math.sign
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalViewConfiguration
+
+data class LiquidActionItem(
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val contentDescription: String,
+    val onClick: () -> Unit,
+    val enabled: Boolean = true
+)
+
+@Composable
+fun LiquidActionBarPopupAnchors(
+    itemCount: Int,
+    modifier: Modifier = Modifier,
+    compactSingleItem: Boolean = false,
+    content: @Composable (Int, IntRect?) -> Unit
+) {
+    if (itemCount <= 0) return
+    val anchorBounds = remember(itemCount) {
+        mutableStateListOf<IntRect?>().apply {
+            repeat(itemCount) { add(null) }
+        }
+    }
+    val minimumWidth = if (compactSingleItem && itemCount == 1) {
+        AppChromeTokens.liquidActionBarSingleWidth
+    } else {
+        AppChromeTokens.liquidActionBarMinWidth
+    }
+    val barWidth = maxOf(minimumWidth, (itemCount * AppChromeTokens.liquidActionBarItemStep.value).dp)
+    Row(
+        modifier = modifier
+            .width(barWidth)
+            .height(AppChromeTokens.liquidActionBarOuterHeight)
+            .padding(horizontal = AppChromeTokens.liquidActionBarHorizontalPadding),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(itemCount) { index ->
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(AppChromeTokens.liquidActionBarItemStep - 2.dp)
+                        .height(AppChromeTokens.liquidActionBarInnerHeight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .onGloballyPositioned { coordinates ->
+                                val position = coordinates.positionInWindow()
+                                anchorBounds[index] = IntRect(
+                                    left = position.x.roundToInt(),
+                                    top = position.y.roundToInt(),
+                                    right = (position.x + coordinates.size.width).roundToInt(),
+                                    bottom = (position.y + coordinates.size.height).roundToInt()
+                                )
+                            }
+                    )
+                    content(index, anchorBounds.getOrNull(index))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.LiquidActionItemSlot(
+    item: LiquidActionItem,
+    tint: Color,
+    iconScale: Float = 1f,
+    onClick: (() -> Unit)? = null
+) {
+    val clickModifier = if (onClick != null && item.enabled) {
+        Modifier.clickable(
+            interactionSource = null,
+            indication = null,
+            onClick = onClick
+        )
+    } else {
+        Modifier
+    }
+    Box(
+        modifier = Modifier
+            .clip(ContinuousCapsule)
+            .then(clickModifier)
+            .fillMaxHeight()
+            .weight(1f)
+            .graphicsLayer {
+                scaleX = iconScale
+                scaleY = iconScale
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = item.contentDescription,
+            tint = if (item.enabled) tint else tint.copy(alpha = 0.38f)
+        )
+    }
+}
+
+@Composable
+fun LiquidActionBar(
+    modifier: Modifier = Modifier,
+    backdrop: Backdrop,
+    items: List<LiquidActionItem>,
+    isBlurEnabled: Boolean = true,
+    layeredStyleEnabled: Boolean = true,
+    compactSingleItem: Boolean = false,
+    selectedIndex: Int = 0,
+    onInteractionChanged: (Boolean) -> Unit = {}
+) {
+    if (items.isEmpty()) return
+    val clampedSelectedIndex = selectedIndex.coerceIn(0, items.lastIndex)
+
+    val isInLightTheme = !isSystemInDarkTheme()
+    val accentColor = MiuixTheme.colorScheme.primary
+    val palette = rememberLiquidActionBarPalette(
+        layeredStyleEnabled = layeredStyleEnabled,
+        isBlurEnabled = isBlurEnabled,
+        isInLightTheme = isInLightTheme,
+        primary = accentColor,
+        onSurface = MiuixTheme.colorScheme.onSurface,
+        surfaceContainer = MiuixTheme.colorScheme.surfaceContainer
+    )
+
+    val tabsBackdrop = rememberLayerBackdrop()
+    val density = LocalDensity.current
+    val viewConfiguration = LocalViewConfiguration.current
+    val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
+    val animationScope = rememberCoroutineScope()
+    val pressedScale = remember {
+        62f / 44f
+    }
+
+    var tabWidthPx by remember { mutableFloatStateOf(0f) }
+    var totalWidthPx by remember { mutableFloatStateOf(0f) }
+
+    val offsetAnimation = remember { Animatable(0f) }
+    val panelOffset by remember(density) {
+        derivedStateOf {
+            if (totalWidthPx == 0f) 0f else {
+                val fraction = (offsetAnimation.value / totalWidthPx).fastCoerceIn(-1f, 1f)
+                with(density) {
+                    3f.dp.toPx() * fraction.sign * EaseOut.transform(abs(fraction))
+                }
+            }
+        }
+    }
+    val effectivePanelOffset = if (layeredStyleEnabled) panelOffset else 0f
+
+    var gestureActive by remember { mutableStateOf(false) }
+    var dragMoved by remember { mutableStateOf(false) }
+    var dragTravelPx by remember { mutableFloatStateOf(0f) }
+    val dragActivationThresholdPx = remember(viewConfiguration.touchSlop) {
+        // 仅在明确滑动时才触发松手选中，避免点按抖动导致串触发。
+        (viewConfiguration.touchSlop * 1.15f).coerceAtLeast(8f)
+    }
+
+    val dampedDragAnimation = remember(animationScope, items.size, density, isLtr, layeredStyleEnabled) {
+        DampedDragAnimation(
+            animationScope = animationScope,
+            initialValue = clampedSelectedIndex.toFloat(),
+            valueRange = 0f..(items.lastIndex).toFloat(),
+            visibilityThreshold = 0.001f,
+            initialScale = 1f,
+            pressedScale = pressedScale,
+            canDrag = { true },
+            onDragStarted = {
+                gestureActive = true
+                dragMoved = false
+                dragTravelPx = 0f
+                onInteractionChanged(true)
+            },
+            onDragStopped = {
+                if (!gestureActive) return@DampedDragAnimation
+                gestureActive = false
+                onInteractionChanged(false)
+                if (!dragMoved) {
+                    if (layeredStyleEnabled) {
+                        val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, items.lastIndex)
+                        items.getOrNull(targetIndex)?.takeIf { it.enabled }?.onClick?.invoke()
+                    }
+                    animationScope.launch {
+                        offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
+                    }
+                    return@DampedDragAnimation
+                }
+                val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, items.lastIndex)
+                animateToValue(targetIndex.toFloat())
+                items.getOrNull(targetIndex)?.takeIf { it.enabled }?.onClick?.invoke()
+                animationScope.launch {
+                    offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
+                }
+            },
+            onDrag = { _, dragAmount ->
+                if (tabWidthPx > 0) {
+                    dragTravelPx += abs(dragAmount.x)
+                    if (!dragMoved && dragTravelPx >= dragActivationThresholdPx) {
+                        dragMoved = true
+                    }
+                    val raw = (targetValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)
+                        .fastCoerceIn(0f, items.lastIndex.toFloat())
+                    updateValue(raw)
+                    animationScope.launch {
+                        offsetAnimation.snapTo(offsetAnimation.value + dragAmount.x)
+                    }
+                }
+            }
+        )
+    }
+    LaunchedEffect(clampedSelectedIndex, items.size) {
+        val target = clampedSelectedIndex.toFloat()
+        if (abs(dampedDragAnimation.targetValue - target) > 0.001f) {
+            dampedDragAnimation.updateValue(target)
+        }
+    }
+
+    val selectionProgressProvider: (Int) -> Float = remember(dampedDragAnimation, items.size) {
+        { index ->
+            (1f - abs(dampedDragAnimation.value - index)).fastCoerceIn(0f, 1f)
+        }
+    }
+
+    val interactionHighlightColor = Color.White
+    val interactionHighlightStrength = liquidActionBarInteractionHighlightStrength(
+        layeredStyleEnabled = layeredStyleEnabled,
+        isInLightTheme = isInLightTheme
+    )
+    val interactionHighlightRadiusScale = liquidActionBarInteractionHighlightRadiusScale(
+        layeredStyleEnabled = layeredStyleEnabled,
+        isInLightTheme = isInLightTheme
+    )
+    val interactiveHighlight = if (isBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        remember(animationScope, tabWidthPx) {
+            InteractiveHighlight(
+                animationScope = animationScope,
+                position = { size, _ ->
+                    Offset(
+                        if (isLtr) (dampedDragAnimation.value + 0.5f) * tabWidthPx + effectivePanelOffset
+                        else size.width - (dampedDragAnimation.value + 0.5f) * tabWidthPx + effectivePanelOffset,
+                        size.height / 2f
+                    )
+                },
+                highlightColor = interactionHighlightColor,
+                highlightStrength = interactionHighlightStrength,
+                highlightRadiusScale = interactionHighlightRadiusScale
+            )
+        }
+    } else {
+        null
+    }
+
+    val minimumWidth = if (compactSingleItem && items.size == 1) {
+        AppChromeTokens.liquidActionBarSingleWidth
+    } else {
+        AppChromeTokens.liquidActionBarMinWidth
+    }
+    val barWidth = remember(items.size, compactSingleItem) {
+        maxOf(minimumWidth, (items.size * AppChromeTokens.liquidActionBarItemStep.value).dp)
+    }
+    val interactionLockModifier = Modifier.pointerInput(onInteractionChanged) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            onInteractionChanged(true)
+            try {
+                do {
+                    val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                } while (event.changes.any { it.pressed })
+            } finally {
+                onInteractionChanged(false)
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .graphicsLayer { clip = false }
+            .width(barWidth)
+            .then(interactionLockModifier),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        val primaryRowModifier = Modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { coords ->
+                totalWidthPx = coords.size.width.toFloat()
+                val contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
+                tabWidthPx = contentWidthPx / items.size
+            }
+            .graphicsLayer {
+                translationX = effectivePanelOffset
+                clip = false
+            }
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { ContinuousCapsule },
+                effects = {
+                    if (isBlurEnabled) {
+                        vibrancy()
+                        blur(UiPerformanceBudget.backdropBlur.toPx())
+                        lens(UiPerformanceBudget.backdropLens.toPx(), UiPerformanceBudget.backdropLens.toPx())
+                    }
+                },
+                highlight = {
+                    liquidActionBarBaseHighlight(
+                        layeredStyleEnabled = layeredStyleEnabled,
+                        isBlurEnabled = isBlurEnabled,
+                        isInLightTheme = isInLightTheme
+                    )
+                },
+                shadow = {
+                    liquidActionBarBaseShadow(
+                        layeredStyleEnabled = layeredStyleEnabled,
+                        isInLightTheme = isInLightTheme
+                    )
+                },
+                onDrawSurface = { drawRect(palette.baseFillColor) }
+            )
+            .then(
+                if (!layeredStyleEnabled) {
+                    Modifier.liquidActionBarSelectionAura(
+                        enabled = true,
+                        animation = dampedDragAnimation,
+                        tabWidthPx = tabWidthPx,
+                        panelOffsetPx = effectivePanelOffset,
+                        isLtr = isLtr,
+                        glowColor = palette.selectionGlowColor,
+                        coreColor = palette.selectionCoreColor
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
+            .then(
+                if (!layeredStyleEnabled && isBlurEnabled && interactiveHighlight != null) {
+                    interactiveHighlight.gestureModifier
+                } else {
+                    Modifier
+                }
+            )
+            .then(if (!layeredStyleEnabled) dampedDragAnimation.modifier else Modifier)
+            .height(AppChromeTokens.liquidActionBarOuterHeight)
+            .padding(AppChromeTokens.liquidActionBarHorizontalPadding)
+
+        Row(
+            primaryRowModifier,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            items.forEachIndexed { index, item ->
+                val selectionProgress = if (layeredStyleEnabled) 0f else selectionProgressProvider(index)
+                LiquidActionItemSlot(
+                    item = item,
+                    tint = if (layeredStyleEnabled) {
+                        palette.inactiveContentColor
+                    } else {
+                        lerp(palette.inactiveContentColor, palette.activeContentColor, selectionProgress)
+                    },
+                    iconScale = if (layeredStyleEnabled) {
+                        1f
+                    } else {
+                        1f + (selectionProgress * 0.05f) + (dampedDragAnimation.pressProgress * selectionProgress * 0.03f)
+                    },
+                    onClick = {
+                        dampedDragAnimation.animateToValue(index.toFloat())
+                        item.onClick()
+                        animationScope.launch {
+                            offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
+                        }
+                    }
+                )
+            }
+        }
+
+        if (layeredStyleEnabled) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clearAndSetSemantics {}
+                    .alpha(0f)
+                    .layerBackdrop(tabsBackdrop)
+                    .graphicsLayer {
+                        translationX = effectivePanelOffset
+                        clip = false
+                    }
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { ContinuousCapsule },
+                        effects = {
+                            if (isBlurEnabled) {
+                                val progress = dampedDragAnimation.pressProgress
+                                vibrancy()
+                                blur(UiPerformanceBudget.backdropBlur.toPx())
+                                lens(
+                                    UiPerformanceBudget.backdropLens.toPx() * progress,
+                                    UiPerformanceBudget.backdropLens.toPx() * progress
+                                )
+                            }
+                        },
+                        highlight = {
+                            Highlight.Default.copy(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f)
+                        },
+                        onDrawSurface = { drawRect(palette.baseFillColor) }
+                    )
+                    .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
+                    .height(AppChromeTokens.liquidActionBarInnerHeight)
+                    .padding(horizontal = AppChromeTokens.liquidActionBarHorizontalPadding)
+                    .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items.forEach { item ->
+                    LiquidActionItemSlot(item = item, tint = accentColor)
+                }
+            }
+
+            if (tabWidthPx > 0f) {
+                Box(
+                    Modifier
+                        .padding(horizontal = AppChromeTokens.liquidActionBarHorizontalPadding)
+                        .graphicsLayer {
+                            val contentWidth = totalWidthPx - with(density) { 8.dp.toPx() }
+                            val singleTabWidth = contentWidth / items.size
+                            val progressOffset = dampedDragAnimation.value * singleTabWidth
+                            translationX = if (isLtr) {
+                                progressOffset + effectivePanelOffset
+                            } else {
+                                -progressOffset + effectivePanelOffset
+                            }
+                            clip = false
+                        }
+                        .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.gestureModifier else Modifier)
+                        .then(dampedDragAnimation.modifier)
+                        .drawBackdrop(
+                            backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
+                            shape = { ContinuousCapsule },
+                            effects = {
+                                if (isBlurEnabled) {
+                                    val progress = dampedDragAnimation.pressProgress
+                                    lens(9f.dp.toPx() * progress, 12f.dp.toPx() * progress, true)
+                                }
+                            },
+                            highlight = {
+                                Highlight.Default.copy(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f)
+                            },
+                            shadow = { Shadow(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f) },
+                            innerShadow = {
+                                InnerShadow(
+                                    radius = 7f.dp * dampedDragAnimation.pressProgress,
+                                    alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f
+                                )
+                            },
+                            layerBlock = {
+                                if (isBlurEnabled) {
+                                    scaleX = dampedDragAnimation.scaleX
+                                    scaleY = dampedDragAnimation.scaleY
+                                    val velocity = dampedDragAnimation.velocity / 10f
+                                    scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
+                                    scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                                }
+                            },
+                            onDrawSurface = {
+                                val progress = dampedDragAnimation.pressProgress
+                                drawRect(
+                                    color = if (isInLightTheme) {
+                                        Color.Black.copy(0.1f)
+                                    } else {
+                                        Color.White.copy(0.1f)
+                                    },
+                                    alpha = progress * (1f - progress)
+                                )
+                                drawRect(Color.Black.copy(alpha = 0.03f * progress))
+                            }
+                        )
+                        .height(AppChromeTokens.liquidActionBarInnerHeight)
+                        .width(
+                            with(density) {
+                                ((totalWidthPx - (AppChromeTokens.liquidActionBarHorizontalPadding * 2).toPx()) / items.size).toDp()
+                            }
+                        )
+                )
+            }
+        }
+    }
+}

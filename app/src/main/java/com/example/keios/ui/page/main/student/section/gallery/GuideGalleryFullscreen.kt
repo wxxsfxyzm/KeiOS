@@ -62,10 +62,10 @@ import com.example.keios.ui.page.main.student.loadGuideBitmapSource
 import com.example.keios.ui.page.main.student.normalizeGuideMediaSource
 import com.example.keios.ui.page.main.student.rememberDeviceRotationDegrees
 import com.example.keios.ui.page.main.student.rememberSystemAutoRotateEnabled
-import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.GlassVariant
-import com.example.keios.ui.page.main.widget.LocalTransitionAnimationsEnabled
-import com.example.keios.ui.page.main.widget.resolvedMotionDuration
+import com.example.keios.ui.page.main.widget.glass.GlassTextButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
+import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
+import com.example.keios.ui.page.main.widget.motion.resolvedMotionDuration
 import com.github.panpf.zoomimage.CoilZoomAsyncImage
 import com.github.panpf.zoomimage.rememberCoilZoomState
 import com.github.panpf.zoomimage.zoom.ContinuousTransformType

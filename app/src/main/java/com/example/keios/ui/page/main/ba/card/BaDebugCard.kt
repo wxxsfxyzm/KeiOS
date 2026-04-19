@@ -12,8 +12,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.ui.page.main.ba.BaGlassCard
-import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.GlassTextButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import com.kyant.backdrop.Backdrop
 
 @Composable

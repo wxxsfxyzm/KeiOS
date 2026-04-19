@@ -15,11 +15,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.ui.page.main.mcp.model.McpOverviewMetric
-import com.example.keios.ui.page.main.widget.AppOverviewCard
-import com.example.keios.ui.page.main.widget.AppOverviewInlineMetricTile
-import com.example.keios.ui.page.main.widget.CardLayoutRhythm
-import com.example.keios.ui.page.main.widget.StatusLabelText
-import com.example.keios.ui.page.main.widget.StatusPill
+import com.example.keios.ui.page.main.widget.core.AppOverviewCard
+import com.example.keios.ui.page.main.widget.core.AppOverviewInlineMetricTile
+import com.example.keios.ui.page.main.widget.core.CardLayoutRhythm
+import com.example.keios.ui.page.main.widget.status.StatusLabelText
+import com.example.keios.ui.page.main.widget.status.StatusPill
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 

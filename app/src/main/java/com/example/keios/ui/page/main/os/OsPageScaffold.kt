@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.example.keios.ui.page.main.widget.AppChromeTokens
-import com.example.keios.ui.page.main.widget.AppPageScaffold
-import com.example.keios.ui.page.main.widget.AppTopBarSearchField
-import com.example.keios.ui.page.main.widget.LiquidActionBar
-import com.example.keios.ui.page.main.widget.LiquidActionItem
+import com.example.keios.ui.page.main.widget.chrome.AppChromeTokens
+import com.example.keios.ui.page.main.widget.chrome.AppPageScaffold
+import com.example.keios.ui.page.main.widget.chrome.AppTopBarSearchField
+import com.example.keios.ui.page.main.widget.chrome.LiquidActionBar
+import com.example.keios.ui.page.main.widget.chrome.LiquidActionItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 

@@ -37,10 +37,10 @@ import com.example.keios.ui.page.main.student.tabcontent.simulate.isSimulateSubH
 import com.example.keios.ui.page.main.student.rememberGuideTabCopyAction
 import com.example.keios.ui.page.main.student.tabcontent.simulate.simulateStatGlyphForKey
 import com.example.keios.ui.page.main.student.tabcontent.profile.normalizeProfileFieldKey
-import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
-import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.GlassVariant
-import com.example.keios.ui.page.main.widget.copyModeAwareRow
+import com.example.keios.ui.page.main.widget.support.CopyModeSelectionContainer
+import com.example.keios.ui.page.main.widget.glass.GlassTextButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
+import com.example.keios.ui.page.main.widget.support.copyModeAwareRow
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults

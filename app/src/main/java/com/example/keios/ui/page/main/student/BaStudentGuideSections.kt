@@ -37,7 +37,7 @@ import coil3.compose.AsyncImage
 import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import com.example.keios.ui.page.main.student.section.buildGuideCopyPayload
 import com.example.keios.ui.page.main.student.section.rememberGuideCopyAction
-import com.example.keios.ui.page.main.widget.MiuixInfoItem
+import com.example.keios.ui.page.main.widget.core.MiuixInfoItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext

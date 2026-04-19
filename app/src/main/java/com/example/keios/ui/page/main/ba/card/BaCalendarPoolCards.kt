@@ -28,8 +28,8 @@ import com.example.keios.ui.page.main.ba.support.formatBaDateTimeNoYearInTimeZon
 import com.example.keios.ui.page.main.ba.support.formatBaRemainingTime
 import com.example.keios.ui.page.main.ba.support.poolProgress
 import com.example.keios.ui.page.main.ba.support.serverRefreshTimeZone
-import com.example.keios.ui.page.main.widget.GlassIconButton
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.GlassIconButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import com.kyant.backdrop.Backdrop
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults

@@ -35,8 +35,8 @@ import com.example.keios.ui.page.main.about.section.AboutRuntimeStatusCardSectio
 import com.example.keios.ui.page.main.about.section.AboutUiFrameworkCardSection
 import com.example.keios.ui.page.main.about.util.openExternalUrl
 import com.example.keios.ui.page.main.os.appLucideBackIcon
-import com.example.keios.ui.page.main.widget.AppPageLazyColumn
-import com.example.keios.ui.page.main.widget.AppPageScaffold
+import com.example.keios.ui.page.main.widget.chrome.AppPageLazyColumn
+import com.example.keios.ui.page.main.widget.chrome.AppPageScaffold
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior

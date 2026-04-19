@@ -7,9 +7,9 @@ import androidx.compose.ui.composed
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogStore
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogTab
 import com.example.keios.ui.page.main.student.fetch.extractGuideContentIdFromUrl
-import com.example.keios.ui.page.main.widget.buildTextCopyPayload
-import com.example.keios.ui.page.main.widget.copyModeAwareRow
-import com.example.keios.ui.page.main.widget.rememberLightTextCopyAction
+import com.example.keios.ui.page.main.widget.support.buildTextCopyPayload
+import com.example.keios.ui.page.main.widget.support.copyModeAwareRow
+import com.example.keios.ui.page.main.widget.support.rememberLightTextCopyAction
 import java.util.concurrent.ConcurrentHashMap
 
 internal val npcSatelliteGuideFlagCache = ConcurrentHashMap<Long, Boolean>()

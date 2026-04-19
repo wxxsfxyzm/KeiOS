@@ -32,8 +32,8 @@ import com.example.keios.ui.page.main.about.model.AboutPermissionEntry
 import com.example.keios.ui.page.main.about.ui.AboutCompactInfoRow
 import com.example.keios.ui.page.main.about.ui.AboutCompactPillRow
 import com.example.keios.ui.page.main.about.ui.AboutSectionCard
-import com.example.keios.ui.page.main.widget.CardLayoutRhythm
-import com.example.keios.ui.page.main.widget.StatusLabelText
+import com.example.keios.ui.page.main.widget.core.CardLayoutRhythm
+import com.example.keios.ui.page.main.widget.status.StatusLabelText
 import java.util.Locale
 
 @Composable

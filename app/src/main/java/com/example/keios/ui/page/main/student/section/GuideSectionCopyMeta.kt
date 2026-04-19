@@ -23,10 +23,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.student.BaGuideMetaItem
 import com.example.keios.ui.page.main.student.GuideRemoteIcon
-import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
-import com.example.keios.ui.page.main.widget.buildTextCopyPayload
-import com.example.keios.ui.page.main.widget.copyModeAwareRow
-import com.example.keios.ui.page.main.widget.rememberLightTextCopyAction
+import com.example.keios.ui.page.main.widget.support.CopyModeSelectionContainer
+import com.example.keios.ui.page.main.widget.support.buildTextCopyPayload
+import com.example.keios.ui.page.main.widget.support.copyModeAwareRow
+import com.example.keios.ui.page.main.widget.support.rememberLightTextCopyAction
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 

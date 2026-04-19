@@ -19,9 +19,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.ba.support.BA_DEFAULT_FRIEND_CODE
 import com.example.keios.ui.page.main.ba.support.BA_DEFAULT_NICKNAME
-import com.example.keios.ui.page.main.widget.AppTypographyTokens
-import com.example.keios.ui.page.main.widget.GlassSearchField
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.core.AppTypographyTokens
+import com.example.keios.ui.page.main.widget.glass.GlassSearchField
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import com.kyant.backdrop.Backdrop
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme

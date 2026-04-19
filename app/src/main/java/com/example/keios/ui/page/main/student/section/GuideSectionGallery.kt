@@ -45,8 +45,8 @@ import com.example.keios.ui.page.main.student.section.gallery.GuideImageFullscre
 import com.example.keios.ui.page.main.student.section.gallery.GuideInlineVideoPlayer
 import com.example.keios.ui.page.main.student.section.gallery.formatAudioDuration
 import com.example.keios.ui.page.main.student.stripGuideWebLinks
-import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.GlassTextButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import com.kyant.backdrop.Backdrop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow

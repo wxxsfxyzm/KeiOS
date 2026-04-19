@@ -21,7 +21,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.keios.ui.page.main.widget.AppTypographyTokens
+import com.example.keios.ui.page.main.widget.core.AppTypographyTokens
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable

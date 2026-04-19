@@ -56,10 +56,10 @@ import com.example.keios.ui.page.main.student.tabcontent.profile.profileStudentI
 import com.example.keios.ui.page.main.student.tabcontent.profile.resolveProfileLinkTitle
 import com.example.keios.ui.page.main.student.tabcontent.profile.sortGalleryItemsByTitleNumbers
 import com.example.keios.ui.page.main.student.tabcontent.profile.sortProfileRowsByKeyNumbers
-import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
-import com.example.keios.ui.page.main.widget.FrostedBlock
-import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.support.CopyModeSelectionContainer
+import com.example.keios.ui.page.main.widget.glass.FrostedBlock
+import com.example.keios.ui.page.main.widget.glass.GlassTextButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

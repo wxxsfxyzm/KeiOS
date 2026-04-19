@@ -24,8 +24,8 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.keios.ui.page.main.widget.GlassVariant
-import com.example.keios.ui.page.main.widget.glassStyle
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.glassStyle
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur

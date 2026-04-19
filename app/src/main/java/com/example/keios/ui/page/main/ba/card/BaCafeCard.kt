@@ -21,9 +21,9 @@ import com.example.keios.ui.page.main.ba.support.formatBaDateTimeNoSeconds
 import com.example.keios.ui.page.main.ba.support.formatBaRemainingTime
 import com.example.keios.ui.page.main.ba.support.nextArenaRefreshMs
 import com.example.keios.ui.page.main.ba.support.nextCafeStudentRefreshMs
-import com.example.keios.ui.page.main.widget.AppDropdownSelector
-import com.example.keios.ui.page.main.widget.GlassIconButton
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.AppDropdownSelector
+import com.example.keios.ui.page.main.widget.glass.GlassIconButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import com.kyant.backdrop.Backdrop
 
 @Composable

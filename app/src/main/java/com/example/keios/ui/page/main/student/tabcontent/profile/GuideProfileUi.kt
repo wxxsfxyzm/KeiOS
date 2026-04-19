@@ -36,8 +36,8 @@ import com.example.keios.ui.page.main.student.extractGuideWebLinks
 import com.example.keios.ui.page.main.student.guideTabCopyable
 import com.example.keios.ui.page.main.student.rememberGuideTabCopyAction
 import com.example.keios.ui.page.main.student.stripGuideWebLinks
-import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
-import com.example.keios.ui.page.main.widget.copyModeAwareRow
+import com.example.keios.ui.page.main.widget.support.CopyModeSelectionContainer
+import com.example.keios.ui.page.main.widget.support.copyModeAwareRow
 import com.kyant.capsule.ContinuousCapsule
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme

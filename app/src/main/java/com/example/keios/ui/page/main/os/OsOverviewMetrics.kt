@@ -6,7 +6,7 @@ import com.example.keios.R
 import com.example.keios.ui.page.main.os.components.OsOverviewMetric
 import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
 import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCard
-import com.example.keios.ui.page.main.widget.StatusLabelText
+import com.example.keios.ui.page.main.widget.status.StatusLabelText
 
 internal data class OsActivityOverviewStats(
     val totalCount: Int,

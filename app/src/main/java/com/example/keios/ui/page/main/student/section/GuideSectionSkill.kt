@@ -1,6 +1,6 @@
 package com.example.keios.ui.page.main.student.section
 
-import com.example.keios.ui.page.main.widget.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -40,12 +40,12 @@ import com.example.keios.ui.page.main.student.guideSkillTypeCircledSuffixPattern
 import com.example.keios.ui.page.main.student.guideSkillTypeNumericSuffixPattern
 import com.example.keios.ui.page.main.student.guideSkillTypeStateSplitPattern
 import com.example.keios.ui.page.main.student.sanitizeGuideSkillLabelForDisplay
-import com.example.keios.ui.page.main.widget.GlassTextButton
-import com.example.keios.ui.page.main.widget.CopyModeSelectionContainer
+import com.example.keios.ui.page.main.widget.glass.GlassTextButton
+import com.example.keios.ui.page.main.widget.support.CopyModeSelectionContainer
 import com.kyant.backdrop.Backdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import com.example.keios.ui.page.main.widget.AppDropdownSelector
+import com.example.keios.ui.page.main.widget.glass.AppDropdownSelector
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 

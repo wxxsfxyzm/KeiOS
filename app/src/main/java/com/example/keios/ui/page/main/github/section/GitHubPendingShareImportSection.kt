@@ -13,11 +13,11 @@ import com.example.keios.R
 import com.example.keios.ui.page.main.github.GitHubCompactInfoRow
 import com.example.keios.ui.page.main.github.share.GitHubPendingShareImportTrack
 import com.example.keios.ui.page.main.github.GitHubStatusPalette
-import com.example.keios.ui.page.main.widget.AppStatusPillSize
-import com.example.keios.ui.page.main.widget.AppSurfaceCard
-import com.example.keios.ui.page.main.widget.AppTypographyTokens
-import com.example.keios.ui.page.main.widget.CardLayoutRhythm
-import com.example.keios.ui.page.main.widget.StatusPill
+import com.example.keios.ui.page.main.widget.core.AppStatusPillSize
+import com.example.keios.ui.page.main.widget.core.AppSurfaceCard
+import com.example.keios.ui.page.main.widget.core.AppTypographyTokens
+import com.example.keios.ui.page.main.widget.core.CardLayoutRhythm
+import com.example.keios.ui.page.main.widget.status.StatusPill
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
