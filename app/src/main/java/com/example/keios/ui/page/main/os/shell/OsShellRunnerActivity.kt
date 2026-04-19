@@ -11,18 +11,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,13 +39,13 @@ import com.example.keios.core.prefs.UiPrefs
 import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.ui.page.main.widget.AppCardHeader
 import com.example.keios.ui.page.main.widget.AppChromeTokens
+import com.example.keios.ui.page.main.widget.AppPageLazyColumn
 import com.example.keios.ui.page.main.widget.AppPageScaffold
 import com.example.keios.ui.page.main.widget.AppSurfaceCard
 import com.example.keios.ui.page.main.widget.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.GlassIconButton
 import com.example.keios.ui.page.main.widget.GlassSearchField
 import com.example.keios.ui.page.main.widget.GlassVariant
-import com.example.keios.ui.page.main.widget.appPageContentPadding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -135,6 +135,7 @@ private fun OsShellRunnerPage(
 ) {
     BackHandler(onBack = onClose)
     val scope = rememberCoroutineScope()
+    val pageListState = rememberLazyListState()
     val shellPageTitle = stringResource(R.string.os_shell_page_title)
     val inputTitle = stringResource(R.string.os_shell_input_title)
     val outputTitle = stringResource(R.string.os_shell_output_title)
@@ -171,6 +172,40 @@ private fun OsShellRunnerPage(
         }
     }
 
+    fun runCommand() {
+        if (runningCommand) return
+        val command = commandInput.trim()
+        if (command.isBlank()) {
+            outputText = emptyCommandText
+            return
+        }
+        if (!canRunShellCommand) {
+            outputText = missingPermissionText
+            return
+        }
+        scope.launch {
+            runningCommand = true
+            try {
+                val output = runCatching { onRunShellCommand(command) }
+                    .getOrElse { throwable ->
+                        throwable.localizedMessage?.takeIf { it.isNotBlank() }
+                            ?: throwable.javaClass.simpleName
+                    }
+                    ?.takeIf { it.isNotBlank() }
+                    ?: noOutputText
+                appendOutput(command, output)
+            } finally {
+                runningCommand = false
+            }
+        }
+    }
+
+    LaunchedEffect(outputText) {
+        if (outputText.isNotBlank()) {
+            outputScrollState.scrollTo(outputScrollState.maxValue)
+        }
+    }
+
     AppPageScaffold(
         title = "",
         largeTitle = shellPageTitle,
@@ -183,152 +218,126 @@ private fun OsShellRunnerPage(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    appPageContentPadding(
-                        innerPadding = innerPadding,
-                        topExtra = 0.dp
-                    )
-                ),
-            verticalArrangement = Arrangement.spacedBy(AppChromeTokens.pageSectionGap)
+        AppPageLazyColumn(
+            innerPadding = innerPadding,
+            state = pageListState,
+            topExtra = 0.dp,
+            sectionSpacing = AppChromeTokens.pageSectionGap
         ) {
-            AppSurfaceCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-                AppCardHeader(
-                    title = inputTitle,
-                    subtitle = shizukuStatus,
-                    endActions = {
-                        GlassIconButton(
-                            backdrop = null,
-                            icon = MiuixIcons.Regular.Play,
-                            contentDescription = runActionDescription,
-                            onClick = {
-                                if (runningCommand) return@GlassIconButton
-                                val command = commandInput.trim()
-                                if (command.isBlank()) {
-                                    outputText = emptyCommandText
-                                    return@GlassIconButton
-                                }
-                                if (!canRunShellCommand) {
-                                    outputText = missingPermissionText
-                                    return@GlassIconButton
-                                }
-                                scope.launch {
-                                    runningCommand = true
-                                    try {
-                                        val output = onRunShellCommand(command)
-                                            ?.takeIf { it.isNotBlank() }
-                                            ?: noOutputText
-                                        appendOutput(command, output)
-                                        outputScrollState.scrollTo(outputScrollState.maxValue)
-                                    } finally {
-                                        runningCommand = false
-                                    }
-                                }
-                            },
-                            iconTint = if (runningCommand) {
-                                MiuixTheme.colorScheme.onBackgroundVariant
-                            } else {
-                                MiuixTheme.colorScheme.primary
-                            },
-                            variant = GlassVariant.Bar
-                        )
-                        GlassIconButton(
-                            backdrop = null,
-                            icon = MiuixIcons.Regular.Lock,
-                            contentDescription = requestPermissionDescription,
-                            onClick = onRequestShizukuPermission,
-                            iconTint = MiuixTheme.colorScheme.primary,
-                            variant = GlassVariant.Bar
-                        )
-                        GlassIconButton(
-                            backdrop = null,
-                            icon = MiuixIcons.Regular.Replace,
-                            contentDescription = clearInputDescription,
-                            onClick = { commandInput = "" },
-                            iconTint = MiuixTheme.colorScheme.onBackgroundVariant,
-                            variant = GlassVariant.Bar
-                        )
-                    }
-                )
-                Box(
+            item(key = "shell_input_card") {
+                AppSurfaceCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp)
-                        .padding(bottom = 14.dp)
-                        .heightIn(min = 220.dp)
                 ) {
-                    GlassSearchField(
-                        value = commandInput,
-                        onValueChange = { commandInput = it },
-                        label = stringResource(R.string.os_shell_input_hint),
-                        backdrop = null,
-                        variant = GlassVariant.SheetInput,
-                        singleLine = false,
-                        textColor = MiuixTheme.colorScheme.primary,
-                        minHeight = 220.dp,
-                        modifier = Modifier
-                            .fillMaxSize()
+                    AppCardHeader(
+                        title = inputTitle,
+                        subtitle = shizukuStatus,
+                        endActions = {
+                            GlassIconButton(
+                                backdrop = null,
+                                icon = MiuixIcons.Regular.Play,
+                                contentDescription = runActionDescription,
+                                onClick = { runCommand() },
+                                iconTint = if (runningCommand) {
+                                    MiuixTheme.colorScheme.onBackgroundVariant
+                                } else {
+                                    MiuixTheme.colorScheme.primary
+                                },
+                                variant = GlassVariant.Bar
+                            )
+                            GlassIconButton(
+                                backdrop = null,
+                                icon = MiuixIcons.Regular.Lock,
+                                contentDescription = requestPermissionDescription,
+                                onClick = onRequestShizukuPermission,
+                                iconTint = MiuixTheme.colorScheme.primary,
+                                variant = GlassVariant.Bar
+                            )
+                            GlassIconButton(
+                                backdrop = null,
+                                icon = MiuixIcons.Regular.Replace,
+                                contentDescription = clearInputDescription,
+                                onClick = { commandInput = "" },
+                                iconTint = MiuixTheme.colorScheme.onBackgroundVariant,
+                                variant = GlassVariant.Bar
+                            )
+                        }
                     )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp)
+                            .padding(bottom = 14.dp)
+                    ) {
+                        GlassSearchField(
+                            value = commandInput,
+                            onValueChange = { commandInput = it },
+                            label = stringResource(R.string.os_shell_input_hint),
+                            backdrop = null,
+                            variant = GlassVariant.SheetInput,
+                            singleLine = true,
+                            onImeActionDone = { runCommand() },
+                            textColor = MiuixTheme.colorScheme.primary,
+                            minHeight = 54.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                        )
+                    }
                 }
             }
-
-            AppSurfaceCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                AppCardHeader(
-                    title = outputTitle,
-                    subtitle = if (runningCommand) outputRunningSubtitle else outputReadySubtitle,
-                    endActions = {
-                        GlassIconButton(
-                            backdrop = null,
-                            icon = MiuixIcons.Regular.Replace,
-                            contentDescription = clearOutputDescription,
-                            onClick = { outputText = "" },
-                            iconTint = MiuixTheme.colorScheme.onBackgroundVariant,
-                            variant = GlassVariant.Bar
-                        )
-                    }
-                )
-                Box(
+            item(key = "shell_output_card") {
+                AppSurfaceCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 220.dp)
-                        .padding(horizontal = 14.dp)
-                        .padding(bottom = 14.dp)
-                        .background(
-                            color = MiuixTheme.colorScheme.surface.copy(alpha = 0.55f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
-                    if (outputText.isBlank()) {
-                        Text(
-                            text = outputHint,
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
-                            fontSize = AppTypographyTokens.Body.fontSize,
-                            lineHeight = AppTypographyTokens.Body.lineHeight
-                        )
-                    } else {
-                        SelectionContainer(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(outputScrollState)
-                        ) {
+                    AppCardHeader(
+                        title = outputTitle,
+                        subtitle = if (runningCommand) outputRunningSubtitle else outputReadySubtitle,
+                        endActions = {
+                            GlassIconButton(
+                                backdrop = null,
+                                icon = MiuixIcons.Regular.Replace,
+                                contentDescription = clearOutputDescription,
+                                onClick = { outputText = "" },
+                                iconTint = MiuixTheme.colorScheme.onBackgroundVariant,
+                                variant = GlassVariant.Bar
+                            )
+                        }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 220.dp, max = 360.dp)
+                            .padding(horizontal = 14.dp)
+                            .padding(bottom = 14.dp)
+                            .background(
+                                color = MiuixTheme.colorScheme.surface.copy(alpha = 0.55f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        if (outputText.isBlank()) {
                             Text(
-                                text = outputText,
-                                color = MiuixTheme.colorScheme.onBackground,
+                                text = outputHint,
+                                color = MiuixTheme.colorScheme.onBackgroundVariant,
                                 fontSize = AppTypographyTokens.Body.fontSize,
                                 lineHeight = AppTypographyTokens.Body.lineHeight,
-                                maxLines = Int.MAX_VALUE,
-                                overflow = TextOverflow.Clip
                             )
+                        } else {
+                            SelectionContainer(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(outputScrollState)
+                            ) {
+                                Text(
+                                    text = outputText,
+                                    color = MiuixTheme.colorScheme.onBackground,
+                                    fontSize = AppTypographyTokens.Body.fontSize,
+                                    lineHeight = AppTypographyTokens.Body.lineHeight,
+                                    maxLines = Int.MAX_VALUE,
+                                    overflow = TextOverflow.Clip
+                                )
+                            }
                         }
                     }
                 }

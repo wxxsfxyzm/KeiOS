@@ -574,10 +574,6 @@ fun OsPage(
             InfoRow(
                 key = context.getString(R.string.os_shell_card_status_label),
                 value = shizukuStatus
-            ),
-            InfoRow(
-                key = context.getString(R.string.os_shell_card_hint_label),
-                value = context.getString(R.string.os_shell_card_hint_value)
             )
         )
     }
