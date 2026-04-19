@@ -378,7 +378,7 @@ private fun OsShellRunnerPage(
                             value = commandInput,
                             onValueChange = { commandInput = it },
                             label = stringResource(R.string.os_shell_input_hint),
-                            minHeight = 168.dp,
+                            minHeight = 136.dp,
                             modifier = Modifier
                                 .fillMaxWidth()
                         )
@@ -441,7 +441,7 @@ private fun ShellCommandInputField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    minHeight: Dp = 168.dp,
+    minHeight: Dp = 136.dp,
     modifier: Modifier = Modifier
 ) {
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()

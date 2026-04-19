@@ -13,6 +13,11 @@ import kotlin.coroutines.resumeWithException
 class ShizukuApiUtils(
     private val requestCode: Int = DEFAULT_REQUEST_CODE
 ) {
+    private data class InteractiveCommandRewriteResult(
+        val command: String,
+        val adaptedTopOnce: Boolean = false
+    )
+
     private data class UiDumpRewriteResult(
         val command: String,
         val redirectedPath: String?
@@ -142,7 +147,11 @@ class ShizukuApiUtils(
     }
 
     private fun createShellProcess(command: String): Process? {
-        val resolved = rewriteUiAutomatorDumpCommand(command)
+        val interactiveRewrite = rewriteInteractiveShellCommand(command)
+        if (interactiveRewrite.adaptedTopOnce) {
+            publishStatus("top command adapted: run once with -n 1")
+        }
+        val resolved = rewriteUiAutomatorDumpCommand(interactiveRewrite.command)
         if (!resolved.redirectedPath.isNullOrBlank()) {
             publishStatus("UI dump redirected: ${resolved.redirectedPath}")
         }
@@ -164,6 +173,23 @@ class ShizukuApiUtils(
                 "createShellProcess failed: ${it.javaClass.simpleName}${it.message?.let { msg -> ": $msg" }.orEmpty()}"
             )
         }.getOrNull()
+    }
+
+    private fun rewriteInteractiveShellCommand(command: String): InteractiveCommandRewriteResult {
+        val trimmed = command.trim()
+        if (trimmed.isBlank()) return InteractiveCommandRewriteResult(command = command)
+        val normalized = trimmed.lowercase(Locale.ROOT)
+        if (!normalized.startsWith("top")) {
+            return InteractiveCommandRewriteResult(command = command)
+        }
+        val hasIterationCount = Regex("""(^|\s)-n(\s*\d+)?(\s|$)""").containsMatchIn(trimmed)
+        if (hasIterationCount) {
+            return InteractiveCommandRewriteResult(command = command)
+        }
+        return InteractiveCommandRewriteResult(
+            command = "$trimmed -n 1",
+            adaptedTopOnce = true
+        )
     }
 
     private fun executeProcessAndRead(process: Process, timeoutMs: Long): String? {
