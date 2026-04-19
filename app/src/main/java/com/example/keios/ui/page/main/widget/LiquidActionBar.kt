@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -30,10 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -138,6 +141,7 @@ fun LiquidActionBarPopupAnchors(
 private fun RowScope.LiquidActionItemSlot(
     item: LiquidActionItem,
     tint: Color,
+    iconScale: Float = 1f,
     onClick: (() -> Unit)? = null
 ) {
     val clickModifier = if (onClick != null && item.enabled) {
@@ -154,7 +158,11 @@ private fun RowScope.LiquidActionItemSlot(
             .clip(ContinuousCapsule)
             .then(clickModifier)
             .fillMaxHeight()
-            .weight(1f),
+            .weight(1f)
+            .graphicsLayer {
+                scaleX = iconScale
+                scaleY = iconScale
+            },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -164,6 +172,102 @@ private fun RowScope.LiquidActionItemSlot(
         )
     }
 }
+
+private fun Modifier.liquidActionBarSelectionAura(
+    enabled: Boolean,
+    animation: DampedDragAnimation,
+    tabWidthPx: Float,
+    panelOffsetPx: Float,
+    isLtr: Boolean,
+    glowColor: Color,
+    coreColor: Color
+): Modifier {
+    if (!enabled || tabWidthPx <= 0f) return this
+    return drawWithContent {
+        val centerX = if (isLtr) {
+            (animation.value + 0.5f) * tabWidthPx + panelOffsetPx
+        } else {
+            size.width - (animation.value + 0.5f) * tabWidthPx + panelOffsetPx
+        }.fastCoerceIn(0f, size.width)
+        val center = Offset(centerX, size.height / 2f)
+        val pressProgress = animation.pressProgress.fastCoerceIn(0f, 1f)
+        drawCircle(
+            color = glowColor.copy(alpha = (0.12f + pressProgress * 0.08f).fastCoerceIn(0f, 0.28f)),
+            radius = size.height * (0.88f + pressProgress * 0.16f),
+            center = center
+        )
+        drawCircle(
+            color = coreColor.copy(alpha = (0.10f + pressProgress * 0.10f).fastCoerceIn(0f, 0.26f)),
+            radius = size.height * (0.42f + pressProgress * 0.08f),
+            center = center
+        )
+        drawContent()
+    }
+}
+
+@Composable
+private fun rememberLiquidActionBarPalette(
+    layeredStyleEnabled: Boolean,
+    isBlurEnabled: Boolean,
+    isInLightTheme: Boolean,
+    primary: Color,
+    onSurface: Color,
+    surfaceContainer: Color
+): LiquidActionBarPalette = remember(
+    layeredStyleEnabled,
+    isBlurEnabled,
+    isInLightTheme,
+    primary,
+    onSurface,
+    surfaceContainer
+) {
+    if (layeredStyleEnabled) {
+        return@remember LiquidActionBarPalette(
+            baseFillColor = if (isBlurEnabled) surfaceContainer.copy(alpha = 0.40f) else surfaceContainer,
+            inactiveContentColor = onSurface,
+            activeContentColor = primary,
+            selectionGlowColor = Color.White,
+            selectionCoreColor = Color.White
+        )
+    }
+
+    if (!isBlurEnabled) {
+        return@remember LiquidActionBarPalette(
+            baseFillColor = surfaceContainer,
+            inactiveContentColor = onSurface.copy(alpha = 0.68f),
+            activeContentColor = onSurface.copy(alpha = 0.94f),
+            selectionGlowColor = Color.White.copy(alpha = 0.12f),
+            selectionCoreColor = Color.White.copy(alpha = 0.10f)
+        )
+    }
+
+    if (isInLightTheme) {
+        return@remember LiquidActionBarPalette(
+            baseFillColor = surfaceContainer.copy(alpha = 0.22f),
+            inactiveContentColor = onSurface.copy(alpha = 0.60f),
+            activeContentColor = onSurface.copy(alpha = 0.92f),
+            selectionGlowColor = Color.White.copy(alpha = 0.18f),
+            selectionCoreColor = Color.White.copy(alpha = 0.12f)
+        )
+    }
+
+    return@remember LiquidActionBarPalette(
+        baseFillColor = surfaceContainer.copy(alpha = 0.16f),
+        inactiveContentColor = onSurface.copy(alpha = 0.76f),
+        activeContentColor = onSurface.copy(alpha = 0.98f),
+        selectionGlowColor = Color.White.copy(alpha = 0.12f),
+        selectionCoreColor = Color.White.copy(alpha = 0.14f)
+    )
+}
+
+@Stable
+private class LiquidActionBarPalette(
+    val baseFillColor: Color,
+    val inactiveContentColor: Color,
+    val activeContentColor: Color,
+    val selectionGlowColor: Color,
+    val selectionCoreColor: Color
+)
 
 @Composable
 fun LiquidActionBar(
@@ -181,12 +285,14 @@ fun LiquidActionBar(
 
     val isInLightTheme = !isSystemInDarkTheme()
     val accentColor = MiuixTheme.colorScheme.primary
-    val containerColor = if (isBlurEnabled) {
-        MiuixTheme.colorScheme.surfaceContainer.copy(0.4f)
-    } else {
-        MiuixTheme.colorScheme.surfaceContainer
-    }
-    val iconColor = MiuixTheme.colorScheme.onSurface
+    val palette = rememberLiquidActionBarPalette(
+        layeredStyleEnabled = layeredStyleEnabled,
+        isBlurEnabled = isBlurEnabled,
+        isInLightTheme = isInLightTheme,
+        primary = accentColor,
+        onSurface = MiuixTheme.colorScheme.onSurface,
+        surfaceContainer = MiuixTheme.colorScheme.surfaceContainer
+    )
 
     val tabsBackdrop = rememberLayerBackdrop()
     val density = LocalDensity.current
@@ -280,13 +386,27 @@ fun LiquidActionBar(
         }
     }
 
-    val interactionHighlightColor = if (!layeredStyleEnabled && isInLightTheme) {
-        Color(0xFF8CCBFF)
-    } else {
-        Color.White
+    val selectionProgressProvider: (Int) -> Float = remember(dampedDragAnimation, items.size) {
+        { index ->
+            (1f - abs(dampedDragAnimation.value - index)).fastCoerceIn(0f, 1f)
+        }
     }
-    val interactionHighlightStrength = if (!layeredStyleEnabled && isInLightTheme) 0.72f else 1f
-    val interactionHighlightRadiusScale = if (!layeredStyleEnabled && isInLightTheme) 0.74f else 1.2f
+
+    val interactionHighlightColor = Color.White
+    val interactionHighlightStrength = if (layeredStyleEnabled) {
+        1f
+    } else if (isInLightTheme) {
+        0.54f
+    } else {
+        0.68f
+    }
+    val interactionHighlightRadiusScale = if (layeredStyleEnabled) {
+        1.2f
+    } else if (isInLightTheme) {
+        0.92f
+    } else {
+        1.02f
+    }
     val interactiveHighlight = if (isBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         remember(animationScope, tabWidthPx) {
             InteractiveHighlight(
@@ -358,14 +478,33 @@ fun LiquidActionBar(
                     }
                 },
                 highlight = {
-                    Highlight.Default.copy(alpha = if (isBlurEnabled) 1f else 0f)
+                    if (layeredStyleEnabled) {
+                        Highlight.Default.copy(alpha = if (isBlurEnabled) 1f else 0f)
+                    } else {
+                        Highlight.Ambient.copy(alpha = if (isBlurEnabled) 0.72f else 0.36f)
+                    }
                 },
                 shadow = {
                     Shadow.Default.copy(
                         color = Color.Black.copy(if (isInLightTheme) 0.1f else 0.2f),
                     )
                 },
-                onDrawSurface = { drawRect(containerColor) }
+                onDrawSurface = { drawRect(palette.baseFillColor) }
+            )
+            .then(
+                if (!layeredStyleEnabled) {
+                    Modifier.liquidActionBarSelectionAura(
+                        enabled = true,
+                        animation = dampedDragAnimation,
+                        tabWidthPx = tabWidthPx,
+                        panelOffsetPx = effectivePanelOffset,
+                        isLtr = isLtr,
+                        glowColor = palette.selectionGlowColor,
+                        coreColor = palette.selectionCoreColor
+                    )
+                } else {
+                    Modifier
+                }
             )
             .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
             .then(
@@ -384,9 +523,19 @@ fun LiquidActionBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             items.forEachIndexed { index, item ->
+                val selectionProgress = if (layeredStyleEnabled) 0f else selectionProgressProvider(index)
                 LiquidActionItemSlot(
                     item = item,
-                    tint = iconColor,
+                    tint = if (layeredStyleEnabled) {
+                        palette.inactiveContentColor
+                    } else {
+                        lerp(palette.inactiveContentColor, palette.activeContentColor, selectionProgress)
+                    },
+                    iconScale = if (layeredStyleEnabled) {
+                        1f
+                    } else {
+                        1f + (selectionProgress * 0.05f) + (dampedDragAnimation.pressProgress * selectionProgress * 0.03f)
+                    },
                     onClick = {
                         dampedDragAnimation.animateToValue(index.toFloat())
                         item.onClick()
@@ -426,7 +575,7 @@ fun LiquidActionBar(
                         highlight = {
                             Highlight.Default.copy(alpha = if (isBlurEnabled) dampedDragAnimation.pressProgress else 0f)
                         },
-                        onDrawSurface = { drawRect(containerColor) }
+                        onDrawSurface = { drawRect(palette.baseFillColor) }
                     )
                     .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
                     .height(AppChromeTokens.liquidActionBarInnerHeight)
