@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -32,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -59,6 +61,7 @@ import com.example.keios.ui.page.main.widget.core.CardLayoutRhythm
 import com.example.keios.ui.page.main.widget.core.AppTypographyTokens
 import com.example.keios.ui.page.main.widget.glass.GlassTextButton
 import com.example.keios.ui.page.main.widget.glass.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.LiquidGlassSwitch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -79,12 +82,16 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+private val LocalSettingsLiquidGlassSwitchEnabled = staticCompositionLocalOf { false }
+
 @Composable
 fun SettingsPage(
     liquidBottomBarEnabled: Boolean,
     onLiquidBottomBarChanged: (Boolean) -> Unit,
     liquidActionBarLayeredStyleEnabled: Boolean,
     onLiquidActionBarLayeredStyleChanged: (Boolean) -> Unit,
+    liquidGlassSwitchEnabled: Boolean,
+    onLiquidGlassSwitchChanged: (Boolean) -> Unit,
     transitionAnimationsEnabled: Boolean,
     onTransitionAnimationsChanged: (Boolean) -> Unit,
     cardPressFeedbackEnabled: Boolean,
@@ -182,6 +189,7 @@ fun SettingsPage(
     val animationGroupActive = transitionAnimationsEnabled
     val componentEffectsGroupActive = liquidActionBarLayeredStyleEnabled ||
         liquidBottomBarEnabled ||
+        liquidGlassSwitchEnabled ||
         cardPressFeedbackEnabled
     val backgroundGroupActive = nonHomeBackgroundEnabled || nonHomeBackgroundUri.isNotBlank()
     val notifyGroupActive = superIslandNotificationEnabled || superIslandBypassRestrictionEnabled
@@ -317,14 +325,17 @@ fun SettingsPage(
             }
         }
     ) { innerPadding ->
-        AppPageLazyColumn(
-            innerPadding = innerPadding,
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            sectionSpacing = 12.dp
+        CompositionLocalProvider(
+            LocalSettingsLiquidGlassSwitchEnabled provides liquidGlassSwitchEnabled
         ) {
+            AppPageLazyColumn(
+                innerPadding = innerPadding,
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                sectionSpacing = 12.dp
+            ) {
             item {
                 SettingsGroupCard(
                     header = stringResource(R.string.settings_group_visual_header),
@@ -426,6 +437,19 @@ fun SettingsPage(
                         summary = stringResource(R.string.settings_bottom_bar_summary),
                         checked = liquidBottomBarEnabled,
                         onCheckedChange = onLiquidBottomBarChanged
+                    )
+
+                    SettingsToggleItem(
+                        title = stringResource(R.string.settings_liquid_switch_title),
+                        summary = if (liquidGlassSwitchEnabled) {
+                            stringResource(R.string.settings_liquid_switch_summary_enabled)
+                        } else {
+                            stringResource(R.string.settings_liquid_switch_summary_disabled)
+                        },
+                        checked = liquidGlassSwitchEnabled,
+                        onCheckedChange = onLiquidGlassSwitchChanged,
+                        infoKey = stringResource(R.string.common_scope),
+                        infoValue = stringResource(R.string.settings_liquid_switch_scope)
                     )
 
                     SettingsToggleItem(
@@ -782,6 +806,7 @@ fun SettingsPage(
                     }
                 }
             }
+            }
         }
     }
 }
@@ -856,10 +881,17 @@ internal fun SettingsToggleItem(
         infoValue = infoValue,
         onClick = { onCheckedChange(!checked) },
         trailing = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange
-            )
+            if (LocalSettingsLiquidGlassSwitchEnabled.current) {
+                LiquidGlassSwitch(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange
+                )
+            } else {
+                Switch(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange
+                )
+            }
         }
     )
 }

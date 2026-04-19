@@ -150,6 +150,9 @@ fun MainScreen(
     var liquidActionBarLayeredStyleEnabled by remember(uiPrefsSnapshot) {
         mutableStateOf(uiPrefsSnapshot.liquidActionBarLayeredStyleEnabled)
     }
+    var liquidGlassSwitchEnabled by remember(uiPrefsSnapshot) {
+        mutableStateOf(uiPrefsSnapshot.liquidGlassSwitchEnabled)
+    }
     var transitionAnimationsEnabled by remember(uiPrefsSnapshot) {
         mutableStateOf(uiPrefsSnapshot.transitionAnimationsEnabled)
     }
@@ -239,6 +242,11 @@ fun MainScreen(
                     onLiquidActionBarLayeredStyleChanged = {
                         liquidActionBarLayeredStyleEnabled = it
                         UiPrefs.setLiquidActionBarLayeredStyleEnabled(it)
+                    },
+                    liquidGlassSwitchEnabled = liquidGlassSwitchEnabled,
+                    onLiquidGlassSwitchChanged = {
+                        liquidGlassSwitchEnabled = it
+                        UiPrefs.setLiquidGlassSwitchEnabled(it)
                     },
                     transitionAnimationsEnabled = transitionAnimationsEnabled,
                     onTransitionAnimationsChanged = {

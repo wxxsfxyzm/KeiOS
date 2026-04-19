@@ -15,6 +15,7 @@ enum class AppThemeMode {
 data class UiPrefsSnapshot(
     val liquidBottomBarEnabled: Boolean,
     val liquidActionBarLayeredStyleEnabled: Boolean,
+    val liquidGlassSwitchEnabled: Boolean,
     val transitionAnimationsEnabled: Boolean,
     val cardPressFeedbackEnabled: Boolean,
     val homeIconHdrEnabled: Boolean,
@@ -35,6 +36,7 @@ object UiPrefs {
     private const val KV_ID = "ui_prefs"
     private const val KEY_LIQUID_BOTTOM_BAR = "liquid_bottom_bar"
     private const val KEY_LIQUID_ACTION_BAR_LAYERED_STYLE = "liquid_action_bar_layered_style"
+    private const val KEY_LIQUID_GLASS_SWITCH = "liquid_glass_switch"
     private const val KEY_TRANSITION_ANIMATIONS = "transition_animations"
     private const val KEY_CARD_PRESS_FEEDBACK = "card_press_feedback"
     private const val KEY_HOME_ICON_HDR = "home_icon_hdr"
@@ -78,6 +80,14 @@ object UiPrefs {
 
     fun setLiquidActionBarLayeredStyleEnabled(value: Boolean) {
         kv().encode(KEY_LIQUID_ACTION_BAR_LAYERED_STYLE, value)
+    }
+
+    fun isLiquidGlassSwitchEnabled(defaultValue: Boolean = false): Boolean {
+        return kv().decodeBool(KEY_LIQUID_GLASS_SWITCH, defaultValue)
+    }
+
+    fun setLiquidGlassSwitchEnabled(value: Boolean) {
+        kv().encode(KEY_LIQUID_GLASS_SWITCH, value)
     }
 
     fun isTransitionAnimationsEnabled(defaultValue: Boolean = true): Boolean {
@@ -223,6 +233,7 @@ object UiPrefs {
         return UiPrefsSnapshot(
             liquidBottomBarEnabled = true,
             liquidActionBarLayeredStyleEnabled = true,
+            liquidGlassSwitchEnabled = false,
             transitionAnimationsEnabled = true,
             cardPressFeedbackEnabled = true,
             homeIconHdrEnabled = false,
@@ -245,6 +256,7 @@ object UiPrefs {
         return UiPrefsSnapshot(
             liquidBottomBarEnabled = store.decodeBool(KEY_LIQUID_BOTTOM_BAR, true),
             liquidActionBarLayeredStyleEnabled = store.decodeBool(KEY_LIQUID_ACTION_BAR_LAYERED_STYLE, true),
+            liquidGlassSwitchEnabled = store.decodeBool(KEY_LIQUID_GLASS_SWITCH, false),
             transitionAnimationsEnabled = store.decodeBool(KEY_TRANSITION_ANIMATIONS, true),
             cardPressFeedbackEnabled = store.decodeBool(KEY_CARD_PRESS_FEEDBACK, true),
             homeIconHdrEnabled = store.decodeBool(KEY_HOME_ICON_HDR, false),
