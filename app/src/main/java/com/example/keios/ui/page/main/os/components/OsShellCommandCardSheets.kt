@@ -87,10 +87,7 @@ internal fun LazyListScope.addShellCommandCards(
                             imageVector = MiuixIcons.Regular.Play,
                             contentDescription = stringResource(R.string.os_shell_card_cd_run_saved),
                             tint = MiuixTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .size(20.dp)
-                                .defaultMinSize(minHeight = 20.dp)
-                                .clickable { onRunCard(card) }
+                            modifier = Modifier.clickable { onRunCard(card) }
                         )
                     }
                 },

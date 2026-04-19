@@ -163,10 +163,15 @@ internal object OsShellCommandCardStore {
         val current = loadCards()
         val existing = current.firstOrNull { it.id == targetId } ?: return null
         val resolvedRunAt = runAtMillis.takeIf { it > 0L } ?: System.currentTimeMillis()
+        val preservedUpdatedAt = existing.updatedAtMillis
+            .takeIf { it > 0L }
+            ?: existing.createdAtMillis.takeIf { it > 0L }
+            ?: resolvedRunAt
         val updated = normalizeCard(
             existing.copy(
                 runOutput = runOutput,
-                lastRunAtMillis = resolvedRunAt
+                lastRunAtMillis = resolvedRunAt,
+                updatedAtMillis = preservedUpdatedAt
             )
         ) ?: return null
         saveCards(current.map { card -> if (card.id == targetId) updated else card })
@@ -183,8 +188,8 @@ internal object OsShellCommandCardStore {
         val normalizedCommand = card.command.trim()
         if (normalizedCommand.isBlank()) return null
         val now = System.currentTimeMillis()
-        val updatedAt = card.updatedAtMillis.takeIf { it > 0L } ?: now
-        val createdAt = card.createdAtMillis.takeIf { it > 0L } ?: updatedAt
+        val createdAt = card.createdAtMillis.takeIf { it > 0L } ?: now
+        val updatedAt = card.updatedAtMillis.takeIf { it > 0L } ?: createdAt
         val lastRunAt = card.lastRunAtMillis.takeIf { it > 0L } ?: 0L
         return card.copy(
             id = card.id.trim().ifBlank { newOsShellCommandCardId() },
