@@ -48,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.core.prefs.AppThemeMode
@@ -370,7 +371,6 @@ private fun OsShellRunnerPage(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 280.dp)
                             .padding(horizontal = 14.dp)
                             .padding(bottom = 14.dp)
                     ) {
@@ -378,6 +378,7 @@ private fun OsShellRunnerPage(
                             value = commandInput,
                             onValueChange = { commandInput = it },
                             label = stringResource(R.string.os_shell_input_hint),
+                            minHeight = 168.dp,
                             modifier = Modifier
                                 .fillMaxWidth()
                         )
@@ -440,6 +441,7 @@ private fun ShellCommandInputField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
+    minHeight: Dp = 168.dp,
     modifier: Modifier = Modifier
 ) {
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
@@ -484,12 +486,12 @@ private fun ShellCommandInputField(
             cursorBrush = SolidColor(MiuixTheme.colorScheme.primary),
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 240.dp),
+                .defaultMinSize(minHeight = minHeight),
             decorationBox = { innerTextField ->
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .defaultMinSize(minHeight = 240.dp)
+                        .defaultMinSize(minHeight = minHeight)
                 ) {
                     if (value.isBlank()) {
                         BasicText(
