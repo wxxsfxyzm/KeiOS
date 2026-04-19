@@ -90,8 +90,6 @@ import com.example.keios.ui.page.main.student.clearGuideBgmPlaybackScope
 import com.example.keios.ui.perf.ReportPagerPerformanceState
 import com.example.keios.ui.page.main.widget.AppMotionTokens
 import com.example.keios.ui.page.main.widget.UiPerformanceBudget
-import com.example.keios.ui.page.main.widget.FloatingBottomBar
-import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.FrostedBlock
 import com.example.keios.ui.page.main.widget.LiquidGlassBottomBar
 import com.example.keios.ui.page.main.widget.LiquidGlassBottomBarItem
@@ -521,7 +519,6 @@ fun BaStudentGuidePage(
     val ignoreStringInput: (String) -> Unit = remember { { _: String -> } }
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
-    val newBottomBarTransitionEnabled = remember { UiPrefs.isNewBottomBarTransitionEnabled() }
     var showBottomBar by remember { mutableStateOf(true) }
     val farJumpAlpha = remember { Animatable(1f) }
     val bottomBarNestedScrollConnection = remember {
@@ -1059,8 +1056,8 @@ fun BaStudentGuidePage(
             Box(modifier = Modifier.fillMaxWidth()) {
                 AnimatedVisibility(
                     visible = showBottomBar,
-                    enter = appFloatingEnter(useNewBottomBarTransition = newBottomBarTransitionEnabled),
-                    exit = appFloatingExit(useNewBottomBarTransition = newBottomBarTransitionEnabled),
+                    enter = appFloatingEnter(),
+                    exit = appFloatingExit(),
                     modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
                     val bottomBarModifier = Modifier
@@ -1076,11 +1073,7 @@ fun BaStudentGuidePage(
                     val bottomBarTabs: @Composable RowScope.() -> Unit = {
                         bottomTabs.forEachIndexed { index, tab ->
                             val selected = pagerState.targetPage == index
-                            val tabColor = if (newBottomBarTransitionEnabled) {
-                                liquidGlassBottomBarItemContentColor(index)
-                            } else {
-                                MiuixTheme.colorScheme.onSurface
-                            }
+                            val tabColor = liquidGlassBottomBarItemContentColor(index)
                             val tabContent: @Composable ColumnScope.() -> Unit = {
                                 val tabIconModifier = Modifier
                                     .size(20.dp)
@@ -1119,53 +1112,29 @@ fun BaStudentGuidePage(
                                     overflow = TextOverflow.Visible
                                 )
                             }
-                            if (newBottomBarTransitionEnabled) {
-                                LiquidGlassBottomBarItem(
-                                    selected = selected,
-                                    tabIndex = index,
-                                    onClick = { selectBottomTab(index) },
-                                    modifier = Modifier.defaultMinSize(minWidth = 76.dp),
-                                    content = tabContent
-                                )
-                            } else {
-                                FloatingBottomBarItem(
-                                    onClick = { selectBottomTab(index) },
-                                    modifier = Modifier.defaultMinSize(minWidth = 76.dp),
-                                    content = tabContent
-                                )
-                            }
+                            LiquidGlassBottomBarItem(
+                                selected = selected,
+                                tabIndex = index,
+                                onClick = { selectBottomTab(index) },
+                                modifier = Modifier.defaultMinSize(minWidth = 76.dp),
+                                content = tabContent
+                            )
                         }
                     }
 
-                    if (newBottomBarTransitionEnabled) {
-                        LiquidGlassBottomBar(
-                            modifier = bottomBarModifier,
-                            selectedIndex = { pagerState.targetPage },
-                            onSelected = { index ->
-                                if (index != pagerState.targetPage) {
-                                    selectBottomTab(index)
-                                }
-                            },
-                            backdrop = navBackdrop,
-                            tabsCount = bottomTabs.size,
-                            isLiquidEffectEnabled = liquidBottomBarEnabled,
-                            content = bottomBarTabs
-                        )
-                    } else {
-                        FloatingBottomBar(
-                            modifier = bottomBarModifier,
-                            selectedIndex = { pagerState.targetPage },
-                            onSelected = { index ->
-                                if (index != pagerState.targetPage) {
-                                    selectBottomTab(index)
-                                }
-                            },
-                            backdrop = navBackdrop,
-                            tabsCount = bottomTabs.size,
-                            isBlurEnabled = liquidBottomBarEnabled,
-                            content = bottomBarTabs
-                        )
-                    }
+                    LiquidGlassBottomBar(
+                        modifier = bottomBarModifier,
+                        selectedIndex = { pagerState.targetPage },
+                        onSelected = { index ->
+                            if (index != pagerState.targetPage) {
+                                selectBottomTab(index)
+                            }
+                        },
+                        backdrop = navBackdrop,
+                        tabsCount = bottomTabs.size,
+                        isLiquidEffectEnabled = liquidBottomBarEnabled,
+                        content = bottomBarTabs
+                    )
                 }
             }
         }

@@ -80,8 +80,6 @@ import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import com.example.keios.ui.perf.ReportPagerPerformanceState
 import com.example.keios.ui.page.main.widget.AppMotionTokens
 import com.example.keios.ui.page.main.widget.UiPerformanceBudget
-import com.example.keios.ui.page.main.widget.FloatingBottomBar
-import com.example.keios.ui.page.main.widget.FloatingBottomBarItem
 import com.example.keios.ui.page.main.widget.LiquidGlassBottomBar
 import com.example.keios.ui.page.main.widget.LiquidGlassBottomBarItem
 import com.example.keios.ui.page.main.widget.liquidGlassBottomBarItemContentColor
@@ -150,9 +148,6 @@ fun MainScreen(
         value = withContext(Dispatchers.IO) { UiPrefs.loadSnapshot() }
     }
     var liquidBottomBarEnabled by remember(uiPrefsSnapshot) { mutableStateOf(uiPrefsSnapshot.liquidBottomBarEnabled) }
-    var newBottomBarTransitionEnabled by remember(uiPrefsSnapshot) {
-        mutableStateOf(uiPrefsSnapshot.newBottomBarTransitionEnabled)
-    }
     var liquidActionBarLayeredStyleEnabled by remember(uiPrefsSnapshot) {
         mutableStateOf(uiPrefsSnapshot.liquidActionBarLayeredStyleEnabled)
     }
@@ -209,7 +204,6 @@ fun MainScreen(
                 MainPagerLayout(
                     navigator = navigator,
                     liquidBottomBarEnabled = liquidBottomBarEnabled,
-                    newBottomBarTransitionEnabled = newBottomBarTransitionEnabled,
                     liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                     cardPressFeedbackEnabled = cardPressFeedbackEnabled,
                     homeIconHdrEnabled = homeIconHdrEnabled,
@@ -241,11 +235,6 @@ fun MainScreen(
                     onLiquidBottomBarChanged = {
                         liquidBottomBarEnabled = it
                         UiPrefs.setLiquidBottomBarEnabled(it)
-                    },
-                    newBottomBarTransitionEnabled = newBottomBarTransitionEnabled,
-                    onNewBottomBarTransitionChanged = {
-                        newBottomBarTransitionEnabled = it
-                        UiPrefs.setNewBottomBarTransitionEnabled(it)
                     },
                     liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
                     onLiquidActionBarLayeredStyleChanged = {
@@ -376,7 +365,6 @@ fun MainScreen(
 private fun MainPagerLayout(
     navigator: Navigator,
     liquidBottomBarEnabled: Boolean,
-    newBottomBarTransitionEnabled: Boolean,
     liquidActionBarLayeredStyleEnabled: Boolean,
     cardPressFeedbackEnabled: Boolean,
     homeIconHdrEnabled: Boolean,
@@ -569,8 +557,8 @@ private fun MainPagerLayout(
             Box(modifier = Modifier.fillMaxWidth()) {
                 AnimatedVisibility(
                     visible = showBottomBar,
-                    enter = appFloatingEnter(useNewBottomBarTransition = newBottomBarTransitionEnabled),
-                    exit = appFloatingExit(useNewBottomBarTransition = newBottomBarTransitionEnabled),
+                    enter = appFloatingEnter(),
+                    exit = appFloatingExit(),
                     modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
                     val bottomBarModifier = Modifier
@@ -586,123 +574,62 @@ private fun MainPagerLayout(
                     val bottomBarTabs: @Composable RowScope.() -> Unit = {
                         tabs.forEachIndexed { index, page ->
                             val selected = pagerState.targetPage == index
-                            val tabColor = if (newBottomBarTransitionEnabled) {
-                                liquidGlassBottomBarItemContentColor(index)
-                            } else {
-                                MiuixTheme.colorScheme.onSurface
-                            }
-                            if (newBottomBarTransitionEnabled) {
-                                LiquidGlassBottomBarItem(
-                                    selected = selected,
-                                    tabIndex = index,
-                                    onClick = { handlePageSelected(index) },
-                                    modifier = Modifier.defaultMinSize(minWidth = 76.dp)
-                                ) {
-                                    val tabIconModifier = Modifier
-                                        .size(20.dp)
-                                        .graphicsLayer {
-                                            scaleX = page.iconScale
-                                            scaleY = page.iconScale
-                                        }
-                                    if (page.iconRes != null) {
+                            val tabColor = liquidGlassBottomBarItemContentColor(index)
+                            LiquidGlassBottomBarItem(
+                                selected = selected,
+                                tabIndex = index,
+                                onClick = { handlePageSelected(index) },
+                                modifier = Modifier.defaultMinSize(minWidth = 76.dp)
+                            ) {
+                                val tabIconModifier = Modifier
+                                    .size(20.dp)
+                                    .graphicsLayer {
+                                        scaleX = page.iconScale
+                                        scaleY = page.iconScale
+                                    }
+                                if (page.iconRes != null) {
+                                    Icon(
+                                        painter = painterResource(id = page.iconRes),
+                                        contentDescription = page.label,
+                                        tint = if (page.keepOriginalColors) Color.Unspecified else tabColor,
+                                        modifier = tabIconModifier
+                                    )
+                                } else {
+                                    page.icon?.let { icon ->
                                         Icon(
-                                            painter = painterResource(id = page.iconRes),
+                                            imageVector = icon,
                                             contentDescription = page.label,
-                                            tint = if (page.keepOriginalColors) Color.Unspecified else tabColor,
+                                            tint = tabColor,
                                             modifier = tabIconModifier
                                         )
-                                    } else {
-                                        page.icon?.let { icon ->
-                                            Icon(
-                                                imageVector = icon,
-                                                contentDescription = page.label,
-                                                tint = tabColor,
-                                                modifier = tabIconModifier
-                                            )
-                                        }
                                     }
-                                    Text(
-                                        text = page.label,
-                                        fontSize = 11.sp,
-                                        lineHeight = 14.sp,
-                                        color = tabColor,
-                                        maxLines = 1,
-                                        softWrap = false,
-                                        overflow = TextOverflow.Visible
-                                    )
                                 }
-                            } else {
-                                FloatingBottomBarItem(
-                                    onClick = { handlePageSelected(index) },
-                                    modifier = Modifier.defaultMinSize(minWidth = 76.dp)
-                                ) {
-                                    val tabIconModifier = Modifier
-                                        .size(20.dp)
-                                        .graphicsLayer {
-                                            scaleX = page.iconScale
-                                            scaleY = page.iconScale
-                                        }
-                                    if (page.iconRes != null) {
-                                        Icon(
-                                            painter = painterResource(id = page.iconRes),
-                                            contentDescription = page.label,
-                                            tint = if (page.keepOriginalColors) Color.Unspecified else MiuixTheme.colorScheme.onSurface,
-                                            modifier = tabIconModifier
-                                        )
-                                    } else {
-                                        page.icon?.let { icon ->
-                                            Icon(
-                                                imageVector = icon,
-                                                contentDescription = page.label,
-                                                tint = MiuixTheme.colorScheme.onSurface,
-                                                modifier = tabIconModifier
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = page.label,
-                                        fontSize = 11.sp,
-                                        lineHeight = 14.sp,
-                                        color = MiuixTheme.colorScheme.onSurface,
-                                        maxLines = 1,
-                                        softWrap = false,
-                                        overflow = TextOverflow.Visible
-                                    )
-                                }
+                                Text(
+                                    text = page.label,
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp,
+                                    color = tabColor,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Visible
+                                )
                             }
                         }
                     }
 
-                    if (newBottomBarTransitionEnabled) {
-                        LiquidGlassBottomBar(
-                            modifier = bottomBarModifier,
-                            selectedIndex = { pagerState.targetPage },
-                            onSelected = { index ->
-                                if (index != pagerState.targetPage) {
-                                    handlePageSelected(index)
-                                }
-                            },
-                            backdrop = backdrop,
-                            tabsCount = tabs.size,
-                            isLiquidEffectEnabled = liquidBottomBarEnabled,
-                            content = bottomBarTabs
-                        )
-                    } else {
-                        FloatingBottomBar(
-                            modifier = bottomBarModifier,
-                            selectedIndex = { pagerState.targetPage },
-                            onSelected = { index ->
-                                // Ignore mirror callbacks emitted after pager page sync.
-                                if (index != pagerState.targetPage) {
-                                    handlePageSelected(index)
-                                }
-                            },
-                            backdrop = backdrop,
-                            tabsCount = tabs.size,
-                            isBlurEnabled = liquidBottomBarEnabled,
-                            content = bottomBarTabs
-                        )
-                    }
+                    LiquidGlassBottomBar(
+                        modifier = bottomBarModifier,
+                        selectedIndex = { pagerState.targetPage },
+                        onSelected = { index ->
+                            if (index != pagerState.targetPage) {
+                                handlePageSelected(index)
+                            }
+                        },
+                        backdrop = backdrop,
+                        tabsCount = tabs.size,
+                        isLiquidEffectEnabled = liquidBottomBarEnabled,
+                        content = bottomBarTabs
+                    )
                 }
             }
         }

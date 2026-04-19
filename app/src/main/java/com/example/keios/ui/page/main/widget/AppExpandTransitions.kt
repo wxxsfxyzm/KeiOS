@@ -33,29 +33,21 @@ internal fun appExpandOut(): ExitTransition {
 }
 
 @Composable
-internal fun appFloatingEnter(useNewBottomBarTransition: Boolean = false): EnterTransition {
+internal fun appFloatingEnter(): EnterTransition {
     if (!LocalTransitionAnimationsEnabled.current) return EnterTransition.None
-    val fadeInDuration = if (useNewBottomBarTransition) 130 else AppMotionTokens.floatingFadeInMs
-    val slideInDuration = if (useNewBottomBarTransition) 260 else AppMotionTokens.floatingSlideInMs
-    return fadeIn(animationSpec = tween(durationMillis = fadeInDuration)) +
+    return fadeIn(animationSpec = tween(durationMillis = 130)) +
         slideInVertically(
-            animationSpec = tween(durationMillis = slideInDuration),
-            initialOffsetY = { fullHeight ->
-                if (useNewBottomBarTransition) (fullHeight * 0.32f).toInt() else fullHeight / 2
-            }
+            animationSpec = tween(durationMillis = 260),
+            initialOffsetY = { fullHeight -> (fullHeight * 0.32f).toInt() }
         )
 }
 
 @Composable
-internal fun appFloatingExit(useNewBottomBarTransition: Boolean = false): ExitTransition {
+internal fun appFloatingExit(): ExitTransition {
     if (!LocalTransitionAnimationsEnabled.current) return ExitTransition.None
-    val fadeOutDuration = if (useNewBottomBarTransition) 100 else AppMotionTokens.floatingFadeOutMs
-    val slideOutDuration = if (useNewBottomBarTransition) 220 else AppMotionTokens.floatingSlideOutMs
-    return fadeOut(animationSpec = tween(durationMillis = fadeOutDuration)) +
+    return fadeOut(animationSpec = tween(durationMillis = 100)) +
         slideOutVertically(
-            animationSpec = tween(durationMillis = slideOutDuration),
-            targetOffsetY = { fullHeight ->
-                if (useNewBottomBarTransition) (fullHeight * 0.36f).toInt() else fullHeight / 2
-            }
+            animationSpec = tween(durationMillis = 220),
+            targetOffsetY = { fullHeight -> (fullHeight * 0.36f).toInt() }
         )
 }
