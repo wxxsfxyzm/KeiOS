@@ -13,9 +13,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -90,9 +92,6 @@ import top.yukonga.miuix.kmp.icon.extended.Tune
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 private val shellAnsiEscapeRegex = Regex("""\u001B\[[;\d]*[ -/]*[@-~]""")
 private val shellKeyValueRegex = Regex("""\b[^\s=]+=[^\s=]+\b""")
@@ -183,7 +182,6 @@ private fun OsShellRunnerPage(
     val inputTitle = stringResource(R.string.os_shell_input_title)
     val outputTitle = stringResource(R.string.os_shell_output_title)
     val outputHint = stringResource(R.string.os_shell_output_hint)
-    val outputInputLabel = stringResource(R.string.os_shell_output_block_input)
     val outputResultLabel = stringResource(R.string.os_shell_output_block_result)
     val outputTimeLabel = stringResource(R.string.os_shell_output_block_time)
     val runActionDescription = stringResource(R.string.os_shell_action_run)
@@ -239,6 +237,7 @@ private fun OsShellRunnerPage(
         mutableStateOf(
             extractLatestShellResultFromDisplay(
                 raw = initialOutputText,
+                stoppedOutputText = commandStoppedText,
                 outputResultLabel = outputResultLabel,
                 outputTimeLabel = outputTimeLabel
             )
@@ -261,10 +260,6 @@ private fun OsShellRunnerPage(
     fun appendOutput(command: String, result: String) {
         val normalizedResult = result.trimEnd()
         latestRunResultOutput = normalizedResult
-        val timestamp = SimpleDateFormat(
-            "HH:mm:ss",
-            Locale.getDefault()
-        ).format(Date())
         val previousOutput = outputText.trimEnd()
         outputText = trimShellOutputHistory(buildString {
             if (previousOutput.isNotBlank()) {
@@ -272,13 +267,9 @@ private fun OsShellRunnerPage(
                 appendLine()
                 appendLine()
             }
-            appendLine("$outputInputLabel:")
             appendLine("$ $command")
             appendLine()
-            appendLine("$outputResultLabel:")
-            appendLine(normalizedResult)
-            appendLine()
-            append("$outputTimeLabel: $timestamp")
+            append(normalizedResult)
         })
     }
 
@@ -583,6 +574,9 @@ private fun OsShellRunnerPage(
                     ShellOutputGlassPanel(
                         text = outputText,
                         hint = outputHint,
+                        stoppedOutputText = commandStoppedText,
+                        outputResultLabel = outputResultLabel,
+                        outputTimeLabel = outputTimeLabel,
                         scrollState = outputScrollState,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -671,6 +665,9 @@ private fun OsShellRunnerPage(
 private fun ShellOutputGlassPanel(
     text: String,
     hint: String,
+    stoppedOutputText: String,
+    outputResultLabel: String,
+    outputTimeLabel: String,
     scrollState: ScrollState,
     modifier: Modifier = Modifier
 ) {
@@ -690,6 +687,29 @@ private fun ShellOutputGlassPanel(
         Color(0xFF82B6F5).copy(alpha = 0.07f)
     } else {
         Color(0xFFE4F1FF).copy(alpha = 0.22f)
+    }
+    val commandColor = if (isDark) {
+        Color(0xFF7AB8FF)
+    } else {
+        Color(0xFF2563EB)
+    }
+    val successOutputColor = if (isDark) {
+        Color(0xFF7EE7A8)
+    } else {
+        Color(0xFF15803D)
+    }
+    val stoppedOutputColor = if (isDark) {
+        Color(0xFFFF9E9E)
+    } else {
+        Color(0xFFDC2626)
+    }
+    val entries = remember(text, stoppedOutputText, outputResultLabel, outputTimeLabel) {
+        parseShellOutputDisplayEntries(
+            raw = text,
+            stoppedOutputText = stoppedOutputText,
+            outputResultLabel = outputResultLabel,
+            outputTimeLabel = outputTimeLabel
+        )
     }
 
     Box(
@@ -713,14 +733,45 @@ private fun ShellOutputGlassPanel(
                     .fillMaxSize()
                     .verticalScroll(scrollState)
             ) {
-                Text(
-                    text = text,
-                    color = MiuixTheme.colorScheme.onBackground,
-                    fontSize = AppTypographyTokens.Body.fontSize,
-                    lineHeight = AppTypographyTokens.Body.lineHeight,
-                    maxLines = Int.MAX_VALUE,
-                    overflow = TextOverflow.Clip
-                )
+                if (entries.isEmpty()) {
+                    Text(
+                        text = text,
+                        color = MiuixTheme.colorScheme.onBackground,
+                        fontSize = AppTypographyTokens.Body.fontSize,
+                        lineHeight = AppTypographyTokens.Body.lineHeight,
+                        maxLines = Int.MAX_VALUE,
+                        overflow = TextOverflow.Clip
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        entries.forEach { entry ->
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "$ ${entry.command}",
+                                    color = commandColor,
+                                    fontSize = AppTypographyTokens.Body.fontSize,
+                                    lineHeight = AppTypographyTokens.Body.lineHeight,
+                                    maxLines = Int.MAX_VALUE,
+                                    overflow = TextOverflow.Clip
+                                )
+                                Text(
+                                    text = entry.result,
+                                    color = if (entry.isStopped) stoppedOutputColor else successOutputColor,
+                                    fontSize = AppTypographyTokens.Body.fontSize,
+                                    lineHeight = AppTypographyTokens.Body.lineHeight,
+                                    maxLines = Int.MAX_VALUE,
+                                    overflow = TextOverflow.Clip
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -802,23 +853,92 @@ private fun trimShellOutputHistory(raw: String): String {
         .trimStart()
 }
 
-private fun extractLatestShellResultFromDisplay(
+private data class ShellOutputDisplayEntry(
+    val command: String,
+    val result: String,
+    val isStopped: Boolean
+)
+
+private fun parseShellOutputDisplayEntries(
     raw: String,
+    stoppedOutputText: String,
     outputResultLabel: String,
     outputTimeLabel: String
-): String {
+): List<ShellOutputDisplayEntry> {
     val normalized = raw
         .replace("\r\n", "\n")
         .replace('\r', '\n')
         .trim()
-    if (normalized.isBlank()) return ""
-    val resultHeader = "$outputResultLabel:"
-    val timeHeader = "$outputTimeLabel:"
-    val resultStart = normalized.lastIndexOf(resultHeader)
-    if (resultStart < 0) return ""
-    val resultBlock = normalized.substring(resultStart + resultHeader.length).trimStart('\n', ' ')
-    if (resultBlock.isBlank()) return ""
-    val timeStart = resultBlock.lastIndexOf("\n$timeHeader")
-    if (timeStart < 0) return resultBlock.trimEnd()
-    return resultBlock.substring(0, timeStart).trimEnd()
+    if (normalized.isBlank()) return emptyList()
+    val lines = normalized.lines()
+    val commandLineIndices = lines.indices.filter { index ->
+        lines[index].startsWith("$ ")
+    }
+    if (commandLineIndices.isEmpty()) return emptyList()
+    val stoppedMarker = stoppedOutputText.trim()
+    return buildList {
+        commandLineIndices.forEachIndexed { index, start ->
+            val end = commandLineIndices.getOrNull(index + 1) ?: lines.size
+            val command = lines[start].removePrefix("$").trim()
+            if (command.isBlank()) return@forEachIndexed
+            val outputLines = normalizeShellOutputBlockLines(
+                lines = lines.subList(start + 1, end),
+                outputResultLabel = outputResultLabel,
+                outputTimeLabel = outputTimeLabel
+            )
+            val result = outputLines.joinToString("\n").trimEnd()
+            add(
+                ShellOutputDisplayEntry(
+                    command = command,
+                    result = result,
+                    isStopped = result.trim() == stoppedMarker
+                )
+            )
+        }
+    }
+}
+
+private fun normalizeShellOutputBlockLines(
+    lines: List<String>,
+    outputResultLabel: String,
+    outputTimeLabel: String
+): List<String> {
+    if (lines.isEmpty()) return emptyList()
+    var start = 0
+    while (start < lines.size && lines[start].isBlank()) {
+        start += 1
+    }
+    if (start < lines.size && lines[start].trim() == "$outputResultLabel:") {
+        start += 1
+    }
+    while (start < lines.size && lines[start].isBlank()) {
+        start += 1
+    }
+    var end = lines.size
+    while (end > start && lines[end - 1].isBlank()) {
+        end -= 1
+    }
+    if (end > start && lines[end - 1].trim().startsWith("$outputTimeLabel:")) {
+        end -= 1
+    }
+    while (end > start && lines[end - 1].isBlank()) {
+        end -= 1
+    }
+    if (start >= end) return emptyList()
+    return lines.subList(start, end).map { it.trimEnd() }
+}
+
+private fun extractLatestShellResultFromDisplay(
+    raw: String,
+    stoppedOutputText: String,
+    outputResultLabel: String,
+    outputTimeLabel: String
+): String {
+    val entries = parseShellOutputDisplayEntries(
+        raw = raw,
+        stoppedOutputText = stoppedOutputText,
+        outputResultLabel = outputResultLabel,
+        outputTimeLabel = outputTimeLabel
+    )
+    return entries.lastOrNull()?.result.orEmpty().trim()
 }
