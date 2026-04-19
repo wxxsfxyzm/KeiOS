@@ -7,8 +7,6 @@ internal data class OsActivityOverviewStats(
     val totalCount: Int,
     val visibleCount: Int,
     val packageConfiguredCount: Int,
-    val explicitClassCount: Int,
-    val totalExtrasCount: Int,
     val extrasConfiguredCardCount: Int
 )
 
@@ -17,8 +15,6 @@ internal fun buildOsActivityOverviewStats(
     defaults: OsGoogleSystemServiceConfig
 ): OsActivityOverviewStats {
     var packageConfiguredCount = 0
-    var explicitClassCount = 0
-    var totalExtrasCount = 0
     var extrasConfiguredCardCount = 0
     cards.forEach { card ->
         val normalized = normalizeActivityShortcutConfig(
@@ -26,19 +22,14 @@ internal fun buildOsActivityOverviewStats(
             defaults = defaults
         )
         if (normalized.packageName.isNotBlank()) packageConfiguredCount++
-        if (normalized.className.isNotBlank()) explicitClassCount++
-        val extrasCount = normalized.intentExtras.size
-        if (extrasCount > 0) {
+        if (normalized.intentExtras.isNotEmpty()) {
             extrasConfiguredCardCount++
-            totalExtrasCount += extrasCount
         }
     }
     return OsActivityOverviewStats(
         totalCount = cards.size,
         visibleCount = cards.count { it.visible },
         packageConfiguredCount = packageConfiguredCount,
-        explicitClassCount = explicitClassCount,
-        totalExtrasCount = totalExtrasCount,
         extrasConfiguredCardCount = extrasConfiguredCardCount
     )
 }
@@ -48,7 +39,6 @@ internal fun buildOsOverviewMetrics(
     visibleRowsCount: Int,
     totalRowsCount: Int,
     topInfoCount: Int,
-    loadedFreshCount: Int,
     cachedSectionCount: Int,
     sectionCount: Int,
     activityStats: OsActivityOverviewStats
@@ -71,14 +61,6 @@ internal fun buildOsOverviewMetrics(
             )
         ),
         OsOverviewMetric(
-            label = context.getString(R.string.os_overview_metric_fresh_sections),
-            value = context.getString(
-                R.string.os_overview_metric_fresh_sections_value,
-                loadedFreshCount,
-                sectionCount
-            )
-        ),
-        OsOverviewMetric(
             label = context.getString(R.string.os_overview_metric_cached_sections),
             value = context.getString(
                 R.string.os_overview_metric_cached_sections_value,
@@ -95,11 +77,18 @@ internal fun buildOsOverviewMetrics(
             )
         ),
         OsOverviewMetric(
-            label = context.getString(R.string.os_overview_metric_activity_targets),
+            label = context.getString(R.string.os_overview_metric_activity_target_ready),
             value = context.getString(
-                R.string.os_overview_metric_activity_targets_value,
+                R.string.os_overview_metric_activity_target_ready_value,
                 activityStats.packageConfiguredCount,
-                activityStats.explicitClassCount,
+                activityStats.totalCount
+            )
+        ),
+        OsOverviewMetric(
+            label = context.getString(R.string.os_overview_metric_activity_extras_cards),
+            value = context.getString(
+                R.string.os_overview_metric_activity_extras_cards_value,
+                activityStats.extrasConfiguredCardCount,
                 activityStats.totalCount
             )
         )

@@ -690,7 +690,6 @@ fun OsPage(
         totalRowsCount,
         visibleRowsCount,
         sectionCount,
-        loadedFreshCount,
         cachedSectionCount,
         activityOverviewStats
     ) {
@@ -699,7 +698,6 @@ fun OsPage(
             visibleRowsCount = visibleRowsCount,
             totalRowsCount = totalRowsCount,
             topInfoCount = topInfoRows.size,
-            loadedFreshCount = loadedFreshCount,
             cachedSectionCount = cachedSectionCount,
             sectionCount = sectionCount,
             activityStats = activityOverviewStats
