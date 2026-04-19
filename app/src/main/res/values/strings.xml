@@ -172,7 +172,7 @@
     <string name="os_sheet_visible_cards_title">参数 card</string>
     <string name="os_sheet_visible_activities_title">活动card</string>
     <string name="os_sheet_visible_activities_desc">关闭活动后会隐藏对应快捷方式卡片，重新开启后会立即显示。</string>
-    <string name="os_overview_title">OS 参数与活动总览</string>
+    <string name="os_overview_title">OS 参数、活动、Shell 总览</string>
     <string name="os_overview_metric_rows_compact">参数卡</string>
     <string name="os_overview_metric_rows_compact_value">%1$d/%2$d</string>
     <string name="os_overview_metric_top_info">Top条目</string>
