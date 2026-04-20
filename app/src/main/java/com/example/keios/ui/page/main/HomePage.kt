@@ -274,7 +274,7 @@ private fun HomeInfoCard(
     Box(
         modifier = Modifier
             .padding(horizontal = 6.dp)
-            .padding(bottom = 8.dp)
+            .padding(bottom = 6.dp)
             .drawBackdrop(
                 backdrop = backdrop,
                 shape = { RoundedRectangle(20.dp) },
@@ -299,8 +299,8 @@ private fun HomeInfoCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 9.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             content()
         }
@@ -365,14 +365,14 @@ private fun HomeInfoGridCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 1.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
             text = title,
             color = MiuixTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 13.sp,
-            lineHeight = 18.sp,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -381,14 +381,15 @@ private fun HomeInfoGridCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 rowStats.forEach { stat ->
-                    Column(
+                    Row(
                         modifier = Modifier
                             .weight(1f)
                             .padding(vertical = 1.dp),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = stat.label,
@@ -401,11 +402,12 @@ private fun HomeInfoGridCard(
                         Text(
                             text = stat.value.ifBlank { naText },
                             color = if (stat.emphasize) summaryColor else MiuixTheme.colorScheme.onSurface,
-                            fontSize = 13.sp,
-                            lineHeight = 17.sp,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
                             fontWeight = if (stat.emphasize) FontWeight.SemiBold else FontWeight.Medium,
                             maxLines = stat.valueMaxLines,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -421,7 +423,7 @@ private data class HomeCardStatItem(
     val label: String,
     val value: String,
     val emphasize: Boolean = false,
-    val valueMaxLines: Int = 2
+    val valueMaxLines: Int = 1
 )
 
 @Composable
@@ -1010,6 +1012,7 @@ fun HomePage(
                             HomeInfoGridCard(
                                 title = homeCardMcp,
                                 naText = homeNa,
+                                columns = 3,
                                 stats = listOf(
                                     HomeCardStatItem(
                                         label = homeStatStatus,
@@ -1043,8 +1046,7 @@ fun HomePage(
                                     ),
                                     HomeCardStatItem(
                                         label = homeStatPath,
-                                        value = mcpEndpointPath,
-                                        valueMaxLines = 3
+                                        value = mcpEndpointPath
                                     )
                                 )
                             )
@@ -1057,6 +1059,7 @@ fun HomePage(
                             HomeInfoGridCard(
                                 title = homeCardGitHub,
                                 naText = homeNa,
+                                columns = 3,
                                 stats = listOf(
                                     HomeCardStatItem(
                                         label = homeStatStableUpdates,
@@ -1086,8 +1089,7 @@ fun HomePage(
                                     ),
                                     HomeCardStatItem(
                                         label = homeStatLastUpdate,
-                                        value = githubLastUpdateLine,
-                                        valueMaxLines = 3
+                                        value = githubLastUpdateLine
                                     )
                                 )
                             )
@@ -1122,7 +1124,7 @@ fun HomePage(
                                 )
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                     }
                 }
             }
