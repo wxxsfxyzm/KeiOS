@@ -318,13 +318,13 @@ fun OsPage(
                 }
                 when (target) {
                     OsCardImportTarget.Activity -> {
-                        val imported = OsActivityShortcutCardStore.importCardsFromJson(
+                        val result = OsActivityShortcutCardStore.importCardsFromJsonMerged(
                             raw = raw,
                             defaults = googleSystemServiceDefaults,
                             builtInSampleDefaults = googleSettingsBuiltInSampleDefaults
                         )
-                        activityShortcutCards = imported
-                        val validIds = imported.mapTo(mutableSetOf()) { it.id }
+                        activityShortcutCards = result.cards
+                        val validIds = result.cards.mapTo(mutableSetOf()) { it.id }
                         activityCardExpanded.keys.retainAll(validIds)
                         if (!validIds.contains(editingActivityShortcutCardId.orEmpty())) {
                             showActivityShortcutEditor = false
@@ -335,16 +335,18 @@ fun OsPage(
                             context,
                             context.getString(
                                 R.string.os_activity_card_toast_imported_summary,
-                                imported.size
+                                result.addedCount,
+                                result.updatedCount,
+                                result.unchangedCount
                             ),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
 
                     OsCardImportTarget.Shell -> {
-                        val imported = OsShellCommandCardStore.importCardsFromJson(raw)
-                        shellCommandCards = imported
-                        val validIds = imported.mapTo(mutableSetOf()) { it.id }
+                        val result = OsShellCommandCardStore.importCardsFromJsonMerged(raw)
+                        shellCommandCards = result.cards
+                        val validIds = result.cards.mapTo(mutableSetOf()) { it.id }
                         shellCommandCardExpanded.keys.retainAll(validIds)
                         if (!validIds.contains(editingShellCommandCardId.orEmpty())) {
                             showShellCommandCardEditor = false
@@ -355,7 +357,9 @@ fun OsPage(
                             context,
                             context.getString(
                                 R.string.os_shell_card_toast_imported_summary,
-                                imported.size
+                                result.addedCount,
+                                result.updatedCount,
+                                result.unchangedCount
                             ),
                             Toast.LENGTH_SHORT
                         ).show()

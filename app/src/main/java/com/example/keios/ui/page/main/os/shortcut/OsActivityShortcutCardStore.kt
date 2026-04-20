@@ -6,6 +6,13 @@ import com.tencent.mmkv.MMKV
 import org.json.JSONArray
 import org.json.JSONObject
 
+internal data class OsActivityCardImportMergeResult(
+    val cards: List<OsActivityShortcutCard>,
+    val addedCount: Int,
+    val updatedCount: Int,
+    val unchangedCount: Int
+)
+
 internal object OsActivityShortcutCardStore {
     private const val KV_ID = "os_activity_shortcut_cards"
     private const val LEGACY_KV_ID = "os_ui_state"
@@ -119,11 +126,11 @@ internal object OsActivityShortcutCardStore {
         }.toString()
     }
 
-    fun importCardsFromJson(
+    fun importCardsFromJsonMerged(
         raw: String,
         defaults: OsGoogleSystemServiceConfig = OsGoogleSystemServiceConfig(),
         builtInSampleDefaults: OsGoogleSystemServiceConfig
-    ): List<OsActivityShortcutCard> {
+    ): OsActivityCardImportMergeResult {
         val normalizedRaw = raw.trim()
         if (normalizedRaw.isBlank()) {
             throw IllegalArgumentException("文件内容为空")
@@ -139,9 +146,71 @@ internal object OsActivityShortcutCardStore {
         if (decoded.isEmpty()) {
             throw IllegalArgumentException("文件中没有有效的活动 card")
         }
-        val migrated = migrateBuiltInSampleCards(decoded, builtInSampleDefaults)
-        saveCards(cards = migrated, defaults = defaults)
-        return migrated
+        val incomingCards = migrateBuiltInSampleCards(decoded, builtInSampleDefaults)
+        val existingCards = loadCards(defaults = defaults, builtInSampleDefaults = builtInSampleDefaults)
+        val mergedCards = existingCards.toMutableList()
+        var addedCount = 0
+        var updatedCount = 0
+        var unchangedCount = 0
+        incomingCards.forEach { imported ->
+            val targetIndexById = mergedCards.indexOfFirst { it.id == imported.id }
+            val targetIndex = if (targetIndexById >= 0) {
+                targetIndexById
+            } else {
+                val importedKey = mergeKeyFor(imported)
+                mergedCards.indexOfFirst { mergeKeyFor(it) == importedKey }
+            }
+            if (targetIndex < 0) {
+                mergedCards += imported
+                addedCount++
+                return@forEach
+            }
+            val existing = mergedCards[targetIndex]
+            val resolved = imported.copy(
+                id = existing.id,
+                isBuiltInSample = existing.isBuiltInSample || imported.isBuiltInSample
+            )
+            if (cardsEquivalent(existing, resolved, defaults)) {
+                unchangedCount++
+            } else {
+                mergedCards[targetIndex] = resolved
+                updatedCount++
+            }
+        }
+        val finalizedCards = migrateBuiltInSampleCards(
+            cards = mergedCards,
+            builtInSampleDefaults = builtInSampleDefaults
+        )
+        saveCards(cards = finalizedCards, defaults = defaults)
+        return OsActivityCardImportMergeResult(
+            cards = finalizedCards,
+            addedCount = addedCount,
+            updatedCount = updatedCount,
+            unchangedCount = unchangedCount
+        )
+    }
+
+    private fun mergeKeyFor(card: OsActivityShortcutCard): String {
+        val config = card.config
+        return listOf(
+            config.packageName.trim().lowercase(),
+            config.className.trim().lowercase(),
+            config.intentAction.trim().lowercase(),
+            config.intentUriData.trim().lowercase(),
+            config.title.trim().lowercase()
+        ).joinToString("|")
+    }
+
+    private fun cardsEquivalent(
+        old: OsActivityShortcutCard,
+        new: OsActivityShortcutCard,
+        defaults: OsGoogleSystemServiceConfig
+    ): Boolean {
+        val oldConfig = normalizeActivityShortcutConfig(old.config, defaults)
+        val newConfig = normalizeActivityShortcutConfig(new.config, defaults)
+        return old.visible == new.visible &&
+            old.isBuiltInSample == new.isBuiltInSample &&
+            oldConfig == newConfig
     }
 
     private fun encodeCards(cards: List<OsActivityShortcutCard>): String {

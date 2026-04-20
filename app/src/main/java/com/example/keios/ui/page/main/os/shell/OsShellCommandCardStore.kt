@@ -6,6 +6,13 @@ import org.json.JSONObject
 import java.util.Locale
 import java.util.UUID
 
+internal data class OsShellCardImportMergeResult(
+    val cards: List<OsShellCommandCard>,
+    val addedCount: Int,
+    val updatedCount: Int,
+    val unchangedCount: Int
+)
+
 internal data class OsShellCommandCard(
     val id: String,
     val visible: Boolean = true,
@@ -340,7 +347,7 @@ internal object OsShellCommandCardStore {
         }.toString()
     }
 
-    fun importCardsFromJson(raw: String): List<OsShellCommandCard> {
+    fun importCardsFromJsonMerged(raw: String): OsShellCardImportMergeResult {
         val normalizedRaw = raw.trim()
         if (normalizedRaw.isBlank()) {
             throw IllegalArgumentException("文件内容为空")
@@ -356,7 +363,55 @@ internal object OsShellCommandCardStore {
         if (decoded.isEmpty()) {
             throw IllegalArgumentException("文件中没有有效的 shell card")
         }
-        saveCards(decoded)
-        return loadCards()
+        val existingCards = loadCards()
+        val mergedCards = existingCards.toMutableList()
+        var addedCount = 0
+        var updatedCount = 0
+        var unchangedCount = 0
+        decoded.forEach { imported ->
+            val targetIndexById = mergedCards.indexOfFirst { it.id == imported.id }
+            val targetIndex = if (targetIndexById >= 0) {
+                targetIndexById
+            } else {
+                mergedCards.indexOfFirst { mergeKeyFor(it) == mergeKeyFor(imported) }
+            }
+            if (targetIndex < 0) {
+                mergedCards += imported
+                addedCount++
+                return@forEach
+            }
+            val existing = mergedCards[targetIndex]
+            val resolved = imported.copy(
+                id = existing.id,
+                createdAtMillis = existing.createdAtMillis.takeIf { it > 0L } ?: imported.createdAtMillis,
+                updatedAtMillis = maxOf(existing.updatedAtMillis, imported.updatedAtMillis)
+            )
+            if (cardsEquivalent(existing, resolved)) {
+                unchangedCount++
+            } else {
+                mergedCards[targetIndex] = resolved
+                updatedCount++
+            }
+        }
+        saveCards(mergedCards)
+        return OsShellCardImportMergeResult(
+            cards = loadCards(),
+            addedCount = addedCount,
+            updatedCount = updatedCount,
+            unchangedCount = unchangedCount
+        )
+    }
+
+    private fun mergeKeyFor(card: OsShellCommandCard): String {
+        return card.command.trim().replace(Regex("\\s+"), " ")
+    }
+
+    private fun cardsEquivalent(old: OsShellCommandCard, new: OsShellCommandCard): Boolean {
+        return old.visible == new.visible &&
+            old.title == new.title &&
+            old.subtitle == new.subtitle &&
+            old.command == new.command &&
+            old.runOutput == new.runOutput &&
+            old.lastRunAtMillis == new.lastRunAtMillis
     }
 }
