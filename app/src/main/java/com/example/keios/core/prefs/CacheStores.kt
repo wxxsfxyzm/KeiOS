@@ -91,6 +91,15 @@ internal object CacheStores {
         }
     }
 
+    fun clearAll(context: Context) {
+        list(context)
+            .asSequence()
+            .filter { it.id != "cache_overview" && it.clearLabel.isNotBlank() }
+            .forEach { entry ->
+                clear(context, entry.id)
+            }
+    }
+
     private fun buildOverview(entries: List<CacheEntrySummary>): CacheEntrySummary {
         val cacheBytes = entries.sumOf(CacheEntrySummary::cacheBytes)
         val configBytes = entries.sumOf(CacheEntrySummary::configBytes)

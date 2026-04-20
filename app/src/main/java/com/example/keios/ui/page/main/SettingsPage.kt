@@ -142,6 +142,7 @@ fun SettingsPage(
     var themePopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
     var cacheReloadSignal by remember { mutableIntStateOf(0) }
     var clearingCacheId by remember { mutableStateOf<String?>(null) }
+    var clearingAllCaches by remember { mutableStateOf(false) }
     var logReloadSignal by remember { mutableIntStateOf(0) }
     var exportingLogZip by remember { mutableStateOf(false) }
     var clearingLogs by remember { mutableStateOf(false) }
@@ -784,12 +785,50 @@ fun SettingsPage(
                         }
 
                         else -> {
+                            GlassTextButton(
+                                backdrop = contentBackdrop,
+                                variant = GlassVariant.SheetDangerAction,
+                                text = if (clearingAllCaches) {
+                                    stringResource(R.string.common_processing)
+                                } else {
+                                    stringResource(R.string.settings_cache_action_clear_all)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                textColor = MiuixTheme.colorScheme.error,
+                                enabled = !clearingAllCaches && clearingCacheId == null,
+                                onClick = {
+                                    scope.launch {
+                                        clearingAllCaches = true
+                                        val result = withContext(Dispatchers.IO) {
+                                            runCatching { CacheStores.clearAll(context) }
+                                        }
+                                        clearingAllCaches = false
+                                        if (result.isSuccess) {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.settings_cache_toast_cleared_all),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        } else {
+                                            val reason = result.exceptionOrNull()?.javaClass?.simpleName
+                                                ?: context.getString(R.string.common_unknown)
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.settings_cache_toast_clear_all_failed, reason),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                        cacheReloadSignal++
+                                    }
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
                             cacheEntries!!.forEachIndexed { index, entry ->
                                 SettingsCacheRow(
                                     entry = entry,
-                                    clearing = clearingCacheId == entry.id,
+                                    clearing = clearingAllCaches || clearingCacheId == entry.id,
                                     onClear = {
-                                        if (clearingCacheId != null) return@SettingsCacheRow
+                                        if (clearingAllCaches || clearingCacheId != null) return@SettingsCacheRow
                                         scope.launch {
                                             clearingCacheId = entry.id
                                             try {
