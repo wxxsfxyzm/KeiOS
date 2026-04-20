@@ -208,7 +208,7 @@
     <string name="os_activity_builtin_google_settings_subtitle">Google 服务设置入口（Sample）</string>
     <string name="os_activity_builtin_google_settings_app_name">Google设置</string>
     <string name="os_activity_builtin_google_settings_package">com.google.android.gms</string>
-    <string name="os_activity_builtin_google_settings_class">com.google.android.gms.app.settings.GoogleSettingsActivity</string>
+    <string name="os_activity_builtin_google_settings_class">com.google.android.gms.app.settings.GoogleSettingsLink</string>
     <string name="os_google_system_service_toast_invalid_target">快捷方式目标不完整，请检查包名</string>
     <string name="os_google_system_service_toast_open_failed">打开失败: %1$s</string>
     <string name="os_google_system_service_cd_remove_intent_extra">删除 Intent Extra</string>

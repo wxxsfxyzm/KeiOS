@@ -69,15 +69,22 @@ internal fun GitHubOverviewCard(
 ) {
     val context = LocalContext.current
     val overviewTitleColor = if (isDark) Color.White else MiuixTheme.colorScheme.onBackgroundVariant
+    val displayRefreshState = if (
+        overviewRefreshState == OverviewRefreshState.Idle && lastRefreshMs > 0L
+    ) {
+        OverviewRefreshState.Cached
+    } else {
+        overviewRefreshState
+    }
     AppOverviewCard(
         title = stringResource(R.string.github_overview_title),
         titleColor = MiuixTheme.colorScheme.onBackground,
         subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant,
-        containerColor = overviewRefreshState.surfaceColor(
+        containerColor = displayRefreshState.surfaceColor(
             isDark = isDark,
             neutralSurface = MiuixTheme.colorScheme.surface
         ),
-        borderColor = overviewRefreshState.borderColor(
+        borderColor = displayRefreshState.borderColor(
             isDark = isDark,
             neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
         ),
@@ -86,14 +93,14 @@ internal fun GitHubOverviewCard(
         onClick = onRefreshAllTracked,
         onLongClick = onOpenTrackSheetForAdd,
         headerEndActions = {
-            if (overviewRefreshState != OverviewRefreshState.Idle) {
-                val indicatorColor = overviewRefreshState.color(
+            if (displayRefreshState != OverviewRefreshState.Idle) {
+                val indicatorColor = displayRefreshState.color(
                     neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
                 )
-                val indicatorBg = overviewRefreshState.indicatorBackground(
+                val indicatorBg = displayRefreshState.indicatorBackground(
                     neutralSurface = MiuixTheme.colorScheme.surface
                 )
-                val progressValue = when (overviewRefreshState) {
+                val progressValue = when (displayRefreshState) {
                     OverviewRefreshState.Refreshing -> refreshProgress.coerceIn(0f, 1f)
                     OverviewRefreshState.Completed,
                     OverviewRefreshState.Cached -> 1f
@@ -111,20 +118,20 @@ internal fun GitHubOverviewCard(
             }
             StatusPill(
                 label = formatRefreshAgo(context = context, lastRefreshMs = lastRefreshMs),
-                color = overviewRefreshState.color(
+                color = displayRefreshState.color(
                     neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
                 ),
                 backgroundAlphaOverride = if (isDark) 0.18f else 0.24f,
                 borderAlphaOverride = if (isDark) 0.35f else 0.42f
             )
             StatusPill(
-                label = when (overviewRefreshState) {
+                label = when (displayRefreshState) {
                     OverviewRefreshState.Cached -> StatusLabelText.Cached
                     OverviewRefreshState.Refreshing -> StatusLabelText.Checking
                     OverviewRefreshState.Completed -> StatusLabelText.Checked
                     OverviewRefreshState.Idle -> StatusLabelText.PendingCheck
                 },
-                color = overviewRefreshState.color(
+                color = displayRefreshState.color(
                     neutralColor = MiuixTheme.colorScheme.onBackgroundVariant
                 )
             )

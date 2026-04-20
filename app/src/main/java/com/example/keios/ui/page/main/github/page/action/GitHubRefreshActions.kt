@@ -373,6 +373,10 @@ internal class GitHubRefreshActions(
                     state.checkStates[item.id] = cached.toUi()
                 }
         }
-        state.lastRefreshMs = trackSnapshot.lastRefreshMs
+        state.lastRefreshMs = if (state.checkStates.isNotEmpty()) {
+            trackSnapshot.lastRefreshMs
+        } else {
+            0L
+        }
     }
 }

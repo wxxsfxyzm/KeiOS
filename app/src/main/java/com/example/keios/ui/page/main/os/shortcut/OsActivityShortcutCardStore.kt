@@ -40,6 +40,8 @@ internal object OsActivityShortcutCardStore {
     private const val KEY_EXPORT_SCHEMA = "schema"
     private const val KEY_EXPORT_EXPORTED_AT = "exportedAtMillis"
     private const val KEY_EXPORT_ITEMS = "items"
+    private const val LEGACY_GOOGLE_SETTINGS_ACTIVITY_CLASS =
+        "com.google.android.gms.app.settings.GoogleSettingsActivity"
 
     private val store: MMKV by lazy { MMKV.mmkvWithID(KV_ID) }
     private val legacyStore: MMKV by lazy { MMKV.mmkvWithID(LEGACY_KV_ID) }
@@ -323,9 +325,28 @@ internal object OsActivityShortcutCardStore {
             )
             if (isGoogleSettingsSample && !sampleMigrated) {
                 sampleMigrated = true
+                val upgradedClassName = when {
+                    card.config.className.trim()
+                        .equals(LEGACY_GOOGLE_SETTINGS_ACTIVITY_CLASS, ignoreCase = true) ->
+                        builtInSampleDefaults.className
+                    else -> card.config.className.trim().ifBlank { builtInSampleDefaults.className }
+                }
+                val upgradedConfig = normalizeActivityShortcutConfig(
+                    config = card.config.copy(
+                        packageName = card.config.packageName.trim()
+                            .ifBlank { builtInSampleDefaults.packageName },
+                        className = upgradedClassName,
+                        intentAction = card.config.intentAction.trim()
+                            .ifBlank { builtInSampleDefaults.intentAction },
+                        intentFlags = card.config.intentFlags.trim()
+                            .ifBlank { builtInSampleDefaults.intentFlags }
+                    ),
+                    defaults = builtInSampleDefaults
+                )
                 card.copy(
                     id = BUILTIN_GOOGLE_SETTINGS_SAMPLE_CARD_ID,
-                    isBuiltInSample = true
+                    isBuiltInSample = true,
+                    config = upgradedConfig
                 )
             } else {
                 card.copy(isBuiltInSample = false)

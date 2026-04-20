@@ -87,14 +87,23 @@ data class HomeBaOverview(
 
 fun loadHomeGitHubOverview(): HomeGitHubOverview {
     val snapshot = GitHubTrackStore.loadSnapshot()
+    val activeStrategyId = snapshot.lookupConfig.selectedStrategy.storageId
+    val matchedCacheByTrackId = snapshot.items.associate { item ->
+        val cache = snapshot.checkCache[item.id]
+            ?.takeIf { entry ->
+                entry.sourceStrategyId.ifBlank { GitHubLookupStrategyOption.AtomFeed.storageId } == activeStrategyId
+            }
+        item.id to cache
+    }
+    val cacheHitCount = matchedCacheByTrackId.count { it.value != null }
     return HomeGitHubOverview(
         trackedCount = snapshot.items.size,
-        cacheHitCount = snapshot.items.count { snapshot.checkCache.containsKey(it.id) },
-        updatableCount = snapshot.items.count { snapshot.checkCache[it.id]?.hasUpdate == true },
-        preReleaseUpdateCount = snapshot.items.count { snapshot.checkCache[it.id]?.hasPreReleaseUpdate == true },
+        cacheHitCount = cacheHitCount,
+        updatableCount = matchedCacheByTrackId.count { it.value?.hasUpdate == true },
+        preReleaseUpdateCount = matchedCacheByTrackId.count { it.value?.hasPreReleaseUpdate == true },
         strategy = snapshot.lookupConfig.selectedStrategy,
         apiTokenConfigured = snapshot.lookupConfig.apiToken.isNotBlank(),
-        cachedRefreshMs = snapshot.lastRefreshMs,
+        cachedRefreshMs = if (cacheHitCount > 0) snapshot.lastRefreshMs else 0L,
         loaded = true
     )
 }
