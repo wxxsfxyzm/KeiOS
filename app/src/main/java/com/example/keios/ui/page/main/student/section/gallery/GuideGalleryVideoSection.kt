@@ -129,25 +129,6 @@ fun GuideGalleryVideoGroupCardItem(
         containerColor = Color(0x223B82F6),
         headerEndActions = {
             val isMemoryHallVideoTitle = title.trim().startsWith("回忆大厅视频")
-            if (isMemoryHallVideoTitle) {
-                val showProgressRing = videoInlineBuffering || previewLoading
-                if (showProgressRing) {
-                    val indicatorProgress = if (videoInlineBuffering) {
-                        0.35f
-                    } else {
-                        previewProgress.coerceIn(0f, 1f)
-                    }
-                    CircularProgressIndicator(
-                        progress = indicatorProgress,
-                        size = 18.dp,
-                        strokeWidth = 2.dp,
-                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                            foregroundColor = Color(0xFF3B82F6),
-                            backgroundColor = Color(0x553B82F6)
-                        )
-                    )
-                }
-            }
             if (items.size > 1) {
                 var pickerPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
                 Box(
@@ -188,6 +169,32 @@ fun GuideGalleryVideoGroupCardItem(
                 }
             }
             if (displayMediaUrl.isNotBlank()) {
+                if (isMemoryHallVideoTitle) {
+                    val indicatorProgress = when {
+                        videoInlineBuffering -> 0.35f
+                        previewLoading -> previewProgress.coerceIn(0f, 1f).coerceAtLeast(0.06f)
+                        else -> 1f
+                    }
+                    val progressForegroundColor = if (!videoInlineBuffering && !previewLoading) {
+                        Color(0xFF34C759)
+                    } else {
+                        Color(0xFF3B82F6)
+                    }
+                    val progressBackgroundColor = if (!videoInlineBuffering && !previewLoading) {
+                        Color(0x5534C759)
+                    } else {
+                        Color(0x553B82F6)
+                    }
+                    CircularProgressIndicator(
+                        progress = indicatorProgress,
+                        size = 18.dp,
+                        strokeWidth = 2.dp,
+                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                            foregroundColor = progressForegroundColor,
+                            backgroundColor = progressBackgroundColor
+                        )
+                    )
+                }
                 GlassTextButton(
                     backdrop = backdrop,
                     text = "",
