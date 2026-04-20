@@ -3,7 +3,6 @@ package com.example.keios.ui.page.main.widget.chrome
 import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -53,6 +52,8 @@ import androidx.compose.ui.util.lerp
 import com.example.keios.ui.animation.DampedDragAnimation
 import com.example.keios.ui.animation.InteractiveHighlight
 import com.example.keios.ui.page.main.widget.glass.UiPerformanceBudget
+import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
+import com.example.keios.ui.page.main.widget.motion.appMotionFloatState
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
@@ -106,9 +107,9 @@ fun RowScope.LiquidGlassBottomBarItem(
         selected || selectionProgress > 0f -> lerp(1f, selectedScale(), selectionProgress)
         else -> 1f
     }
-    val scale by animateFloatAsState(
+    val scale by appMotionFloatState(
         targetValue = targetScale,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 580f),
+        durationMillis = 160,
         label = "liquid_bottom_bar_item_scale"
     )
 
@@ -152,6 +153,7 @@ fun LiquidGlassBottomBar(
     val density = LocalDensity.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
     val isInLightTheme = !isSystemInDarkTheme()
+    val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
     val animationScope = rememberCoroutineScope()
 
     val safeTabsCount = tabsCount.coerceAtLeast(1)
@@ -216,9 +218,17 @@ fun LiquidGlassBottomBar(
             onDragStopped = {
                 val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, safeTabsCount - 1)
                 currentIndex = targetIndex
-                animateToValue(targetIndex.toFloat())
+                if (transitionAnimationsEnabled) {
+                    animateToValue(targetIndex.toFloat())
+                } else {
+                    snapToValue(targetIndex.toFloat())
+                }
                 animationScope.launch {
-                    offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
+                    if (transitionAnimationsEnabled) {
+                        offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
+                    } else {
+                        offsetAnimation.snapTo(0f)
+                    }
                 }
             },
             onDrag = { _, dragAmount ->
@@ -244,7 +254,11 @@ fun LiquidGlassBottomBar(
         snapshotFlow { currentIndex }
             .drop(1)
             .collectLatest { index ->
-                dampedDragAnimation.animateToValue(index.toFloat())
+                if (transitionAnimationsEnabled) {
+                    dampedDragAnimation.animateToValue(index.toFloat())
+                } else {
+                    dampedDragAnimation.snapToValue(index.toFloat())
+                }
                 onSelected(index)
             }
     }

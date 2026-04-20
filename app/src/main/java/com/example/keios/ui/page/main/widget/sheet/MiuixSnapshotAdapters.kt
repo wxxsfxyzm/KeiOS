@@ -12,11 +12,20 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,6 +33,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -38,11 +49,14 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.PopupPositionProvider as ComposePopupPositionProvider
 import com.example.keios.ui.page.main.widget.glass.AppInteractiveTokens
 import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.layout.BottomSheetDefaults
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import kotlin.math.roundToInt
@@ -254,6 +268,88 @@ fun SnapshotWindowBottomSheet(
     enableNestedScroll: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    var wasShown by remember { mutableStateOf(false) }
+    LaunchedEffect(show, onDismissFinished) {
+        if (show) {
+            wasShown = true
+        } else if (wasShown) {
+            wasShown = false
+            onDismissFinished?.invoke()
+        }
+    }
+    val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
+    if (!transitionAnimationsEnabled) {
+        if (!show) return
+        Dialog(
+            onDismissRequest = {
+                if (allowDismiss) {
+                    onDismissRequest?.invoke()
+                }
+            },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = allowDismiss,
+                dismissOnClickOutside = allowDismiss
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        if (enableWindowDim) Color.Black.copy(alpha = 0.32f) else Color.Transparent
+                    )
+                    .then(
+                        if (allowDismiss) {
+                            Modifier.clickable(onClick = { onDismissRequest?.invoke() })
+                        } else {
+                            Modifier
+                        }
+                    )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .widthIn(max = sheetMaxWidth)
+                        .padding(
+                            horizontal = outsideMargin.width,
+                            vertical = outsideMargin.height
+                        )
+                        .clip(
+                            RoundedCornerShape(
+                                topStart = cornerRadius,
+                                topEnd = cornerRadius
+                            )
+                        )
+                        .background(backgroundColor)
+                        .padding(
+                            horizontal = insideMargin.width,
+                            vertical = insideMargin.height
+                        )
+                ) {
+                    if (!title.isNullOrBlank() || startAction != null || endAction != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            startAction?.invoke()
+                            Text(
+                                text = title.orEmpty(),
+                                modifier = Modifier.weight(1f),
+                                color = Color.Unspecified,
+                                maxLines = 1
+                            )
+                            endAction?.invoke()
+                        }
+                        Spacer(modifier = Modifier)
+                    }
+                    content()
+                }
+            }
+        }
+        return
+    }
+
     WindowBottomSheet(
         show = show,
         modifier = modifier,

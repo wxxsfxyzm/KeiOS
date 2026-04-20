@@ -512,27 +512,35 @@ private fun MainPagerLayout(
         refreshHomeOverviewState(reason = "settings_return_$settingsReturnToken")
     }
     val farJumpBefore: suspend () -> Unit = {
-        farJumpAlpha.snapTo(1f)
-        farJumpAlpha.animateTo(
-            targetValue = 0.92f,
-            animationSpec = tween(
-                durationMillis = resolvedMotionDuration(
-                    AppMotionTokens.farJumpDimMs,
-                    transitionAnimationsEnabled
+        if (!transitionAnimationsEnabled) {
+            farJumpAlpha.snapTo(1f)
+        } else {
+            farJumpAlpha.snapTo(1f)
+            farJumpAlpha.animateTo(
+                targetValue = 0.92f,
+                animationSpec = tween(
+                    durationMillis = resolvedMotionDuration(
+                        AppMotionTokens.farJumpDimMs,
+                        transitionAnimationsEnabled
+                    )
                 )
             )
-        )
+        }
     }
     val farJumpAfter: suspend () -> Unit = {
-        farJumpAlpha.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = resolvedMotionDuration(
-                    AppMotionTokens.farJumpRestoreMs,
-                    transitionAnimationsEnabled
+        if (!transitionAnimationsEnabled) {
+            farJumpAlpha.snapTo(1f)
+        } else {
+            farJumpAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = resolvedMotionDuration(
+                        AppMotionTokens.farJumpRestoreMs,
+                        transitionAnimationsEnabled
+                    )
                 )
             )
-        )
+        }
     }
     ReportPagerPerformanceState(
         scope = "main_pager",
