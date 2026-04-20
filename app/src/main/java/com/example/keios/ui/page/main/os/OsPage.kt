@@ -508,296 +508,64 @@ fun OsPage(
         }
     )
 
-    LaunchedEffect(systemTableExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
-        if (!cacheLoaded) return@LaunchedEffect
-        if (runtime.isDataActive && systemTableExpanded && isCardVisible(
-                visibleCards,
-                OsSectionCard.SYSTEM
-            )
-        ) ensureLoad(SectionKind.SYSTEM)
-    }
-    LaunchedEffect(secureTableExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
-        if (!cacheLoaded) return@LaunchedEffect
-        if (runtime.isDataActive && secureTableExpanded && isCardVisible(
-                visibleCards,
-                OsSectionCard.SECURE
-            )
-        ) ensureLoad(SectionKind.SECURE)
-    }
-    LaunchedEffect(globalTableExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
-        if (!cacheLoaded) return@LaunchedEffect
-        if (runtime.isDataActive && globalTableExpanded && isCardVisible(
-                visibleCards,
-                OsSectionCard.GLOBAL
-            )
-        ) ensureLoad(SectionKind.GLOBAL)
-    }
-    LaunchedEffect(androidPropsExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
-        if (!cacheLoaded) return@LaunchedEffect
-        if (runtime.isDataActive && androidPropsExpanded && isCardVisible(
-                visibleCards,
-                OsSectionCard.ANDROID
-            )
-        ) ensureLoad(SectionKind.ANDROID)
-    }
-    LaunchedEffect(javaPropsExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
-        if (!cacheLoaded) return@LaunchedEffect
-        if (runtime.isDataActive && javaPropsExpanded && isCardVisible(visibleCards, OsSectionCard.JAVA)) ensureLoad(
-            SectionKind.JAVA)
-    }
-    LaunchedEffect(linuxEnvExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
-        if (!cacheLoaded) return@LaunchedEffect
-        if (runtime.isDataActive && linuxEnvExpanded && isCardVisible(visibleCards, OsSectionCard.LINUX)) ensureLoad(
-            SectionKind.LINUX)
-    }
-    LaunchedEffect(
-        showActivitySuggestionSheet,
-        googleSystemServiceSuggestionTarget,
-        activityShortcutDraft.packageName
-    ) {
-        if (!showActivitySuggestionSheet) return@LaunchedEffect
-        when (googleSystemServiceSuggestionTarget) {
-            ShortcutSuggestionField.PackageName -> {
-                googleSystemServicePackageSuggestionsLoading = true
-                runCatching {
-                    withContext(Dispatchers.IO) { loadInstalledAppOptions(context) }
-                }.onSuccess { apps ->
-                    googleSystemServicePackageSuggestions = apps
-                }.onFailure {
-                    googleSystemServicePackageSuggestions = emptyList()
-                }
-                googleSystemServicePackageSuggestionsLoading = false
-            }
+    BindOsVisibleSectionLoadEffects(
+        cacheLoaded = cacheLoaded,
+        isDataActive = runtime.isDataActive,
+        visibleCards = visibleCards,
+        systemTableExpanded = systemTableExpanded,
+        secureTableExpanded = secureTableExpanded,
+        globalTableExpanded = globalTableExpanded,
+        androidPropsExpanded = androidPropsExpanded,
+        javaPropsExpanded = javaPropsExpanded,
+        linuxEnvExpanded = linuxEnvExpanded,
+        ensureLoad = { section -> ensureLoad(section) }
+    )
+    BindOsActivitySuggestionLoadEffect(
+        showActivitySuggestionSheet = showActivitySuggestionSheet,
+        googleSystemServiceSuggestionTarget = googleSystemServiceSuggestionTarget,
+        activityShortcutDraftPackageName = activityShortcutDraft.packageName,
+        context = context,
+        onPackageSuggestionsLoadingChange = { googleSystemServicePackageSuggestionsLoading = it },
+        onPackageSuggestionsChange = { googleSystemServicePackageSuggestions = it },
+        onClassSuggestionsLoadingChange = { googleSystemServiceClassSuggestionsLoading = it },
+        onClassSuggestionsChange = { googleSystemServiceClassSuggestions = it }
+    )
 
-            ShortcutSuggestionField.ClassName -> {
-                val targetPackageName = activityShortcutDraft.packageName.trim()
-                if (targetPackageName.isBlank()) {
-                    googleSystemServiceClassSuggestions = emptyList()
-                    return@LaunchedEffect
-                }
-                googleSystemServiceClassSuggestionsLoading = true
-                runCatching {
-                    withContext(Dispatchers.IO) {
-                        loadActivityClassOptions(
-                            context = context,
-                            packageName = targetPackageName
-                        )
-                    }
-                }.onSuccess { classes ->
-                    googleSystemServiceClassSuggestions = classes
-                }.onFailure {
-                    googleSystemServiceClassSuggestions = emptyList()
-                }
-                googleSystemServiceClassSuggestionsLoading = false
-            }
+    val derivedState = rememberOsPageDerivedState(
+        context = context,
+        queryApplied = queryApplied,
+        shizukuStatus = shizukuStatus,
+        shellSavedCountLabel = shellSavedCountLabel,
+        shellCommandCards = shellCommandCards,
+        sectionStates = sectionStates,
+        topInfoExpanded = topInfoExpanded,
+        systemTableExpanded = systemTableExpanded,
+        secureTableExpanded = secureTableExpanded,
+        globalTableExpanded = globalTableExpanded,
+        androidPropsExpanded = androidPropsExpanded,
+        javaPropsExpanded = javaPropsExpanded,
+        linuxEnvExpanded = linuxEnvExpanded,
+        isDark = isDark,
+        inactiveColor = inactive,
+        cachedColor = cachedColor,
+        refreshingColor = refreshingColor,
+        syncedColor = syncedColor,
+        surfaceColor = surfaceColor,
+        refreshing = refreshing,
+        refreshProgress = refreshProgress,
+        cachePersisted = cachePersisted,
+        visibleCards = visibleCards,
+        activityShortcutCards = activityShortcutCards
+    )
 
-            else -> Unit
-        }
-    }
-
-    val systemRows = sectionStates[SectionKind.SYSTEM]?.rows ?: emptyList()
-    val secureRows = sectionStates[SectionKind.SECURE]?.rows ?: emptyList()
-    val globalRows = sectionStates[SectionKind.GLOBAL]?.rows ?: emptyList()
-    val androidRows = sectionStates[SectionKind.ANDROID]?.rows ?: emptyList()
-    val javaRows = sectionStates[SectionKind.JAVA]?.rows ?: emptyList()
-    val linuxRows = sectionStates[SectionKind.LINUX]?.rows ?: emptyList()
-
-    val topInfoRows = remember(systemRows, secureRows, globalRows, androidRows, javaRows, linuxRows) {
-        buildTopInfoRows(systemRows, secureRows, globalRows, androidRows, javaRows, linuxRows)
-    }
-
-    val prunedSystemRows = remember(systemRows) {
-        removeTopInfoRows(
-            SectionKind.SYSTEM,
-            systemRows
-        )
-    }
-    val prunedSecureRows = remember(secureRows) {
-        removeTopInfoRows(
-            SectionKind.SECURE,
-            secureRows
-        )
-    }
-    val prunedGlobalRows = remember(globalRows) {
-        removeTopInfoRows(
-            SectionKind.GLOBAL,
-            globalRows
-        )
-    }
-    val prunedAndroidRows = remember(androidRows) {
-        removeTopInfoRows(
-            SectionKind.ANDROID,
-            androidRows
-        )
-    }
-    val prunedJavaRows = remember(javaRows) { removeTopInfoRows(SectionKind.JAVA, javaRows) }
-    val prunedLinuxRows = remember(linuxRows) { removeTopInfoRows(SectionKind.LINUX, linuxRows) }
-
-    val q = queryApplied.trim()
-    val displayedTopInfoRows = remember(q, topInfoRows, topInfoExpanded) {
-        if (q.isBlank() && !topInfoExpanded) topInfoRows else sortRowsByType(
-            filterRows(
-                topInfoRows,
-                q
-            )
-        )
-    }
-    val displayedSystemRows = remember(q, prunedSystemRows, systemTableExpanded) {
-        if (q.isBlank() && !systemTableExpanded) prunedSystemRows else sortRowsByType(
-            filterRows(
-                prunedSystemRows,
-                q
-            )
-        )
-    }
-    val displayedSecureRows = remember(q, prunedSecureRows, secureTableExpanded) {
-        if (q.isBlank() && !secureTableExpanded) prunedSecureRows else sortRowsByType(
-            filterRows(
-                prunedSecureRows,
-                q
-            )
-        )
-    }
-    val displayedGlobalRows = remember(q, prunedGlobalRows, globalTableExpanded) {
-        if (q.isBlank() && !globalTableExpanded) prunedGlobalRows else sortRowsByType(
-            filterRows(
-                prunedGlobalRows,
-                q
-            )
-        )
-    }
-    val displayedAndroidRows = remember(q, prunedAndroidRows, androidPropsExpanded) {
-        if (q.isBlank() && !androidPropsExpanded) prunedAndroidRows else sortRowsByType(
-            filterRows(
-                prunedAndroidRows,
-                q
-            )
-        )
-    }
-    val displayedJavaRows = remember(q, prunedJavaRows, javaPropsExpanded) {
-        if (q.isBlank() && !javaPropsExpanded) prunedJavaRows else sortRowsByType(
-            filterRows(
-                prunedJavaRows,
-                q
-            )
-        )
-    }
-    val displayedLinuxRows = remember(q, prunedLinuxRows, linuxEnvExpanded) {
-        if (q.isBlank() && !linuxEnvExpanded) prunedLinuxRows else sortRowsByType(
-            filterRows(
-                prunedLinuxRows,
-                q
-            )
-        )
-    }
-    val groupedTopInfoRows = remember(displayedTopInfoRows, topInfoExpanded, q) {
-        if (q.isBlank() && !topInfoExpanded) emptyList() else groupTopInfoRows(displayedTopInfoRows)
-    }
-    val shellRunnerRows = remember(
-        shizukuStatus,
-        context,
-        shellSavedCountLabel,
-        shellCommandCards
-    ) {
-        listOf(
-            InfoRow(
-                key = context.getString(R.string.os_shell_card_status_label),
-                value = shizukuStatus
-            ),
-            InfoRow(
-                key = shellSavedCountLabel,
-                value = context.getString(R.string.common_item_count, shellCommandCards.size)
-            )
-        )
-    }
-    val visibleRowsCount = remember(
-        displayedTopInfoRows.size,
-        displayedSystemRows.size,
-        displayedSecureRows.size,
-        displayedGlobalRows.size,
-        displayedAndroidRows.size,
-        displayedJavaRows.size,
-        displayedLinuxRows.size
-    ) {
-        displayedTopInfoRows.size +
-            displayedSystemRows.size +
-            displayedSecureRows.size +
-            displayedGlobalRows.size +
-            displayedAndroidRows.size +
-            displayedJavaRows.size +
-            displayedLinuxRows.size
-    }
-
-    suspend fun exportCard(card: OsSectionCard) {
-        exportOsSectionCard(
-            card = card,
-            currentExportingCard = exportingCard,
-            updateExportingCard = { exportingCard = it },
-            visibleCardsProvider = { visibleCards },
-            ensureLoad = ::ensureLoad,
-            sectionStatesProvider = { sectionStates },
-            activityShortcutCardsProvider = { activityShortcutCards },
-            googleSystemServiceDefaults = googleSystemServiceDefaults,
-            context = context,
-            shizukuStatus = shizukuStatus,
-            launchExport = { fileName, payload ->
-                pendingExportContent = payload
-                exportLauncher.launch(fileName)
-            },
-            onExportFailed = { throwable ->
-                Toast.makeText(
-                    context,
-                    "导出失败: ${throwable.javaClass.simpleName}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        )
-    }
-
-    val overviewUiState = remember(
-        isDark,
-        inactive,
-        cachedColor,
-        refreshingColor,
-        syncedColor,
-        refreshing,
-        refreshProgress,
-        cachePersisted,
-        visibleCards,
-        sectionStates,
-        topInfoRows.size,
-        visibleRowsCount,
-        activityShortcutCards,
-        shellCommandCards,
-        surfaceColor
-    ) {
-        buildOsOverviewUiState(
-            context = context,
-            isDark = isDark,
-            inactiveColor = inactive,
-            cachedColor = cachedColor,
-            refreshingColor = refreshingColor,
-            syncedColor = syncedColor,
-            surfaceColor = surfaceColor,
-            refreshing = refreshing,
-            refreshProgress = refreshProgress,
-            cachePersisted = cachePersisted,
-            visibleCards = visibleCards,
-            sectionStates = sectionStates,
-            topInfoCount = topInfoRows.size,
-            visibleRowsCount = visibleRowsCount,
-            activityCards = activityShortcutCards,
-            shellCommandCards = shellCommandCards
-        )
-    }
-    val overviewState = overviewUiState.overviewState
-    val statusLabel = overviewUiState.statusLabel
-    val statusColor = overviewUiState.statusColor
-    val overviewCardColor = overviewUiState.overviewCardColor
-    val overviewBorderColor = overviewUiState.overviewBorderColor
-    val indicatorProgress = overviewUiState.indicatorProgress
-    val indicatorBg = overviewUiState.indicatorBg
-    val overviewMetrics = overviewUiState.metrics
+    val overviewState = derivedState.overviewUiState.overviewState
+    val statusLabel = derivedState.overviewUiState.statusLabel
+    val statusColor = derivedState.overviewUiState.statusColor
+    val overviewCardColor = derivedState.overviewUiState.overviewCardColor
+    val overviewBorderColor = derivedState.overviewUiState.overviewBorderColor
+    val indicatorProgress = derivedState.overviewUiState.indicatorProgress
+    val indicatorBg = derivedState.overviewUiState.indicatorBg
+    val overviewMetrics = derivedState.overviewUiState.metrics
 
     OsPageScaffoldShell(
         scrollBehavior = scrollBehavior,
@@ -1124,12 +892,12 @@ fun OsPage(
             overviewBorderColor = overviewBorderColor,
             overviewMetrics = overviewMetrics,
             noMatchedResultsText = noMatchedResultsText,
-            query = q,
-            displayedTopInfoRows = displayedTopInfoRows,
-            groupedTopInfoRows = groupedTopInfoRows,
+            query = derivedState.query,
+            displayedTopInfoRows = derivedState.displayedTopInfoRows,
+            groupedTopInfoRows = derivedState.groupedTopInfoRows,
             topInfoExpanded = topInfoExpanded,
             onTopInfoExpandedChange = { topInfoExpanded = it },
-            shellRunnerRows = shellRunnerRows,
+            shellRunnerRows = derivedState.shellRunnerRows,
             shellRunnerExpanded = shellRunnerExpanded,
             onShellRunnerExpandedChange = { shellRunnerExpanded = it },
             onOpenShellRunner = { OsShellRunnerActivity.launch(context) },
@@ -1154,59 +922,42 @@ fun OsPage(
                 activityCardExpanded[cardId] = expanded
             },
             onOpenActivityShortcutCard = { card ->
-                val normalized = normalizeActivityShortcutConfig(
-                    config = card.config,
-                    defaults = googleSystemServiceDefaults
-                )
-                if (normalized.packageName.isBlank()) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.os_google_system_service_toast_invalid_target),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    runCatching {
-                        launchGoogleSystemServiceActivity(
-                            context = context,
-                            config = normalized,
-                            defaults = googleSystemServiceDefaults
+                openOsActivityShortcutCard(
+                    context = context,
+                    card = card,
+                    defaults = googleSystemServiceDefaults,
+                    invalidTargetMessage = context.getString(R.string.os_google_system_service_toast_invalid_target),
+                    openFailedMessage = { error ->
+                        context.getString(
+                            R.string.os_google_system_service_toast_open_failed,
+                            error.javaClass.simpleName
                         )
-                    }.onFailure { error ->
-                        Toast.makeText(
-                            context,
-                            context.getString(
-                                R.string.os_google_system_service_toast_open_failed,
-                                error.javaClass.simpleName
-                            ),
-                            Toast.LENGTH_SHORT
-                        ).show()
                     }
-                }
+                )
             },
             onOpenActivityShortcutCardEditor = { card ->
-                activityCardEditMode = OsActivityCardEditMode.Edit
-                editingActivityShortcutCardId = card.id
-                editingActivityShortcutBuiltIn = card.isBuiltInSample
-                activityShortcutDraft = ensureEditorActivityShortcutDraft(
-                    normalizeActivityShortcutConfig(
-                        config = card.config,
-                        defaults = googleSystemServiceDefaults
-                    )
+                beginEditingOsActivityShortcutCard(
+                    card = card,
+                    defaults = googleSystemServiceDefaults,
+                    onEditModeChange = { activityCardEditMode = it },
+                    onEditingCardIdChange = { editingActivityShortcutCardId = it },
+                    onEditingBuiltInChange = { editingActivityShortcutBuiltIn = it },
+                    onDraftChange = { activityShortcutDraft = it },
+                    onShowEditorChange = { showActivityShortcutEditor = it }
                 )
-                showActivityShortcutEditor = true
             },
-            displayedSystemRows = displayedSystemRows,
-            displayedSecureRows = displayedSecureRows,
-            displayedGlobalRows = displayedGlobalRows,
-            displayedAndroidRows = displayedAndroidRows,
-            displayedJavaRows = displayedJavaRows,
-            displayedLinuxRows = displayedLinuxRows,
-            prunedSystemRows = prunedSystemRows,
-            prunedSecureRows = prunedSecureRows,
-            prunedGlobalRows = prunedGlobalRows,
-            prunedAndroidRows = prunedAndroidRows,
-            prunedJavaRows = prunedJavaRows,
-            prunedLinuxRows = prunedLinuxRows,
+            displayedSystemRows = derivedState.displayedSystemRows,
+            displayedSecureRows = derivedState.displayedSecureRows,
+            displayedGlobalRows = derivedState.displayedGlobalRows,
+            displayedAndroidRows = derivedState.displayedAndroidRows,
+            displayedJavaRows = derivedState.displayedJavaRows,
+            displayedLinuxRows = derivedState.displayedLinuxRows,
+            prunedSystemRows = derivedState.prunedSystemRows,
+            prunedSecureRows = derivedState.prunedSecureRows,
+            prunedGlobalRows = derivedState.prunedGlobalRows,
+            prunedAndroidRows = derivedState.prunedAndroidRows,
+            prunedJavaRows = derivedState.prunedJavaRows,
+            prunedLinuxRows = derivedState.prunedLinuxRows,
             systemTableExpanded = systemTableExpanded,
             onSystemTableExpandedChange = { systemTableExpanded = it },
             secureTableExpanded = secureTableExpanded,
@@ -1229,7 +980,26 @@ fun OsPage(
                 )
             },
             exportingCard = exportingCard,
-            onExportCard = { card -> scope.launch { exportCard(card) } },
+            onExportCard = { card ->
+                scope.launch {
+                    exportOsPageCard(
+                        card = card,
+                        currentExportingCard = exportingCard,
+                        updateExportingCard = { exportingCard = it },
+                        visibleCardsProvider = { visibleCards },
+                        ensureLoad = ::ensureLoad,
+                        sectionStatesProvider = { sectionStates },
+                        activityShortcutCardsProvider = { activityShortcutCards },
+                        googleSystemServiceDefaults = googleSystemServiceDefaults,
+                        context = context,
+                        shizukuStatus = shizukuStatus,
+                        launchExport = { fileName, payload ->
+                            pendingExportContent = payload
+                            exportLauncher.launch(fileName)
+                        }
+                    )
+                }
+            },
             onRefreshAll = { scope.launch { refreshAllSections() } },
             contentBottomPadding = runtime.contentBottomPadding,
             showFloatingAddButton = !showActivityShortcutEditor &&

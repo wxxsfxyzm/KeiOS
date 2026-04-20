@@ -44,13 +44,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shadow as ComposeTextShadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -65,7 +62,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,7 +82,6 @@ import com.example.keios.ui.page.main.widget.status.StatusLabelText
 import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 import com.example.keios.ui.page.main.widget.motion.appMotionFloatState
 import com.example.keios.ui.page.main.widget.motion.resolvedMotionDuration
-import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.ui.page.main.mcp.util.formatMcpUptimeText
 import com.example.keios.ui.page.main.os.appLucideCloseIcon
@@ -95,19 +90,8 @@ import com.example.keios.ui.page.main.os.appLucideLayersIcon
 import com.example.keios.ui.page.main.os.osLucideSettingsIcon
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberActionBarBackdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.highlight.Highlight
-import com.kyant.backdrop.shadow.Shadow
-import com.kyant.shapes.RoundedRectangle
-import com.tencent.mmkv.MMKV
-import java.util.concurrent.TimeUnit
-import java.util.Locale
 import kotlinx.coroutines.flow.onEach
 import com.rosan.installer.ui.library.effect.BgEffectBackground
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
@@ -118,30 +102,7 @@ import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private fun formatGitHubCacheAgo(
-    lastRefreshMs: Long,
-    notRefreshedText: String,
-    justNowText: String,
-    nowMs: Long = System.currentTimeMillis()
-): String {
-    if (lastRefreshMs <= 0L) return notRefreshedText
-    val deltaMs = (nowMs - lastRefreshMs).coerceAtLeast(0L)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(deltaMs)
-    if (minutes <= 0L) return justNowText
-    if (minutes < 60L) return "${minutes}m"
-    val hours = minutes / 60L
-    val remainMinutes = minutes % 60L
-    return if (remainMinutes == 0L) "${hours}h" else "${hours}h ${remainMinutes}m"
-}
-
-private const val HOME_BA_KV_ID = "ba_page_settings"
-private const val HOME_PAGE_PREFS_KV_ID = "home_page_prefs"
-private const val HOME_VISIBLE_OVERVIEW_CARDS_KEY = "home_visible_overview_cards"
-private const val HOME_BA_DEFAULT_FRIEND_CODE = "ARISUKEI"
-private const val HOME_BA_AP_LIMIT_MAX = 240
-private const val HOME_BA_AP_MAX = 999
 private const val HOME_HEADER_SINK_PER_HIDDEN_CARD_DP = 22
-private const val HOME_CARD_HORIZONTAL_PADDING_DP = 12
 private val HOME_BA_CAFE_DAILY_AP_BY_LEVEL = intArrayOf(92, 152, 222, 302, 390, 460, 530, 600, 570, 740)
 private val HOME_KEI_TITLE_GRADIENT_COLORS = listOf(
     Color(0xFFFFD2DE),
@@ -150,308 +111,6 @@ private val HOME_KEI_TITLE_GRADIENT_COLORS = listOf(
     Color(0xFFFF76A5),
     Color(0xFFFF6098),
     Color(0xFFFF5893)
-)
-
-private enum class HomeOverviewCard {
-    MCP,
-    GITHUB,
-    BA
-}
-
-private fun loadHomeVisibleOverviewCards(): Set<HomeOverviewCard> {
-    val kv = MMKV.mmkvWithID(HOME_PAGE_PREFS_KV_ID)
-    val raw = kv.decodeString(HOME_VISIBLE_OVERVIEW_CARDS_KEY, "").orEmpty().trim()
-    if (raw.isBlank()) return HomeOverviewCard.entries.toSet()
-    val parsed = raw.split(',')
-        .mapNotNull { name ->
-            HomeOverviewCard.entries.firstOrNull { it.name == name.trim() }
-        }
-        .toSet()
-    return parsed.ifEmpty { HomeOverviewCard.entries.toSet() }
-}
-
-private fun saveHomeVisibleOverviewCards(cards: Set<HomeOverviewCard>) {
-    val kv = MMKV.mmkvWithID(HOME_PAGE_PREFS_KV_ID)
-    val serialized = cards.joinToString(",") { it.name }
-    kv.encode(HOME_VISIBLE_OVERVIEW_CARDS_KEY, serialized)
-}
-
-data class HomeGitHubOverview(
-    val trackedCount: Int = 0,
-    val cacheHitCount: Int = 0,
-    val updatableCount: Int = 0,
-    val preReleaseUpdateCount: Int = 0,
-    val strategy: GitHubLookupStrategyOption = GitHubLookupStrategyOption.AtomFeed,
-    val apiTokenConfigured: Boolean = false,
-    val cachedRefreshMs: Long = 0L,
-    val loaded: Boolean = false
-)
-
-data class HomeBaOverview(
-    val activated: Boolean = false,
-    val apCurrent: Int = 0,
-    val apLimit: Int = HOME_BA_AP_LIMIT_MAX,
-    val cafeStored: Int = 0,
-    val cafeCap: Int = HOME_BA_CAFE_DAILY_AP_BY_LEVEL.last(),
-    val loaded: Boolean = false
-)
-
-fun loadHomeGitHubOverview(): HomeGitHubOverview {
-    val snapshot = GitHubTrackStore.loadSnapshot()
-    return HomeGitHubOverview(
-        trackedCount = snapshot.items.size,
-        cacheHitCount = snapshot.items.count { snapshot.checkCache.containsKey(it.id) },
-        updatableCount = snapshot.items.count { snapshot.checkCache[it.id]?.hasUpdate == true },
-        preReleaseUpdateCount = snapshot.items.count { snapshot.checkCache[it.id]?.hasPreReleaseUpdate == true },
-        strategy = snapshot.lookupConfig.selectedStrategy,
-        apiTokenConfigured = snapshot.lookupConfig.apiToken.isNotBlank(),
-        cachedRefreshMs = snapshot.lastRefreshMs,
-        loaded = true
-    )
-}
-
-fun loadHomeBaOverview(): HomeBaOverview {
-    val kv = MMKV.mmkvWithID(HOME_BA_KV_ID)
-
-    val friendCode = kv.decodeString("id_friend_code", HOME_BA_DEFAULT_FRIEND_CODE)
-        .orEmpty()
-        .uppercase(Locale.ROOT)
-        .filter { it in 'A'..'Z' }
-        .take(8)
-        .let { if (it.length == 8) it else HOME_BA_DEFAULT_FRIEND_CODE }
-    val activated = friendCode != HOME_BA_DEFAULT_FRIEND_CODE
-
-    val apLimit = kv.decodeInt("ap_limit", HOME_BA_AP_LIMIT_MAX).coerceIn(0, HOME_BA_AP_LIMIT_MAX)
-    val apCurrentExact = if (kv.containsKey("ap_current_exact")) {
-        kv.decodeString("ap_current_exact", "0")?.toDoubleOrNull() ?: 0.0
-    } else {
-        kv.decodeInt("ap_current", 0).toDouble()
-    }
-    val apCurrent = apCurrentExact.coerceIn(0.0, HOME_BA_AP_MAX.toDouble()).toInt()
-
-    val cafeLevel = kv.decodeInt("cafe_level", 1).coerceIn(1, 10)
-    val cafeCap = HOME_BA_CAFE_DAILY_AP_BY_LEVEL[cafeLevel - 1]
-    val cafeStoredRaw = kv.decodeString("cafe_stored_ap", "0")?.toDoubleOrNull() ?: 0.0
-    val cafeStored = cafeStoredRaw.coerceAtLeast(0.0).toInt().coerceAtMost(cafeCap)
-
-    return HomeBaOverview(
-        activated = activated,
-        apCurrent = apCurrent,
-        apLimit = apLimit,
-        cafeStored = cafeStored,
-        cafeCap = cafeCap,
-        loaded = true
-    )
-}
-
-private fun Modifier.homeKeiHdrAccent(
-    enabled: Boolean,
-    sweepProgress: Float,
-    sweepAlpha: Float = 0.82f,
-    radialAlpha: Float = 0.30f,
-    radialRadiusScale: Float = 0.72f,
-    radialCenterX: Float = 0.5f,
-    radialCenterY: Float = 0.5f
-): Modifier {
-    if (!enabled) return this
-    return this
-        .graphicsLayer {
-            compositingStrategy = CompositingStrategy.Offscreen
-        }
-        .drawWithContent {
-            drawContent()
-            drawRect(
-                brush = Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0f to Color.Transparent,
-                        (sweepProgress - 0.16f).coerceIn(0f, 1f) to Color.Transparent,
-                        sweepProgress.coerceIn(0f, 1f) to Color.White.copy(alpha = sweepAlpha),
-                        (sweepProgress + 0.16f).coerceIn(0f, 1f) to Color.Transparent,
-                        1f to Color.Transparent
-                    )
-                ),
-                blendMode = BlendMode.SrcAtop
-            )
-            drawRect(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = radialAlpha),
-                        Color.Transparent
-                    ),
-                    center = Offset(size.width * radialCenterX, size.height * radialCenterY),
-                    radius = size.minDimension * radialRadiusScale
-                ),
-                blendMode = BlendMode.SrcAtop
-            )
-        }
-}
-
-@Composable
-private fun HomeInfoCard(
-    backdrop: Backdrop,
-    blurEnabled: Boolean,
-    content: @Composable () -> Unit,
-) {
-    val isInLightTheme = !isSystemInDarkTheme()
-    val containerColor = if (blurEnabled) {
-        MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
-    } else {
-        MiuixTheme.colorScheme.surfaceContainer
-    }
-
-    Box(
-        modifier = Modifier
-            .padding(horizontal = HOME_CARD_HORIZONTAL_PADDING_DP.dp)
-            .padding(bottom = 6.dp)
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedRectangle(20.dp) },
-                effects = {
-                    if (blurEnabled) {
-                        vibrancy()
-                        blur(8.dp.toPx())
-                        lens(24.dp.toPx(), 24.dp.toPx())
-                    }
-                },
-                highlight = {
-                    Highlight.Default.copy(alpha = if (blurEnabled) 1f else 0f)
-                },
-                shadow = {
-                    Shadow.Default.copy(
-                        color = Color.Black.copy(if (isInLightTheme) 0.1f else 0.2f)
-                    )
-                },
-                onDrawSurface = { drawRect(containerColor) }
-            )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
-private fun HomeBottomPageLabel(
-    page: BottomPage,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val iconModifier = Modifier
-            .size(18.dp)
-            .graphicsLayer {
-                scaleX = page.iconScale
-                scaleY = page.iconScale
-            }
-        if (page.iconRes != null) {
-            Icon(
-                painter = painterResource(id = page.iconRes),
-                contentDescription = page.label,
-                tint = if (page.keepOriginalColors) Color.Unspecified else MiuixTheme.colorScheme.onBackground,
-                modifier = iconModifier
-            )
-        } else {
-            page.icon?.let { icon ->
-                Icon(
-                    imageVector = icon,
-                    contentDescription = page.label,
-                    tint = MiuixTheme.colorScheme.onBackground,
-                    modifier = iconModifier
-                )
-            }
-        }
-        Text(
-            text = page.label,
-            color = MiuixTheme.colorScheme.onBackground
-        )
-    }
-}
-
-@Composable
-private fun HomeInfoGridCard(
-    title: String,
-    stats: List<HomeCardStatItem>,
-    naText: String,
-    columns: Int = 2
-) {
-    val summaryColor = if (isSystemInDarkTheme()) {
-        Color(0xFF8AB8FF)
-    } else {
-        Color(0xFF1E63D6)
-    }
-    val labelColor = MiuixTheme.colorScheme.onSurfaceVariantSummary
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 1.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Text(
-            text = title,
-            color = MiuixTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        stats.chunked(columns).forEach { rowStats ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                rowStats.forEach { stat ->
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(vertical = 1.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stat.label,
-                            color = labelColor,
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = stat.value.ifBlank { naText },
-                            color = if (stat.emphasize) summaryColor else MiuixTheme.colorScheme.onSurface,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            fontWeight = if (stat.emphasize) FontWeight.SemiBold else FontWeight.Medium,
-                            maxLines = stat.valueMaxLines,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-                repeat(columns - rowStats.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-private data class HomeCardStatItem(
-    val label: String,
-    val value: String,
-    val emphasize: Boolean = false,
-    val valueMaxLines: Int = 1
 )
 
 @Composable

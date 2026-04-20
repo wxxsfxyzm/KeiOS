@@ -5,8 +5,12 @@ import android.widget.Toast
 import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
 import com.example.keios.ui.page.main.os.shell.OsShellCommandCardStore
+import com.example.keios.ui.page.main.os.shortcut.OsActivityCardEditMode
 import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCard
 import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCardStore
+import com.example.keios.ui.page.main.os.shortcut.ensureEditorActivityShortcutDraft
+import com.example.keios.ui.page.main.os.shortcut.launchGoogleSystemServiceActivity
+import com.example.keios.ui.page.main.os.shortcut.normalizeActivityShortcutConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -334,4 +338,92 @@ internal suspend fun exportOsSectionCard(
     } finally {
         updateExportingCard(null)
     }
+}
+
+internal suspend fun exportOsPageCard(
+    card: OsSectionCard,
+    currentExportingCard: OsSectionCard?,
+    updateExportingCard: (OsSectionCard?) -> Unit,
+    visibleCardsProvider: () -> Set<OsSectionCard>,
+    ensureLoad: suspend (SectionKind, Boolean) -> Unit,
+    sectionStatesProvider: () -> Map<SectionKind, SectionState>,
+    activityShortcutCardsProvider: () -> List<OsActivityShortcutCard>,
+    googleSystemServiceDefaults: OsGoogleSystemServiceConfig,
+    context: Context,
+    shizukuStatus: String,
+    launchExport: (fileName: String, payload: String) -> Unit
+) {
+    exportOsSectionCard(
+        card = card,
+        currentExportingCard = currentExportingCard,
+        updateExportingCard = updateExportingCard,
+        visibleCardsProvider = visibleCardsProvider,
+        ensureLoad = ensureLoad,
+        sectionStatesProvider = sectionStatesProvider,
+        activityShortcutCardsProvider = activityShortcutCardsProvider,
+        googleSystemServiceDefaults = googleSystemServiceDefaults,
+        context = context,
+        shizukuStatus = shizukuStatus,
+        launchExport = launchExport,
+        onExportFailed = { throwable ->
+            Toast.makeText(
+                context,
+                "导出失败: ${throwable.javaClass.simpleName}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    )
+}
+
+internal fun openOsActivityShortcutCard(
+    context: Context,
+    card: OsActivityShortcutCard,
+    defaults: OsGoogleSystemServiceConfig,
+    invalidTargetMessage: String,
+    openFailedMessage: (Throwable) -> String
+) {
+    val normalized = normalizeActivityShortcutConfig(
+        config = card.config,
+        defaults = defaults
+    )
+    if (normalized.packageName.isBlank()) {
+        Toast.makeText(context, invalidTargetMessage, Toast.LENGTH_SHORT).show()
+        return
+    }
+    runCatching {
+        launchGoogleSystemServiceActivity(
+            context = context,
+            config = normalized,
+            defaults = defaults
+        )
+    }.onFailure { error ->
+        Toast.makeText(
+            context,
+            openFailedMessage(error),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+}
+
+internal fun beginEditingOsActivityShortcutCard(
+    card: OsActivityShortcutCard,
+    defaults: OsGoogleSystemServiceConfig,
+    onEditModeChange: (OsActivityCardEditMode) -> Unit,
+    onEditingCardIdChange: (String?) -> Unit,
+    onEditingBuiltInChange: (Boolean) -> Unit,
+    onDraftChange: (OsGoogleSystemServiceConfig) -> Unit,
+    onShowEditorChange: (Boolean) -> Unit
+) {
+    onEditModeChange(OsActivityCardEditMode.Edit)
+    onEditingCardIdChange(card.id)
+    onEditingBuiltInChange(card.isBuiltInSample)
+    onDraftChange(
+        ensureEditorActivityShortcutDraft(
+            normalizeActivityShortcutConfig(
+                config = card.config,
+                defaults = defaults
+            )
+        )
+    )
+    onShowEditorChange(true)
 }

@@ -1,5 +1,6 @@
 package com.example.keios.ui.page.main.os
 
+import android.content.Context
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -12,6 +13,11 @@ import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
 import com.example.keios.ui.page.main.os.shortcut.BUILTIN_GOOGLE_SETTINGS_SAMPLE_CARD_ID
 import com.example.keios.ui.page.main.os.shortcut.LEGACY_GOOGLE_SYSTEM_SERVICE_CARD_ID
 import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCard
+import com.example.keios.ui.page.main.os.shortcut.ShortcutActivityClassOption
+import com.example.keios.ui.page.main.os.shortcut.ShortcutInstalledAppOption
+import com.example.keios.ui.page.main.os.shortcut.ShortcutSuggestionField
+import com.example.keios.ui.page.main.os.shortcut.loadActivityClassOptions
+import com.example.keios.ui.page.main.os.shortcut.loadInstalledAppOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
@@ -128,6 +134,144 @@ internal fun BindOsShizukuInvalidation(
         updateSection(SectionKind.SECURE) { it.copy(loadedFresh = false) }
         updateSection(SectionKind.GLOBAL) { it.copy(loadedFresh = false) }
         updateSection(SectionKind.LINUX) { it.copy(loadedFresh = false) }
+    }
+}
+
+@Composable
+internal fun BindOsVisibleSectionLoadEffects(
+    cacheLoaded: Boolean,
+    isDataActive: Boolean,
+    visibleCards: Set<OsSectionCard>,
+    systemTableExpanded: Boolean,
+    secureTableExpanded: Boolean,
+    globalTableExpanded: Boolean,
+    androidPropsExpanded: Boolean,
+    javaPropsExpanded: Boolean,
+    linuxEnvExpanded: Boolean,
+    ensureLoad: suspend (SectionKind) -> Unit
+) {
+    BindOsSectionLoadEffect(
+        expanded = systemTableExpanded,
+        cacheLoaded = cacheLoaded,
+        isDataActive = isDataActive,
+        visibleCards = visibleCards,
+        card = OsSectionCard.SYSTEM,
+        section = SectionKind.SYSTEM,
+        ensureLoad = ensureLoad
+    )
+    BindOsSectionLoadEffect(
+        expanded = secureTableExpanded,
+        cacheLoaded = cacheLoaded,
+        isDataActive = isDataActive,
+        visibleCards = visibleCards,
+        card = OsSectionCard.SECURE,
+        section = SectionKind.SECURE,
+        ensureLoad = ensureLoad
+    )
+    BindOsSectionLoadEffect(
+        expanded = globalTableExpanded,
+        cacheLoaded = cacheLoaded,
+        isDataActive = isDataActive,
+        visibleCards = visibleCards,
+        card = OsSectionCard.GLOBAL,
+        section = SectionKind.GLOBAL,
+        ensureLoad = ensureLoad
+    )
+    BindOsSectionLoadEffect(
+        expanded = androidPropsExpanded,
+        cacheLoaded = cacheLoaded,
+        isDataActive = isDataActive,
+        visibleCards = visibleCards,
+        card = OsSectionCard.ANDROID,
+        section = SectionKind.ANDROID,
+        ensureLoad = ensureLoad
+    )
+    BindOsSectionLoadEffect(
+        expanded = javaPropsExpanded,
+        cacheLoaded = cacheLoaded,
+        isDataActive = isDataActive,
+        visibleCards = visibleCards,
+        card = OsSectionCard.JAVA,
+        section = SectionKind.JAVA,
+        ensureLoad = ensureLoad
+    )
+    BindOsSectionLoadEffect(
+        expanded = linuxEnvExpanded,
+        cacheLoaded = cacheLoaded,
+        isDataActive = isDataActive,
+        visibleCards = visibleCards,
+        card = OsSectionCard.LINUX,
+        section = SectionKind.LINUX,
+        ensureLoad = ensureLoad
+    )
+}
+
+@Composable
+private fun BindOsSectionLoadEffect(
+    expanded: Boolean,
+    cacheLoaded: Boolean,
+    isDataActive: Boolean,
+    visibleCards: Set<OsSectionCard>,
+    card: OsSectionCard,
+    section: SectionKind,
+    ensureLoad: suspend (SectionKind) -> Unit
+) {
+    LaunchedEffect(expanded, visibleCards, cacheLoaded, isDataActive) {
+        if (!cacheLoaded) return@LaunchedEffect
+        if (isDataActive && expanded && isCardVisible(visibleCards, card)) {
+            ensureLoad(section)
+        }
+    }
+}
+
+@Composable
+internal fun BindOsActivitySuggestionLoadEffect(
+    showActivitySuggestionSheet: Boolean,
+    googleSystemServiceSuggestionTarget: ShortcutSuggestionField,
+    activityShortcutDraftPackageName: String,
+    context: Context,
+    onPackageSuggestionsLoadingChange: (Boolean) -> Unit,
+    onPackageSuggestionsChange: (List<ShortcutInstalledAppOption>) -> Unit,
+    onClassSuggestionsLoadingChange: (Boolean) -> Unit,
+    onClassSuggestionsChange: (List<ShortcutActivityClassOption>) -> Unit
+) {
+    LaunchedEffect(
+        showActivitySuggestionSheet,
+        googleSystemServiceSuggestionTarget,
+        activityShortcutDraftPackageName
+    ) {
+        if (!showActivitySuggestionSheet) return@LaunchedEffect
+        when (googleSystemServiceSuggestionTarget) {
+            ShortcutSuggestionField.PackageName -> {
+                onPackageSuggestionsLoadingChange(true)
+                runCatching {
+                    withContext(Dispatchers.IO) { loadInstalledAppOptions(context) }
+                }.onSuccess(onPackageSuggestionsChange)
+                    .onFailure { onPackageSuggestionsChange(emptyList()) }
+                onPackageSuggestionsLoadingChange(false)
+            }
+
+            ShortcutSuggestionField.ClassName -> {
+                val targetPackageName = activityShortcutDraftPackageName.trim()
+                if (targetPackageName.isBlank()) {
+                    onClassSuggestionsChange(emptyList())
+                    return@LaunchedEffect
+                }
+                onClassSuggestionsLoadingChange(true)
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        loadActivityClassOptions(
+                            context = context,
+                            packageName = targetPackageName
+                        )
+                    }
+                }.onSuccess(onClassSuggestionsChange)
+                    .onFailure { onClassSuggestionsChange(emptyList()) }
+                onClassSuggestionsLoadingChange(false)
+            }
+
+            else -> Unit
+        }
     }
 }
 
