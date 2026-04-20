@@ -11,10 +11,14 @@ import androidx.compose.runtime.setValue
 import androidx.navigation3.runtime.NavKey
 import com.example.keios.ui.navigation.KeiosRoute
 
+internal data class MainScreenReturnState(
+    val settingsReturnToken: Int
+)
+
 @Composable
-internal fun rememberMainScreenSettingsReturnToken(
+internal fun rememberMainScreenSettingsReturnState(
     backStack: List<NavKey>
-): Int {
+): MainScreenReturnState {
     var token by rememberSaveable { mutableIntStateOf(0) }
     var previousTopRoute by remember { mutableStateOf<NavKey?>(null) }
     LaunchedEffect(backStack.lastOrNull()) {
@@ -24,11 +28,11 @@ internal fun rememberMainScreenSettingsReturnToken(
         }
         previousTopRoute = currentTopRoute
     }
-    return token
+    return MainScreenReturnState(settingsReturnToken = token)
 }
 
 @Composable
-internal fun BindMainScreenRequestedBottomPageEffect(
+internal fun BindMainScreenBottomPageReturnEffect(
     requestedBottomPageToken: Int,
     requestedBottomPage: String?,
     onReturnToMain: () -> Unit

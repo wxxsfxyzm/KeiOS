@@ -1,17 +1,10 @@
 package com.example.keios.ui.page.main.student.section.gallery
 
-import android.view.ViewGroup
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,46 +16,24 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import com.example.keios.ui.page.main.student.BaGuideGalleryItem
-import com.example.keios.ui.page.main.student.GuideRemoteImageAdaptive
 import com.example.keios.ui.page.main.student.GuideVideoControlAction
 import com.example.keios.ui.page.main.student.GuideVideoFullscreenActivity
 import com.example.keios.ui.page.main.student.section.buildGuideCopyPayload
 import com.example.keios.ui.page.main.student.section.guideCopyable
 import com.example.keios.ui.page.main.student.normalizeGuideMediaSource
-import com.example.keios.ui.page.main.widget.glass.AppDropdownAnchorButton
 import com.example.keios.ui.page.main.widget.core.AppFeatureCard
 import com.example.keios.ui.page.main.widget.core.AppSurfaceCard
 import com.example.keios.ui.page.main.widget.support.CopyModeSelectionContainer
 import com.example.keios.ui.page.main.widget.glass.GlassTextButton
 import com.example.keios.ui.page.main.widget.glass.GlassVariant
-import com.example.keios.ui.page.main.widget.glass.LiquidDropdownColumn
-import com.example.keios.ui.page.main.widget.glass.LiquidDropdownImpl
-import com.example.keios.ui.page.main.widget.sheet.SnapshotPopupPlacement
-import com.example.keios.ui.page.main.widget.sheet.SnapshotWindowListPopup
-import com.example.keios.ui.page.main.widget.sheet.capturePopupAnchor
 import com.kyant.backdrop.Backdrop
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.ExpandLess
-import top.yukonga.miuix.kmp.icon.extended.ExpandMore
-import top.yukonga.miuix.kmp.icon.extended.Pause
-import top.yukonga.miuix.kmp.icon.extended.Play
-import top.yukonga.miuix.kmp.icon.extended.Replace
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -79,7 +50,6 @@ fun GuideGalleryVideoGroupCardItem(
 ) {
     if (items.isEmpty()) return
     val context = LocalContext.current
-    var showPicker by remember(title, items.size) { mutableStateOf(false) }
     var selectedIndex by rememberSaveable(title, items.size) { mutableStateOf(0) }
     LaunchedEffect(items.size) {
         if (selectedIndex !in items.indices) selectedIndex = 0
@@ -121,127 +91,47 @@ fun GuideGalleryVideoGroupCardItem(
         modifier = modifier.fillMaxWidth(),
         containerColor = Color(0x223B82F6),
         headerEndActions = {
-            val isMemoryHallVideoTitle = title.trim().startsWith("回忆大厅视频")
-            if (items.size > 1) {
-                var pickerPopupAnchorBounds by remember { mutableStateOf<IntRect?>(null) }
-                Box(
-                    modifier = Modifier.capturePopupAnchor { pickerPopupAnchorBounds = it }
-                ) {
-                    AppDropdownAnchorButton(
-                        backdrop = backdrop,
-                        text = optionLabels.getOrElse(selectedIndex) { "视频 1" },
-                        textColor = Color(0xFF3B82F6),
-                        variant = GlassVariant.Compact,
-                        onClick = { showPicker = !showPicker }
-                    )
-                    if (showPicker) {
-                        SnapshotWindowListPopup(
-                            show = showPicker,
-                            alignment = PopupPositionProvider.Align.BottomEnd,
-                            anchorBounds = pickerPopupAnchorBounds,
-                            placement = SnapshotPopupPlacement.ButtonEnd,
-                            onDismissRequest = { showPicker = false },
-                            enableWindowDim = false
-                        ) {
-                            LiquidDropdownColumn {
-                                optionLabels.forEachIndexed { idx, option ->
-                                    LiquidDropdownImpl(
-                                        text = option,
-                                        optionSize = optionLabels.size,
-                                        isSelected = selectedIndex == idx,
-                                        index = idx,
-                                        onSelectedIndexChange = { selected ->
-                                            selectedIndex = selected
-                                            showPicker = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if (displayMediaUrl.isNotBlank()) {
-                if (isMemoryHallVideoTitle) {
-                    val indicatorProgress = when {
-                        videoInlineBuffering -> 0.35f
-                        previewLoading -> previewProgress.coerceIn(0f, 1f).coerceAtLeast(0.06f)
-                        else -> 1f
-                    }
-                    val progressForegroundColor = if (!videoInlineBuffering && !previewLoading) {
-                        Color(0xFF34C759)
+            GuideGalleryVideoGroupHeaderActions(
+                title = title,
+                itemsSize = items.size,
+                optionLabels = optionLabels,
+                selectedIndex = selectedIndex,
+                onSelectedIndexChange = { selectedIndex = it },
+                displayMediaUrl = displayMediaUrl,
+                saveTargetUrl = saveTargetUrl,
+                videoInlineExpanded = videoInlineExpanded,
+                videoInlinePlaying = videoInlinePlaying,
+                videoInlineBuffering = videoInlineBuffering,
+                previewLoading = previewLoading,
+                previewProgress = previewProgress,
+                backdrop = backdrop,
+                onToggleInlinePlay = {
+                    if (normalizeGuideMediaSource(displayMediaUrl).isBlank()) {
+                        Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
+                    } else if (!videoInlineExpanded) {
+                        videoInlineExpanded = true
                     } else {
-                        Color(0xFF3B82F6)
+                        videoControlRequestId += 1
                     }
-                    val progressBackgroundColor = if (!videoInlineBuffering && !previewLoading) {
-                        Color(0x5534C759)
+                },
+                onOpenFullscreen = {
+                    val normalized = normalizeGuideMediaSource(displayMediaUrl)
+                    if (normalized.isBlank()) {
+                        Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
                     } else {
-                        Color(0x553B82F6)
-                    }
-                    CircularProgressIndicator(
-                        progress = indicatorProgress,
-                        size = 18.dp,
-                        strokeWidth = 2.dp,
-                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                            foregroundColor = progressForegroundColor,
-                            backgroundColor = progressBackgroundColor
-                        )
-                    )
-                }
-                GlassTextButton(
-                    backdrop = backdrop,
-                    text = "",
-                    leadingIcon = if (videoInlineExpanded && videoInlinePlaying) {
-                        MiuixIcons.Regular.Pause
-                    } else {
-                        MiuixIcons.Regular.Play
-                    },
-                    textColor = Color(0xFF3B82F6),
-                    variant = GlassVariant.Compact,
-                    onClick = {
-                        if (normalizeGuideMediaSource(displayMediaUrl).isBlank()) {
-                            Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
-                        } else if (!videoInlineExpanded) {
-                            videoInlineExpanded = true
-                        } else {
-                            videoControlRequestId += 1
-                        }
-                    }
-                )
-                GlassTextButton(
-                    backdrop = backdrop,
-                    text = "",
-                    leadingIcon = MiuixIcons.Regular.ExpandMore,
-                    textColor = Color(0xFF3B82F6),
-                    variant = GlassVariant.Compact,
-                    onClick = {
-                        val normalized = normalizeGuideMediaSource(displayMediaUrl)
-                        if (normalized.isBlank()) {
-                            Toast.makeText(context, "视频链接无效", Toast.LENGTH_SHORT).show()
-                        } else {
-                            GuideVideoFullscreenActivity.Companion.launch(
-                                context = context,
-                                mediaUrl = normalized
-                            )
-                        }
-                    }
-                )
-            }
-            if (saveTargetUrl.isNotBlank()) {
-                GlassTextButton(
-                    backdrop = backdrop,
-                    text = "",
-                    leadingIcon = MiuixIcons.Regular.Download,
-                    textColor = Color(0xFF3B82F6),
-                    variant = GlassVariant.Compact,
-                    onClick = {
-                        onSaveMedia(
-                            saveTargetUrl,
-                            optionLabels.getOrElse(selectedIndex) { title }
+                        GuideVideoFullscreenActivity.Companion.launch(
+                            context = context,
+                            mediaUrl = normalized
                         )
                     }
-                )
-            }
+                },
+                onSaveMedia = {
+                    onSaveMedia(
+                        saveTargetUrl,
+                        optionLabels.getOrElse(selectedIndex) { title }
+                    )
+                }
+            )
         }
     ) {
         if (displayMediaUrl.isBlank()) {
@@ -346,23 +236,15 @@ internal fun GuideInlineVideoPlayer(
     }
 
     if (!expanded) {
-        if (normalizedPreviewUrl.isNotBlank()) {
-            Box(
-                modifier = Modifier.clickable {
-                    onExpandedChange(false)
-                    openFullscreen()
-                }
-            ) {
-                GuideRemoteImageAdaptive(
-                    imageUrl = normalizedPreviewUrl,
-                    progressState = previewProgressState,
-                    onLoadingChanged = onPreviewLoadingChanged
-                )
-            }
-        } else {
-            previewProgressState?.value = 1f
-            onPreviewLoadingChanged?.invoke(false)
-        }
+        GuideInlineVideoPreview(
+            previewImageUrl = normalizedPreviewUrl,
+            onOpenFullscreen = {
+                onExpandedChange(false)
+                openFullscreen()
+            },
+            previewProgressState = previewProgressState,
+            onPreviewLoadingChanged = onPreviewLoadingChanged
+        )
         onBufferingChange(false)
         return
     }
@@ -406,10 +288,7 @@ internal fun GuideInlineVideoPlayer(
     val activePlayer = player
     if (activePlayer == null) {
         onIsPlayingChange(false)
-        Text(
-            text = "视频暂不可用",
-            color = MiuixTheme.colorScheme.onBackgroundVariant
-        )
+        GuideInlineVideoUnavailableHint()
         return
     }
 
@@ -426,80 +305,16 @@ internal fun GuideInlineVideoPlayer(
         }
     }
 
-    AndroidView(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(videoRatio)
-            .clip(RoundedCornerShape(14.dp)),
-        factory = { ctx ->
-            PlayerView(ctx).apply {
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-                useController = true
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                this.player = activePlayer
-            }
-        },
-        update = { view ->
-            view.player = activePlayer
-            view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-        }
+    GuideInlineVideoPlayerBody(
+        player = activePlayer,
+        videoRatio = videoRatio,
+        loopEnabled = loopEnabled,
+        onToggleLoop = { loopEnabled = !loopEnabled },
+        onCollapse = { onExpandedChange(false) },
+        backdrop = backdrop
     )
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        GlassTextButton(
-            backdrop = backdrop,
-            text = "",
-            leadingIcon = MiuixIcons.Regular.Replace,
-            textColor = if (loopEnabled) Color(0xFF34C759) else Color(0xFF3B82F6),
-            variant = GlassVariant.Compact,
-            onClick = { loopEnabled = !loopEnabled }
-        )
-        GlassTextButton(
-            backdrop = backdrop,
-            text = "",
-            leadingIcon = MiuixIcons.Regular.ExpandLess,
-            textColor = Color(0xFF3B82F6),
-            variant = GlassVariant.Compact,
-            onClick = { onExpandedChange(false) }
-        )
-    }
-
-    if (isBuffering) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CircularProgressIndicator(
-                progress = 0.35f,
-                size = 14.dp,
-                strokeWidth = 2.dp,
-                colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                    foregroundColor = Color(0xFF60A5FA),
-                    backgroundColor = Color(0x3360A5FA)
-                )
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = "视频加载中...",
-                color = MiuixTheme.colorScheme.onBackgroundVariant
-            )
-        }
-    }
-
-    loadError?.takeIf { it.isNotBlank() }?.let { err ->
-        Text(
-            text = "视频播放失败：$err",
-            color = MiuixTheme.colorScheme.error,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
+    GuideInlineVideoStatusHints(
+        isBuffering = isBuffering,
+        loadError = loadError
+    )
 }

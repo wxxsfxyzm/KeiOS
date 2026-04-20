@@ -2,27 +2,17 @@ package com.example.keios.ui.page.main.student.section.gallery
 
 import android.graphics.Bitmap
 import android.os.SystemClock
-import android.view.ViewGroup
-import androidx.activity.BackEventCompat
-import androidx.activity.ExperimentalActivityApi
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -34,20 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import com.example.keios.ui.page.main.ba.support.BASettingsStore
-import com.example.keios.ui.page.main.student.IMAGE_BACK_GESTURE_CONTENT_FADE_FACTOR
-import com.example.keios.ui.page.main.student.IMAGE_BACK_GESTURE_SCRIM_FADE_FACTOR
-import com.example.keios.ui.page.main.student.IMAGE_BACK_GESTURE_TRANSLATION_FACTOR
 import com.example.keios.ui.page.main.student.IMAGE_TAP_DISMISS_GESTURE_COOLDOWN_MS
 import com.example.keios.ui.page.main.student.IMAGE_TAP_DISMISS_OFFSET_EPSILON_PX
 import com.example.keios.ui.page.main.student.IMAGE_TAP_DISMISS_SCALE_EPSILON
@@ -57,25 +40,17 @@ import com.example.keios.ui.page.main.student.loadGuideBitmapSource
 import com.example.keios.ui.page.main.student.normalizeGuideMediaSource
 import com.example.keios.ui.page.main.student.rememberDeviceRotationDegrees
 import com.example.keios.ui.page.main.student.rememberSystemAutoRotateEnabled
-import com.example.keios.ui.page.main.widget.glass.GlassTextButton
-import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 import com.example.keios.ui.page.main.widget.motion.resolvedMotionDuration
 import com.github.panpf.zoomimage.CoilZoomAsyncImage
 import com.github.panpf.zoomimage.rememberCoilZoomState
 import com.github.panpf.zoomimage.zoom.ContinuousTransformType
 import com.github.panpf.zoomimage.zoom.GestureType
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 import kotlin.math.abs
 
-@OptIn(ExperimentalActivityApi::class)
 @Composable
 internal fun GuideImageFullscreenDialog(
     imageUrl: String,
@@ -148,45 +123,7 @@ internal fun GuideImageFullscreenDialog(
             lastTransformActiveAtMs = SystemClock.elapsedRealtime()
         }
     }
-    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
-    var predictiveBackSwipeEdge by remember { mutableIntStateOf(BackEventCompat.EDGE_NONE) }
-    var dialogWidthPx by remember { mutableIntStateOf(0) }
-    BackHandler(enabled = true) {
-        onDismiss()
-    }
-    PredictiveBackHandler(enabled = true) { backEvents ->
-        var dismissedByPredictiveProgress = false
-        try {
-            backEvents.collect { event ->
-                predictiveBackProgress = event.progress.coerceIn(0f, 1f)
-                predictiveBackSwipeEdge = event.swipeEdge
-                if (event.progress >= 0.995f) {
-                    dismissedByPredictiveProgress = true
-                    onDismiss()
-                }
-            }
-            if (!dismissedByPredictiveProgress) {
-                onDismiss()
-            }
-        } catch (_: CancellationException) {
-        } finally {
-            predictiveBackProgress = 0f
-            predictiveBackSwipeEdge = BackEventCompat.EDGE_NONE
-        }
-    }
-    val clampedBackProgress = predictiveBackProgress.coerceIn(0f, 1f)
-    val easedBackProgress = clampedBackProgress * clampedBackProgress * (3f - 2f * clampedBackProgress)
-    val backEdgeDirection = when (predictiveBackSwipeEdge) {
-        BackEventCompat.EDGE_LEFT -> 1f
-        BackEventCompat.EDGE_RIGHT -> -1f
-        else -> 0f
-    }
-    val backTranslationX = dialogWidthPx.toFloat() *
-            IMAGE_BACK_GESTURE_TRANSLATION_FACTOR *
-        backEdgeDirection *
-        easedBackProgress
-    val backContentAlpha = (1f - easedBackProgress * IMAGE_BACK_GESTURE_CONTENT_FADE_FACTOR).coerceIn(0f, 1f)
-    val backScrimAlpha = (1f - easedBackProgress * IMAGE_BACK_GESTURE_SCRIM_FADE_FACTOR).coerceIn(0f, 1f)
+    val backGestureState = rememberGuideFullscreenBackGestureState(onDismiss = onDismiss)
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -199,48 +136,27 @@ internal fun GuideImageFullscreenDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .onSizeChanged { dialogWidthPx = it.width }
+                .onSizeChanged { backGestureState.onDialogWidthChanged(it.width) }
                 .graphicsLayer {
-                    translationX = backTranslationX
-                    alpha = backContentAlpha
+                    translationX = backGestureState.translationX
+                    alpha = backGestureState.contentAlpha
                 }
-                .background(Color.Black.copy(alpha = backScrimAlpha))
+                .background(Color.Black.copy(alpha = backGestureState.scrimAlpha))
         ) {
             BoxWithConstraints(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 val safeRatio = ratio.coerceAtLeast(0.1f)
-                val viewportWidth = maxWidth
-                val viewportHeight = maxHeight
-                val viewportRatio = if (viewportHeight.value > 0f) {
-                    viewportWidth.value / viewportHeight.value
-                } else {
-                    1f
-                }
-
-                fun fitArea(targetRatio: Float): Float {
-                    val normalizedRatio = targetRatio.coerceAtLeast(0.1f)
-                    return if (viewportRatio >= normalizedRatio) {
-                        val fittedHeight = viewportHeight.value
-                        val fittedWidth = fittedHeight * normalizedRatio
-                        fittedWidth * fittedHeight
-                    } else {
-                        val fittedWidth = viewportWidth.value
-                        val fittedHeight = fittedWidth / normalizedRatio
-                        fittedWidth * fittedHeight
-                    }
-                }
-
-                val normalArea = fitArea(safeRatio)
-                val rotatedRatio = (1f / safeRatio).coerceAtLeast(0.1f)
-                val rotatedArea = fitArea(rotatedRatio)
-                val shouldRotate90 = safeRatio > 1.02f && rotatedArea > (normalArea * 1.12f)
-                val targetRotation = if (mediaAdaptiveRotationEnabled) {
-                    if (allowAutoRotate && shouldRotate90) 90 else 0
-                } else {
-                    if (systemAutoRotateEnabled) systemRotationDegrees else 0
-                }
+                val targetRotation = resolveGuideImageTargetRotation(
+                    safeRatio = safeRatio,
+                    viewportWidth = maxWidth.value,
+                    viewportHeight = maxHeight.value,
+                    allowAutoRotate = allowAutoRotate,
+                    mediaAdaptiveRotationEnabled = mediaAdaptiveRotationEnabled,
+                    systemAutoRotateEnabled = systemAutoRotateEnabled,
+                    systemRotationDegrees = systemRotationDegrees
+                )
                 val rotationTransition = remember(normalizedImageUrl) { Animatable(0f) }
                 var appliedZoomRotation by rememberSaveable(normalizedImageUrl) { mutableIntStateOf(0) }
                 var initializedRotation by rememberSaveable(normalizedImageUrl) { mutableStateOf(false) }
@@ -325,39 +241,18 @@ internal fun GuideImageFullscreenDialog(
                 )
 
                 if (sampledState.loading) {
-                    CircularProgressIndicator(
-                        progress = 0.28f,
-                        size = 24.dp,
-                        strokeWidth = 2.dp,
-                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                            foregroundColor = Color(0xFF60A5FA),
-                            backgroundColor = Color(0x3360A5FA)
-                        ),
+                    GuideFullscreenImageLoadingIndicator(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
             }
             if (!sampledState.loading && sampledState.helperLoadFailed && sampledBitmap == null) {
-                Row(
+                GuideFullscreenImageRetryHint(
+                    onRetry = { retryToken += 1 },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "图片加载异常",
-                        color = Color(0xFFBFDBFE)
-                    )
-                    GlassTextButton(
-                        backdrop = null,
-                        text = "重试",
-                        leadingIcon = MiuixIcons.Regular.Refresh,
-                        textColor = Color(0xFF60A5FA),
-                        variant = GlassVariant.Compact,
-                        onClick = { retryToken += 1 }
-                    )
-                }
+                        .padding(bottom = 24.dp)
+                )
             }
         }
     }
@@ -405,56 +300,11 @@ internal fun GuideVideoFullscreenDialog(
         ) {
             val activePlayer = player
             if (activePlayer != null) {
-                BoxWithConstraints(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val safeRatio = videoRatio.coerceAtLeast(0.2f)
-                    val shouldRotateLandscape = forceLandscape && maxHeight > maxWidth
-
-                    fun fitSize(targetRatio: Float): Pair<Dp, Dp> {
-                        val normalizedRatio = targetRatio.coerceAtLeast(0.2f)
-                        val viewportRatio = if (maxHeight.value > 0f) maxWidth.value / maxHeight.value else 1f
-                        return if (viewportRatio >= normalizedRatio) {
-                            val h = maxHeight
-                            (h * normalizedRatio) to h
-                        } else {
-                            val w = maxWidth
-                            w to (w / normalizedRatio)
-                        }
-                    }
-
-                    val playerModifier = if (shouldRotateLandscape) {
-                        val rotatedFinal = fitSize((1f / safeRatio).coerceAtLeast(0.2f))
-                        val preRotate = rotatedFinal.second to rotatedFinal.first
-                        Modifier
-                            .width(preRotate.first)
-                            .height(preRotate.second)
-                            .rotate(90f)
-                            .align(Alignment.Center)
-                    } else {
-                        Modifier.fillMaxSize()
-                    }
-
-                    AndroidView(
-                        modifier = playerModifier,
-                        factory = { ctx ->
-                            PlayerView(ctx).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                                useController = true
-                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                this.player = activePlayer
-                            }
-                        },
-                        update = { view ->
-                            view.player = activePlayer
-                            view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        }
-                    )
-                }
+                GuideVideoFullscreenPlayerLayer(
+                    activePlayer = activePlayer,
+                    videoRatio = videoRatio,
+                    forceLandscape = forceLandscape
+                )
             } else {
                 Text(
                     text = "视频地址无效",

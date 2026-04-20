@@ -1,0 +1,63 @@
+package com.example.keios.ui.page.main.student.section.gallery
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+@Composable
+internal fun GuideInlineVideoUnavailableHint() {
+    Text(
+        text = "视频暂不可用",
+        color = MiuixTheme.colorScheme.onBackgroundVariant
+    )
+}
+
+@Composable
+internal fun GuideInlineVideoStatusHints(
+    isBuffering: Boolean,
+    loadError: String?
+) {
+    if (isBuffering) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CircularProgressIndicator(
+                progress = 0.35f,
+                size = 14.dp,
+                strokeWidth = 2.dp,
+                colors = ProgressIndicatorDefaults.progressIndicatorColors(
+                    foregroundColor = Color(0xFF60A5FA),
+                    backgroundColor = Color(0x3360A5FA)
+                )
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "视频加载中...",
+                color = MiuixTheme.colorScheme.onBackgroundVariant
+            )
+        }
+    }
+
+    loadError?.takeIf { it.isNotBlank() }?.let { err ->
+        Text(
+            text = "视频播放失败：$err",
+            color = MiuixTheme.colorScheme.error,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}

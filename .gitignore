@@ -81,3 +81,4 @@ tmp/
 
 # Local QA checklists (keep local only)
 /docs/qa/mainscreen_fivepages_regression_checklist.md
+/scripts/qa/refactor_regression_gate.sh

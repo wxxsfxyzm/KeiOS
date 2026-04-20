@@ -54,8 +54,8 @@ fun MainScreen(
     val currentNotificationPermissionGranted by rememberUpdatedState(notificationPermissionGranted)
     val currentOnCheckOrRequestShizuku by rememberUpdatedState(onCheckOrRequestShizuku)
     val currentOnAppThemeModeChanged by rememberUpdatedState(onAppThemeModeChanged)
-    val mainResumeFromSettingsToken = rememberMainScreenSettingsReturnToken(backStack)
-    BindMainScreenRequestedBottomPageEffect(
+    val mainReturnState = rememberMainScreenSettingsReturnState(backStack)
+    BindMainScreenBottomPageReturnEffect(
         requestedBottomPageToken = requestedBottomPageToken,
         requestedBottomPage = requestedBottomPage,
         onReturnToMain = {
@@ -80,6 +80,18 @@ fun MainScreen(
             navigator.push(KeiosRoute.BaStudentGuide(nonce = System.nanoTime()))
         }
     )
+    val pagerCoordinator = buildMainScreenPagerCoordinator(
+        settingsReturnToken = mainReturnState.settingsReturnToken,
+        prefsState = uiPrefsState,
+        shizukuStatus = currentShizukuStatus,
+        shizukuApiUtils = shizukuApiUtils,
+        mcpServerManager = mcpServerManager,
+        onOpenGuideDetail = openGuideDetail,
+        requestedBottomPage = requestedBottomPage,
+        requestedBottomPageToken = requestedBottomPageToken,
+        requestedGitHubRefreshToken = requestedGitHubRefreshToken,
+        onRequestedBottomPageConsumed = onRequestedBottomPageConsumed
+    )
     if (!view.isInEditMode) {
         SideEffect {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@SideEffect
@@ -96,21 +108,14 @@ fun MainScreen(
     MainScreenNavHost(
         backStack = backStack,
         navigator = navigator,
-        settingsReturnToken = mainResumeFromSettingsToken,
+        pagerCoordinator = pagerCoordinator,
         prefsState = uiPrefsState,
         appLabel = currentAppLabel,
         packageInfo = currentPackageInfo,
-        shizukuStatus = currentShizukuStatus,
         onCheckOrRequestShizuku = currentOnCheckOrRequestShizuku,
         notificationPermissionGranted = currentNotificationPermissionGranted,
-        shizukuApiUtils = shizukuApiUtils,
         mcpServerManager = mcpServerManager,
         appThemeMode = appThemeMode,
         onAppThemeModeChanged = currentOnAppThemeModeChanged,
-        requestedBottomPage = requestedBottomPage,
-        requestedBottomPageToken = requestedBottomPageToken,
-        requestedGitHubRefreshToken = requestedGitHubRefreshToken,
-        onRequestedBottomPageConsumed = onRequestedBottomPageConsumed,
-        onOpenGuideDetail = openGuideDetail
     )
 }

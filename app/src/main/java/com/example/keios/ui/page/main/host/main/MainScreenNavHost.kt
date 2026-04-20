@@ -11,7 +11,6 @@ import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.example.keios.core.prefs.AppThemeMode
-import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.mcp.server.McpServerManager
 import com.example.keios.ui.navigation.KeiosRoute
 import com.example.keios.ui.navigation.Navigator
@@ -27,46 +26,39 @@ import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEna
 internal fun MainScreenNavHost(
     backStack: MutableList<NavKey>,
     navigator: Navigator,
-    settingsReturnToken: Int,
+    pagerCoordinator: MainScreenPagerCoordinator,
     prefsState: MainScreenUiPrefsState,
     appLabel: String,
     packageInfo: PackageInfo?,
-    shizukuStatus: String,
     onCheckOrRequestShizuku: () -> Unit,
     notificationPermissionGranted: Boolean,
-    shizukuApiUtils: ShizukuApiUtils,
     mcpServerManager: McpServerManager,
     appThemeMode: AppThemeMode,
-    onAppThemeModeChanged: (AppThemeMode) -> Unit,
-    requestedBottomPage: String?,
-    requestedBottomPageToken: Int,
-    requestedGitHubRefreshToken: Int,
-    onRequestedBottomPageConsumed: () -> Unit,
-    onOpenGuideDetail: (String) -> Unit
+    onAppThemeModeChanged: (AppThemeMode) -> Unit
 ) {
     val entryProvider = entryProvider<NavKey> {
         entry<KeiosRoute.Main> {
             MainPagerLayout(
                 navigator = navigator,
-                settingsReturnToken = settingsReturnToken,
-                liquidBottomBarEnabled = prefsState.liquidBottomBarEnabled,
-                liquidActionBarLayeredStyleEnabled = prefsState.liquidActionBarLayeredStyleEnabled,
-                cardPressFeedbackEnabled = prefsState.cardPressFeedbackEnabled,
-                homeIconHdrEnabled = prefsState.homeIconHdrEnabled,
-                preloadingEnabled = prefsState.preloadingEnabled,
-                nonHomeBackgroundEnabled = prefsState.nonHomeBackgroundEnabled,
-                nonHomeBackgroundUri = prefsState.nonHomeBackgroundUri,
-                nonHomeBackgroundOpacity = prefsState.nonHomeBackgroundOpacity,
-                visibleBottomPageNames = prefsState.visibleBottomPageNames,
-                onVisibleBottomPageNamesChange = prefsState::updateVisibleBottomPageNames,
-                shizukuStatus = shizukuStatus,
-                shizukuApiUtils = shizukuApiUtils,
-                mcpServerManager = mcpServerManager,
-                onOpenGuideDetail = onOpenGuideDetail,
-                requestedBottomPage = requestedBottomPage,
-                requestedBottomPageToken = requestedBottomPageToken,
-                requestedGitHubRefreshToken = requestedGitHubRefreshToken,
-                onRequestedBottomPageConsumed = onRequestedBottomPageConsumed
+                settingsReturnToken = pagerCoordinator.settingsReturnToken,
+                liquidBottomBarEnabled = pagerCoordinator.liquidBottomBarEnabled,
+                liquidActionBarLayeredStyleEnabled = pagerCoordinator.liquidActionBarLayeredStyleEnabled,
+                cardPressFeedbackEnabled = pagerCoordinator.cardPressFeedbackEnabled,
+                homeIconHdrEnabled = pagerCoordinator.homeIconHdrEnabled,
+                preloadingEnabled = pagerCoordinator.preloadingEnabled,
+                nonHomeBackgroundEnabled = pagerCoordinator.nonHomeBackgroundEnabled,
+                nonHomeBackgroundUri = pagerCoordinator.nonHomeBackgroundUri,
+                nonHomeBackgroundOpacity = pagerCoordinator.nonHomeBackgroundOpacity,
+                visibleBottomPageNames = pagerCoordinator.visibleBottomPageNames,
+                onVisibleBottomPageNamesChange = pagerCoordinator.onVisibleBottomPageNamesChange,
+                shizukuStatus = pagerCoordinator.shizukuStatus,
+                shizukuApiUtils = pagerCoordinator.shizukuApiUtils,
+                mcpServerManager = pagerCoordinator.mcpServerManager,
+                onOpenGuideDetail = pagerCoordinator.onOpenGuideDetail,
+                requestedBottomPage = pagerCoordinator.requestedBottomPage,
+                requestedBottomPageToken = pagerCoordinator.requestedBottomPageToken,
+                requestedGitHubRefreshToken = pagerCoordinator.requestedGitHubRefreshToken,
+                onRequestedBottomPageConsumed = pagerCoordinator.onRequestedBottomPageConsumed
             )
         }
         entry<KeiosRoute.Settings> {
@@ -117,8 +109,8 @@ internal fun MainScreenNavHost(
                 appLabel = appLabel,
                 packageInfo = packageInfo,
                 notificationPermissionGranted = notificationPermissionGranted,
-                shizukuStatus = shizukuStatus,
-                shizukuApiUtils = shizukuApiUtils,
+                shizukuStatus = pagerCoordinator.shizukuStatus,
+                shizukuApiUtils = pagerCoordinator.shizukuApiUtils,
                 onCheckShizuku = onCheckOrRequestShizuku,
                 onBack = { navigator.pop() }
             )
@@ -135,7 +127,7 @@ internal fun MainScreenNavHost(
                 liquidActionBarLayeredStyleEnabled = prefsState.liquidActionBarLayeredStyleEnabled,
                 preloadingEnabled = prefsState.preloadingEnabled,
                 onBack = { navigator.pop() },
-                onOpenGuide = onOpenGuideDetail
+                onOpenGuide = pagerCoordinator.onOpenGuideDetail
             )
         }
     }

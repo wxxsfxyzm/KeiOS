@@ -18,10 +18,6 @@ internal fun extractImageUrlsFromHtml(sourceUrl: String, raw: String): List<Stri
         .toList()
 }
 
-internal fun normalizeMediaUrl(sourceUrl: String, mediaRaw: String): String {
-    return normalizeImageUrl(sourceUrl, mediaRaw)
-}
-
 internal fun extractImageUrlsFromAny(sourceUrl: String, any: Any?, depth: Int = 0): List<String> {
     if (any == null || depth > 6) return emptyList()
     return when (any) {
@@ -52,42 +48,6 @@ internal fun extractImageUrlsFromAny(sourceUrl: String, any: Any?, depth: Int = 
             val result = mutableListOf<String>()
             for (i in 0 until any.length()) {
                 result += extractImageUrlsFromAny(sourceUrl, any.opt(i), depth + 1)
-            }
-            result.distinct()
-        }
-
-        else -> emptyList()
-    }
-}
-
-internal fun extractVideoUrlsFromAny(sourceUrl: String, any: Any?, depth: Int = 0): List<String> {
-    if (any == null || depth > 6) return emptyList()
-    return when (any) {
-        is String -> {
-            buildList {
-                val normalized = normalizeMediaUrl(sourceUrl, any)
-                if (looksLikeVideoUrl(normalized)) add(normalized)
-                any.split(",", ";")
-                    .map { normalizeMediaUrl(sourceUrl, it.trim()) }
-                    .filter { looksLikeVideoUrl(it) }
-                    .forEach { add(it) }
-            }.distinct()
-        }
-
-        is JSONObject -> {
-            val result = mutableListOf<String>()
-            val keys = any.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                result += extractVideoUrlsFromAny(sourceUrl, any.opt(key), depth + 1)
-            }
-            result.distinct()
-        }
-
-        is JSONArray -> {
-            val result = mutableListOf<String>()
-            for (i in 0 until any.length()) {
-                result += extractVideoUrlsFromAny(sourceUrl, any.opt(i), depth + 1)
             }
             result.distinct()
         }
