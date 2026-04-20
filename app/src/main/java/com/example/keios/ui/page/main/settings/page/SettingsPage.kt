@@ -66,6 +66,14 @@ import com.example.keios.ui.page.main.settings.support.formatLogTime
 import com.example.keios.ui.page.main.settings.support.formatOpacityPercent
 import com.example.keios.ui.page.main.settings.support.resolveNonHomeBackgroundAspectRatio
 import com.example.keios.ui.page.main.settings.support.resolveNonHomeBackgroundCropSize
+import com.example.keios.ui.page.main.settings.section.SettingsAnimationSection
+import com.example.keios.ui.page.main.settings.section.SettingsBackgroundSection
+import com.example.keios.ui.page.main.settings.section.SettingsCacheSection
+import com.example.keios.ui.page.main.settings.section.SettingsComponentEffectsSection
+import com.example.keios.ui.page.main.settings.section.SettingsCopySection
+import com.example.keios.ui.page.main.settings.section.SettingsLogSection
+import com.example.keios.ui.page.main.settings.section.SettingsNotifySection
+import com.example.keios.ui.page.main.settings.section.SettingsVisualSection
 import com.example.keios.ui.page.main.os.appLucideBackIcon
 import com.example.keios.ui.page.main.os.appLucideAlertIcon
 import com.example.keios.ui.page.main.os.appLucideConfigIcon
@@ -368,510 +376,113 @@ fun SettingsPage(
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                 sectionSpacing = 12.dp
             ) {
-            item {
-                SettingsGroupCard(
-                    header = stringResource(R.string.settings_group_visual_header),
-                    title = stringResource(R.string.settings_group_visual_title),
-                    sectionIcon = appLucideLayersIcon(),
-                    containerColor = if (visualGroupActive) enabledCardColor else disabledCardColor
-                ) {
-                    SettingsActionItem(
-                        title = stringResource(R.string.settings_theme_mode_title),
-                        summary = themeSummary
-                    ) {
-                        AppDropdownSelector(
-                            selectedText = currentThemeLabel,
-                            options = themeModeOptions.map { it.second },
-                            selectedIndex = themeModeOptions.indexOfFirst { it.first == appThemeMode }
-                                .coerceAtLeast(0),
-                            expanded = showThemeModePopup,
-                            anchorBounds = themePopupAnchorBounds,
-                            onExpandedChange = { showThemeModePopup = it },
-                            onSelectedIndexChange = { selectedIndex ->
-                                onAppThemeModeChanged(themeModeOptions[selectedIndex].first)
-                            },
-                            onAnchorBoundsChange = { themePopupAnchorBounds = it },
-                            backdrop = null,
-                            variant = GlassVariant.SheetAction
-                        )
-                    }
-
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_preloading_title),
-                        summary = if (preloadingEnabled) {
-                            stringResource(R.string.settings_preloading_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_preloading_summary_disabled)
-                        },
-                        checked = preloadingEnabled,
-                        onCheckedChange = onPreloadingEnabledChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_preloading_scope)
-                    )
-
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_home_shine_title),
-                        summary = if (homeIconHdrEnabled) {
-                            stringResource(R.string.settings_home_shine_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_home_shine_summary_disabled)
-                        },
-                        checked = homeIconHdrEnabled,
-                        onCheckedChange = onHomeIconHdrChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_home_shine_scope)
+                item {
+                    SettingsVisualSection(
+                        preloadingEnabled = preloadingEnabled,
+                        onPreloadingEnabledChanged = onPreloadingEnabledChanged,
+                        homeIconHdrEnabled = homeIconHdrEnabled,
+                        onHomeIconHdrChanged = onHomeIconHdrChanged,
+                        appThemeMode = appThemeMode,
+                        onAppThemeModeChanged = onAppThemeModeChanged,
+                        showThemeModePopup = showThemeModePopup,
+                        onShowThemeModePopupChange = { showThemeModePopup = it },
+                        themePopupAnchorBounds = themePopupAnchorBounds,
+                        onThemePopupAnchorBoundsChange = { themePopupAnchorBounds = it },
+                        enabledCardColor = enabledCardColor,
+                        disabledCardColor = disabledCardColor
                     )
                 }
-            }
-            item {
-                SettingsGroupCard(
-                    header = stringResource(R.string.settings_group_animation_header),
-                    title = stringResource(R.string.settings_group_animation_title),
-                    sectionIcon = appLucideTimeIcon(),
-                    containerColor = if (animationGroupActive) enabledCardColor else disabledCardColor
-                ) {
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_transition_animations_title),
-                        summary = if (transitionAnimationsEnabled) {
-                            stringResource(R.string.settings_transition_animations_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_transition_animations_summary_disabled)
-                        },
-                        checked = transitionAnimationsEnabled,
-                        onCheckedChange = onTransitionAnimationsChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_transition_animations_scope)
+                item {
+                    SettingsAnimationSection(
+                        transitionAnimationsEnabled = transitionAnimationsEnabled,
+                        onTransitionAnimationsChanged = onTransitionAnimationsChanged,
+                        enabledCardColor = enabledCardColor,
+                        disabledCardColor = disabledCardColor
                     )
                 }
-            }
-            item {
-                SettingsGroupCard(
-                    header = stringResource(R.string.settings_group_component_effects_header),
-                    title = stringResource(R.string.settings_group_component_effects_title),
-                    sectionIcon = appLucideConfigIcon(),
-                    containerColor = if (componentEffectsGroupActive) enabledCardColor else disabledCardColor
-                ) {
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_actionbar_style_title),
-                        summary = if (liquidActionBarLayeredStyleEnabled) {
-                            stringResource(R.string.settings_actionbar_style_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_actionbar_style_summary_disabled)
-                        },
-                        checked = liquidActionBarLayeredStyleEnabled,
-                        onCheckedChange = onLiquidActionBarLayeredStyleChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_actionbar_style_scope)
-                    )
-
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_bottom_bar_title),
-                        summary = stringResource(R.string.settings_bottom_bar_summary),
-                        checked = liquidBottomBarEnabled,
-                        onCheckedChange = onLiquidBottomBarChanged
-                    )
-
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_liquid_switch_title),
-                        summary = if (liquidGlassSwitchEnabled) {
-                            stringResource(R.string.settings_liquid_switch_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_liquid_switch_summary_disabled)
-                        },
-                        checked = liquidGlassSwitchEnabled,
-                        onCheckedChange = onLiquidGlassSwitchChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_liquid_switch_scope)
-                    )
-
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_card_feedback_title),
-                        summary = if (cardPressFeedbackEnabled) {
-                            stringResource(R.string.settings_card_feedback_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_card_feedback_summary_disabled)
-                        },
-                        checked = cardPressFeedbackEnabled,
-                        onCheckedChange = onCardPressFeedbackChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_card_feedback_scope)
+                item {
+                    SettingsComponentEffectsSection(
+                        liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
+                        onLiquidActionBarLayeredStyleChanged = onLiquidActionBarLayeredStyleChanged,
+                        liquidBottomBarEnabled = liquidBottomBarEnabled,
+                        onLiquidBottomBarChanged = onLiquidBottomBarChanged,
+                        liquidGlassSwitchEnabled = liquidGlassSwitchEnabled,
+                        onLiquidGlassSwitchChanged = onLiquidGlassSwitchChanged,
+                        cardPressFeedbackEnabled = cardPressFeedbackEnabled,
+                        onCardPressFeedbackChanged = onCardPressFeedbackChanged,
+                        enabledCardColor = enabledCardColor,
+                        disabledCardColor = disabledCardColor
                     )
                 }
-            }
-            item {
-                SettingsGroupCard(
-                    header = stringResource(R.string.settings_group_background_header),
-                    title = stringResource(R.string.settings_group_background_title),
-                    sectionIcon = appLucideMediaIcon(),
-                    containerColor = if (backgroundGroupActive) enabledCardColor else disabledCardColor
-                ) {
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_non_home_background_title),
-                        summary = if (nonHomeBackgroundEnabled) {
-                            stringResource(R.string.settings_non_home_background_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_non_home_background_summary_disabled)
+                item {
+                    SettingsBackgroundSection(
+                        nonHomeBackgroundEnabled = nonHomeBackgroundEnabled,
+                        onNonHomeBackgroundEnabledChanged = onNonHomeBackgroundEnabledChanged,
+                        nonHomeBackgroundUri = nonHomeBackgroundUri,
+                        onNonHomeBackgroundUriChanged = onNonHomeBackgroundUriChanged,
+                        nonHomeBackgroundOpacity = nonHomeBackgroundOpacity,
+                        onNonHomeBackgroundOpacityChanged = onNonHomeBackgroundOpacityChanged,
+                        backgroundPickerLauncher = nonHomeBackgroundPickerLauncher,
+                        onClearBackground = {
+                            deleteManagedNonHomeBackgroundFile(context, nonHomeBackgroundUri)
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.settings_non_home_background_toast_cleared),
+                                Toast.LENGTH_SHORT
+                            ).show()
                         },
-                        checked = nonHomeBackgroundEnabled,
-                        onCheckedChange = onNonHomeBackgroundEnabledChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_non_home_background_scope)
-                    )
-
-                    SettingsActionItem(
-                        title = stringResource(R.string.settings_non_home_background_image_title),
-                        summary = if (nonHomeBackgroundUri.isBlank()) {
-                            stringResource(R.string.settings_non_home_background_image_summary_empty)
-                        } else {
-                            stringResource(R.string.settings_non_home_background_image_summary_ready)
-                        }
-                    )
-                    AppDualActionRow(
-                        first = { modifier ->
-                            GlassTextButton(
-                                backdrop = contentBackdrop,
-                                variant = GlassVariant.SheetPrimaryAction,
-                                text = stringResource(R.string.settings_non_home_background_action_select),
-                                modifier = modifier,
-                                textColor = MiuixTheme.colorScheme.primary,
-                                onClick = {
-                                    nonHomeBackgroundPickerLauncher.launch(arrayOf("image/*"))
-                                }
-                            )
-                        },
-                        second = { modifier ->
-                            GlassTextButton(
-                                backdrop = contentBackdrop,
-                                variant = GlassVariant.SheetDangerAction,
-                                text = stringResource(R.string.settings_non_home_background_action_clear),
-                                modifier = modifier,
-                                textColor = MiuixTheme.colorScheme.error,
-                                enabled = nonHomeBackgroundUri.isNotBlank(),
-                                onClick = {
-                                    deleteManagedNonHomeBackgroundFile(context, nonHomeBackgroundUri)
-                                    onNonHomeBackgroundUriChanged("")
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.settings_non_home_background_toast_cleared),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            )
-                        }
-                    )
-
-                    SettingsActionItem(
-                        title = stringResource(R.string.settings_non_home_background_opacity_title),
-                        summary = stringResource(
-                            R.string.settings_non_home_background_opacity_summary,
-                            formatOpacityPercent(nonHomeBackgroundOpacity)
-                        )
-                    )
-                    Slider(
-                        value = nonHomeBackgroundOpacity.coerceIn(
-                            NON_HOME_BACKGROUND_OPACITY_MIN,
-                            NON_HOME_BACKGROUND_OPACITY_MAX
-                        ),
-                        onValueChange = onNonHomeBackgroundOpacityChanged,
-                        valueRange = NON_HOME_BACKGROUND_OPACITY_MIN..NON_HOME_BACKGROUND_OPACITY_MAX,
-                        showKeyPoints = true,
-                        keyPoints = NON_HOME_BACKGROUND_OPACITY_KEY_POINTS,
-                        magnetThreshold = NON_HOME_BACKGROUND_OPACITY_MAGNET_THRESHOLD,
-                        hapticEffect = SliderDefaults.SliderHapticEffect.Step,
-                        enabled = nonHomeBackgroundEnabled,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 2.dp)
-                    )
-                    SettingsInfoItem(
-                        key = stringResource(R.string.common_note),
-                        value = stringResource(
-                            R.string.settings_non_home_background_opacity_default,
-                            formatOpacityPercent(NON_HOME_BACKGROUND_OPACITY_DEFAULT)
-                        )
+                        enabledCardColor = enabledCardColor,
+                        disabledCardColor = disabledCardColor
                     )
                 }
-            }
-            item {
-                SettingsGroupCard(
-                    header = stringResource(R.string.settings_group_log_header),
-                    title = stringResource(R.string.settings_group_log_title),
-                    sectionIcon = appLucideNotesIcon(),
-                    containerColor = if (logGroupActive) enabledCardColor else disabledCardColor
-                ) {
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_log_debug_title),
-                        summary = if (logDebugEnabled) {
-                            stringResource(R.string.settings_log_debug_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_log_debug_summary_disabled)
-                        },
-                        checked = logDebugEnabled,
-                        onCheckedChange = onLogDebugChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_log_scope)
-                    )
-                    SettingsInfoItem(
-                        key = stringResource(R.string.common_note),
-                        value = if (logDebugEnabled) {
-                            stringResource(R.string.settings_log_note_enabled)
-                        } else {
-                            stringResource(R.string.settings_log_note_disabled)
-                        }
-                    )
-                    SettingsInfoItem(
-                        key = stringResource(R.string.settings_log_stat_size),
-                        value = formatBytes(logStats.totalBytes)
-                    )
-                    SettingsInfoItem(
-                        key = stringResource(R.string.settings_log_stat_files),
-                        value = stringResource(R.string.settings_log_stat_files_count, logStats.fileCount)
-                    )
-                    SettingsInfoItem(
-                        key = stringResource(R.string.settings_log_stat_latest),
-                        value = logLatestText
-                    )
-                    AppDualActionRow(
-                        first = { modifier ->
-                            GlassTextButton(
-                                backdrop = contentBackdrop,
-                                variant = GlassVariant.SheetPrimaryAction,
-                                text = if (exportingLogZip) {
-                                    stringResource(R.string.common_processing)
-                                } else {
-                                    stringResource(R.string.settings_log_action_export_zip)
-                                },
-                                modifier = modifier,
-                                textColor = MiuixTheme.colorScheme.primary,
-                                enabled = !exportingLogZip && !clearingLogs,
-                                onClick = {
-                                    exportingLogZip = true
-                                    val stamp = SimpleDateFormat(
-                                        "yyyyMMdd-HHmmss",
-                                        Locale.getDefault()
-                                    ).format(Date())
-                                    logExportLauncher.launch("keios-logs-$stamp.zip")
-                                }
-                            )
-                        },
-                        second = { modifier ->
-                            GlassTextButton(
-                                backdrop = contentBackdrop,
-                                variant = GlassVariant.SheetDangerAction,
-                                text = if (clearingLogs) {
-                                    stringResource(R.string.common_processing)
-                                } else {
-                                    stringResource(R.string.settings_log_action_clear)
-                                },
-                                modifier = modifier,
-                                textColor = MiuixTheme.colorScheme.error,
-                                enabled = !exportingLogZip && !clearingLogs,
-                                onClick = {
-                                    scope.launch {
-                                        clearingLogs = true
-                                        val result = withContext(Dispatchers.IO) {
-                                            runCatching { AppLogStore.clear(context) }
-                                        }
-                                        clearingLogs = false
-                                        if (result.isSuccess) {
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.settings_log_toast_cleared),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        } else {
-                                            val reason = result.exceptionOrNull()?.javaClass?.simpleName
-                                                ?: context.getString(R.string.common_unknown)
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.settings_log_toast_clear_failed, reason),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                        logReloadSignal++
-                                    }
-                                }
-                            )
-                        }
+                item {
+                    SettingsLogSection(
+                        logDebugEnabled = logDebugEnabled,
+                        onLogDebugChanged = onLogDebugChanged,
+                        logStats = logStats,
+                        exportingLogZip = exportingLogZip,
+                        onExportingLogZipChange = { exportingLogZip = it },
+                        clearingLogs = clearingLogs,
+                        onClearingLogsChange = { clearingLogs = it },
+                        onLogReloadSignal = { logReloadSignal++ },
+                        logExportLauncher = logExportLauncher,
+                        enabledCardColor = enabledCardColor,
+                        disabledCardColor = disabledCardColor
                     )
                 }
-            }
-            item {
-                SettingsGroupCard(
-                    header = stringResource(R.string.settings_group_notify_header),
-                    title = stringResource(R.string.settings_group_notify_title),
-                    sectionIcon = appLucideAlertIcon(),
-                    containerColor = if (notifyGroupActive) enabledCardColor else disabledCardColor
-                ) {
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_super_island_style_title),
-                        summary = if (superIslandNotificationEnabled) {
-                            stringResource(R.string.settings_super_island_style_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_super_island_style_summary_disabled)
-                        },
-                        checked = superIslandNotificationEnabled,
-                        onCheckedChange = onSuperIslandNotificationChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = stringResource(R.string.settings_super_island_style_scope)
-                    )
-
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_super_island_bypass_title),
-                        summary = if (superIslandBypassRestrictionEnabled) {
-                            stringResource(R.string.settings_super_island_bypass_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_super_island_bypass_summary_disabled)
-                        },
-                        checked = superIslandBypassRestrictionEnabled,
-                        onCheckedChange = onSuperIslandBypassRestrictionChanged,
-                        infoKey = stringResource(R.string.common_note),
-                        infoValue = stringResource(R.string.settings_super_island_bypass_note)
+                item {
+                    SettingsNotifySection(
+                        superIslandNotificationEnabled = superIslandNotificationEnabled,
+                        onSuperIslandNotificationChanged = onSuperIslandNotificationChanged,
+                        superIslandBypassRestrictionEnabled = superIslandBypassRestrictionEnabled,
+                        onSuperIslandBypassRestrictionChanged = onSuperIslandBypassRestrictionChanged,
+                        enabledCardColor = enabledCardColor,
+                        disabledCardColor = disabledCardColor
                     )
                 }
-            }
-            item {
-                SettingsGroupCard(
-                    header = stringResource(R.string.settings_group_copy_header),
-                    title = stringResource(R.string.settings_group_copy_title),
-                    sectionIcon = osLucideCopyIcon(),
-                    containerColor = if (textCopyCapabilityExpanded) enabledCardColor else disabledCardColor
-                ) {
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_copy_capability_title),
-                        summary = if (textCopyCapabilityExpanded) {
-                            stringResource(R.string.settings_copy_capability_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_copy_capability_summary_disabled)
-                        },
-                        checked = textCopyCapabilityExpanded,
-                        onCheckedChange = onTextCopyCapabilityExpandedChanged,
-                        infoKey = stringResource(R.string.common_note),
-                        infoValue = if (textCopyCapabilityExpanded) {
-                            stringResource(R.string.settings_copy_capability_note_enabled)
-                        } else {
-                            stringResource(R.string.settings_copy_capability_note_disabled)
-                        }
+                item {
+                    SettingsCopySection(
+                        textCopyCapabilityExpanded = textCopyCapabilityExpanded,
+                        onTextCopyCapabilityExpandedChanged = onTextCopyCapabilityExpandedChanged,
+                        enabledCardColor = enabledCardColor,
+                        disabledCardColor = disabledCardColor
                     )
                 }
-            }
-            item {
-                SettingsGroupCard(
-                    header = stringResource(R.string.settings_cache_header),
-                    title = stringResource(R.string.settings_cache_diagnostics_title),
-                    sectionIcon = appLucidePackageIcon(),
-                    containerColor = if (cacheDiagnosticsEnabled) enabledCardColor else disabledCardColor
-                ) {
-                    SettingsToggleItem(
-                        title = stringResource(R.string.settings_cache_diagnostics_title),
-                        summary = if (cacheDiagnosticsEnabled) {
-                            stringResource(R.string.settings_cache_diagnostics_summary_enabled)
-                        } else {
-                            stringResource(R.string.settings_cache_diagnostics_summary_disabled)
-                        },
-                        checked = cacheDiagnosticsEnabled,
-                        onCheckedChange = onCacheDiagnosticsChanged,
-                        infoKey = stringResource(R.string.common_scope),
-                        infoValue = if (cacheDiagnosticsEnabled) {
-                            stringResource(R.string.settings_cache_scope_enabled)
-                        } else {
-                            stringResource(R.string.settings_cache_scope_disabled)
-                        }
+                item {
+                    SettingsCacheSection(
+                        cacheDiagnosticsEnabled = cacheDiagnosticsEnabled,
+                        onCacheDiagnosticsChanged = onCacheDiagnosticsChanged,
+                        cacheEntries = cacheEntries,
+                        cacheEntriesLoading = cacheEntriesLoading,
+                        clearingAllCaches = clearingAllCaches,
+                        onClearingAllCachesChange = { clearingAllCaches = it },
+                        clearingCacheId = clearingCacheId,
+                        onClearingCacheIdChange = { clearingCacheId = it },
+                        onCacheReload = { cacheReloadSignal++ },
+                        enabledCardColor = enabledCardColor,
+                        disabledCardColor = disabledCardColor
                     )
-                    when {
-                        !cacheDiagnosticsEnabled -> {
-                            Text(
-                                text = stringResource(R.string.settings_cache_disabled_desc),
-                                color = subtitleColor,
-                                fontSize = AppTypographyTokens.Supporting.fontSize,
-                                lineHeight = AppTypographyTokens.Supporting.lineHeight
-                            )
-                        }
-
-                        cacheEntries == null && cacheEntriesLoading -> {
-                            Text(
-                                text = stringResource(R.string.settings_cache_loading_desc),
-                                color = subtitleColor,
-                                fontSize = AppTypographyTokens.Supporting.fontSize,
-                                lineHeight = AppTypographyTokens.Supporting.lineHeight
-                            )
-                        }
-
-                        cacheEntries.isNullOrEmpty() -> {
-                            Text(
-                                text = stringResource(R.string.settings_cache_empty_desc),
-                                color = subtitleColor,
-                                fontSize = AppTypographyTokens.Supporting.fontSize,
-                                lineHeight = AppTypographyTokens.Supporting.lineHeight
-                            )
-                        }
-
-                        else -> {
-                            GlassTextButton(
-                                backdrop = contentBackdrop,
-                                variant = GlassVariant.SheetDangerAction,
-                                text = if (clearingAllCaches) {
-                                    stringResource(R.string.common_processing)
-                                } else {
-                                    stringResource(R.string.settings_cache_action_clear_all)
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                textColor = MiuixTheme.colorScheme.error,
-                                enabled = !clearingAllCaches && clearingCacheId == null,
-                                onClick = {
-                                    scope.launch {
-                                        clearingAllCaches = true
-                                        val result = withContext(Dispatchers.IO) {
-                                            runCatching { CacheStores.clearAll(context) }
-                                        }
-                                        clearingAllCaches = false
-                                        if (result.isSuccess) {
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.settings_cache_toast_cleared_all),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        } else {
-                                            val reason = result.exceptionOrNull()?.javaClass?.simpleName
-                                                ?: context.getString(R.string.common_unknown)
-                                            Toast.makeText(
-                                                context,
-                                                context.getString(R.string.settings_cache_toast_clear_all_failed, reason),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                        cacheReloadSignal++
-                                    }
-                                }
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            cacheEntries!!.forEachIndexed { index, entry ->
-                                SettingsCacheRow(
-                                    entry = entry,
-                                    clearing = clearingAllCaches || clearingCacheId == entry.id,
-                                    onClear = {
-                                        if (clearingAllCaches || clearingCacheId != null) return@SettingsCacheRow
-                                        scope.launch {
-                                            clearingCacheId = entry.id
-                                            try {
-                                                withContext(Dispatchers.IO) {
-                                                    CacheStores.clear(context, entry.id)
-                                                }
-                                                cacheReloadSignal++
-                                            } finally {
-                                                clearingCacheId = null
-                                            }
-                                        }
-                                    }
-                                )
-                                if (index < cacheEntries!!.lastIndex) {
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                }
-                            }
-                        }
-                    }
                 }
-            }
             }
         }
     }
