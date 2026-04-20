@@ -1,7 +1,9 @@
 package com.example.keios.mcp.server
 
+import android.content.Intent
 import android.content.Context
 import android.net.Uri
+import com.example.keios.R
 import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.feature.github.data.local.GitHubReleaseAssetCacheStore
 import com.example.keios.feature.github.data.local.GitHubTrackStore
@@ -29,6 +31,14 @@ import com.example.keios.ui.page.main.student.catalog.clearBaGuideCatalogCache
 import com.example.keios.ui.page.main.student.catalog.isBaGuideCatalogBundleComplete
 import com.example.keios.ui.page.main.student.catalog.isBaGuideCatalogCacheExpired
 import com.example.keios.ui.page.main.student.catalog.loadCachedBaGuideCatalogBundle
+import com.example.keios.ui.page.main.os.OsGoogleSystemServiceConfig
+import com.example.keios.ui.page.main.os.OsInfoCache
+import com.example.keios.ui.page.main.os.OsSectionCard
+import com.example.keios.ui.page.main.os.OsUiStateStore
+import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
+import com.example.keios.ui.page.main.os.shell.OsShellCommandCardStore
+import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCard
+import com.example.keios.ui.page.main.os.shortcut.OsActivityShortcutCardStore
 import com.tencent.mmkv.MMKV
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
@@ -143,26 +153,29 @@ class LocalMcpService(
 
     fun listLocalTools(): List<McpToolMeta> {
         return listOf(
-            McpToolMeta("keios.health.ping", "服务连通性探针，返回 pong"),
-            McpToolMeta("keios.app.info", "读取 KeiOS 应用基础信息"),
-            McpToolMeta("keios.app.version", "读取应用版本号与版本码"),
-            McpToolMeta("keios.shizuku.status", "读取 Shizuku 当前状态"),
-            McpToolMeta("keios.mcp.runtime.status", "读取 MCP 服务运行状态"),
-            McpToolMeta("keios.mcp.runtime.logs", "读取 MCP 运行日志（支持 limit）"),
-            McpToolMeta("keios.mcp.runtime.config", "生成客户端接入配置 JSON（支持 mode/endpoint/serverName）"),
-            McpToolMeta("keios.system.topinfo.query", "检索系统 TopInfo 参数（支持 query/limit）"),
-            McpToolMeta("keios.github.tracked.snapshot", "读取 GitHub 跟踪配置与缓存快照"),
-            McpToolMeta("keios.github.tracked.list", "读取 GitHub 跟踪仓库列表（支持 repoFilter/limit）"),
-            McpToolMeta("keios.github.tracked.check", "在线检查跟踪仓库更新（支持 repoFilter/onlyUpdates/limit）"),
-            McpToolMeta("keios.github.tracked.summary", "读取 GitHub 跟踪汇总（mode=cache|network）"),
-            McpToolMeta("keios.github.tracked.cache.clear", "清空 GitHub 跟踪检查缓存"),
-            McpToolMeta("keios.ba.snapshot", "读取 BA 页面核心状态快照（AP、咖啡厅、刷新间隔）"),
-            McpToolMeta("keios.ba.calendar.cache", "读取 BA 活动日历缓存（支持 serverIndex/includeEntries/limit）"),
-            McpToolMeta("keios.ba.pool.cache", "读取 BA 卡池缓存（支持 serverIndex/includeEntries/limit）"),
-            McpToolMeta("keios.ba.guide.catalog.cache", "读取图鉴总览缓存（支持 tab/includeEntries/limit）"),
-            McpToolMeta("keios.ba.guide.cache.overview", "读取学生图鉴详情缓存总体状态"),
-            McpToolMeta("keios.ba.guide.cache.inspect", "按 URL 检查学生图鉴缓存完整度（支持 url/includeSections）"),
-            McpToolMeta("keios.ba.cache.clear", "清理 BA/GitHub 相关缓存（scope 可选）")
+            McpToolMeta("keios.health.ping", "健康探针，返回 pong。"),
+            McpToolMeta("keios.app.info", "读取应用元信息（label/package/version/shizukuApi）。"),
+            McpToolMeta("keios.app.version", "读取版本信息（versionName/versionCode）。"),
+            McpToolMeta("keios.shizuku.status", "读取 Shizuku 当前状态字符串。"),
+            McpToolMeta("keios.mcp.runtime.status", "读取 MCP 运行态（endpoint/clientCount/error）。"),
+            McpToolMeta("keios.mcp.runtime.logs", "读取 MCP 日志（limit=1..200）。"),
+            McpToolMeta("keios.mcp.runtime.config", "生成可导入 MCP JSON（mode=auto|local|lan，支持 endpoint/serverName 覆盖）。"),
+            McpToolMeta("keios.system.topinfo.query", "查询系统 TopInfo 缓存（query/limit）。"),
+            McpToolMeta("keios.os.cards.snapshot", "读取 OS 页面卡片总览（可见性/展开态/缓存体积/统计）。"),
+            McpToolMeta("keios.os.activity.cards", "读取活动 card 列表（query/onlyVisible/limit）。"),
+            McpToolMeta("keios.os.shell.cards", "读取 shell card 列表（query/onlyVisible/includeOutput/limit）。"),
+            McpToolMeta("keios.github.tracked.snapshot", "读取 GitHub 跟踪配置与缓存快照。"),
+            McpToolMeta("keios.github.tracked.list", "读取跟踪仓库列表（repoFilter/limit）。"),
+            McpToolMeta("keios.github.tracked.check", "在线检查跟踪仓库更新（repoFilter/onlyUpdates/limit）。"),
+            McpToolMeta("keios.github.tracked.summary", "读取跟踪汇总（mode=cache|network，支持 repoFilter）。"),
+            McpToolMeta("keios.github.tracked.cache.clear", "清空 GitHub 检查缓存与 Release 资源缓存。"),
+            McpToolMeta("keios.ba.snapshot", "读取 BA 核心快照（AP/咖啡厅/通知阈值/刷新间隔）。"),
+            McpToolMeta("keios.ba.calendar.cache", "读取 BA 活动日历缓存（serverIndex/includeEntries/limit）。"),
+            McpToolMeta("keios.ba.pool.cache", "读取 BA 卡池缓存（serverIndex/includeEntries/limit）。"),
+            McpToolMeta("keios.ba.guide.catalog.cache", "读取 BA 图鉴总览缓存（tab/includeEntries/limit）。"),
+            McpToolMeta("keios.ba.guide.cache.overview", "读取学生图鉴详情缓存总览。"),
+            McpToolMeta("keios.ba.guide.cache.inspect", "按 URL 检查学生图鉴详情缓存（url/includeSections/refreshIntervalHours）。"),
+            McpToolMeta("keios.ba.cache.clear", "清理 BA/GitHub 缓存（scope=all|ba_calendar_pool|ba_guide_catalog|ba_guide_all|ba_guide_url|github_check）。")
         )
     }
 
@@ -289,6 +302,63 @@ class LocalMcpService(
             val query = argString(request.arguments?.get("query"))
             val limit = argInt(request.arguments?.get("limit"), DEFAULT_TOPINFO_LIMIT).coerceIn(1, MAX_TOPINFO_LIMIT)
             callText(buildTopInfoText(query = query, limit = limit))
+        }
+
+        server.addTool(
+            name = "keios.os.cards.snapshot",
+            description = "Get OS page card snapshot (visibility, expanded state, cache sizes).",
+            inputSchema = ToolSchema(properties = buildJsonObject { })
+        ) { _ ->
+            callText(buildOsCardsSnapshotText())
+        }
+
+        server.addTool(
+            name = "keios.os.activity.cards",
+            description = "List OS activity cards. Args: query(optional), onlyVisible(optional), limit(optional).",
+            inputSchema = ToolSchema(
+                properties = buildJsonObject {
+                    put("query", buildJsonObject { put("type", JsonPrimitive("string")) })
+                    put("onlyVisible", buildJsonObject { put("type", JsonPrimitive("boolean")) })
+                    put("limit", buildJsonObject { put("type", JsonPrimitive("integer")) })
+                }
+            )
+        ) { request ->
+            val query = argString(request.arguments?.get("query")).trim()
+            val onlyVisible = argBoolean(request.arguments?.get("onlyVisible"), false)
+            val limit = argInt(request.arguments?.get("limit"), DEFAULT_TRACK_LIMIT).coerceIn(1, MAX_TRACK_LIMIT)
+            callText(
+                buildOsActivityCardsText(
+                    query = query,
+                    onlyVisible = onlyVisible,
+                    limit = limit
+                )
+            )
+        }
+
+        server.addTool(
+            name = "keios.os.shell.cards",
+            description = "List OS shell cards. Args: query(optional), onlyVisible(optional), includeOutput(optional), limit(optional).",
+            inputSchema = ToolSchema(
+                properties = buildJsonObject {
+                    put("query", buildJsonObject { put("type", JsonPrimitive("string")) })
+                    put("onlyVisible", buildJsonObject { put("type", JsonPrimitive("boolean")) })
+                    put("includeOutput", buildJsonObject { put("type", JsonPrimitive("boolean")) })
+                    put("limit", buildJsonObject { put("type", JsonPrimitive("integer")) })
+                }
+            )
+        ) { request ->
+            val query = argString(request.arguments?.get("query")).trim()
+            val onlyVisible = argBoolean(request.arguments?.get("onlyVisible"), false)
+            val includeOutput = argBoolean(request.arguments?.get("includeOutput"), false)
+            val limit = argInt(request.arguments?.get("limit"), DEFAULT_TRACK_LIMIT).coerceIn(1, MAX_TRACK_LIMIT)
+            callText(
+                buildOsShellCardsText(
+                    query = query,
+                    onlyVisible = onlyVisible,
+                    includeOutput = includeOutput,
+                    limit = limit
+                )
+            )
         }
 
         server.addTool(
@@ -587,22 +657,25 @@ class LocalMcpService(
             val task = request.arguments?.get("task").orEmpty().trim()
             val promptText = buildString {
                 appendLine("你当前连接的是 KeiOS 本地 MCP 服务。")
-                appendLine("请先执行初始化：")
+                appendLine("请按以下顺序初始化：")
                 appendLine("1) keios.health.ping")
                 appendLine("2) keios.mcp.runtime.status")
-                appendLine("3) keios.mcp.runtime.config (mode=auto)")
-                appendLine("4) 如需说明文档，读取资源 $SKILL_RESOURCE_URI")
-                appendLine("5) 如需可导入配置，读取资源 $CONFIG_RESOURCE_URI 或模板 $CONFIG_TEMPLATE_URI")
+                appendLine("3) keios.mcp.runtime.config(mode=auto)")
+                appendLine("4) 读取资源 $SKILL_OVERVIEW_URI")
+                appendLine("5) 按任务读取资源 $SKILL_RESOURCE_URI 或模板 $SKILL_TOOL_TEMPLATE_URI")
+                appendLine("6) 需要导入配置时读取 $CONFIG_RESOURCE_URI 或模板 $CONFIG_TEMPLATE_URI")
                 appendLine()
                 appendLine("常用工具分组：")
-                appendLine("- 运行排障：keios.mcp.runtime.logs / keios.shizuku.status")
+                appendLine("- 运行排障：keios.mcp.runtime.status / keios.mcp.runtime.logs / keios.shizuku.status")
+                appendLine("- OS 页面：keios.os.cards.snapshot / keios.os.activity.cards / keios.os.shell.cards")
                 appendLine("- 系统参数：keios.system.topinfo.query")
-                appendLine("- GitHub 跟踪：keios.github.tracked.snapshot / check / summary")
-                appendLine("- BA 缓存：keios.ba.snapshot / keios.ba.calendar.cache / keios.ba.guide.cache.inspect")
+                appendLine("- GitHub 跟踪：keios.github.tracked.snapshot / list / check / summary")
+                appendLine("- BA 缓存：keios.ba.snapshot / keios.ba.calendar.cache / keios.ba.pool.cache / keios.ba.guide.cache.inspect")
+                appendLine("- 缓存清理：keios.github.tracked.cache.clear / keios.ba.cache.clear")
                 if (task.isNotBlank()) {
                     appendLine()
                     appendLine("当前任务：$task")
-                    appendLine("先给出不超过 3 步的工具调用计划，再执行。")
+                    appendLine("先给出不超过 4 步的工具调用计划，再执行。")
                 }
             }.trim()
 
@@ -621,12 +694,13 @@ class LocalMcpService(
     private fun buildServerInstructions(): String {
         return buildString {
             appendLine("KeiOS local MCP server")
-            appendLine("- Run keios.health.ping before task execution.")
-            appendLine("- For runtime diagnostics, use keios.mcp.runtime.status and keios.mcp.runtime.logs.")
-            appendLine("- For connection config JSON, use keios.mcp.runtime.config or resources $CONFIG_RESOURCE_URI / $CONFIG_TEMPLATE_URI.")
-            appendLine("- Skill doc resource: $SKILL_RESOURCE_URI")
-            appendLine("- Skill overview resource: $SKILL_OVERVIEW_URI")
-            appendLine("- Bootstrap prompt: $BOOTSTRAP_PROMPT")
+            appendLine("- Start with keios.health.ping, then keios.mcp.runtime.status.")
+            appendLine("- Read quick overview from $SKILL_OVERVIEW_URI before task execution.")
+            appendLine("- Use $BOOTSTRAP_PROMPT when task context is missing.")
+            appendLine("- Use keios.mcp.runtime.config or resources $CONFIG_RESOURCE_URI / $CONFIG_TEMPLATE_URI for import JSON.")
+            appendLine("- OS diagnostics can use keios.os.cards.snapshot / keios.os.activity.cards / keios.os.shell.cards.")
+            appendLine("- Full skill doc resource: $SKILL_RESOURCE_URI")
+            appendLine("- Tool help template resource: $SKILL_TOOL_TEMPLATE_URI")
         }.trim()
     }
 
@@ -686,6 +760,36 @@ class LocalMcpService(
 
     private fun buildSkillOverview(): String {
         val state = mcpStateProvider?.invoke()
+        val runtimeTools = listOf(
+            "keios.health.ping",
+            "keios.mcp.runtime.status",
+            "keios.mcp.runtime.logs",
+            "keios.mcp.runtime.config"
+        )
+        val osTools = listOf(
+            "keios.os.cards.snapshot",
+            "keios.os.activity.cards",
+            "keios.os.shell.cards"
+        )
+        val systemTools = listOf(
+            "keios.system.topinfo.query"
+        )
+        val githubTools = listOf(
+            "keios.github.tracked.snapshot",
+            "keios.github.tracked.list",
+            "keios.github.tracked.check",
+            "keios.github.tracked.summary",
+            "keios.github.tracked.cache.clear"
+        )
+        val baTools = listOf(
+            "keios.ba.snapshot",
+            "keios.ba.calendar.cache",
+            "keios.ba.pool.cache",
+            "keios.ba.guide.catalog.cache",
+            "keios.ba.guide.cache.overview",
+            "keios.ba.guide.cache.inspect",
+            "keios.ba.cache.clear"
+        )
         return buildString {
             appendLine("skillResource=$SKILL_RESOURCE_URI")
             appendLine("skillOverviewResource=$SKILL_OVERVIEW_URI")
@@ -698,6 +802,12 @@ class LocalMcpService(
             if (state?.lanEndpoints?.isNotEmpty() == true) {
                 appendLine("lanEndpoints=${state.lanEndpoints.joinToString(",")}")
             }
+            appendLine("runtimeTools=${runtimeTools.joinToString(",")}")
+            appendLine("osTools=${osTools.joinToString(",")}")
+            appendLine("systemTools=${systemTools.joinToString(",")}")
+            appendLine("githubTools=${githubTools.joinToString(",")}")
+            appendLine("baTools=${baTools.joinToString(",")}")
+            appendLine("defaultFlow=keios.health.ping->keios.mcp.runtime.status->keios.mcp.runtime.config")
             appendLine("toolCount=${listLocalTools().size}")
             appendLine("tools=${listLocalTools().joinToString(",") { it.name }}")
         }.trim()
@@ -721,34 +831,88 @@ class LocalMcpService(
             appendLine()
             appendLine("## Suggested Usage")
             when (hit.name) {
+                "keios.health.ping" -> {
+                    appendLine("- 作为第一条调用验证链路连通性。")
+                    appendLine("- 返回值固定为 pong。")
+                }
+
+                "keios.app.info", "keios.app.version", "keios.shizuku.status" -> {
+                    appendLine("- 作为环境确认工具使用。")
+                    appendLine("- 输出为 key=value 文本，适合直接记录到报告。")
+                }
+
+                "keios.mcp.runtime.status" -> {
+                    appendLine("- 先看 running/connectedClients/localEndpoint。")
+                    appendLine("- 有异常时继续调用 keios.mcp.runtime.logs。")
+                }
+
+                "keios.mcp.runtime.logs" -> {
+                    appendLine("- 建议先用 limit=30，排障时再扩大。")
+                    appendLine("- 日志按时间倒序输出。")
+                }
+
                 "keios.mcp.runtime.config" -> {
-                    appendLine("- 默认使用 mode=auto")
-                    appendLine("- 同机客户端优先 mode=local")
-                    appendLine("- 跨设备调试再使用 mode=lan")
+                    appendLine("- 默认使用 mode=auto。")
+                    appendLine("- 同机客户端优先 mode=local。")
+                    appendLine("- 跨设备调试使用 mode=lan。")
+                    appendLine("- 需要临时目标时可传 endpoint 覆盖。")
                 }
 
                 "keios.system.topinfo.query" -> {
-                    appendLine("- query 为空时返回 TopInfo 热点键")
-                    appendLine("- 使用 limit 控制输出规模")
+                    appendLine("- query 为空时返回热点参数。")
+                    appendLine("- 使用 limit 控制输出规模。")
+                }
+
+                "keios.os.cards.snapshot" -> {
+                    appendLine("- 读取 OS 页面整体状态，适合先做一次快照。")
+                    appendLine("- 可见卡片、展开态、缓存体积和估算值会一次返回。")
+                }
+
+                "keios.os.activity.cards" -> {
+                    appendLine("- 用 query 按标题/包名/类名筛选活动 card。")
+                    appendLine("- onlyVisible=true 只看当前显示中的活动 card。")
+                    appendLine("- limit 控制返回条目数量。")
+                }
+
+                "keios.os.shell.cards" -> {
+                    appendLine("- 默认返回 shell card 元信息和命令。")
+                    appendLine("- includeOutput=true 会追加运行输出摘要。")
+                    appendLine("- onlyVisible=true 可与 query 组合做精确筛选。")
+                }
+
+                "keios.github.tracked.snapshot", "keios.github.tracked.list", "keios.github.tracked.summary" -> {
+                    appendLine("- 先用 snapshot 获取总览，再按 list/summary 下钻。")
+                    appendLine("- repoFilter 支持 owner/repo、包名、应用名。")
                 }
 
                 "keios.github.tracked.check" -> {
-                    appendLine("- 先用 onlyUpdates=true 快速筛选")
-                    appendLine("- repoFilter 可按 owner/repo、包名或应用名过滤")
+                    appendLine("- 先用 onlyUpdates=true 快速筛选。")
+                    appendLine("- repoFilter 可按 owner/repo、包名或应用名过滤。")
+                }
+
+                "keios.github.tracked.cache.clear" -> {
+                    appendLine("- 清理后建议再执行 tracked.check 获取新状态。")
+                    appendLine("- 会同时清理 release asset 缓存。")
+                }
+
+                "keios.ba.snapshot", "keios.ba.calendar.cache", "keios.ba.pool.cache", "keios.ba.guide.catalog.cache", "keios.ba.guide.cache.overview" -> {
+                    appendLine("- 先用 ba.snapshot 获取全局状态。")
+                    appendLine("- 再按日历/卡池/图鉴缓存工具下钻。")
                 }
 
                 "keios.ba.guide.cache.inspect" -> {
-                    appendLine("- url 为空时会读取当前图鉴 URL")
-                    appendLine("- includeSections=true 可输出各板块条目数量")
+                    appendLine("- url 为空时读取当前图鉴 URL。")
+                    appendLine("- includeSections=true 输出分区统计。")
+                    appendLine("- refreshIntervalHours 可覆盖当前判定窗口。")
                 }
 
                 "keios.ba.cache.clear" -> {
-                    appendLine("- scope=all 可一次性清理 BA/GitHub 缓存")
-                    appendLine("- scope=ba_guide_url 需要同时传入 url")
+                    appendLine("- scope=all 可一次性清理 BA/GitHub 缓存。")
+                    appendLine("- scope=ba_guide_url 需要同时传入 url。")
                 }
 
                 else -> {
-                    appendLine("- 直接调用并解析 key=value 输出")
+                    appendLine("- 直接调用并解析 key=value 输出。")
                 }
             }
         }.trim()
@@ -882,6 +1046,197 @@ class LocalMcpService(
         } else {
             rows.joinToString("\n") { "${it.key}=${it.value}" }
         }
+    }
+
+    private fun buildOsGoogleSystemDefaults(): OsGoogleSystemServiceConfig {
+        val defaults = OsGoogleSystemServiceConfig(
+            title = appContext.getString(R.string.os_section_google_system_service_title),
+            subtitle = appContext.getString(R.string.os_google_system_service_default_subtitle),
+            appName = appContext.getString(R.string.os_google_system_service_default_app_name),
+            intentFlags = appContext.getString(R.string.os_google_system_service_default_intent_flags)
+        )
+        return defaults.normalized()
+    }
+
+    private fun buildOsGoogleSettingsSampleDefaults(
+        defaults: OsGoogleSystemServiceConfig
+    ): OsGoogleSystemServiceConfig {
+        val sample = OsGoogleSystemServiceConfig(
+            title = appContext.getString(R.string.os_activity_builtin_google_settings_title),
+            subtitle = appContext.getString(R.string.os_activity_builtin_google_settings_subtitle),
+            appName = appContext.getString(R.string.os_activity_builtin_google_settings_app_name),
+            packageName = appContext.getString(R.string.os_activity_builtin_google_settings_package),
+            className = appContext.getString(R.string.os_activity_builtin_google_settings_class),
+            intentAction = Intent.ACTION_VIEW,
+            intentFlags = appContext.getString(R.string.os_google_system_service_default_intent_flags)
+        )
+        return sample.normalized(defaults)
+    }
+
+    private fun loadOsActivityCards(): List<OsActivityShortcutCard> {
+        val defaults = buildOsGoogleSystemDefaults()
+        val sampleDefaults = buildOsGoogleSettingsSampleDefaults(defaults)
+        return OsActivityShortcutCardStore.loadCards(
+            defaults = defaults,
+            builtInSampleDefaults = sampleDefaults
+        )
+    }
+
+    private fun buildOsCardsSnapshotText(): String {
+        val uiSnapshot = OsUiStateStore.loadSnapshot()
+        val visibleCards = uiSnapshot.visibleCards
+        val activityCards = loadOsActivityCards()
+        val shellCards = OsShellCommandCardStore.loadCards()
+        val shellRunnerVisible = visibleCards.contains(OsSectionCard.SHELL_RUNNER)
+        val parameterTotalCount = OsSectionCard.entries.count {
+            it != OsSectionCard.GOOGLE_SYSTEM_SERVICE && it != OsSectionCard.SHELL_RUNNER
+        }
+        val parameterVisibleCount = visibleCards.count {
+            it != OsSectionCard.GOOGLE_SYSTEM_SERVICE && it != OsSectionCard.SHELL_RUNNER
+        }
+        val activityVisibleCount = activityCards.count { it.visible }
+        val shellVisibleCount = shellCards.count { it.visible } + if (shellRunnerVisible) 1 else 0
+        val shellTotalCount = shellCards.size + 1
+        val cachePersisted = OsInfoCache.hasPersistedCache()
+        val cachedSectionCount = OsInfoCache.cachedSectionCount(visibleCards)
+
+        return buildString {
+            appendLine("visibleCards=${visibleCards.map { it.name }.sorted().joinToString(",")}")
+            appendLine("parameterCards=$parameterVisibleCount/$parameterTotalCount")
+            appendLine("activityCards=$activityVisibleCount/${activityCards.size}")
+            appendLine("shellCards=$shellVisibleCount/$shellTotalCount")
+            appendLine("shellRunnerVisible=$shellRunnerVisible")
+            appendLine("topInfoExpanded=${uiSnapshot.topInfoExpanded}")
+            appendLine("overviewExpanded=${OsUiStateStore.overviewExpanded(true)}")
+            appendLine("systemExpanded=${uiSnapshot.systemTableExpanded}")
+            appendLine("secureExpanded=${uiSnapshot.secureTableExpanded}")
+            appendLine("globalExpanded=${uiSnapshot.globalTableExpanded}")
+            appendLine("androidExpanded=${uiSnapshot.androidPropsExpanded}")
+            appendLine("javaExpanded=${uiSnapshot.javaPropsExpanded}")
+            appendLine("linuxExpanded=${uiSnapshot.linuxEnvExpanded}")
+            appendLine("cachePersisted=$cachePersisted")
+            appendLine("cachedSectionCount=$cachedSectionCount")
+            appendLine("cacheFootprintBytes=${OsInfoCache.storageFootprintBytes()}")
+            appendLine("cacheActualDataBytes=${OsInfoCache.actualDataBytes()}")
+            appendLine("cacheEstimatedBytes=${OsInfoCache.cacheBytesEstimated()}")
+            appendLine("uiStateFootprintBytes=${OsUiStateStore.storageFootprintBytes()}")
+            appendLine("uiStateActualDataBytes=${OsUiStateStore.actualDataBytes()}")
+            appendLine("uiStateEstimatedBytes=${OsUiStateStore.configBytesEstimated()}")
+        }.trim()
+    }
+
+    private fun matchesActivityCard(card: OsActivityShortcutCard, query: String): Boolean {
+        if (query.isBlank()) return true
+        val key = query.lowercase(Locale.ROOT)
+        return card.id.lowercase(Locale.ROOT).contains(key) ||
+            card.config.title.lowercase(Locale.ROOT).contains(key) ||
+            card.config.subtitle.lowercase(Locale.ROOT).contains(key) ||
+            card.config.appName.lowercase(Locale.ROOT).contains(key) ||
+            card.config.packageName.lowercase(Locale.ROOT).contains(key) ||
+            card.config.className.lowercase(Locale.ROOT).contains(key) ||
+            card.config.intentAction.lowercase(Locale.ROOT).contains(key) ||
+            card.config.intentCategory.lowercase(Locale.ROOT).contains(key)
+    }
+
+    private fun buildOsActivityCardsText(
+        query: String,
+        onlyVisible: Boolean,
+        limit: Int
+    ): String {
+        val cards = loadOsActivityCards()
+        val filtered = cards.filter { card ->
+            (!onlyVisible || card.visible) && matchesActivityCard(card, query)
+        }
+        val rows = filtered.take(limit)
+        return buildString {
+            appendLine("total=${cards.size}")
+            appendLine("visibleTotal=${cards.count { it.visible }}")
+            appendLine("matched=${filtered.size}")
+            appendLine("returned=${rows.size}")
+            appendLine("query=${query.ifBlank { "(none)" }}")
+            appendLine("onlyVisible=$onlyVisible")
+            rows.forEachIndexed { index, card ->
+                appendLine(
+                    "activity[$index]=id:${card.id} | visible:${card.visible} | builtIn:${card.isBuiltInSample} | title:${card.config.title} | package:${card.config.packageName} | class:${card.config.className} | action:${card.config.intentAction} | extras:${card.config.intentExtras.size}"
+                )
+            }
+        }.trim()
+    }
+
+    private fun matchesShellCard(card: OsShellCommandCard, query: String): Boolean {
+        if (query.isBlank()) return true
+        val key = query.lowercase(Locale.ROOT)
+        return card.id.lowercase(Locale.ROOT).contains(key) ||
+            card.title.lowercase(Locale.ROOT).contains(key) ||
+            card.subtitle.lowercase(Locale.ROOT).contains(key) ||
+            card.command.lowercase(Locale.ROOT).contains(key) ||
+            card.runOutput.lowercase(Locale.ROOT).contains(key)
+    }
+
+    private fun normalizeOutputSnippet(raw: String, maxLen: Int = 180): String {
+        val normalized = raw
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .replace('\n', ' ')
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        return if (normalized.length <= maxLen) normalized else "${normalized.take(maxLen - 1)}…"
+    }
+
+    private fun buildOsShellCardsText(
+        query: String,
+        onlyVisible: Boolean,
+        includeOutput: Boolean,
+        limit: Int
+    ): String {
+        val uiSnapshot = OsUiStateStore.loadSnapshot()
+        val shellRunnerTitle = appContext.getString(R.string.os_shell_card_title)
+        val shellRunnerSubtitle = appContext.getString(R.string.os_shell_card_subtitle)
+        val shellRunnerVisible = uiSnapshot.visibleCards.contains(OsSectionCard.SHELL_RUNNER)
+
+        val matchesShellRunner = query.isBlank() ||
+            shellRunnerTitle.contains(query, ignoreCase = true) ||
+            shellRunnerSubtitle.contains(query, ignoreCase = true) ||
+            "shell-runner".contains(query, ignoreCase = true)
+        val includeShellRunner = (!onlyVisible || shellRunnerVisible) && matchesShellRunner
+
+        val cards = OsShellCommandCardStore.loadCards()
+        val filteredCards = cards.filter { card ->
+            (!onlyVisible || card.visible) && matchesShellCard(card, query)
+        }
+        val rows = filteredCards.take(limit)
+        val totalWithRunner = cards.size + 1
+        val visibleWithRunner = cards.count { it.visible } + if (shellRunnerVisible) 1 else 0
+        val matchedCount = filteredCards.size + if (includeShellRunner) 1 else 0
+        val returnedCount = rows.size + if (includeShellRunner) 1 else 0
+
+        return buildString {
+            appendLine("total=$totalWithRunner")
+            appendLine("visibleTotal=$visibleWithRunner")
+            appendLine("matched=$matchedCount")
+            appendLine("returned=$returnedCount")
+            appendLine("query=${query.ifBlank { "(none)" }}")
+            appendLine("onlyVisible=$onlyVisible")
+            appendLine("includeOutput=$includeOutput")
+            if (includeShellRunner) {
+                appendLine(
+                    "shell[runner]=id:shell-runner | visible:$shellRunnerVisible | builtIn:true | title:$shellRunnerTitle | subtitle:$shellRunnerSubtitle"
+                )
+            }
+            rows.forEachIndexed { index, card ->
+                val baseLine = buildString {
+                    append("shell[$index]=id:${card.id} | visible:${card.visible} | builtIn:false")
+                    append(" | title:${card.title} | subtitle:${card.subtitle}")
+                    append(" | command:${card.command}")
+                    append(" | lastRunAtMs:${card.lastRunAtMillis}")
+                    append(" | updatedAtMs:${card.updatedAtMillis}")
+                }
+                appendLine(baseLine)
+                if (includeOutput && card.runOutput.isNotBlank()) {
+                    appendLine("shell[$index].output=${normalizeOutputSnippet(card.runOutput)}")
+                }
+            }
+        }.trim()
     }
 
     private fun buildGitHubTrackedSnapshotText(): String {
