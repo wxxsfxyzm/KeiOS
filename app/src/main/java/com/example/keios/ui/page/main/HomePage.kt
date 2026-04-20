@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.alignByBaseline
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
@@ -363,6 +362,8 @@ private fun HomeInlineInfoItem(
         Color(0xFF1E63D6)
     }
 
+    val contentColumnStartPadding = titleSlotWidth + 6.dp
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -383,7 +384,6 @@ private fun HomeInlineInfoItem(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .width(titleSlotWidth)
-                    .alignByBaseline()
             )
             Text(
                 text = headline.ifBlank { naText },
@@ -395,7 +395,6 @@ private fun HomeInlineInfoItem(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .weight(1f)
-                    .alignByBaseline()
             )
         }
         if (detail.isNotBlank()) {
@@ -405,7 +404,10 @@ private fun HomeInlineInfoItem(
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = contentColumnStartPadding)
             )
         }
         if (extraDetail.isNotBlank()) {
@@ -415,7 +417,10 @@ private fun HomeInlineInfoItem(
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = contentColumnStartPadding)
             )
         }
     }
