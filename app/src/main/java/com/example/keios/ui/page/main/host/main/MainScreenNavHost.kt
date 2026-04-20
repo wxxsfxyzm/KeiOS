@@ -15,12 +15,12 @@ import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.mcp.server.McpServerManager
 import com.example.keios.ui.navigation.KeiosRoute
 import com.example.keios.ui.navigation.Navigator
-import com.example.keios.ui.page.main.BaGuideCatalogPage
-import com.example.keios.ui.page.main.BaStudentGuidePage
 import com.example.keios.ui.page.main.McpSkillPage
-import com.example.keios.ui.page.main.SettingsPage
-import com.example.keios.ui.page.main.about.AboutPage
+import com.example.keios.ui.page.main.about.page.AboutPage
 import com.example.keios.ui.page.main.host.pager.MainPagerLayout
+import com.example.keios.ui.page.main.settings.page.SettingsPage
+import com.example.keios.ui.page.main.student.catalog.page.BaGuideCatalogPage
+import com.example.keios.ui.page.main.student.page.BaStudentGuidePage
 import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 
 @Composable

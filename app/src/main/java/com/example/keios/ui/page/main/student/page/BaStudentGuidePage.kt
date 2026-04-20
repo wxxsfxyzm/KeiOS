@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.student.page
 
 import android.app.Activity
 import android.content.Intent
@@ -34,8 +34,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -84,13 +82,12 @@ import com.example.keios.ui.page.main.student.isMemoryHallFileGalleryItem
 import com.example.keios.ui.page.main.student.isRenderableGalleryStaticImageUrl
 import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import com.example.keios.ui.page.main.student.fetch.extractGuideContentIdFromUrl
-import com.example.keios.ui.page.main.student.tabcontent.renderBaStudentGuideTabContent
+import com.example.keios.ui.page.main.student.page.component.BaStudentGuidePagerContent
 import com.example.keios.ui.page.main.student.clearGuideBgmLoopScope
 import com.example.keios.ui.page.main.student.clearGuideBgmPlaybackScope
 import com.example.keios.ui.perf.ReportPagerPerformanceState
 import com.example.keios.ui.page.main.widget.motion.AppMotionTokens
 import com.example.keios.ui.page.main.widget.glass.UiPerformanceBudget
-import com.example.keios.ui.page.main.widget.glass.FrostedBlock
 import com.example.keios.ui.page.main.widget.chrome.LiquidGlassBottomBar
 import com.example.keios.ui.page.main.widget.chrome.LiquidGlassBottomBarItem
 import com.example.keios.ui.page.main.widget.chrome.LiquidActionBar
@@ -115,13 +112,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -205,7 +199,6 @@ fun BaStudentGuidePage(
         loading = loading,
         animationsEnabled = transitionAnimationsEnabled
     )
-    val ignoreStringInput: (String) -> Unit = remember { { _: String -> } }
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
     var showBottomBar by remember { mutableStateOf(true) }
@@ -832,150 +825,32 @@ fun BaStudentGuidePage(
             }
         }
     ) { innerPadding ->
-        HorizontalPager(
-            state = pagerState,
-            key = { index -> bottomTabs[index].name },
-            overscrollEffect = null,
-            beyondViewportPageCount = preloadPolicy.guidePagerBeyondViewportPageCount,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = farJumpAlpha.value }
-                .layerBackdrop(navBackdrop)
-        ) { pageIndex ->
-            val pageBottomTab = bottomTabs.getOrElse(pageIndex) { GuideBottomTab.Archive }
-            val isVoiceTab = pageBottomTab == GuideBottomTab.Voice
-            val shouldRenderHeavyContent =
-                pageIndex == pagerState.currentPage ||
-                    pageIndex == pagerState.settledPage ||
-                    (preloadPolicy.includeTargetPageInHeavyRender && pageIndex == pagerState.targetPage)
-            val pageListState = rememberSaveable(
-                sourceUrl,
-                pageBottomTab.name,
-                saver = LazyListState.Saver
-            ) {
-                LazyListState()
-            }
-            // Each guide page owns an isolated backdrop instance.
-            val pageBackdrop: LayerBackdrop = key("page-$activationCount-$sourceUrl-$pageIndex") {
-                rememberLayerBackdrop {
-                    drawRect(surfaceColor)
-                    drawContent()
-                }
-            }
-            Box(modifier = Modifier.fillMaxSize()) {
-                if (shouldRenderHeavyContent) {
-                    LazyColumn(
-                        state = pageListState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(
-                            top = innerPadding.calculateTopPadding(),
-                            bottom = innerPadding.calculateBottomPadding() + 16.dp,
-                            start = 16.dp,
-                            end = 16.dp
-                        )
-                    ) {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    SmallTitle(pageBottomTab.label)
-                                }
-                                if (sourceUrl.isNotBlank()) {
-                                    val foregroundColor = when {
-                                        loading -> Color(0xFF3B82F6)
-                                        !error.isNullOrBlank() -> Color(0xFFEF4444)
-                                        else -> Color(0xFF22C55E)
-                                    }
-                                    CircularProgressIndicator(
-                                        progress = syncProgress,
-                                        size = 18.dp,
-                                        strokeWidth = 2.dp,
-                                        colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                                            foregroundColor = foregroundColor,
-                                            backgroundColor = foregroundColor.copy(alpha = 0.30f),
-                                        ),
-                                    )
-                                }
-                            }
-                        }
-                        item { Spacer(modifier = Modifier.height(12.dp)) }
-
-                        if (sourceUrl.isBlank()) {
-                            item {
-                                FrostedBlock(
-                                    backdrop = pageBackdrop,
-                                    title = stringResource(R.string.guide_empty_student_title),
-                                    subtitle = stringResource(R.string.guide_empty_student_subtitle),
-                                    accent = accent
-                                )
-                            }
-                        } else {
-                            renderBaStudentGuideTabContent(
-                                activeBottomTab = pageBottomTab,
-                                info = info,
-                                error = error,
-                                backdrop = pageBackdrop,
-                                accent = accent,
-                                context = context,
-                                sourceUrl = sourceUrl,
-                                galleryCacheRevision = galleryCacheRevision,
-                                playingVoiceUrl = if (isVoiceTab) playingVoiceUrl else "",
-                                isVoicePlaying = isVoiceTab && isVoicePlaying,
-                                voicePlayProgress = if (isVoiceTab) voicePlayProgress else 0f,
-                                selectedVoiceLanguage = if (isVoiceTab) selectedVoiceLanguage else "",
-                                onOpenExternal = ::openExternal,
-                                onOpenGuide = ::openGuideInPage,
-                                onSaveMedia = ::saveGuideMedia,
-                                onToggleVoicePlayback = if (isVoiceTab) ::toggleVoicePlayback else ignoreStringInput,
-                                onSelectedVoiceLanguageChange = if (isVoiceTab) {
-                                    { selectedVoiceLanguage = it }
-                                } else {
-                                    ignoreStringInput
-                                }
-                            )
-                        }
-                    }
-                } else {
-                    Spacer(modifier = Modifier.fillMaxSize())
-                }
-                if (shouldRenderHeavyContent && sourceUrl.isNotBlank() && loading && info == null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(
-                                top = innerPadding.calculateTopPadding(),
-                                bottom = innerPadding.calculateBottomPadding(),
-                                start = 20.dp,
-                                end = 20.dp
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Image(
-                                painter = painterResource(R.drawable.q_862c2944),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(112.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.guide_loading_title),
-                                color = MiuixTheme.colorScheme.onBackground,
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        BaStudentGuidePagerContent(
+            sourceUrl = sourceUrl,
+            info = info,
+            error = error,
+            pagerState = pagerState,
+            bottomTabs = bottomTabs.toList(),
+            syncProgress = syncProgress,
+            activationCount = activationCount,
+            surfaceColor = surfaceColor,
+            accent = accent,
+            innerPadding = innerPadding,
+            farJumpAlpha = farJumpAlpha.value,
+            navBackdrop = navBackdrop,
+            galleryCacheRevision = galleryCacheRevision,
+            selectedVoiceLanguage = selectedVoiceLanguage,
+            playingVoiceUrl = playingVoiceUrl,
+            isVoicePlaying = isVoicePlaying,
+            voicePlayProgress = voicePlayProgress,
+            includeTargetPageInHeavyRender = preloadPolicy.includeTargetPageInHeavyRender,
+            guidePagerBeyondViewportPageCount = preloadPolicy.guidePagerBeyondViewportPageCount,
+            nestedScrollConnection = scrollBehavior.nestedScrollConnection,
+            onOpenExternal = ::openExternal,
+            onOpenGuide = ::openGuideInPage,
+            onSaveMedia = ::saveGuideMedia,
+            onToggleVoicePlayback = ::toggleVoicePlayback,
+            onSelectedVoiceLanguageChange = { selectedVoiceLanguage = it }
+        )
     }
 }

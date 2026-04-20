@@ -70,14 +70,15 @@ import com.example.keios.ui.page.main.widget.sheet.SheetFieldBlock
 import com.example.keios.ui.page.main.widget.sheet.SheetSectionCard
 import com.example.keios.ui.page.main.widget.sheet.SheetSectionTitle
 import com.example.keios.ui.page.main.widget.sheet.SnapshotWindowBottomSheet
+import com.example.keios.ui.page.main.os.shell.util.buildShellOutputHistoryText
+import com.example.keios.ui.page.main.os.shell.util.formatShellResultForReadability
+import com.example.keios.ui.page.main.os.shell.util.trimShellOutputHistory
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -93,8 +94,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 
-private val shellAnsiEscapeRegex = Regex("""\u001B\[[;\d]*[ -/]*[@-~]""")
-private val shellKeyValueRegex = Regex("""\b[^\s=]+=[^\s=]+\b""")
 private const val shellPersistDebounceMs = 220L
 private const val shellOutputMaxChars = 120_000
 
@@ -300,7 +299,7 @@ private fun OsShellRunnerPage(
             appendLine(normalizedResult)
             appendLine()
             append(timeLabel)
-        })
+        }, maxChars = shellOutputMaxChars)
         outputEntries = trimShellOutputEntries(
             outputEntries + ShellOutputDisplayEntry(
                 command = command.trim(),
@@ -433,7 +432,10 @@ private fun OsShellRunnerPage(
                 maxChars = shellOutputMaxChars
             )
             outputEntries = trimmedEntries
-            outputText = buildShellOutputHistoryText(trimmedEntries)
+            outputText = buildShellOutputHistoryText(
+                entries = trimmedEntries,
+                maxChars = shellOutputMaxChars
+            )
             latestRunResultOutput = trimmedEntries.lastOrNull()?.result.orEmpty().trim()
         } else {
             outputText = formatShellResultForReadability(outputText)
@@ -766,100 +768,4 @@ private fun OsShellRunnerPage(
         persistOutputEnabled = persistOutputEnabled,
         onPersistOutputEnabledChange = { checked -> persistOutputEnabled = checked }
     )
-}
-
-private fun buildShellOutputHistoryText(entries: List<ShellOutputDisplayEntry>): String {
-    if (entries.isEmpty()) return ""
-    val raw = entries.joinToString(separator = "\n\n") { entry ->
-        buildString {
-            append("$ ")
-            append(entry.command.trim())
-            appendLine()
-            appendLine()
-            append(entry.result.trimEnd())
-            val timeLabel = entry.timeLabel.trim()
-            if (timeLabel.isNotBlank()) {
-                appendLine()
-                appendLine()
-                append(timeLabel)
-            }
-        }.trimEnd()
-    }
-    return trimShellOutputHistory(raw)
-}
-
-private fun formatShellResultForReadability(raw: String): String {
-    val normalized = raw
-        .replace("\r\n", "\n")
-        .replace('\r', '\n')
-    val jsonPretty = tryFormatShellOutputAsJson(normalized)
-    if (jsonPretty != null) return jsonPretty
-
-    val noAnsi = shellAnsiEscapeRegex.replace(normalized, "")
-    val lines = mutableListOf<String>()
-    var previousBlank = true
-
-    noAnsi.lines().forEach { source ->
-        val reflowed = reflowShellVerboseLine(
-            source.replace("\t", "    ").trimEnd()
-        )
-        reflowed.lines().forEach { lineRaw ->
-            val line = lineRaw.trimEnd()
-            if (line.isBlank()) {
-                if (!previousBlank) {
-                    lines += ""
-                    previousBlank = true
-                }
-            } else {
-                if (lineLooksLikeSectionHeading(line) && lines.isNotEmpty() && lines.last().isNotBlank()) {
-                    lines += ""
-                }
-                lines += line
-                previousBlank = false
-            }
-        }
-    }
-
-    return lines.joinToString("\n").trim()
-}
-
-private fun tryFormatShellOutputAsJson(raw: String): String? {
-    val trimmed = raw.trim()
-    if (trimmed.isBlank()) return null
-    return runCatching {
-        when {
-            trimmed.startsWith("{") && trimmed.endsWith("}") -> JSONObject(trimmed).toString(2)
-            trimmed.startsWith("[") && trimmed.endsWith("]") -> JSONArray(trimmed).toString(2)
-            else -> null
-        }
-    }.getOrNull()
-}
-
-private fun reflowShellVerboseLine(line: String): String {
-    if (line.length <= 120) return line
-    val keyValues = shellKeyValueRegex.findAll(line).map { it.value }.toList()
-    if (keyValues.size >= 6) {
-        return keyValues.joinToString(separator = "\n") { token -> "  $token" }
-    }
-    if (line.contains(", ") && line.count { it == ',' } >= 5) {
-        return line.replace(", ", ",\n  ")
-    }
-    if (line.contains("; ") && line.count { it == ';' } >= 4) {
-        return line.replace("; ", ";\n  ")
-    }
-    return line
-}
-
-private fun lineLooksLikeSectionHeading(line: String): Boolean {
-    if (line.length !in 2..80) return false
-    if (line.startsWith(" ") || line.startsWith("\t")) return false
-    return line.endsWith(":")
-}
-
-private fun trimShellOutputHistory(raw: String): String {
-    val normalized = raw.trimEnd()
-    if (normalized.length <= shellOutputMaxChars) return normalized
-    return normalized
-        .takeLast(shellOutputMaxChars)
-        .trimStart()
 }

@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.student.page
 
 import android.net.Uri
 import android.webkit.MimeTypeMap

@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.settings.support
 
 import android.content.Context
 import android.net.Uri
@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.core.prefs.CacheEntrySummary
+import com.example.keios.ui.page.main.settings.page.LocalSettingsLiquidGlassSwitchEnabled
 import com.example.keios.ui.page.main.widget.core.AppControlRow
 import com.example.keios.ui.page.main.widget.core.AppFeatureCard
 import com.example.keios.ui.page.main.widget.core.AppInfoRow

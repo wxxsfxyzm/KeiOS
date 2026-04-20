@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.settings.page
 
 import android.app.Activity
 import android.content.Context
@@ -49,6 +49,23 @@ import com.example.keios.core.prefs.AppThemeMode
 import com.example.keios.core.prefs.CacheEntrySummary
 import com.example.keios.core.prefs.CacheStores
 import com.example.keios.core.log.AppLogStore
+import com.example.keios.ui.page.main.settings.support.NON_HOME_BACKGROUND_OPACITY_DEFAULT
+import com.example.keios.ui.page.main.settings.support.NON_HOME_BACKGROUND_OPACITY_KEY_POINTS
+import com.example.keios.ui.page.main.settings.support.NON_HOME_BACKGROUND_OPACITY_MAGNET_THRESHOLD
+import com.example.keios.ui.page.main.settings.support.NON_HOME_BACKGROUND_OPACITY_MAX
+import com.example.keios.ui.page.main.settings.support.NON_HOME_BACKGROUND_OPACITY_MIN
+import com.example.keios.ui.page.main.settings.support.SettingsActionItem
+import com.example.keios.ui.page.main.settings.support.SettingsCacheRow
+import com.example.keios.ui.page.main.settings.support.SettingsGroupCard
+import com.example.keios.ui.page.main.settings.support.SettingsInfoItem
+import com.example.keios.ui.page.main.settings.support.SettingsToggleItem
+import com.example.keios.ui.page.main.settings.support.createNonHomeBackgroundCropOutputUri
+import com.example.keios.ui.page.main.settings.support.deleteManagedNonHomeBackgroundFile
+import com.example.keios.ui.page.main.settings.support.formatBytes
+import com.example.keios.ui.page.main.settings.support.formatLogTime
+import com.example.keios.ui.page.main.settings.support.formatOpacityPercent
+import com.example.keios.ui.page.main.settings.support.resolveNonHomeBackgroundAspectRatio
+import com.example.keios.ui.page.main.settings.support.resolveNonHomeBackgroundCropSize
 import com.example.keios.ui.page.main.os.appLucideBackIcon
 import com.example.keios.ui.page.main.os.appLucideAlertIcon
 import com.example.keios.ui.page.main.os.appLucideConfigIcon

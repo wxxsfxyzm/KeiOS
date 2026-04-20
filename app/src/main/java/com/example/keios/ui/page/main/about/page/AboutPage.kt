@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main.about
+package com.example.keios.ui.page.main.about.page
 
 import android.content.pm.PackageInfo
 import android.widget.Toast

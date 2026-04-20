@@ -1,17 +1,12 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.student.catalog.page
 
-import android.graphics.Bitmap
 import android.widget.Toast
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,7 +48,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -69,9 +63,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.keios.R
 import com.example.keios.ui.page.main.host.pager.animateTabSwitch
+import com.example.keios.ui.page.main.student.catalog.component.BaGuideCatalogEntryCard
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogBundle
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogEntry
-import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogIconCache
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogStore
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogTab
 import com.example.keios.ui.page.main.student.catalog.clearBaGuideCatalogCache
@@ -81,10 +75,12 @@ import com.example.keios.ui.page.main.student.catalog.hydrateBaGuideCatalogRelea
 import com.example.keios.ui.page.main.student.catalog.isBaGuideCatalogBundleComplete
 import com.example.keios.ui.page.main.student.catalog.isBaGuideCatalogCacheExpired
 import com.example.keios.ui.page.main.student.catalog.loadCachedBaGuideCatalogBundle
+import com.example.keios.ui.page.main.student.catalog.state.BaGuideCatalogSortMode
+import com.example.keios.ui.page.main.student.catalog.state.rememberCatalogSyncProgress
+import com.example.keios.ui.page.main.student.catalog.state.sortedByMode
 import com.example.keios.ui.perf.ReportPagerPerformanceState
 import com.example.keios.ui.page.main.widget.chrome.AppChromeTokens
 import com.example.keios.ui.page.main.widget.motion.AppMotionTokens
-import com.example.keios.ui.page.main.widget.core.AppStatusPillSize
 import com.example.keios.ui.page.main.widget.chrome.AppTopBarSearchField
 import com.example.keios.ui.page.main.widget.chrome.AppTopBarSection
 import com.example.keios.ui.page.main.widget.core.AppTypographyTokens
@@ -125,8 +121,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlin.math.max
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -137,18 +131,11 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val CATALOG_BATCH_SIZE = 20
 private const val CATALOG_LOAD_MORE_THRESHOLD = 10
 private const val CATALOG_RELEASE_DATE_FETCH_LIMIT_PER_PASS = 24
-
-private enum class BaGuideCatalogSortMode(@StringRes val labelRes: Int) {
-    Default(R.string.ba_catalog_sort_default),
-    ReleaseDateDesc(R.string.ba_catalog_sort_release_date_desc),
-    ReleaseDateAsc(R.string.ba_catalog_sort_release_date_asc),
-}
 
 @Composable
 fun BaGuideCatalogPage(
@@ -760,269 +747,4 @@ private fun CatalogTabContent(
                 }
             }
     }
-}
-
-@Composable
-internal fun BaGuideCatalogEntryCard(
-    entry: BaGuideCatalogEntry,
-    isFavorite: Boolean,
-    onOpenGuide: (String) -> Unit,
-    onToggleFavorite: (Long) -> Unit
-) {
-    val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
-    val copiedToast = stringResource(R.string.guide_toast_item_copied)
-    val copyPayload = remember(entry) {
-        buildString {
-            append(entry.name.ifBlank { "未知角色" })
-            append(" | ID ")
-            append(entry.contentId)
-            if (entry.aliasDisplay.isNotBlank()) {
-                append('\n')
-                append(entry.aliasDisplay)
-            }
-            if (entry.detailUrl.isNotBlank()) {
-                append('\n')
-                append(entry.detailUrl)
-            }
-        }
-    }
-    val copyAction = remember(context, clipboard, copiedToast, copyPayload) {
-        {
-            clipboard.setText(AnnotatedString(copyPayload))
-            Toast.makeText(context, copiedToast, Toast.LENGTH_SHORT).show()
-        }
-    }
-    val cardShape = RoundedCornerShape(16.dp)
-    val favoriteActionColor = if (isFavorite) {
-        Color(0xFFEC4899)
-    } else {
-        Color(0xFF3B82F6)
-    }
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = if (isFavorite) {
-                    Color(0x99EC4899)
-                } else {
-                    MiuixTheme.colorScheme.primary.copy(alpha = 0.24f)
-                },
-                shape = cardShape
-            )
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = { onOpenGuide(entry.detailUrl) },
-                onLongClick = copyAction
-            ),
-        cornerRadius = 16.dp,
-        colors = CardDefaults.defaultColors(
-            color = if (isFavorite) {
-                Color(0x33EC4899)
-            } else {
-                MiuixTheme.colorScheme.primary.copy(alpha = 0.12f)
-            }
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = CardLayoutRhythm.cardHorizontalPadding,
-                    vertical = CardLayoutRhythm.cardVerticalPadding
-                ),
-            horizontalArrangement = Arrangement.spacedBy(CardLayoutRhythm.controlRowGap),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(56.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (entry.iconUrl.isBlank()) {
-                    CatalogAvatarFallback(iconRes = entry.tab.iconRes)
-                } else {
-                    CatalogAvatarImage(
-                        imageUrl = entry.iconUrl,
-                        fallbackRes = entry.tab.iconRes
-                    )
-                }
-            }
-
-            Box(modifier = Modifier.weight(1f)) {
-                androidx.compose.foundation.layout.Column(
-                    verticalArrangement = Arrangement.spacedBy(CardLayoutRhythm.controlRowTextGap)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CardLayoutRhythm.infoRowGap),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Text(
-                            text = entry.name,
-                            modifier = Modifier.weight(1f),
-                            color = MiuixTheme.colorScheme.onBackground,
-                            fontSize = AppTypographyTokens.CompactTitle.fontSize,
-                            lineHeight = AppTypographyTokens.CompactTitle.lineHeight,
-                            fontWeight = AppTypographyTokens.CompactTitle.fontWeight,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        StatusPill(
-                            label = "ID ${entry.contentId}",
-                            color = MiuixTheme.colorScheme.primary,
-                            size = AppStatusPillSize.Compact
-                        )
-                    }
-                    if (entry.aliasDisplay.isNotBlank()) {
-                        Text(
-                            text = entry.aliasDisplay,
-                            color = MiuixTheme.colorScheme.onBackgroundVariant,
-                            fontSize = AppTypographyTokens.Supporting.fontSize,
-                            lineHeight = AppTypographyTokens.Supporting.lineHeight,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-            GlassIconButton(
-                backdrop = null,
-                icon = MiuixIcons.Regular.FavoritesFill,
-                contentDescription = if (isFavorite) {
-                    stringResource(R.string.ba_catalog_cd_unfavorite_student)
-                } else {
-                    stringResource(R.string.ba_catalog_cd_favorite_student)
-                },
-                onClick = { onToggleFavorite(entry.contentId) },
-                width = 34.dp,
-                height = 34.dp,
-                variant = GlassVariant.Floating,
-                iconTint = favoriteActionColor,
-                containerColor = favoriteActionColor
-            )
-        }
-    }
-}
-
-@Composable
-private fun rememberCatalogSyncProgress(
-    loading: Boolean,
-    animationsEnabled: Boolean
-): Float {
-    val progress = remember { Animatable(0f) }
-    LaunchedEffect(loading, animationsEnabled) {
-        if (!animationsEnabled) {
-            progress.snapTo(if (loading) 0.9f else 1f)
-            return@LaunchedEffect
-        }
-        if (loading) {
-            progress.snapTo(0.12f)
-            progress.animateTo(
-                targetValue = 0.68f,
-                animationSpec = tween(
-                    durationMillis = resolvedMotionDuration(520, animationsEnabled),
-                    easing = FastOutSlowInEasing
-                ),
-            )
-            progress.animateTo(
-                targetValue = 0.90f,
-                animationSpec = tween(
-                    durationMillis = resolvedMotionDuration(1800, animationsEnabled),
-                    easing = LinearEasing
-                ),
-            )
-        } else {
-            progress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = resolvedMotionDuration(260, animationsEnabled),
-                    easing = FastOutSlowInEasing
-                ),
-            )
-        }
-    }
-    return progress.value
-}
-
-@Composable
-private fun CatalogAvatarImage(
-    imageUrl: String,
-    fallbackRes: Int
-) {
-    val context = LocalContext.current
-    val bitmap by produceState<Bitmap?>(initialValue = BaGuideCatalogIconCache.get(imageUrl), imageUrl) {
-        value = withContext(Dispatchers.IO) { BaGuideCatalogIconCache.getOrLoad(context, imageUrl) }
-    }
-    val rendered = bitmap
-    if (rendered == null) {
-        CatalogAvatarFallback(iconRes = fallbackRes)
-        return
-    }
-    Image(
-        bitmap = rendered.asImageBitmap(),
-        contentDescription = null,
-        contentScale = ContentScale.Fit,
-        modifier = Modifier
-            .size(56.dp)
-            .clip(RoundedCornerShape(12.dp))
-    )
-}
-
-@Composable
-private fun CatalogAvatarFallback(iconRes: Int) {
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.42f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            tint = MiuixTheme.colorScheme.onBackgroundVariant,
-            modifier = Modifier.size(28.dp)
-        )
-    }
-}
-
-private fun List<BaGuideCatalogEntry>.sortedByMode(
-    mode: BaGuideCatalogSortMode,
-    favoriteCatalogEntries: Map<Long, Long>
-): List<BaGuideCatalogEntry> {
-    val sortedBase = when (mode) {
-        BaGuideCatalogSortMode.Default -> sortedBy { it.order }
-        BaGuideCatalogSortMode.ReleaseDateDesc -> sortedWith(
-            compareByDescending<BaGuideCatalogEntry> {
-                when {
-                    it.releaseDateSec > 0L -> it.releaseDateSec
-                    it.createdAtSec > 0L -> it.createdAtSec
-                    else -> Long.MIN_VALUE
-                }
-            }.thenBy { it.order }
-        )
-        BaGuideCatalogSortMode.ReleaseDateAsc -> sortedWith(
-            compareBy<BaGuideCatalogEntry> {
-                when {
-                    it.releaseDateSec > 0L -> it.releaseDateSec
-                    it.createdAtSec > 0L -> it.createdAtSec
-                    else -> Long.MAX_VALUE
-                }
-            }.thenBy { it.order }
-        )
-    }
-    if (favoriteCatalogEntries.isEmpty()) return sortedBase
-    val pinnedFavorites = sortedBase
-        .filter { entry -> favoriteCatalogEntries.containsKey(entry.contentId) }
-        .sortedWith(
-            compareBy<BaGuideCatalogEntry> {
-                favoriteCatalogEntries[it.contentId] ?: Long.MAX_VALUE
-            }.thenBy { it.order }
-        )
-    val regularEntries = sortedBase.filterNot { entry ->
-        favoriteCatalogEntries.containsKey(entry.contentId)
-    }
-    return pinnedFavorites + regularEntries
 }
