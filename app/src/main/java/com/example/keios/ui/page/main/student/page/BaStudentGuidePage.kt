@@ -1,14 +1,6 @@
 package com.example.keios.ui.page.main.student.page
 
-import android.app.Activity
-import android.content.Intent
-import android.net.Uri
-import android.provider.DocumentsContract
-import android.webkit.MimeTypeMap
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.documentfile.provider.DocumentFile
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -62,35 +54,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.media3.common.MediaItem
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.keios.R
-import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
 import com.example.keios.ui.page.main.host.pager.animateTabSwitch
-import com.example.keios.ui.page.main.ba.support.BASettingsStore
 import com.example.keios.ui.page.main.student.BaStudentGuideInfo
-import com.example.keios.ui.page.main.student.BaGuideGalleryItem
-import com.example.keios.ui.page.main.student.BaGuideTempMediaCache
 import com.example.keios.ui.page.main.student.BaStudentGuideStore
 import com.example.keios.ui.page.main.student.createGameKeeMediaSourceFactory
 import com.example.keios.ui.page.main.student.GuideBottomTab
-import com.example.keios.ui.page.main.student.fetchGuideInfo
-import com.example.keios.ui.page.main.student.hasRenderableGalleryMedia
-import com.example.keios.ui.page.main.student.isMemoryHallFileGalleryItem
-import com.example.keios.ui.page.main.student.isRenderableGalleryStaticImageUrl
-import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
-import com.example.keios.ui.page.main.student.fetch.extractGuideContentIdFromUrl
 import com.example.keios.ui.page.main.student.page.component.BaStudentGuideBottomBar
 import com.example.keios.ui.page.main.student.page.component.BaStudentGuidePagerContent
-import com.example.keios.ui.page.main.student.page.support.GuideMediaSaveRequest
-import com.example.keios.ui.page.main.student.page.support.buildGuideMediaSaveRequest
-import com.example.keios.ui.page.main.student.page.support.copyGuideMediaToUri
-import com.example.keios.ui.page.main.student.page.support.createUniqueDocumentInTree
-import com.example.keios.ui.page.main.student.page.support.normalizeGuidePlaybackSource
 import com.example.keios.ui.page.main.student.page.support.rememberGuideSyncProgress
 import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuideInfoLoadEffect
+import com.example.keios.ui.page.main.student.page.state.rememberBaStudentGuideMediaSaveAction
+import com.example.keios.ui.page.main.student.page.state.rememberBaStudentGuidePageActions
 import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuidePagerSyncEffects
 import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuidePlayerLifecycleEffects
 import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuidePrefetchEffects
@@ -120,12 +96,9 @@ import com.example.keios.ui.page.main.os.appLucideShareIcon
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -190,8 +163,6 @@ fun BaStudentGuidePage(
     var playingVoiceUrl by rememberSaveable(sourceUrl) { mutableStateOf("") }
     var isVoicePlaying by remember(sourceUrl) { mutableStateOf(false) }
     var voicePlayProgress by remember(sourceUrl) { mutableFloatStateOf(0f) }
-    var pendingCustomSaveRequest by remember { mutableStateOf<GuideMediaSaveRequest?>(null) }
-    var pendingFixedSaveRequest by remember { mutableStateOf<GuideMediaSaveRequest?>(null) }
     var galleryPrefetchRequested by rememberSaveable(sourceUrl, guideSyncToken) { mutableStateOf(false) }
     var staticImagePrefetchStage by rememberSaveable(sourceUrl, guideSyncToken) { mutableIntStateOf(0) }
     var galleryCacheRevision by remember(sourceUrl) { mutableIntStateOf(0) }
@@ -236,71 +207,10 @@ fun BaStudentGuidePage(
             .setMediaSourceFactory(createGameKeeMediaSourceFactory(context))
             .build()
     }
-    val customSaveLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val request = pendingCustomSaveRequest
-        pendingCustomSaveRequest = null
-        val targetUri = result.data?.data
-        if (result.resultCode != Activity.RESULT_OK || request == null || targetUri == null) {
-            return@rememberLauncherForActivityResult
-        }
-        pageScope.launch {
-            val success = withContext(Dispatchers.IO) {
-                copyGuideMediaToUri(context, request.sourceUrl, targetUri)
-            }
-            if (success) {
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.guide_media_save_success, request.fileName),
-                    Toast.LENGTH_SHORT
-                ).show()
-            } else {
-                Toast.makeText(context, context.getString(R.string.guide_media_save_failed), Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    val fixedFolderLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val request = pendingFixedSaveRequest
-        if (result.resultCode != Activity.RESULT_OK) {
-            pendingFixedSaveRequest = null
-            return@rememberLauncherForActivityResult
-        }
-        val treeUri = result.data?.data
-        if (request == null || treeUri == null) {
-            pendingFixedSaveRequest = null
-            return@rememberLauncherForActivityResult
-        }
-        runCatching {
-            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            context.contentResolver.takePersistableUriPermission(treeUri, flags)
-        }
-        BASettingsStore.saveMediaSaveFixedTreeUri(treeUri.toString())
-        pendingFixedSaveRequest = null
-        pageScope.launch {
-            val success = withContext(Dispatchers.IO) {
-                val treeDoc = DocumentFile.fromTreeUri(context, treeUri) ?: return@withContext false
-                val targetDoc = createUniqueDocumentInTree(
-                    tree = treeDoc,
-                    mimeType = request.mimeType,
-                    fileName = request.fileName
-                ) ?: return@withContext false
-                copyGuideMediaToUri(context, request.sourceUrl, targetDoc.uri)
-            }
-            if (success) {
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.guide_media_save_success, request.fileName),
-                    Toast.LENGTH_SHORT
-                ).show()
-            } else {
-                Toast.makeText(context, context.getString(R.string.guide_media_save_failed), Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
+    val saveGuideMediaAction = rememberBaStudentGuideMediaSaveAction(
+        pageScope = pageScope,
+        currentStudentNamePrefix = { info?.title?.trim().orEmpty() }
+    )
 
     BindBaStudentGuidePlayerLifecycleEffects(
         context = context,
@@ -315,163 +225,24 @@ fun BaStudentGuidePage(
         onIsVoicePlayingChange = { isVoicePlaying = it },
         onVoicePlayProgressChange = { voicePlayProgress = it }
     )
-
-    fun shareSource() {
-        val raw = info?.sourceUrl?.ifBlank { sourceUrl } ?: sourceUrl
-        val target = normalizeGuideUrl(raw)
-        if (target.isBlank()) {
-            Toast.makeText(context, shareSourceEmptyText, Toast.LENGTH_SHORT).show()
-            return
-        }
-        runCatching {
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, target)
-            }
-            val chooser = Intent.createChooser(intent, shareSourceChooserTitle).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(chooser)
-        }.onFailure {
-            Toast.makeText(context, shareSourceFailedText, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun openExternal(rawUrl: String) {
-        val target = normalizeGuideUrl(rawUrl)
-        if (target.isBlank()) return
-        runCatching {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(target)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-        }.onFailure {
-            Toast.makeText(context, openLinkFailedText, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun openGuideInPage(rawUrl: String) {
-        val normalized = normalizeGuideUrl(rawUrl)
-        val contentId = extractGuideContentIdFromUrl(normalized)
-        val target = if (contentId != null && contentId > 0L) {
-            "https://www.gamekee.com/ba/tj/$contentId.html"
-        } else {
-            normalized
-        }
-        if (target.isBlank()) return
-        if (target == sourceUrl) return
-        manualRefreshRequested = false
-        BaStudentGuideStore.setCurrentUrl(target)
-        sourceUrl = target
-        error = null
-        refreshSignal += 1
-    }
-
-    fun saveGuideMedia(rawMediaUrl: String, rawTitle: String) {
-        val studentNamePrefix = info?.title?.trim().orEmpty()
-        val request = buildGuideMediaSaveRequest(
-            rawUrl = rawMediaUrl,
-            rawTitle = rawTitle,
-            rawPrefix = studentNamePrefix
-        )
-        if (request == null) {
-            Toast.makeText(context, context.getString(R.string.guide_media_save_empty), Toast.LENGTH_SHORT).show()
-            return
-        }
-        val useFixedSaveLocation = BASettingsStore.loadMediaSaveCustomEnabled()
-        if (!useFixedSaveLocation) {
-            pendingCustomSaveRequest = request
-            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = request.mimeType
-                putExtra(Intent.EXTRA_TITLE, request.fileName)
-            }
-            customSaveLauncher.launch(intent)
-            return
-        }
-
-        val fixedTreeUriRaw = BASettingsStore.loadMediaSaveFixedTreeUri()
-        val fixedTreeUri = fixedTreeUriRaw.takeIf { it.isNotBlank() }?.let { raw ->
-            runCatching { Uri.parse(raw) }.getOrNull()
-        }
-        if (fixedTreeUri != null) {
-            pageScope.launch {
-                val success = withContext(Dispatchers.IO) {
-                    val treeDoc = DocumentFile.fromTreeUri(context, fixedTreeUri)
-                        ?: return@withContext false
-                    val targetDoc = createUniqueDocumentInTree(
-                        tree = treeDoc,
-                        mimeType = request.mimeType,
-                        fileName = request.fileName
-                    ) ?: return@withContext false
-                    copyGuideMediaToUri(context, request.sourceUrl, targetDoc.uri)
-                }
-                if (success) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.guide_media_save_success, request.fileName),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    BASettingsStore.saveMediaSaveFixedTreeUri("")
-                    pendingFixedSaveRequest = request
-                    val pickerIntent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                        addFlags(
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-                        )
-                    }
-                    fixedFolderLauncher.launch(pickerIntent)
-                }
-            }
-            return
-        }
-
-        pendingFixedSaveRequest = request
-        val pickerIntent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-            addFlags(
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-            )
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                putExtra(DocumentsContract.EXTRA_INITIAL_URI, Uri.parse("content://com.android.externalstorage.documents/tree/primary%3ADownload"))
-            }
-        }
-        fixedFolderLauncher.launch(pickerIntent)
-    }
-
-    fun toggleVoicePlayback(rawAudioUrl: String) {
-        val target = normalizeGuidePlaybackSource(rawAudioUrl)
-        if (target.isBlank()) return
-        runCatching {
-            if (playingVoiceUrl == target) {
-                if (voicePlayer.isPlaying) {
-                    voicePlayer.pause()
-                    playingVoiceUrl = ""
-                    isVoicePlaying = false
-                    voicePlayProgress = 0f
-                } else {
-                    voicePlayer.play()
-                    playingVoiceUrl = target
-                    isVoicePlaying = true
-                }
-            } else {
-                voicePlayer.setMediaItem(MediaItem.fromUri(target))
-                voicePlayer.prepare()
-                voicePlayer.play()
-                playingVoiceUrl = target
-                isVoicePlaying = true
-                voicePlayProgress = 0f
-            }
-        }.onFailure {
-            playingVoiceUrl = ""
-            isVoicePlaying = false
-            voicePlayProgress = 0f
-            Toast.makeText(context, "语音播放失败", Toast.LENGTH_SHORT).show()
-        }
-    }
+    val pageActions = rememberBaStudentGuidePageActions(
+        info = info,
+        sourceUrl = sourceUrl,
+        shareSourceEmptyText = shareSourceEmptyText,
+        shareSourceChooserTitle = shareSourceChooserTitle,
+        shareSourceFailedText = shareSourceFailedText,
+        openLinkFailedText = openLinkFailedText,
+        voicePlayer = voicePlayer,
+        playingVoiceUrl = playingVoiceUrl,
+        onPlayingVoiceUrlChange = { playingVoiceUrl = it },
+        onIsVoicePlayingChange = { isVoicePlaying = it },
+        onVoicePlayProgressChange = { voicePlayProgress = it },
+        onManualRefreshRequestedChange = { manualRefreshRequested = it },
+        onSourceUrlChange = { sourceUrl = it },
+        onErrorChange = { error = it },
+        onRefreshSignalIncrease = { refreshSignal += 1 },
+        saveGuideMedia = saveGuideMediaAction
+    )
 
     fun selectBottomTab(index: Int) {
         if (index !in bottomTabs.indices) return
@@ -564,15 +335,12 @@ fun BaStudentGuidePage(
             LiquidActionItem(
                 icon = shareIcon,
                 contentDescription = shareSourceContentDescription,
-                onClick = { shareSource() }
+                onClick = pageActions.shareSource
             ),
             LiquidActionItem(
                 icon = refreshIcon,
                 contentDescription = refreshContentDescription,
-                onClick = {
-                    manualRefreshRequested = true
-                    refreshSignal += 1
-                }
+                onClick = pageActions.requestRefresh
             )
         )
     }
@@ -641,10 +409,10 @@ fun BaStudentGuidePage(
             includeTargetPageInHeavyRender = preloadPolicy.includeTargetPageInHeavyRender,
             guidePagerBeyondViewportPageCount = preloadPolicy.guidePagerBeyondViewportPageCount,
             nestedScrollConnection = scrollBehavior.nestedScrollConnection,
-            onOpenExternal = ::openExternal,
-            onOpenGuide = ::openGuideInPage,
-            onSaveMedia = ::saveGuideMedia,
-            onToggleVoicePlayback = ::toggleVoicePlayback,
+            onOpenExternal = pageActions.openExternal,
+            onOpenGuide = pageActions.openGuideInPage,
+            onSaveMedia = pageActions.saveGuideMedia,
+            onToggleVoicePlayback = pageActions.toggleVoicePlayback,
             onSelectedVoiceLanguageChange = { selectedVoiceLanguage = it }
         )
     }

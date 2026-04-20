@@ -2,7 +2,6 @@ package com.example.keios.ui.page.main.student.catalog.page
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +26,6 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,7 +48,6 @@ import com.example.keios.core.prefs.UiPrefs
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
 import com.example.keios.ui.page.main.ba.support.BASettingsStore
-import com.example.keios.ui.page.main.host.pager.animateTabSwitch
 import com.example.keios.ui.page.main.os.appLucideBackIcon
 import com.example.keios.ui.page.main.os.appLucideRefreshIcon
 import com.example.keios.ui.page.main.os.appLucideSortIcon
@@ -67,28 +64,26 @@ import com.example.keios.ui.page.main.student.catalog.loadCachedBaGuideCatalogBu
 import com.example.keios.ui.page.main.student.catalog.state.BaGuideCatalogSortMode
 import com.example.keios.ui.page.main.student.catalog.state.CATALOG_RELEASE_DATE_FETCH_LIMIT_PER_PASS
 import com.example.keios.ui.page.main.student.catalog.state.rememberBaGuideCatalogFilterSortState
+import com.example.keios.ui.page.main.student.catalog.state.rememberBaGuideCatalogTabSelectCoordinator
+import com.example.keios.ui.page.main.student.catalog.state.rememberBaGuideCatalogTopBarActionItems
 import com.example.keios.ui.page.main.student.catalog.state.rememberCatalogSyncProgress
 import com.example.keios.ui.page.main.widget.chrome.AppChromeTokens
 import com.example.keios.ui.page.main.widget.chrome.AppTopBarSearchField
 import com.example.keios.ui.page.main.widget.chrome.AppTopBarSection
 import com.example.keios.ui.page.main.widget.chrome.LiquidActionBar
 import com.example.keios.ui.page.main.widget.chrome.LiquidActionBarPopupAnchors
-import com.example.keios.ui.page.main.widget.chrome.LiquidActionItem
 import com.example.keios.ui.page.main.widget.chrome.LiquidGlassBottomBar
 import com.example.keios.ui.page.main.widget.chrome.LiquidGlassBottomBarItem
 import com.example.keios.ui.page.main.widget.chrome.liquidGlassBottomBarItemContentColor
 import com.example.keios.ui.page.main.widget.glass.UiPerformanceBudget
-import com.example.keios.ui.page.main.widget.motion.AppMotionTokens
 import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 import com.example.keios.ui.page.main.widget.motion.appFloatingEnter
 import com.example.keios.ui.page.main.widget.motion.appFloatingExit
-import com.example.keios.ui.page.main.widget.motion.resolvedMotionDuration
 import com.example.keios.ui.perf.ReportPagerPerformanceState
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -148,24 +143,15 @@ fun BaGuideCatalogPage(
 
     val sortIcon = appLucideSortIcon()
     val refreshIcon = appLucideRefreshIcon()
-    val actionItems = remember(
-        sortActionContentDescription,
-        refreshActionContentDescription,
-        filterSortState.showSortPopup
-    ) {
-        listOf(
-            LiquidActionItem(
-                icon = sortIcon,
-                contentDescription = sortActionContentDescription,
-                onClick = { filterSortState.showSortPopup = !filterSortState.showSortPopup }
-            ),
-            LiquidActionItem(
-                icon = refreshIcon,
-                contentDescription = refreshActionContentDescription,
-                onClick = { refreshSignal += 1 }
-            )
-        )
-    }
+    val actionItems = rememberBaGuideCatalogTopBarActionItems(
+        sortIcon = sortIcon,
+        refreshIcon = refreshIcon,
+        sortActionContentDescription = sortActionContentDescription,
+        refreshActionContentDescription = refreshActionContentDescription,
+        showSortPopup = filterSortState.showSortPopup,
+        onShowSortPopupChange = { filterSortState.showSortPopup = it },
+        onRefreshRequest = { refreshSignal += 1 }
+    )
 
     val tabs = BaGuideCatalogTab.entries
     val pagerState = rememberPagerState(
@@ -179,8 +165,6 @@ fun BaGuideCatalogPage(
         scrolling = pagerState.isScrollInProgress
     )
 
-    val pagerScope = rememberCoroutineScope()
-    var tabJumpJob by remember { mutableStateOf<Job?>(null) }
     LaunchedEffect(pagerState.settledPage) {
         if (selectedTabIndex != pagerState.settledPage) {
             selectedTabIndex = pagerState.settledPage
@@ -191,6 +175,14 @@ fun BaGuideCatalogPage(
     val liquidBottomBarEnabled = remember { UiPrefs.isLiquidBottomBarEnabled() }
     var showBottomBar by remember { mutableStateOf(true) }
     val farJumpAlpha = remember { Animatable(1f) }
+    val selectCatalogTabAction = rememberBaGuideCatalogTabSelectCoordinator(
+        tabs = tabs.toList(),
+        pagerState = pagerState,
+        transitionAnimationsEnabled = transitionAnimationsEnabled,
+        farJumpAlpha = farJumpAlpha,
+        onSelectedTabIndexChange = { selectedTabIndex = it },
+        onSortPopupChange = { filterSortState.showSortPopup = it }
+    )
     var showSearchBar by remember { mutableStateOf(true) }
     val density = LocalDensity.current
     var searchBarHideOffsetPx by remember { mutableStateOf(0f) }
@@ -224,50 +216,6 @@ fun BaGuideCatalogPage(
                 }
                 return Offset.Zero
             }
-        }
-    }
-
-    fun selectCatalogTab(index: Int) {
-        if (index !in tabs.indices) return
-        val stablePageIndex = if (pagerState.isScrollInProgress) {
-            pagerState.targetPage
-        } else {
-            pagerState.settledPage
-        }
-        if (index == stablePageIndex) return
-
-        selectedTabIndex = index
-        filterSortState.showSortPopup = false
-        tabJumpJob?.cancel()
-        tabJumpJob = pagerScope.launch {
-            pagerState.animateTabSwitch(
-                fromIndex = stablePageIndex,
-                targetIndex = index,
-                animationsEnabled = transitionAnimationsEnabled,
-                onFarJumpBefore = {
-                    farJumpAlpha.snapTo(1f)
-                    farJumpAlpha.animateTo(
-                        targetValue = 0.92f,
-                        animationSpec = tween(
-                            durationMillis = resolvedMotionDuration(
-                                AppMotionTokens.farJumpDimMs,
-                                transitionAnimationsEnabled
-                            )
-                        )
-                    )
-                },
-                onFarJumpAfter = {
-                    farJumpAlpha.animateTo(
-                        targetValue = 1f,
-                        animationSpec = tween(
-                            durationMillis = resolvedMotionDuration(
-                                AppMotionTokens.farJumpRestoreMs,
-                                transitionAnimationsEnabled
-                            )
-                        )
-                    )
-                }
-            )
         }
     }
 
@@ -424,7 +372,7 @@ fun BaGuideCatalogPage(
                             LiquidGlassBottomBarItem(
                                 selected = selected,
                                 tabIndex = index,
-                                onClick = { selectCatalogTab(index) },
+                                onClick = { selectCatalogTabAction(index) },
                                 modifier = Modifier.defaultMinSize(minWidth = 76.dp),
                                 content = tabContent
                             )
@@ -436,7 +384,7 @@ fun BaGuideCatalogPage(
                         selectedIndex = pagerState.targetPage,
                         onSelected = { index ->
                             if (index != pagerState.targetPage) {
-                                selectCatalogTab(index)
+                                selectCatalogTabAction(index)
                             }
                         },
                         backdrop = bottomBarBackdrop,
