@@ -98,7 +98,11 @@ internal fun MainPagerBottomBar(
             LiquidGlassBottomBar(
                 modifier = bottomBarModifier,
                 selectedIndex = selectedPageIndex,
-                onSelected = onPageSelected,
+                onSelected = { index ->
+                    if (index != selectedPageIndex) {
+                        onPageSelected(index)
+                    }
+                },
                 backdrop = backdrop,
                 tabsCount = tabs.size,
                 reduceEffectsDuringPagerScroll = reduceEffectsDuringPagerScroll,

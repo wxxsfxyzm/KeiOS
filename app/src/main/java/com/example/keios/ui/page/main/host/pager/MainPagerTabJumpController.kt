@@ -98,17 +98,16 @@ internal fun rememberMainPagerTabJumpController(
     val onPageSelected: (Int) -> Unit = { index ->
         if (index in tabs.indices) {
             showBottomBar = true
-            val activeTargetIndex = pagerState.targetPage.coerceIn(0, tabs.lastIndex)
-            if (index != activeTargetIndex || pagerState.isScrollInProgress) {
-                val fromIndex = if (pagerState.isScrollInProgress) {
-                    activeTargetIndex
-                } else {
-                    pagerState.currentPage.coerceIn(0, tabs.lastIndex)
-                }
+            val stablePageIndex = if (pagerState.isScrollInProgress) {
+                pagerState.targetPage
+            } else {
+                pagerState.settledPage
+            }.coerceIn(0, tabs.lastIndex)
+            if (index != stablePageIndex || pagerState.isScrollInProgress) {
                 tabJumpJob?.cancel()
                 tabJumpJob = coroutineScope.launch {
                     pagerState.animateTabSwitch(
-                        fromIndex = fromIndex,
+                        fromIndex = stablePageIndex,
                         targetIndex = index,
                         animationsEnabled = transitionAnimationsEnabled,
                         onFarJumpBefore = farJumpBefore,
@@ -127,16 +126,16 @@ internal fun rememberMainPagerTabJumpController(
     LaunchedEffect(requestedBottomPageToken, requestedBottomPage, tabs) {
         val target = requestedBottomPage ?: return@LaunchedEffect
         val index = tabs.indexOfFirst { it.name == target }
-        val currentStableIndex = if (pagerState.isScrollInProgress) {
+        val stablePageIndex = if (pagerState.isScrollInProgress) {
             pagerState.targetPage
         } else {
-            pagerState.currentPage
+            pagerState.settledPage
         }.coerceIn(0, tabs.lastIndex)
-        if (index >= 0 && index != currentStableIndex) {
+        if (index >= 0 && index != stablePageIndex) {
             tabJumpJob?.cancel()
             tabJumpJob = coroutineScope.launch {
                 pagerState.animateTabSwitch(
-                    fromIndex = currentStableIndex,
+                    fromIndex = stablePageIndex,
                     targetIndex = index,
                     animationsEnabled = transitionAnimationsEnabled,
                     onFarJumpBefore = farJumpBefore,
