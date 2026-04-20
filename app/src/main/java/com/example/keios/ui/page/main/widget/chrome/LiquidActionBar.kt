@@ -300,7 +300,11 @@ fun LiquidActionBar(
         }
     }
 
-    val interactionHighlightColor = Color.White
+    val interactionHighlightColor = if (layeredStyleEnabled || isInLightTheme) {
+        Color.White
+    } else {
+        palette.selectionGlowColor
+    }
     val interactionHighlightStrength = liquidActionBarInteractionHighlightStrength(
         layeredStyleEnabled = layeredStyleEnabled,
         isInLightTheme = isInLightTheme
@@ -309,7 +313,10 @@ fun LiquidActionBar(
         layeredStyleEnabled = layeredStyleEnabled,
         isInLightTheme = isInLightTheme
     )
-    val interactiveHighlight = if (isBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    val interactiveHighlightEnabled = isBlurEnabled &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        (layeredStyleEnabled || isInLightTheme)
+    val interactiveHighlight = if (interactiveHighlightEnabled) {
         remember(animationScope, tabWidthPx) {
             InteractiveHighlight(
                 animationScope = animationScope,

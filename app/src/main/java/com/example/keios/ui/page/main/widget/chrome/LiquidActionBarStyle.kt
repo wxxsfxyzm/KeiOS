@@ -96,9 +96,9 @@ internal fun rememberLiquidActionBarPalette(
     return@remember LiquidActionBarPalette(
         baseFillColor = surfaceContainer.copy(alpha = 0.15f),
         inactiveContentColor = onSurface.copy(alpha = 0.76f),
-        activeContentColor = onSurface.copy(alpha = 0.98f),
-        selectionGlowColor = Color.White.copy(alpha = 0.10f),
-        selectionCoreColor = Color.White.copy(alpha = 0.12f)
+        activeContentColor = onSurface.copy(alpha = 0.95f),
+        selectionGlowColor = onSurface.copy(alpha = 0.09f),
+        selectionCoreColor = surfaceContainer.copy(alpha = 0.16f)
     )
 }
 
@@ -114,12 +114,16 @@ internal fun liquidActionBarBaseHighlight(
     val highlightColor = if (isInLightTheme) {
         Color.White.copy(alpha = if (isBlurEnabled) 0.34f else 0.24f)
     } else {
-        Color.White.copy(alpha = if (isBlurEnabled) 0.22f else 0.16f)
+        Color.White.copy(alpha = if (isBlurEnabled) 0.14f else 0.10f)
     }
     return Highlight(
-        width = if (isInLightTheme) 0.55.dp else 0.48.dp,
-        blurRadius = if (isInLightTheme) 1.5.dp else 1.2.dp,
-        alpha = if (isBlurEnabled) 0.42f else 0.22f,
+        width = if (isInLightTheme) 0.55.dp else 0.42.dp,
+        blurRadius = if (isInLightTheme) 1.5.dp else 1.05.dp,
+        alpha = if (isBlurEnabled) {
+            if (isInLightTheme) 0.42f else 0.26f
+        } else {
+            if (isInLightTheme) 0.22f else 0.14f
+        },
         style = HighlightStyle.Default(
             color = highlightColor,
             angle = 84f,
@@ -168,7 +172,7 @@ internal fun liquidActionBarInteractionHighlightRadiusScale(
 ): Float = when {
     layeredStyleEnabled -> 1.2f
     isInLightTheme -> 0.88f
-    else -> 0.98f
+    else -> 0.86f
 }
 
 @Stable
