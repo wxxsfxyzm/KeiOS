@@ -410,14 +410,41 @@ private fun OsShellRunnerPage(
             Toast.makeText(context, outputFormatEmptyToast, Toast.LENGTH_SHORT).show()
             return
         }
-        outputText = formatShellOutputForReadability(outputText)
-        outputEntries = parseShellOutputDisplayEntries(
-            raw = outputText,
-            stoppedOutputText = commandStoppedText,
-            outputResultLabel = outputResultLabel,
-            outputTimeLabel = outputTimeLabel
-        )
-        latestRunResultOutput = outputEntries.lastOrNull()?.result.orEmpty().trim()
+        val parsedEntries = if (outputEntries.isNotEmpty()) {
+            outputEntries
+        } else {
+            parseShellOutputDisplayEntries(
+                raw = outputText,
+                stoppedOutputText = commandStoppedText,
+                outputResultLabel = outputResultLabel,
+                outputTimeLabel = outputTimeLabel
+            )
+        }
+        if (parsedEntries.isNotEmpty()) {
+            val formattedEntries = parsedEntries.map { entry ->
+                if (entry.isStopped) {
+                    entry
+                } else {
+                    entry.copy(result = formatShellResultForReadability(entry.result))
+                }
+            }
+            val trimmedEntries = trimShellOutputEntries(
+                entries = formattedEntries,
+                maxChars = shellOutputMaxChars
+            )
+            outputEntries = trimmedEntries
+            outputText = buildShellOutputHistoryText(trimmedEntries)
+            latestRunResultOutput = trimmedEntries.lastOrNull()?.result.orEmpty().trim()
+        } else {
+            outputText = formatShellResultForReadability(outputText)
+            outputEntries = parseShellOutputDisplayEntries(
+                raw = outputText,
+                stoppedOutputText = commandStoppedText,
+                outputResultLabel = outputResultLabel,
+                outputTimeLabel = outputTimeLabel
+            )
+            latestRunResultOutput = outputEntries.lastOrNull()?.result.orEmpty().trim()
+        }
         Toast.makeText(context, outputFormattedToast, Toast.LENGTH_SHORT).show()
     }
 
@@ -741,7 +768,27 @@ private fun OsShellRunnerPage(
     )
 }
 
-private fun formatShellOutputForReadability(raw: String): String {
+private fun buildShellOutputHistoryText(entries: List<ShellOutputDisplayEntry>): String {
+    if (entries.isEmpty()) return ""
+    val raw = entries.joinToString(separator = "\n\n") { entry ->
+        buildString {
+            append("$ ")
+            append(entry.command.trim())
+            appendLine()
+            appendLine()
+            append(entry.result.trimEnd())
+            val timeLabel = entry.timeLabel.trim()
+            if (timeLabel.isNotBlank()) {
+                appendLine()
+                appendLine()
+                append(timeLabel)
+            }
+        }.trimEnd()
+    }
+    return trimShellOutputHistory(raw)
+}
+
+private fun formatShellResultForReadability(raw: String): String {
     val normalized = raw
         .replace("\r\n", "\n")
         .replace('\r', '\n')
