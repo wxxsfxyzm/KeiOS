@@ -1,13 +1,12 @@
 package com.example.keios.ui.page.main
 
+import androidx.compose.ui.graphics.Color
 import com.example.keios.ui.page.main.github.VersionCheckUi
 import com.example.keios.ui.page.main.github.formatReleaseValue
 import com.example.keios.ui.page.main.github.statusActionUrl
-import com.example.keios.ui.page.main.github.statusIcon
+import com.example.keios.ui.page.main.github.statusColor
 import org.junit.Test
 import kotlin.test.assertEquals
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Ok
 
 class GitHubPageModelsTest {
     @Test
@@ -51,12 +50,12 @@ class GitHubPageModelsTest {
     }
 
     @Test
-    fun `local prerelease without remote update uses ok icon instead of warning icon`() {
+    fun `local prerelease without remote update keeps prerelease status color`() {
         val state = VersionCheckUi(
             hasUpdate = false,
             isPreRelease = true
         )
 
-        assertEquals(MiuixIcons.Regular.Ok, state.statusIcon())
+        assertEquals(Color(0xFFF59E0B), state.statusColor(Color.Gray))
     }
 }

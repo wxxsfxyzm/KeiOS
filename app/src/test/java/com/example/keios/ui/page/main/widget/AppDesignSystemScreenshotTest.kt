@@ -13,26 +13,38 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.example.keios.R
-import com.example.keios.ui.page.main.BaGuideCatalogEntryCard
-import com.example.keios.ui.page.main.SettingsGroupCard
-import com.example.keios.ui.page.main.SettingsToggleItem
 import com.example.keios.ui.page.main.about.section.AboutAppCardSection
+import com.example.keios.ui.page.main.settings.support.SettingsGroupCard
+import com.example.keios.ui.page.main.settings.support.SettingsToggleItem
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogEntry
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogTab
+import com.example.keios.ui.page.main.student.catalog.component.BaGuideCatalogEntryCard
+import com.example.keios.ui.page.main.widget.chrome.AppChromeTokens
+import com.example.keios.ui.page.main.widget.chrome.AppTopBarSearchField
+import com.example.keios.ui.page.main.widget.chrome.AppTopBarSection
+import com.example.keios.ui.page.main.widget.core.AppInfoListBody
+import com.example.keios.ui.page.main.widget.core.AppInfoRow
+import com.example.keios.ui.page.main.widget.core.AppOverviewCard
+import com.example.keios.ui.page.main.widget.core.AppSupportingBlock
+import com.example.keios.ui.page.main.widget.core.CardLayoutRhythm
+import com.example.keios.ui.page.main.widget.glass.GlassIconButton
+import com.example.keios.ui.page.main.widget.glass.GlassTextButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
+import com.example.keios.ui.page.main.widget.glass.LiquidDropdownColumn
+import com.example.keios.ui.page.main.widget.glass.LiquidDropdownImpl
+import com.example.keios.ui.page.main.widget.status.StatusPill
+import com.example.keios.ui.page.main.widget.support.LocalTextCopyExpandedOverride
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -184,35 +196,27 @@ class AppDesignSystemScreenshotTest {
                             .background(Color(0xFFF3F4F6))
                             .padding(16.dp)
                     ) {
-                        Card(
-                            colors = CardDefaults.defaultColors(
-                                color = Color(0x223B82F6),
-                                contentColor = MiuixTheme.colorScheme.onBackground
-                            ),
-                            onClick = {}
+                        SettingsGroupCard(
+                            header = "视觉样式",
+                            title = "操作与反馈",
+                            containerColor = Color(0x223B82F6)
                         ) {
-                            SettingsGroupCard(
-                                header = "视觉样式",
-                                title = "操作与反馈",
-                                summary = "统一开关行、胶囊按钮和下拉选项的尺寸与节奏。"
-                            ) {
-                                SettingsToggleItem(
-                                    title = "ActionBar 分层样式",
-                                    summary = "保持顶部交互区域的层次和反馈一致。",
-                                    checked = true,
-                                    onCheckedChange = {},
-                                    infoKey = "作用范围",
-                                    infoValue = "主页面与具备 action bar 的子页面"
-                                )
-                                SettingsToggleItem(
-                                    title = "复制能力扩展",
-                                    summary = "切换完整文本选择能力。",
-                                    checked = false,
-                                    onCheckedChange = {},
-                                    infoKey = "说明",
-                                    infoValue = "关闭时保留轻量长按复制，开启后支持完整选择拖动。"
-                                )
-                            }
+                            SettingsToggleItem(
+                                title = "ActionBar 分层样式",
+                                summary = "保持顶部交互区域的层次和反馈一致。",
+                                checked = true,
+                                onCheckedChange = {},
+                                infoKey = "作用范围",
+                                infoValue = "主页面与具备 action bar 的子页面"
+                            )
+                            SettingsToggleItem(
+                                title = "复制能力扩展",
+                                summary = "切换完整文本选择能力。",
+                                checked = false,
+                                onCheckedChange = {},
+                                infoKey = "说明",
+                                infoValue = "关闭时保留轻量长按复制，开启后支持完整选择拖动。"
+                            )
                         }
                     }
                 }
