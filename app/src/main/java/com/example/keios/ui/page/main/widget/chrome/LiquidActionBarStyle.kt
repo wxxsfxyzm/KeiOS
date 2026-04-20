@@ -120,17 +120,17 @@ internal fun liquidActionBarBaseHighlight(
     }
 
     val highlightColor = if (isInLightTheme) {
-        Color.White.copy(alpha = if (isBlurEnabled) 0.34f else 0.24f)
+        Color.White.copy(alpha = if (isBlurEnabled) 0.26f else 0.18f)
     } else {
         Color.White.copy(alpha = if (isBlurEnabled) 0.14f else 0.10f)
     }
     return Highlight(
-        width = if (isInLightTheme) 0.55.dp else 0.42.dp,
-        blurRadius = if (isInLightTheme) 1.5.dp else 1.05.dp,
+        width = if (isInLightTheme) 0.50.dp else 0.42.dp,
+        blurRadius = if (isInLightTheme) 1.30.dp else 1.05.dp,
         alpha = if (isBlurEnabled) {
-            if (isInLightTheme) 0.42f else 0.26f
+            if (isInLightTheme) 0.30f else 0.26f
         } else {
-            if (isInLightTheme) 0.22f else 0.14f
+            if (isInLightTheme) 0.18f else 0.14f
         },
         style = HighlightStyle.Default(
             color = highlightColor,
