@@ -106,10 +106,12 @@ internal fun buildOsOverviewUiState(
     val loadedFreshCount = visibleSectionStates.count { it.loadedFresh }
     val cachedSectionCount = visibleSectionStates.count { !it.loadedFresh && it.rows.isNotEmpty() }
     val sectionCount = currentVisibleSectionKinds.size
+    val hasTopInfoCard = visibleCards.contains(OsSectionCard.TOP_INFO)
     val overviewState = when {
         refreshing -> SystemOverviewState.Refreshing
         loadedFreshCount == sectionCount && sectionCount > 0 -> SystemOverviewState.Completed
         cachePersisted || cachedSectionCount > 0 -> SystemOverviewState.Cached
+        sectionCount == 0 && hasTopInfoCard -> SystemOverviewState.Completed
         else -> SystemOverviewState.Idle
     }
     val statusLabel = when (overviewState) {
