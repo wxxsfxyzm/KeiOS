@@ -2,6 +2,11 @@
     <string name="mcp_skill_page_title">MCP Skill</string>
     <string name="mcp_skill_page_subtitle">SKILL.md</string>
     <string name="mcp_skill_markdown_empty"># MCP Skill\n\n暂无内容</string>
+    <string name="mcp_skill_section_empty_items">暂无条目</string>
+    <string name="mcp_skill_section_default_root">MCP Skill</string>
+    <string name="mcp_skill_section_default_overview">概览</string>
+    <string name="mcp_skill_section_default_content">内容</string>
+    <string name="mcp_skill_section_empty_content">暂无内容</string>
     <string name="page_mcp_title">MCP</string>
     <string name="mcp_default_service_name">KeiOS MCP</string>
     <string name="mcp_runtime_pending">待运行</string>

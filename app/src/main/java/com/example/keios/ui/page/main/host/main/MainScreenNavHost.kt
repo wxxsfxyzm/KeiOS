@@ -15,7 +15,7 @@ import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.mcp.server.McpServerManager
 import com.example.keios.ui.navigation.KeiosRoute
 import com.example.keios.ui.navigation.Navigator
-import com.example.keios.ui.page.main.McpSkillPage
+import com.example.keios.ui.page.main.mcp.skill.page.McpSkillPage
 import com.example.keios.ui.page.main.about.page.AboutPage
 import com.example.keios.ui.page.main.host.pager.MainPagerLayout
 import com.example.keios.ui.page.main.settings.page.SettingsPage

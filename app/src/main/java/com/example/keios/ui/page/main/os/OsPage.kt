@@ -1,9 +1,6 @@
 package com.example.keios.ui.page.main.os
 
-import android.content.Intent
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
@@ -33,7 +30,9 @@ import com.example.keios.ui.page.main.os.components.OsPageMainList
 import com.example.keios.ui.page.main.os.components.OsPageOverlayHost
 import com.example.keios.ui.page.main.os.components.OsPageOverlaySheets
 import com.example.keios.ui.page.main.os.state.OsCardImportTarget
+import com.example.keios.ui.page.main.os.state.rememberOsPageCardTransferState
 import com.example.keios.ui.page.main.os.state.rememberOsPageOverlayState
+import com.example.keios.ui.page.main.os.state.rememberOsPageTextBundle
 import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
 import com.example.keios.ui.page.main.os.shell.OsShellCommandCardStore
 import com.example.keios.ui.page.main.os.shell.OsShellRunnerActivity
@@ -76,78 +75,37 @@ fun OsPage(
     val context = LocalContext.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
-    val exportSuccessText = stringResource(R.string.common_export_success)
-    val noRefreshableCardText = stringResource(R.string.os_toast_no_refreshable_card)
-    val refreshCompletedText = stringResource(R.string.os_toast_refresh_completed)
-    val manageCardsContentDescription = stringResource(R.string.os_action_manage_cards)
-    val manageActivitiesContentDescription = stringResource(R.string.os_action_manage_activities)
-    val manageShellCardsContentDescription = stringResource(R.string.os_action_manage_shell_cards)
-    val refreshParamsContentDescription = stringResource(R.string.os_action_refresh_params)
-    val searchLabel = stringResource(R.string.os_search_label)
-    val visibleCardsTitle = stringResource(R.string.os_sheet_visible_cards_title)
-    val visibleActivitiesTitle = stringResource(R.string.os_sheet_visible_activities_title)
-    val visibleShellCardsTitle = stringResource(R.string.os_sheet_visible_shell_cards_title)
-    val visibleShellCardsDesc = stringResource(R.string.os_sheet_visible_shell_cards_desc)
-    val googleSystemServiceDefaultTitle = stringResource(R.string.os_section_google_system_service_title)
-    val googleSystemServiceDefaultSubtitle = stringResource(R.string.os_google_system_service_default_subtitle)
-    val googleSystemServiceDefaultAppName = stringResource(R.string.os_google_system_service_default_app_name)
-    val shellSavedCountLabel = stringResource(R.string.os_shell_card_saved_count_label)
-    val shellCardSavedToast = stringResource(R.string.os_shell_card_toast_saved)
-    val shellCardDeletedToast = stringResource(R.string.os_shell_card_toast_deleted)
-    val shellCardCommandRequiredToast = stringResource(R.string.os_shell_card_toast_command_required)
-    val shellCardDeleteDialogTitle = stringResource(R.string.os_shell_card_delete_dialog_title)
-    val shellRunNoPermissionText = stringResource(R.string.os_shell_run_requires_permission)
-    val shellRunNoOutputText = stringResource(R.string.os_shell_run_empty_output)
-    val editShellCommandCardTitle = stringResource(R.string.os_shell_card_sheet_title_edit)
-    val editActivityCardTitle = stringResource(R.string.os_activity_sheet_title_edit)
-    val addActivityCardTitle = stringResource(R.string.os_activity_sheet_title_add)
-    val activityCardDeletedToast = stringResource(R.string.os_activity_card_toast_deleted)
-    val activityCardDeleteDialogTitle = stringResource(R.string.os_activity_card_delete_dialog_title)
-    val cardImportFailedWithReason = stringResource(R.string.os_card_toast_import_failed_with_reason)
-    val activityBuiltInGoogleSettingsTitle =
-        stringResource(R.string.os_activity_builtin_google_settings_title)
-    val activityBuiltInGoogleSettingsSubtitle =
-        stringResource(R.string.os_activity_builtin_google_settings_subtitle)
-    val activityBuiltInGoogleSettingsAppName =
-        stringResource(R.string.os_activity_builtin_google_settings_app_name)
-    val activityBuiltInGoogleSettingsPackage =
-        stringResource(R.string.os_activity_builtin_google_settings_package)
-    val activityBuiltInGoogleSettingsClass =
-        stringResource(R.string.os_activity_builtin_google_settings_class)
-    val googleSystemServiceDefaultIntentFlags =
-        stringResource(R.string.os_google_system_service_default_intent_flags)
-    val googleSystemServiceDefaults = remember(
-        googleSystemServiceDefaultTitle,
-        googleSystemServiceDefaultSubtitle,
-        googleSystemServiceDefaultAppName,
-        googleSystemServiceDefaultIntentFlags
-    ) {
-        OsGoogleSystemServiceConfig(
-            title = googleSystemServiceDefaultTitle,
-            subtitle = googleSystemServiceDefaultSubtitle,
-            appName = googleSystemServiceDefaultAppName,
-            intentFlags = googleSystemServiceDefaultIntentFlags
-        ).normalized()
-    }
-    val googleSettingsBuiltInSampleDefaults = remember(
-        activityBuiltInGoogleSettingsTitle,
-        activityBuiltInGoogleSettingsSubtitle,
-        activityBuiltInGoogleSettingsAppName,
-        activityBuiltInGoogleSettingsPackage,
-        activityBuiltInGoogleSettingsClass,
-        googleSystemServiceDefaultIntentFlags
-    ) {
-        OsGoogleSystemServiceConfig(
-            title = activityBuiltInGoogleSettingsTitle,
-            subtitle = activityBuiltInGoogleSettingsSubtitle,
-            appName = activityBuiltInGoogleSettingsAppName,
-            packageName = activityBuiltInGoogleSettingsPackage,
-            className = activityBuiltInGoogleSettingsClass,
-            intentAction = Intent.ACTION_VIEW,
-            intentFlags = googleSystemServiceDefaultIntentFlags
-        ).normalized(googleSystemServiceDefaults)
-    }
-    val noMatchedResultsText = stringResource(R.string.common_no_matched_results)
+    val textBundle = rememberOsPageTextBundle()
+    val exportSuccessText = textBundle.exportSuccessText
+    val noRefreshableCardText = textBundle.noRefreshableCardText
+    val refreshCompletedText = textBundle.refreshCompletedText
+    val manageCardsContentDescription = textBundle.manageCardsContentDescription
+    val manageActivitiesContentDescription = textBundle.manageActivitiesContentDescription
+    val manageShellCardsContentDescription = textBundle.manageShellCardsContentDescription
+    val refreshParamsContentDescription = textBundle.refreshParamsContentDescription
+    val searchLabel = textBundle.searchLabel
+    val visibleCardsTitle = textBundle.visibleCardsTitle
+    val visibleActivitiesTitle = textBundle.visibleActivitiesTitle
+    val visibleShellCardsTitle = textBundle.visibleShellCardsTitle
+    val visibleShellCardsDesc = textBundle.visibleShellCardsDesc
+    val googleSystemServiceDefaultTitle = textBundle.googleSystemServiceDefaultTitle
+    val shellSavedCountLabel = textBundle.shellSavedCountLabel
+    val shellCardSavedToast = textBundle.shellCardSavedToast
+    val shellCardDeletedToast = textBundle.shellCardDeletedToast
+    val shellCardCommandRequiredToast = textBundle.shellCardCommandRequiredToast
+    val shellCardDeleteDialogTitle = textBundle.shellCardDeleteDialogTitle
+    val shellRunNoPermissionText = textBundle.shellRunNoPermissionText
+    val shellRunNoOutputText = textBundle.shellRunNoOutputText
+    val editShellCommandCardTitle = textBundle.editShellCommandCardTitle
+    val editActivityCardTitle = textBundle.editActivityCardTitle
+    val addActivityCardTitle = textBundle.addActivityCardTitle
+    val activityCardDeletedToast = textBundle.activityCardDeletedToast
+    val activityCardDeleteDialogTitle = textBundle.activityCardDeleteDialogTitle
+    val cardImportFailedWithReason = textBundle.cardImportFailedWithReason
+    val noMatchedResultsText = textBundle.noMatchedResultsText
+    val googleSystemServiceDefaultIntentFlags = textBundle.googleSystemServiceDefaultIntentFlags
+    val googleSystemServiceDefaults = textBundle.googleSystemServiceDefaults
+    val googleSettingsBuiltInSampleDefaults = textBundle.googleSettingsBuiltInSampleDefaults
     val shizukuReady = shizukuStatus.contains("granted", ignoreCase = true)
     val initialUiSnapshot = remember { OsUiStateStore.loadSnapshot() }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -225,103 +183,21 @@ fun OsPage(
         lifecycleOwner = lifecycleOwner,
         reloadCards = { shellCommandCards = OsShellCommandCardStore.loadCards() }
     )
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        val content = overlayState.pendingExportContent
-        if (uri == null || content.isNullOrBlank()) return@rememberLauncherForActivityResult
-        runCatching {
-            context.contentResolver.openOutputStream(uri)?.bufferedWriter().use { writer ->
-                writer?.write(content)
-            }
-        }.onSuccess {
-            Toast.makeText(context, exportSuccessText, Toast.LENGTH_SHORT).show()
-        }.onFailure {
-            Toast.makeText(
-                context,
-                context.getString(R.string.common_export_failed_with_reason, it.javaClass.simpleName),
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        val target = overlayState.pendingImportTarget
-        overlayState.onPendingImportTargetChange(null)
-        if (uri == null || target == null) {
-            overlayState.onCardTransferInProgressChange(false)
-            return@rememberLauncherForActivityResult
-        }
-        scope.launch {
-            runCatching {
-                val raw = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.bufferedReader().use { reader ->
-                        reader?.readText().orEmpty()
-                    }
-                }
-                when (target) {
-                    OsCardImportTarget.Activity -> {
-                        val result = OsActivityShortcutCardStore.importCardsFromJsonMerged(
-                            raw = raw,
-                            defaults = googleSystemServiceDefaults,
-                            builtInSampleDefaults = googleSettingsBuiltInSampleDefaults
-                        )
-                        activityShortcutCards = result.cards
-                        val validIds = result.cards.mapTo(mutableSetOf()) { it.id }
-                        activityCardExpanded.keys.retainAll(validIds)
-                        if (!validIds.contains(overlayState.editingActivityShortcutCardId.orEmpty())) {
-                            overlayState.onShowActivityShortcutEditorChange(false)
-                            overlayState.onShowActivityCardDeleteConfirmChange(false)
-                            overlayState.onEditingActivityShortcutCardIdChange(null)
-                        }
-                        Toast.makeText(
-                            context,
-                            context.getString(
-                                R.string.os_activity_card_toast_imported_summary,
-                                result.addedCount,
-                                result.updatedCount,
-                                result.unchangedCount
-                            ),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    OsCardImportTarget.Shell -> {
-                        val result = OsShellCommandCardStore.importCardsFromJsonMerged(raw)
-                        shellCommandCards = result.cards
-                        val validIds = result.cards.mapTo(mutableSetOf()) { it.id }
-                        shellCommandCardExpanded.keys.retainAll(validIds)
-                        if (!validIds.contains(overlayState.editingShellCommandCardId.orEmpty())) {
-                            overlayState.onShowShellCommandCardEditorChange(false)
-                            overlayState.onShowShellCardDeleteConfirmChange(false)
-                            overlayState.onEditingShellCommandCardIdChange(null)
-                        }
-                        Toast.makeText(
-                            context,
-                            context.getString(
-                                R.string.os_shell_card_toast_imported_summary,
-                                result.addedCount,
-                                result.updatedCount,
-                                result.unchangedCount
-                            ),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-            }.onFailure { error ->
-                Toast.makeText(
-                    context,
-                    String.format(
-                        cardImportFailedWithReason,
-                        error.message ?: error.javaClass.simpleName
-                    ),
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            overlayState.onCardTransferInProgressChange(false)
-        }
-    }
+    val cardTransferState = rememberOsPageCardTransferState(
+        context = context,
+        scope = scope,
+        overlayState = overlayState,
+        activityShortcutCards = activityShortcutCards,
+        onActivityShortcutCardsChange = { activityShortcutCards = it },
+        activityCardExpanded = activityCardExpanded,
+        shellCommandCards = shellCommandCards,
+        onShellCommandCardsChange = { shellCommandCards = it },
+        shellCommandCardExpanded = shellCommandCardExpanded,
+        googleSystemServiceDefaults = googleSystemServiceDefaults,
+        googleSettingsBuiltInSampleDefaults = googleSettingsBuiltInSampleDefaults,
+        cardImportFailedWithReason = cardImportFailedWithReason,
+        exportSuccessText = exportSuccessText
+    )
     var sectionStates by remember {
         mutableStateOf(
             mapOf(
@@ -575,7 +451,7 @@ fun OsPage(
                         defaults = googleSystemServiceDefaults
                     )
                     overlayState.onPendingExportContentChange(payload)
-                    exportLauncher.launch("keios-os-activity-cards.json")
+                    cardTransferState.exportLauncher.launch("keios-os-activity-cards.json")
                 }.onFailure { error ->
                     Toast.makeText(
                         context,
@@ -590,7 +466,7 @@ fun OsPage(
             onImportAllActivityCards = {
                 overlayState.onPendingImportTargetChange(OsCardImportTarget.Activity)
                 overlayState.onCardTransferInProgressChange(true)
-                importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                cardTransferState.importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
             },
             applyActivityCardVisibility = ::applyActivityCardVisibility,
             visibleShellCardsTitle = visibleShellCardsTitle,
@@ -601,7 +477,7 @@ fun OsPage(
                 runCatching {
                     val payload = OsShellCommandCardStore.buildCardsExportJson(shellCommandCards)
                     overlayState.onPendingExportContentChange(payload)
-                    exportLauncher.launch("keios-os-shell-cards.json")
+                    cardTransferState.exportLauncher.launch("keios-os-shell-cards.json")
                 }.onFailure { error ->
                     Toast.makeText(
                         context,
@@ -616,7 +492,7 @@ fun OsPage(
             onImportAllShellCards = {
                 overlayState.onPendingImportTargetChange(OsCardImportTarget.Shell)
                 overlayState.onCardTransferInProgressChange(true)
-                importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                cardTransferState.importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
             },
             applyShellCommandCardVisibility = ::applyShellCommandCardVisibility,
             editShellCommandCardTitle = editShellCommandCardTitle,
@@ -760,7 +636,7 @@ fun OsPage(
                         shizukuStatus = shizukuStatus,
                         launchExport = { fileName, payload ->
                             overlayState.onPendingExportContentChange(payload)
-                            exportLauncher.launch(fileName)
+                            cardTransferState.exportLauncher.launch(fileName)
                         }
                     )
                 }

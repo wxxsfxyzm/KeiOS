@@ -82,7 +82,21 @@ import com.example.keios.ui.page.main.student.isMemoryHallFileGalleryItem
 import com.example.keios.ui.page.main.student.isRenderableGalleryStaticImageUrl
 import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import com.example.keios.ui.page.main.student.fetch.extractGuideContentIdFromUrl
+import com.example.keios.ui.page.main.student.page.component.BaStudentGuideBottomBar
 import com.example.keios.ui.page.main.student.page.component.BaStudentGuidePagerContent
+import com.example.keios.ui.page.main.student.page.support.GuideMediaSaveRequest
+import com.example.keios.ui.page.main.student.page.support.buildGuideMediaSaveRequest
+import com.example.keios.ui.page.main.student.page.support.copyGuideMediaToUri
+import com.example.keios.ui.page.main.student.page.support.createUniqueDocumentInTree
+import com.example.keios.ui.page.main.student.page.support.normalizeGuidePlaybackSource
+import com.example.keios.ui.page.main.student.page.support.rememberGuideSyncProgress
+import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuideInfoLoadEffect
+import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuidePagerSyncEffects
+import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuidePlayerLifecycleEffects
+import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuidePrefetchEffects
+import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuideSourceRestoreEffect
+import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuideVoiceListenerEffect
+import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuideVoiceProgressEffect
 import com.example.keios.ui.page.main.student.clearGuideBgmLoopScope
 import com.example.keios.ui.page.main.student.clearGuideBgmPlaybackScope
 import com.example.keios.ui.perf.ReportPagerPerformanceState
@@ -288,62 +302,19 @@ fun BaStudentGuidePage(
         }
     }
 
-    DisposableEffect(voicePlayer) {
-        onDispose {
-            runCatching { voicePlayer.release() }
-        }
-    }
-
-    DisposableEffect(sourceUrl) {
-        onDispose {
-            clearGuideBgmLoopScope(sourceUrl)
-            clearGuideBgmPlaybackScope(sourceUrl)
-            BaGuideTempMediaCache.clearGuideCache(context, sourceUrl)
-        }
-    }
-
-    DisposableEffect(voicePlayer) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                isVoicePlaying = isPlaying && playingVoiceUrl.isNotBlank()
-                if (!isVoicePlaying) {
-                    voicePlayProgress = 0f
-                }
-            }
-
-            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                voicePlayProgress = 0f
-            }
-
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                when (playbackState) {
-                    Player.STATE_ENDED, Player.STATE_IDLE -> {
-                        playingVoiceUrl = ""
-                        isVoicePlaying = false
-                        voicePlayProgress = 0f
-                    }
-                    Player.STATE_READY -> {
-                        isVoicePlaying = voicePlayer.isPlaying && playingVoiceUrl.isNotBlank()
-                    }
-                }
-            }
-
-            override fun onPlayerError(error: PlaybackException) {
-                playingVoiceUrl = ""
-                isVoicePlaying = false
-                voicePlayProgress = 0f
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.guide_toast_voice_play_failed_with_reason, error.errorCodeName),
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-        voicePlayer.addListener(listener)
-        onDispose {
-            voicePlayer.removeListener(listener)
-        }
-    }
+    BindBaStudentGuidePlayerLifecycleEffects(
+        context = context,
+        sourceUrl = sourceUrl,
+        voicePlayer = voicePlayer
+    )
+    BindBaStudentGuideVoiceListenerEffect(
+        context = context,
+        voicePlayer = voicePlayer,
+        playingVoiceUrl = playingVoiceUrl,
+        onPlayingVoiceUrlChange = { playingVoiceUrl = it },
+        onIsVoicePlayingChange = { isVoicePlaying = it },
+        onVoicePlayProgressChange = { voicePlayProgress = it }
+    )
 
     fun shareSource() {
         val raw = info?.sourceUrl?.ifBlank { sourceUrl } ?: sourceUrl
@@ -471,14 +442,6 @@ fun BaStudentGuidePage(
         fixedFolderLauncher.launch(pickerIntent)
     }
 
-    LaunchedEffect(Unit) {
-        val latestStored = BaStudentGuideStore.loadCurrentUrl()
-        if (latestStored.isNotBlank() && latestStored != sourceUrl) {
-            sourceUrl = latestStored
-            error = null
-        }
-    }
-
     fun toggleVoicePlayback(rawAudioUrl: String) {
         val target = normalizeGuidePlaybackSource(rawAudioUrl)
         if (target.isBlank()) return
@@ -547,151 +510,53 @@ fun BaStudentGuidePage(
         }
     }
 
-    LaunchedEffect(sourceUrl, bottomTabs.size) {
-        val targetIndex = selectedBottomTabIndex.coerceIn(0, bottomTabs.lastIndex)
-        if (pagerState.currentPage != targetIndex) {
-            pagerState.scrollToPage(targetIndex)
-        }
-    }
-
-    LaunchedEffect(pagerState.settledPage) {
-        if (selectedBottomTabIndex != pagerState.settledPage) {
-            selectedBottomTabIndex = pagerState.settledPage
-        }
-    }
-
-    val voiceTabActive = activeBottomTab == GuideBottomTab.Voice
-    val voicePlayingForProgress = if (voiceTabActive) isVoicePlaying else false
-    val voiceUrlForProgress = if (voiceTabActive) playingVoiceUrl else ""
-    LaunchedEffect(voiceTabActive, voicePlayingForProgress, voiceUrlForProgress) {
-        if (!voiceTabActive || !voicePlayingForProgress || voiceUrlForProgress.isBlank()) {
-            voicePlayProgress = 0f
-            return@LaunchedEffect
-        }
-        while (voiceTabActive && voicePlayingForProgress && voiceUrlForProgress.isNotBlank()) {
-            val duration = voicePlayer.duration
-            val position = voicePlayer.currentPosition
-            voicePlayProgress = if (duration > 0L && position >= 0L) {
-                (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-            } else {
-                0f
-            }
-            delay(220)
-        }
-    }
-
-    LaunchedEffect(activeBottomTab) {
-        if (activeBottomTab == GuideBottomTab.Gallery) {
-            galleryPrefetchRequested = true
-        }
-    }
-
-    // 阶段1：进入学生图鉴后仅预加载少量静态图片，保证首屏顺滑并控制流量。
-    LaunchedEffect(sourceUrl, info?.syncedAtMs) {
-        if (staticImagePrefetchStage >= 1) return@LaunchedEffect
-        val guide = info ?: return@LaunchedEffect
-        staticImagePrefetchStage = 1
-
-        val urls = collectGuideStaticImagePrefetchUrls(guide)
-            .take(preloadPolicy.guideStaticPrefetchInitialCount)
-        if (urls.isEmpty()) return@LaunchedEffect
-
-        withContext(Dispatchers.IO) {
-            BaGuideTempMediaCache.prefetchForGuide(
-                context = context,
-                sourceUrl = sourceUrl,
-                rawUrls = urls
-            )
-        }
-        galleryCacheRevision += 1
-    }
-
-    // 阶段2：用户进入影画板块后，再补充一批静态图片；GIF/视频/音频保持按需加载。
-    LaunchedEffect(sourceUrl, galleryPrefetchRequested, info?.syncedAtMs) {
-        if (!galleryPrefetchRequested) return@LaunchedEffect
-        if (staticImagePrefetchStage >= 2) return@LaunchedEffect
-        val guide = info ?: return@LaunchedEffect
-        staticImagePrefetchStage = 2
-
-        val urls = collectGuideStaticImagePrefetchUrls(guide)
-            .drop(preloadPolicy.guideStaticPrefetchInitialCount)
-            .take(preloadPolicy.guideStaticPrefetchGalleryExtraCount)
-        if (urls.isEmpty()) return@LaunchedEffect
-
-        withContext(Dispatchers.IO) {
-            BaGuideTempMediaCache.prefetchForGuide(
-                context = context,
-                sourceUrl = sourceUrl,
-                rawUrls = urls
-            )
-        }
-        galleryCacheRevision += 1
-    }
-
-    LaunchedEffect(sourceUrl, refreshSignal) {
-        if (refreshSignal == 0 && transitionAnimationsEnabled && preloadPolicy.initialFetchDelayMs > 0) {
-            delay(preloadPolicy.initialFetchDelayMs.toLong())
-        }
-        val requestUrl = sourceUrl
-        if (requestUrl.isBlank()) return@LaunchedEffect
-        val manualRefresh = manualRefreshRequested
-        manualRefreshRequested = false
-        loading = true
-
-        val now = System.currentTimeMillis()
-        val refreshIntervalHours = withContext(Dispatchers.IO) {
-            BASettingsStore.loadCalendarRefreshIntervalHours()
-        }
-        val cacheSnapshot = withContext(Dispatchers.IO) {
-            BaStudentGuideStore.loadInfoSnapshot(requestUrl)
-        }
-        if (requestUrl != sourceUrl) return@LaunchedEffect
-
-        val cacheExpired = BaStudentGuideStore.isCacheExpired(
-            snapshot = cacheSnapshot,
-            refreshIntervalHours = refreshIntervalHours,
-            nowMs = now
-        )
-        val cacheComplete = cacheSnapshot.isComplete && cacheSnapshot.info != null
-        if (!manualRefresh && cacheComplete && !cacheExpired) {
-            info = cacheSnapshot.info
-            error = null
-            loading = false
-            return@LaunchedEffect
-        }
-
-        if (cacheComplete) {
-            info = cacheSnapshot.info
-            error = null
-        } else if (cacheSnapshot.hasCache && !cacheSnapshot.isComplete) {
-            info = null
-        }
-
-        val shouldClearLocalCache = manualRefresh || (cacheSnapshot.hasCache && (cacheExpired || !cacheSnapshot.isComplete))
-        if (shouldClearLocalCache) {
-            withContext(Dispatchers.IO) {
-                BaStudentGuideStore.clearCachedInfo(requestUrl)
-                BaGuideTempMediaCache.clearGuideCache(context, requestUrl)
-            }
-            if (requestUrl != sourceUrl) return@LaunchedEffect
-        }
-
-        val result = withContext(Dispatchers.IO) {
-            runCatching { fetchGuideInfo(requestUrl) }
-        }
-        if (requestUrl != sourceUrl) return@LaunchedEffect
-        result.onSuccess { latest ->
-            if (requestUrl != sourceUrl) return@onSuccess
-            info = latest
-            error = null
-            withContext(Dispatchers.IO) { BaStudentGuideStore.saveInfo(latest) }
-        }.onFailure {
-            if (requestUrl != sourceUrl) return@onFailure
-            error = if (info != null) "网络请求失败，已显示本地缓存" else "图鉴信息加载失败"
-        }
-        if (requestUrl != sourceUrl) return@LaunchedEffect
-        loading = false
-    }
+    BindBaStudentGuideSourceRestoreEffect(
+        sourceUrl = sourceUrl,
+        onSourceUrlChange = { sourceUrl = it },
+        onErrorChange = { error = it }
+    )
+    BindBaStudentGuidePagerSyncEffects(
+        sourceUrl = sourceUrl,
+        bottomTabsSize = bottomTabs.size,
+        selectedBottomTabIndex = selectedBottomTabIndex,
+        pagerState = pagerState,
+        onSelectedBottomTabIndexChange = { selectedBottomTabIndex = it }
+    )
+    BindBaStudentGuideVoiceProgressEffect(
+        activeBottomTab = activeBottomTab,
+        isVoicePlaying = isVoicePlaying,
+        playingVoiceUrl = playingVoiceUrl,
+        voicePlayer = voicePlayer,
+        onVoicePlayProgressChange = { voicePlayProgress = it }
+    )
+    BindBaStudentGuidePrefetchEffects(
+        context = context,
+        sourceUrl = sourceUrl,
+        guideSyncToken = guideSyncToken,
+        info = info,
+        activeBottomTab = activeBottomTab,
+        galleryPrefetchRequested = galleryPrefetchRequested,
+        onGalleryPrefetchRequestedChange = { galleryPrefetchRequested = it },
+        staticImagePrefetchStage = staticImagePrefetchStage,
+        onStaticImagePrefetchStageChange = { staticImagePrefetchStage = it },
+        initialPrefetchCount = preloadPolicy.guideStaticPrefetchInitialCount,
+        galleryExtraPrefetchCount = preloadPolicy.guideStaticPrefetchGalleryExtraCount,
+        onGalleryCacheRevisionIncrease = { galleryCacheRevision += 1 }
+    )
+    BindBaStudentGuideInfoLoadEffect(
+        context = context,
+        sourceUrl = sourceUrl,
+        refreshSignal = refreshSignal,
+        transitionAnimationsEnabled = transitionAnimationsEnabled,
+        initialFetchDelayMs = preloadPolicy.initialFetchDelayMs,
+        manualRefreshRequested = manualRefreshRequested,
+        onManualRefreshRequestedChange = { manualRefreshRequested = it },
+        currentSourceUrlProvider = { sourceUrl },
+        currentInfoProvider = { info },
+        onInfoChange = { info = it },
+        onErrorChange = { error = it },
+        onLoadingChange = { loading = it }
+    )
     val shareIcon = appLucideShareIcon()
     val refreshIcon = appLucideRefreshIcon()
     val actionItems = remember(shareSourceContentDescription, refreshContentDescription) {
@@ -744,85 +609,15 @@ fun BaStudentGuidePage(
             )
         },
         bottomBar = {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                AnimatedVisibility(
-                    visible = showBottomBar,
-                    enter = appFloatingEnter(),
-                    exit = appFloatingExit(),
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                ) {
-                    val bottomBarModifier = Modifier
-                        .padding(
-                            horizontal = 12.dp,
-                            vertical = 12.dp + navigationBarBottom
-                        )
-                    val bottomBarTabs: @Composable RowScope.() -> Unit = {
-                        bottomTabs.forEachIndexed { index, tab ->
-                            val selected = pagerState.targetPage == index
-                            val tabColor = liquidGlassBottomBarItemContentColor(index)
-                            val tabContent: @Composable ColumnScope.() -> Unit = {
-                                val tabIconModifier = Modifier
-                                    .size(20.dp)
-                                    .graphicsLayer {
-                                        scaleX = 1f
-                                        scaleY = 1f
-                                    }
-                                if (tab.localLogoRes != null) {
-                                    val useThemeTintForLocalLogo =
-                                        tab == GuideBottomTab.Skills || tab == GuideBottomTab.Profile || tab == GuideBottomTab.Simulate
-                                    Icon(
-                                        painter = painterResource(id = tab.localLogoRes),
-                                        contentDescription = tab.label,
-                                        tint = if (useThemeTintForLocalLogo) {
-                                            tabColor
-                                        } else {
-                                            Color.Unspecified
-                                        },
-                                        modifier = tabIconModifier
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = tab.icon,
-                                        contentDescription = tab.label,
-                                        tint = tabColor,
-                                        modifier = tabIconModifier
-                                    )
-                                }
-                                Text(
-                                    text = tab.label,
-                                    fontSize = 11.sp,
-                                    lineHeight = 14.sp,
-                                    color = tabColor,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    overflow = TextOverflow.Visible
-                                )
-                            }
-                            LiquidGlassBottomBarItem(
-                                selected = selected,
-                                tabIndex = index,
-                                onClick = { selectBottomTab(index) },
-                                modifier = Modifier.defaultMinSize(minWidth = 76.dp),
-                                content = tabContent
-                            )
-                        }
-                    }
-
-                    LiquidGlassBottomBar(
-                        modifier = bottomBarModifier,
-                        selectedIndex = pagerState.targetPage,
-                        onSelected = { index ->
-                            if (index != pagerState.targetPage) {
-                                selectBottomTab(index)
-                            }
-                        },
-                        backdrop = navBackdrop,
-                        tabsCount = bottomTabs.size,
-                        isLiquidEffectEnabled = liquidBottomBarEnabled,
-                        content = bottomBarTabs
-                    )
-                }
-            }
+            BaStudentGuideBottomBar(
+                visible = showBottomBar,
+                navigationBarBottom = navigationBarBottom,
+                bottomTabs = bottomTabs.toList(),
+                selectedPage = pagerState.targetPage,
+                backdrop = navBackdrop,
+                isLiquidEffectEnabled = liquidBottomBarEnabled,
+                onSelectTab = ::selectBottomTab
+            )
         }
     ) { innerPadding ->
         BaStudentGuidePagerContent(
