@@ -93,6 +93,89 @@ internal fun BaCalendarSectionHeaderCard(
 }
 
 @Composable
+internal fun BaCalendarCard(
+    backdrop: Backdrop?,
+    isPageActive: Boolean,
+    serverOptions: List<String>,
+    serverIndex: Int,
+    baCalendarLoading: Boolean,
+    baCalendarLastSyncMs: Long,
+    baCalendarError: String?,
+    visibleCalendarEntries: List<BaCalendarEntry>,
+    nowMs: Long,
+    showEndedActivities: Boolean,
+    showCalendarPoolImages: Boolean,
+    effectsEnabled: Boolean,
+    onRefreshCalendar: () -> Unit,
+    onOpenCalendarLink: (String) -> Unit,
+) {
+    val countdownBlue = Color(0xFF60A5FA)
+    val serverTimeZone = serverRefreshTimeZone(serverIndex)
+    BaGlassCard(
+        backdrop = backdrop,
+        accentColor = Color(0xFF3B82F6),
+        accentAlpha = 0f,
+        effectsEnabled = effectsEnabled,
+    ) {
+        BaCardHeader(
+            title = "活动日历 · ${serverOptions[serverIndex]}",
+            trailing = {
+                Text(
+                    text = if (baCalendarLoading) "同步中..." else formatBaDateTimeNoYearInTimeZone(
+                        baCalendarLastSyncMs,
+                        serverTimeZone
+                    ),
+                    color = countdownBlue,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = MiuixIcons.Regular.Refresh,
+                    contentDescription = "刷新活动日历",
+                    variant = GlassVariant.Content,
+                    onClick = onRefreshCalendar,
+                )
+            },
+        )
+        when {
+            !baCalendarError.isNullOrBlank() -> {
+                BaCalendarStatePanel(
+                    backdrop = backdrop,
+                    text = baCalendarError,
+                    accentColor = Color(0xFFF59E0B),
+                    effectsEnabled = effectsEnabled
+                )
+            }
+
+            !baCalendarLoading && visibleCalendarEntries.isEmpty() -> {
+                BaCalendarStatePanel(
+                    backdrop = backdrop,
+                    text = if (showEndedActivities) "暂无活动" else "暂无进行中或即将开始的活动",
+                    accentColor = MiuixTheme.colorScheme.onBackgroundVariant,
+                    effectsEnabled = effectsEnabled
+                )
+            }
+
+            else -> {
+                visibleCalendarEntries.forEach { activity ->
+                    BaCalendarEntryPanel(
+                        backdrop = backdrop,
+                        isPageActive = isPageActive,
+                        serverIndex = serverIndex,
+                        activity = activity,
+                        nowMs = nowMs,
+                        showCalendarPoolImages = showCalendarPoolImages,
+                        effectsEnabled = effectsEnabled,
+                        onOpenCalendarLink = onOpenCalendarLink
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 internal fun BaCalendarStatePanel(
     backdrop: Backdrop?,
     text: String,
@@ -242,6 +325,91 @@ internal fun BaPoolSectionHeaderCard(
                 )
             },
         )
+    }
+}
+
+@Composable
+internal fun BaPoolCard(
+    backdrop: Backdrop?,
+    isPageActive: Boolean,
+    serverOptions: List<String>,
+    serverIndex: Int,
+    baPoolLoading: Boolean,
+    baPoolLastSyncMs: Long,
+    baPoolError: String?,
+    visiblePoolEntries: List<BaPoolEntry>,
+    nowMs: Long,
+    showEndedPools: Boolean,
+    showCalendarPoolImages: Boolean,
+    effectsEnabled: Boolean,
+    onRefreshPool: () -> Unit,
+    onOpenPoolStudentGuide: (String) -> Unit,
+    onOpenCalendarLink: (String) -> Unit,
+) {
+    val countdownBlue = Color(0xFF60A5FA)
+    val serverTimeZone = serverRefreshTimeZone(serverIndex)
+    BaGlassCard(
+        backdrop = backdrop,
+        accentColor = Color(0xFF3B82F6),
+        accentAlpha = 0f,
+        effectsEnabled = effectsEnabled,
+    ) {
+        BaCardHeader(
+            title = "卡池信息 · ${serverOptions[serverIndex]}",
+            trailing = {
+                Text(
+                    text = if (baPoolLoading) "同步中..." else formatBaDateTimeNoYearInTimeZone(
+                        baPoolLastSyncMs,
+                        serverTimeZone
+                    ),
+                    color = countdownBlue,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                GlassIconButton(
+                    backdrop = backdrop,
+                    icon = MiuixIcons.Regular.Refresh,
+                    contentDescription = "刷新卡池",
+                    variant = GlassVariant.Content,
+                    onClick = onRefreshPool,
+                )
+            },
+        )
+        when {
+            !baPoolError.isNullOrBlank() -> {
+                BaPoolStatePanel(
+                    backdrop = backdrop,
+                    text = baPoolError,
+                    accentColor = Color(0xFFF59E0B),
+                    effectsEnabled = effectsEnabled
+                )
+            }
+
+            !baPoolLoading && visiblePoolEntries.isEmpty() -> {
+                BaPoolStatePanel(
+                    backdrop = backdrop,
+                    text = if (showEndedPools) "暂无卡池" else "暂无进行中或即将开始的卡池",
+                    accentColor = MiuixTheme.colorScheme.onBackgroundVariant,
+                    effectsEnabled = effectsEnabled
+                )
+            }
+
+            else -> {
+                visiblePoolEntries.forEach { pool ->
+                    BaPoolEntryPanel(
+                        backdrop = backdrop,
+                        isPageActive = isPageActive,
+                        serverIndex = serverIndex,
+                        pool = pool,
+                        nowMs = nowMs,
+                        showCalendarPoolImages = showCalendarPoolImages,
+                        effectsEnabled = effectsEnabled,
+                        onOpenPoolStudentGuide = onOpenPoolStudentGuide,
+                        onOpenCalendarLink = onOpenCalendarLink
+                    )
+                }
+            }
+        }
     }
 }
 

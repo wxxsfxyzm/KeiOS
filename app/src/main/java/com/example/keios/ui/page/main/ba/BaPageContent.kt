@@ -16,15 +16,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.ba.card.BaCafeCard
-import com.example.keios.ui.page.main.ba.card.BaCalendarEntryPanel
-import com.example.keios.ui.page.main.ba.card.BaCalendarSectionHeaderCard
-import com.example.keios.ui.page.main.ba.card.BaCalendarStatePanel
+import com.example.keios.ui.page.main.ba.card.BaCalendarCard
 import com.example.keios.ui.page.main.ba.card.BaDebugCard
 import com.example.keios.ui.page.main.ba.card.BaIdCard
 import com.example.keios.ui.page.main.ba.card.BaOverviewCard
-import com.example.keios.ui.page.main.ba.card.BaPoolEntryPanel
-import com.example.keios.ui.page.main.ba.card.BaPoolSectionHeaderCard
-import com.example.keios.ui.page.main.ba.card.BaPoolStatePanel
+import com.example.keios.ui.page.main.ba.card.BaPoolCard
 import com.example.keios.ui.page.main.ba.card.filterVisibleCalendarEntries
 import com.example.keios.ui.page.main.ba.card.filterVisiblePoolEntries
 import com.example.keios.ui.page.main.ba.support.BAInitState
@@ -32,7 +28,6 @@ import com.example.keios.ui.page.main.ba.support.BaCalendarEntry
 import com.example.keios.ui.page.main.ba.support.BaPoolEntry
 import com.kyant.backdrop.Backdrop
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal data class BaPageContentState(
     val isPageActive: Boolean,
@@ -208,116 +203,44 @@ internal fun BaPageContent(
         item { Spacer(modifier = Modifier.height(10.dp)) }
 
         item {
-            BaCalendarSectionHeaderCard(
+            BaCalendarCard(
                 backdrop = backdrop,
+                isPageActive = state.isPageActive,
                 serverOptions = state.serverOptions,
                 serverIndex = state.serverIndex,
                 baCalendarLoading = state.baCalendarLoading,
                 baCalendarLastSyncMs = state.baCalendarLastSyncMs,
+                baCalendarError = state.baCalendarError,
+                visibleCalendarEntries = visibleCalendarEntries,
+                nowMs = calendarPoolNowMs,
+                showEndedActivities = state.showEndedActivities,
+                showCalendarPoolImages = state.showCalendarPoolImages,
                 effectsEnabled = calendarPoolEffectsEnabled,
                 onRefreshCalendar = actions.onRefreshCalendar,
+                onOpenCalendarLink = actions.onOpenCalendarLink
             )
-        }
-
-        when {
-            !state.baCalendarError.isNullOrBlank() -> {
-                item {
-                    BaCalendarStatePanel(
-                        backdrop = backdrop,
-                        text = state.baCalendarError.orEmpty(),
-                        accentColor = androidx.compose.ui.graphics.Color(0xFFF59E0B),
-                        effectsEnabled = calendarPoolEffectsEnabled
-                    )
-                }
-            }
-
-            !state.baCalendarLoading && visibleCalendarEntries.isEmpty() -> {
-                item {
-                    BaCalendarStatePanel(
-                        backdrop = backdrop,
-                        text = if (state.showEndedActivities) "暂无活动" else "暂无进行中或即将开始的活动",
-                        accentColor = MiuixTheme.colorScheme.onBackgroundVariant,
-                        effectsEnabled = calendarPoolEffectsEnabled
-                    )
-                }
-            }
-
-            else -> {
-                items(
-                    items = visibleCalendarEntries,
-                    key = { activity -> "calendar-${activity.id}-${activity.beginAtMs}-${activity.endAtMs}" },
-                    contentType = { "ba_calendar_entry" }
-                ) { activity ->
-                    BaCalendarEntryPanel(
-                        backdrop = backdrop,
-                        isPageActive = state.isPageActive,
-                        serverIndex = state.serverIndex,
-                        activity = activity,
-                        nowMs = calendarPoolNowMs,
-                        showCalendarPoolImages = state.showCalendarPoolImages,
-                        effectsEnabled = calendarPoolEffectsEnabled,
-                        onOpenCalendarLink = actions.onOpenCalendarLink
-                    )
-                }
-            }
         }
 
         item { Spacer(modifier = Modifier.height(10.dp)) }
 
         item {
-            BaPoolSectionHeaderCard(
+            BaPoolCard(
                 backdrop = backdrop,
+                isPageActive = state.isPageActive,
                 serverOptions = state.serverOptions,
                 serverIndex = state.serverIndex,
                 baPoolLoading = state.baPoolLoading,
                 baPoolLastSyncMs = state.baPoolLastSyncMs,
+                baPoolError = state.baPoolError,
+                visiblePoolEntries = visiblePoolEntries,
+                nowMs = calendarPoolNowMs,
+                showEndedPools = state.showEndedPools,
+                showCalendarPoolImages = state.showCalendarPoolImages,
                 effectsEnabled = calendarPoolEffectsEnabled,
                 onRefreshPool = actions.onRefreshPool,
+                onOpenPoolStudentGuide = actions.onOpenPoolStudentGuide,
+                onOpenCalendarLink = actions.onOpenCalendarLink
             )
-        }
-
-        when {
-            !state.baPoolError.isNullOrBlank() -> {
-                item {
-                    BaPoolStatePanel(
-                        backdrop = backdrop,
-                        text = state.baPoolError.orEmpty(),
-                        accentColor = androidx.compose.ui.graphics.Color(0xFFF59E0B),
-                        effectsEnabled = calendarPoolEffectsEnabled
-                    )
-                }
-            }
-
-            !state.baPoolLoading && visiblePoolEntries.isEmpty() -> {
-                item {
-                    BaPoolStatePanel(
-                        backdrop = backdrop,
-                        text = "暂无进行中或即将开始的卡池",
-                        accentColor = MiuixTheme.colorScheme.onBackgroundVariant,
-                        effectsEnabled = calendarPoolEffectsEnabled
-                    )
-                }
-            }
-
-            else -> {
-                items(
-                    items = visiblePoolEntries,
-                    key = { pool -> "pool-${pool.id}-${pool.startAtMs}-${pool.endAtMs}" },
-                    contentType = { "ba_pool_entry" }
-                ) { pool ->
-                    BaPoolEntryPanel(
-                        backdrop = backdrop,
-                        isPageActive = state.isPageActive,
-                        serverIndex = state.serverIndex,
-                        pool = pool,
-                        nowMs = calendarPoolNowMs,
-                        showCalendarPoolImages = state.showCalendarPoolImages,
-                        effectsEnabled = calendarPoolEffectsEnabled,
-                        onOpenPoolStudentGuide = actions.onOpenPoolStudentGuide,
-                        onOpenCalendarLink = actions.onOpenCalendarLink
-                    )
-                }
-            }
         }
 
         item { Spacer(modifier = Modifier.height(10.dp)) }

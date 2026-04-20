@@ -98,11 +98,17 @@ internal fun rememberMainPagerTabJumpController(
     val onPageSelected: (Int) -> Unit = { index ->
         if (index in tabs.indices) {
             showBottomBar = true
-            if (index != pagerRuntime.stablePageIndex || pagerRuntime.isPagerScrollInProgress) {
+            val activeTargetIndex = pagerState.targetPage.coerceIn(0, tabs.lastIndex)
+            if (index != activeTargetIndex || pagerState.isScrollInProgress) {
+                val fromIndex = if (pagerState.isScrollInProgress) {
+                    activeTargetIndex
+                } else {
+                    pagerState.currentPage.coerceIn(0, tabs.lastIndex)
+                }
                 tabJumpJob?.cancel()
                 tabJumpJob = coroutineScope.launch {
                     pagerState.animateTabSwitch(
-                        fromIndex = pagerRuntime.stablePageIndex,
+                        fromIndex = fromIndex,
                         targetIndex = index,
                         animationsEnabled = transitionAnimationsEnabled,
                         onFarJumpBefore = farJumpBefore,
@@ -121,11 +127,16 @@ internal fun rememberMainPagerTabJumpController(
     LaunchedEffect(requestedBottomPageToken, requestedBottomPage, tabs) {
         val target = requestedBottomPage ?: return@LaunchedEffect
         val index = tabs.indexOfFirst { it.name == target }
-        if (index >= 0 && index != pagerRuntime.stablePageIndex) {
+        val currentStableIndex = if (pagerState.isScrollInProgress) {
+            pagerState.targetPage
+        } else {
+            pagerState.currentPage
+        }.coerceIn(0, tabs.lastIndex)
+        if (index >= 0 && index != currentStableIndex) {
             tabJumpJob?.cancel()
             tabJumpJob = coroutineScope.launch {
                 pagerState.animateTabSwitch(
-                    fromIndex = pagerRuntime.stablePageIndex,
+                    fromIndex = currentStableIndex,
                     targetIndex = index,
                     animationsEnabled = transitionAnimationsEnabled,
                     onFarJumpBefore = farJumpBefore,
