@@ -4,11 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,8 +14,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.core.prefs.AppThemeMode
-import com.example.keios.core.prefs.CacheEntrySummary
-import com.example.keios.core.prefs.CacheStores
 import com.example.keios.ui.page.main.os.appLucideBackIcon
 import com.example.keios.ui.page.main.settings.section.SettingsAnimationSection
 import com.example.keios.ui.page.main.settings.section.SettingsBackgroundSection
@@ -30,12 +24,11 @@ import com.example.keios.ui.page.main.settings.section.SettingsLogSection
 import com.example.keios.ui.page.main.settings.section.SettingsNotifySection
 import com.example.keios.ui.page.main.settings.section.SettingsVisualSection
 import com.example.keios.ui.page.main.settings.state.rememberSettingsBackgroundController
+import com.example.keios.ui.page.main.settings.state.rememberSettingsCacheController
 import com.example.keios.ui.page.main.settings.state.rememberSettingsLogController
 import com.example.keios.ui.page.main.settings.state.rememberSettingsPageUiState
 import com.example.keios.ui.page.main.widget.chrome.AppPageLazyColumn
 import com.example.keios.ui.page.main.widget.chrome.AppPageScaffold
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -95,23 +88,10 @@ fun SettingsPage(
         logDebugEnabled = logDebugEnabled,
         pageUiState = pageUiState
     )
-
-    var cacheEntries by remember(cacheDiagnosticsEnabled) {
-        mutableStateOf<List<CacheEntrySummary>?>(if (cacheDiagnosticsEnabled) null else emptyList())
-    }
-    var cacheEntriesLoading by remember(cacheDiagnosticsEnabled) {
-        mutableStateOf(cacheDiagnosticsEnabled)
-    }
-    LaunchedEffect(cacheDiagnosticsEnabled, pageUiState.cacheReloadSignal) {
-        if (!cacheDiagnosticsEnabled) {
-            cacheEntries = emptyList()
-            cacheEntriesLoading = false
-            return@LaunchedEffect
-        }
-        cacheEntriesLoading = cacheEntries == null
-        cacheEntries = withContext(Dispatchers.IO) { CacheStores.list(context) }
-        cacheEntriesLoading = false
-    }
+    val cacheController = rememberSettingsCacheController(
+        context = context,
+        cacheDiagnosticsEnabled = cacheDiagnosticsEnabled
+    )
 
     val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
@@ -228,13 +208,13 @@ fun SettingsPage(
                     SettingsCacheSection(
                         cacheDiagnosticsEnabled = cacheDiagnosticsEnabled,
                         onCacheDiagnosticsChanged = onCacheDiagnosticsChanged,
-                        cacheEntries = cacheEntries,
-                        cacheEntriesLoading = cacheEntriesLoading,
-                        clearingAllCaches = pageUiState.clearingAllCaches,
-                        onClearingAllCachesChange = { pageUiState.clearingAllCaches = it },
-                        clearingCacheId = pageUiState.clearingCacheId,
-                        onClearingCacheIdChange = { pageUiState.clearingCacheId = it },
-                        onCacheReload = pageUiState::requestCacheReload,
+                        cacheEntries = cacheController.cacheEntries,
+                        cacheEntriesLoading = cacheController.cacheEntriesLoading,
+                        clearingAllCaches = cacheController.clearingAllCaches,
+                        onClearingAllCachesChange = { cacheController.clearingAllCaches = it },
+                        clearingCacheId = cacheController.clearingCacheId,
+                        onClearingCacheIdChange = { cacheController.clearingCacheId = it },
+                        onCacheReload = cacheController::requestCacheReload,
                         enabledCardColor = enabledCardColor,
                         disabledCardColor = disabledCardColor
                     )

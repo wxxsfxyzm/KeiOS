@@ -4,19 +4,13 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageInfo
 import android.os.Build
-import android.widget.Toast
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -29,8 +23,6 @@ import com.example.keios.mcp.server.McpServerManager
 import com.example.keios.ui.navigation.KeiosRoute
 import com.example.keios.ui.navigation.Navigator
 import com.example.keios.ui.page.main.student.BaStudentGuideStore
-import com.example.keios.ui.page.main.student.fetch.extractGuideContentIdFromUrl
-import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -62,19 +54,14 @@ fun MainScreen(
     val currentNotificationPermissionGranted by rememberUpdatedState(notificationPermissionGranted)
     val currentOnCheckOrRequestShizuku by rememberUpdatedState(onCheckOrRequestShizuku)
     val currentOnAppThemeModeChanged by rememberUpdatedState(onAppThemeModeChanged)
-    var mainResumeFromSettingsToken by rememberSaveable { mutableIntStateOf(0) }
-    var previousTopRoute by remember { mutableStateOf<NavKey?>(null) }
-    LaunchedEffect(backStack.lastOrNull()) {
-        val currentTopRoute = backStack.lastOrNull()
-        if (previousTopRoute == KeiosRoute.Settings && currentTopRoute == KeiosRoute.Main) {
-            mainResumeFromSettingsToken++
+    val mainResumeFromSettingsToken = rememberMainScreenSettingsReturnToken(backStack)
+    BindMainScreenRequestedBottomPageEffect(
+        requestedBottomPageToken = requestedBottomPageToken,
+        requestedBottomPage = requestedBottomPage,
+        onReturnToMain = {
+            navigator.popUntil { it == KeiosRoute.Main }
         }
-        previousTopRoute = currentTopRoute
-    }
-    LaunchedEffect(requestedBottomPageToken, requestedBottomPage) {
-        if (requestedBottomPage.isNullOrBlank()) return@LaunchedEffect
-        navigator.popUntil { it == KeiosRoute.Main }
-    }
+    )
     val uiPrefsSnapshot by produceState(
         initialValue = UiPrefs.defaultSnapshot(appThemeMode)
     ) {
@@ -86,17 +73,13 @@ fun MainScreen(
         mcpServerManager = mcpServerManager
     )
     val poolGuideMissingText = stringResource(R.string.main_toast_pool_guide_missing)
-    val openGuideDetail: (String) -> Unit = { rawUrl ->
-        val normalized = normalizeGuideUrl(rawUrl)
-        val contentId = if (normalized.isBlank()) null else extractGuideContentIdFromUrl(normalized)
-        if (contentId == null || contentId <= 0L) {
-            Toast.makeText(context, poolGuideMissingText, Toast.LENGTH_SHORT).show()
-        } else {
-            val canonicalGuideUrl = "https://www.gamekee.com/ba/tj/$contentId.html"
+    val openGuideDetail = rememberMainScreenOpenGuideDetailAction(
+        poolGuideMissingText = poolGuideMissingText,
+        onNavigateToCanonicalGuide = { canonicalGuideUrl ->
             BaStudentGuideStore.setCurrentUrl(canonicalGuideUrl)
             navigator.push(KeiosRoute.BaStudentGuide(nonce = System.nanoTime()))
         }
-    }
+    )
     if (!view.isInEditMode) {
         SideEffect {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@SideEffect
