@@ -140,6 +140,7 @@ private const val HOME_VISIBLE_OVERVIEW_CARDS_KEY = "home_visible_overview_cards
 private const val HOME_BA_DEFAULT_FRIEND_CODE = "ARISUKEI"
 private const val HOME_BA_AP_LIMIT_MAX = 240
 private const val HOME_BA_AP_MAX = 999
+private const val HOME_HEADER_SINK_PER_HIDDEN_CARD_DP = 22
 private val HOME_BA_CAFE_DAILY_AP_BY_LEVEL = intArrayOf(92, 152, 222, 302, 390, 460, 530, 600, 570, 740)
 private val HOME_KEI_TITLE_GRADIENT_COLORS = listOf(
     Color(0xFFFFD2DE),
@@ -766,6 +767,8 @@ fun HomePage(
             )
         )
     }
+    val hiddenOverviewCardCount = (HomeOverviewCard.entries.size - visibleOverviewCards.size).coerceAtLeast(0)
+    val homeHeaderSinkOffset = (hiddenOverviewCardCount * HOME_HEADER_SINK_PER_HIDDEN_CARD_DP).dp
 
     Scaffold(
         topBar = {
@@ -898,7 +901,7 @@ fun HomePage(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
-                        top = logoPadding.calculateTopPadding() + 36.dp,
+                        top = logoPadding.calculateTopPadding() + 36.dp + homeHeaderSinkOffset,
                         start = logoPadding.calculateStartPadding(layoutDirection),
                         end = logoPadding.calculateEndPadding(layoutDirection)
                     )
@@ -1053,7 +1056,8 @@ fun HomePage(
                             .height(
                                 logoHeightDp + 36.dp +
                                     logoPadding.calculateTopPadding() -
-                                    listContentPadding.calculateTopPadding() + 90.dp
+                                    listContentPadding.calculateTopPadding() + 90.dp +
+                                    homeHeaderSinkOffset
                             )
                             .onSizeChanged { size ->
                                 logoHeightPx = size.height
