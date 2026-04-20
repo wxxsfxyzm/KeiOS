@@ -6,7 +6,6 @@ import android.content.pm.PackageInfo
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -15,14 +14,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -54,14 +49,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
@@ -82,12 +74,7 @@ import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import com.example.keios.ui.perf.ReportPagerPerformanceState
 import com.example.keios.ui.page.main.widget.motion.AppMotionTokens
 import com.example.keios.ui.page.main.widget.glass.UiPerformanceBudget
-import com.example.keios.ui.page.main.widget.chrome.LiquidGlassBottomBar
-import com.example.keios.ui.page.main.widget.chrome.LiquidGlassBottomBarItem
-import com.example.keios.ui.page.main.widget.chrome.liquidGlassBottomBarItemContentColor
 import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
-import com.example.keios.ui.page.main.widget.motion.appFloatingEnter
-import com.example.keios.ui.page.main.widget.motion.appFloatingExit
 import com.example.keios.ui.page.main.widget.motion.resolvedMotionDuration
 import com.example.keios.core.log.AppLogger
 import com.example.keios.core.system.ShizukuApiUtils
@@ -107,7 +94,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -615,6 +601,20 @@ private fun MainPagerLayout(
     val systemInsets = WindowInsets.safeDrawing.union(WindowInsets.navigationBars).asPaddingValues()
     val homeTopInset = systemInsets.calculateTopPadding()
     val homeBottomInset = systemInsets.calculateBottomPadding()
+    val handleActionBarInteractingChanged: (Boolean) -> Unit = { interacting ->
+        pagerScrollEnabled = !interacting
+    }
+    val handleBottomPageVisibilityChange: (BottomPage, Boolean) -> Unit = { page, visible ->
+        if (page != BottomPage.Home) {
+            val updated = visibleBottomPageNames
+                .toMutableSet()
+                .apply {
+                    if (visible) add(page.name) else remove(page.name)
+                }
+                .toSet()
+            onVisibleBottomPageNamesChange(updated)
+        }
+    }
 
     LaunchedEffect(tabs.size) {
         val lastIndex = tabs.lastIndex
@@ -664,80 +664,20 @@ private fun MainPagerLayout(
             .background(MiuixTheme.colorScheme.background)
             .nestedScroll(nestedScrollConnection),
         bottomBar = {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                AnimatedVisibility(
-                    visible = showBottomBar,
-                    enter = appFloatingEnter(),
-                    exit = appFloatingExit(),
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                ) {
-                    val bottomBarModifier = Modifier
-                        .padding(
-                            horizontal = 12.dp,
-                            vertical = 12.dp + navigationBarBottom
-                        )
-                    val bottomBarTabs: @Composable RowScope.() -> Unit = {
-                        tabs.forEachIndexed { index, page ->
-                            val selected = pagerState.targetPage == index
-                            val tabColor = liquidGlassBottomBarItemContentColor(index)
-                            LiquidGlassBottomBarItem(
-                                selected = selected,
-                                tabIndex = index,
-                                onClick = { handlePageSelected(index) },
-                                modifier = Modifier.defaultMinSize(minWidth = 76.dp)
-                            ) {
-                                val tabIconModifier = Modifier
-                                    .size(20.dp)
-                                    .graphicsLayer {
-                                        scaleX = page.iconScale
-                                        scaleY = page.iconScale
-                                    }
-                                if (page.iconRes != null) {
-                                    Icon(
-                                        painter = painterResource(id = page.iconRes),
-                                        contentDescription = page.label,
-                                        tint = if (page.keepOriginalColors) Color.Unspecified else tabColor,
-                                        modifier = tabIconModifier
-                                    )
-                                } else {
-                                    page.icon?.let { icon ->
-                                        Icon(
-                                            imageVector = icon,
-                                            contentDescription = page.label,
-                                            tint = tabColor,
-                                            modifier = tabIconModifier
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = page.label,
-                                    fontSize = 11.sp,
-                                    lineHeight = 14.sp,
-                                    color = tabColor,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    overflow = TextOverflow.Visible
-                                )
-                            }
-                        }
+            MainPagerBottomBar(
+                visible = showBottomBar,
+                navigationBarBottom = navigationBarBottom,
+                tabs = tabs,
+                selectedPageIndex = pagerState.targetPage,
+                backdrop = backdrop,
+                reduceEffectsDuringPagerScroll = pagerState.isScrollInProgress,
+                liquidBottomBarEnabled = liquidBottomBarEnabled,
+                onPageSelected = { index ->
+                    if (index != pagerState.targetPage) {
+                        handlePageSelected(index)
                     }
-
-                    LiquidGlassBottomBar(
-                        modifier = bottomBarModifier,
-                        selectedIndex = pagerState.targetPage,
-                        onSelected = { index ->
-                            if (index != pagerState.targetPage) {
-                                handlePageSelected(index)
-                            }
-                        },
-                        backdrop = backdrop,
-                        tabsCount = tabs.size,
-                        reduceEffectsDuringPagerScroll = pagerState.isScrollInProgress,
-                        isLiquidEffectEnabled = liquidBottomBarEnabled,
-                        content = bottomBarTabs
-                    )
                 }
-            }
+            )
         }
     ) { _ ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -755,139 +695,37 @@ private fun MainPagerLayout(
                     .graphicsLayer { alpha = farJumpAlpha.value }
                     .layerBackdrop(backdrop)
             ) { pageIndex ->
-
-                val currentPageType = tabs[pageIndex]
-                val isHome = currentPageType == BottomPage.Home
-                val isTopBarManagedPage = currentPageType == BottomPage.Os ||
-                    currentPageType == BottomPage.Ba ||
-                    currentPageType == BottomPage.Mcp ||
-                    currentPageType == BottomPage.GitHub
-
-                val pageHorizontalPadding = when {
-                    isHome -> 0.dp
-                    isTopBarManagedPage -> 0.dp
-                    else -> 18.dp
-                }
-                val contentInsets = when {
-                    isHome -> PaddingValues(0.dp)
-                    isTopBarManagedPage -> PaddingValues(0.dp)
-                    else -> systemInsets
-                }
-                val topSpacerPadding = when {
-                    isHome -> 0.dp
-                    isTopBarManagedPage -> 0.dp
-                    else -> 14.dp
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = pageHorizontalPadding)
-                        .padding(contentInsets)
-                        .padding(top = topSpacerPadding)
-                ) {
-                    when (currentPageType) {
-                        BottomPage.Home -> {
-                            HomePage(
-                                shizukuStatus = shizukuStatus,
-                                mcpOverview = homeMcpOverview,
-                                homeGitHubOverview = homeGitHubOverview,
-                                homeBaOverview = homeBaOverview,
-                                homeIconHdrEnabled = homeIconHdrEnabled,
-                                runtime = pagerRuntime.pageRuntime(
-                                    pageIndex = pageIndex,
-                                    contentTopPadding = homeTopInset,
-                                    contentBottomPadding = homeBottomInset
-                                ),
-                                liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                                visibleBottomPages = visibleTabsSnapshot,
-                                onBottomPageVisibilityChange = { page, visible ->
-                                    if (page == BottomPage.Home) return@HomePage
-                                    val updated = visibleBottomPageNames
-                                        .toMutableSet()
-                                        .apply {
-                                            if (visible) add(page.name) else remove(page.name)
-                                        }
-                                        .toSet()
-                                    onVisibleBottomPageNamesChange(updated)
-                                },
-                                onOpenSettings = { navigator.pushSingleTop(KeiosRoute.Settings) },
-                                onOpenAbout = { navigator.pushSingleTop(KeiosRoute.About) },
-                                onActionBarInteractingChanged = { interacting ->
-                                    pagerScrollEnabled = !interacting
-                                }
-                            )
-                        }
-                        BottomPage.Os -> {
-                            OsPage(
-                                runtime = pagerRuntime.pageRuntime(
-                                    pageIndex = pageIndex,
-                                    scrollToTopSignal = osScrollToTopSignal,
-                                    contentBottomPadding = bottomOverlayPadding
-                                ),
-                                shizukuStatus = shizukuStatus,
-                                shizukuApiUtils = shizukuApiUtils,
-                                cardPressFeedbackEnabled = cardPressFeedbackEnabled,
-                                liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                                onActionBarInteractingChanged = { interacting ->
-                                    pagerScrollEnabled = !interacting
-                                }
-                            )
-                        }
-                        BottomPage.Ba -> {
-                            BAPage(
-                                runtime = pagerRuntime.pageRuntime(
-                                    pageIndex = pageIndex,
-                                    scrollToTopSignal = baScrollToTopSignal,
-                                    contentBottomPadding = bottomOverlayPadding
-                                ),
-                                preloadingEnabled = preloadingEnabled,
-                                cardPressFeedbackEnabled = cardPressFeedbackEnabled,
-                                liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                                onOpenPoolStudentGuide = { sourceUrl ->
-                                    onOpenGuideDetail(sourceUrl)
-                                },
-                                onOpenGuideCatalog = {
-                                    navigator.pushSingleTop(KeiosRoute.BaGuideCatalog)
-                                },
-                                onActionBarInteractingChanged = { interacting ->
-                                    pagerScrollEnabled = !interacting
-                                }
-                            )
-                        }
-                        BottomPage.Mcp -> {
-                            McpPage(
-                                mcpServerManager = mcpServerManager,
-                                runtime = pagerRuntime.pageRuntime(
-                                    pageIndex = pageIndex,
-                                    scrollToTopSignal = mcpScrollToTopSignal,
-                                    contentBottomPadding = bottomOverlayPadding
-                                ),
-                                cardPressFeedbackEnabled = cardPressFeedbackEnabled,
-                                liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                                onOpenSkill = { navigator.pushSingleTop(KeiosRoute.McpSkill) },
-                                onActionBarInteractingChanged = { interacting ->
-                                    pagerScrollEnabled = !interacting
-                                }
-                            )
-                        }
-                        BottomPage.GitHub -> {
-                            GitHubPage(
-                                runtime = pagerRuntime.pageRuntime(
-                                    pageIndex = pageIndex,
-                                    scrollToTopSignal = githubScrollToTopSignal,
-                                    contentBottomPadding = bottomOverlayPadding
-                                ),
-                                externalRefreshTriggerToken = requestedGitHubRefreshToken,
-                                cardPressFeedbackEnabled = cardPressFeedbackEnabled,
-                                liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                                onActionBarInteractingChanged = { interacting ->
-                                    pagerScrollEnabled = !interacting
-                                }
-                            )
-                        }
-                    }
-                }
+                MainPagerPageHost(
+                    pageType = tabs[pageIndex],
+                    pageIndex = pageIndex,
+                    pagerRuntime = pagerRuntime,
+                    visibleBottomPages = visibleTabsSnapshot,
+                    shizukuStatus = shizukuStatus,
+                    shizukuApiUtils = shizukuApiUtils,
+                    cardPressFeedbackEnabled = cardPressFeedbackEnabled,
+                    liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
+                    homeIconHdrEnabled = homeIconHdrEnabled,
+                    preloadingEnabled = preloadingEnabled,
+                    mcpServerManager = mcpServerManager,
+                    homeMcpOverview = homeMcpOverview,
+                    homeGitHubOverview = homeGitHubOverview,
+                    homeBaOverview = homeBaOverview,
+                    homeTopInset = homeTopInset,
+                    homeBottomInset = homeBottomInset,
+                    bottomOverlayPadding = bottomOverlayPadding,
+                    requestedGitHubRefreshToken = requestedGitHubRefreshToken,
+                    osScrollToTopSignal = osScrollToTopSignal,
+                    baScrollToTopSignal = baScrollToTopSignal,
+                    mcpScrollToTopSignal = mcpScrollToTopSignal,
+                    githubScrollToTopSignal = githubScrollToTopSignal,
+                    onBottomPageVisibilityChange = handleBottomPageVisibilityChange,
+                    onOpenSettings = { navigator.pushSingleTop(KeiosRoute.Settings) },
+                    onOpenAbout = { navigator.pushSingleTop(KeiosRoute.About) },
+                    onOpenPoolGuideDetail = onOpenGuideDetail,
+                    onOpenBaGuideCatalog = { navigator.pushSingleTop(KeiosRoute.BaGuideCatalog) },
+                    onOpenMcpSkill = { navigator.pushSingleTop(KeiosRoute.McpSkill) },
+                    onActionBarInteractingChanged = handleActionBarInteractingChanged
+                )
             }
 
             if (pagerRuntime.shouldRenderNonHomeBackground) {
