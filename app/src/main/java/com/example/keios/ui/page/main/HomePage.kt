@@ -272,7 +272,7 @@ private fun HomeInfoCard(
 
     Box(
         modifier = Modifier
-            .padding(horizontal = 10.dp)
+            .padding(horizontal = 6.dp)
             .padding(bottom = 8.dp)
             .drawBackdrop(
                 backdrop = backdrop,
@@ -298,7 +298,7 @@ private fun HomeInfoCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 9.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             content()
@@ -374,9 +374,11 @@ private fun HomeInlineInfoItem(
                 text = title,
                 fontWeight = FontWeight.Medium,
                 fontSize = 12.sp,
-                lineHeight = 16.sp
+                lineHeight = 16.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = headline.ifBlank { naText },
                 color = summaryColor,
