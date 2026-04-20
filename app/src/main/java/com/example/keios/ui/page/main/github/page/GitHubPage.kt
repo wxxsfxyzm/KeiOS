@@ -8,7 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -31,23 +30,17 @@ import com.example.keios.ui.page.main.github.sheet.GitHubTrackEditSheet
 import com.example.keios.ui.page.main.github.sheet.GitHubTrackImportDialog
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
-import com.example.keios.ui.page.main.github.GitHubSortMode
 import com.example.keios.ui.page.main.github.page.BindGitHubPageEffects
 import com.example.keios.ui.page.main.github.page.GitHubPageActions
-import com.example.keios.ui.page.main.github.page.GitHubPageDerivedState
 import com.example.keios.ui.page.main.github.page.rememberGitHubPageState
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-
-private const val pendingShareImportCardVisibleWindowMs = 90_000L
-private const val pendingShareImportCardTickMs = 15_000L
 
 @Composable
 fun GitHubPage(
@@ -200,123 +193,12 @@ fun GitHubPage(
         onActionBarInteractingChanged = onActionBarInteractingChanged
     )
 
-    val trackedUi by remember(state) {
-        derivedStateOf {
-            val filteredTracked = state.trackedItems.filter { item ->
-                state.trackedSearch.isBlank() ||
-                    item.owner.contains(state.trackedSearch, ignoreCase = true) ||
-                    item.repo.contains(state.trackedSearch, ignoreCase = true) ||
-                    item.appLabel.contains(state.trackedSearch, ignoreCase = true) ||
-                    item.packageName.contains(state.trackedSearch, ignoreCase = true)
-            }
-            val isSortUpdatable: (com.example.keios.feature.github.model.GitHubTrackedApp) -> Boolean = { item ->
-                item.alwaysShowLatestReleaseDownloadButton || state.checkStates[item.id]?.hasUpdate == true
-            }
-            val sortedTracked = when (state.sortMode) {
-                GitHubSortMode.UpdateFirst -> filteredTracked.sortedWith(
-                    compareByDescending<com.example.keios.feature.github.model.GitHubTrackedApp> {
-                        isSortUpdatable(it)
-                    }
-                        .thenByDescending { state.checkStates[it.id]?.hasPreReleaseUpdate == true }
-                        .thenBy { it.appLabel.lowercase() }
-                )
-                GitHubSortMode.NameAsc -> filteredTracked.sortedBy { it.appLabel.lowercase() }
-                GitHubSortMode.PreReleaseFirst -> filteredTracked.sortedWith(
-                    compareByDescending<com.example.keios.feature.github.model.GitHubTrackedApp> {
-                        state.checkStates[it.id]?.isPreRelease == true
-                    }
-                        .thenByDescending { isSortUpdatable(it) }
-                        .thenBy { it.appLabel.lowercase() }
-                )
-            }
-            val trackedCount = state.trackedItems.size
-            val updatableCount = state.trackedItems.count { state.checkStates[it.id]?.hasUpdate == true }
-            val preReleaseCount = state.trackedItems.count { state.checkStates[it.id]?.isPreRelease == true }
-            val preReleaseUpdateCount =
-                state.trackedItems.count { state.checkStates[it.id]?.hasPreReleaseUpdate == true }
-            val failedCount = state.trackedItems.count { state.checkStates[it.id]?.failed == true }
-            val stableLatestCount = state.trackedItems.count {
-                val itemState = state.checkStates[it.id]
-                itemState?.hasUpdate == false && itemState.isPreRelease.not()
-            }
-            GitHubPageDerivedState(
-                filteredTracked = filteredTracked,
-                sortedTracked = sortedTracked,
-                overviewMetrics = GitHubOverviewMetrics(
-                    trackedCount = trackedCount,
-                    updatableCount = updatableCount,
-                    stableLatestCount = stableLatestCount,
-                    preReleaseCount = preReleaseCount,
-                    preReleaseUpdateCount = preReleaseUpdateCount,
-                    failedCount = failedCount
-                )
-            )
-        }
-    }
-    val appLastUpdatedAtByTrackId by remember {
-        derivedStateOf {
-            buildMap<String, Long> {
-                val appUpdatedAtByPackage = buildMap<String, Long> {
-                    state.trackedFirstInstallAtByPackage.forEach { (packageName, firstInstallAtMillis) ->
-                        if (packageName.isNotBlank() && firstInstallAtMillis > 0L) {
-                            put(packageName, firstInstallAtMillis)
-                        }
-                    }
-                    state.appList
-                        .filter { it.packageName.isNotBlank() && it.lastUpdateTimeMs > 0L }
-                        .forEach { put(it.packageName, it.lastUpdateTimeMs) }
-                }
-                state.trackedItems.forEach { item ->
-                    val byPackage = appUpdatedAtByPackage[item.packageName]
-                    val byTrackId = state.trackedAddedAtById[item.id]
-                    val updatedAt = byPackage?.takeIf { it > 0L } ?: byTrackId?.takeIf { it > 0L }
-                    if (updatedAt != null) {
-                        put(item.id, updatedAt)
-                    }
-                }
-            }
-        }
-    }
+    val contentDerivedState = rememberGitHubPageContentDerivedState(state = state)
     val checkLogicDownloaderOptions = remember(state.showCheckLogicSheet) {
         if (state.showCheckLogicSheet) {
             queryDownloaderOptions(context)
         } else {
             emptyList()
-        }
-    }
-    val pendingShareImportRepoOverlapCount by remember(
-        state.pendingShareImportTrack,
-        state.trackedItems
-    ) {
-        derivedStateOf {
-            val pending = state.pendingShareImportTrack ?: return@derivedStateOf 0
-            state.trackedItems.count { item ->
-                item.owner.equals(pending.owner, ignoreCase = true) &&
-                    item.repo.equals(pending.repo, ignoreCase = true)
-            }
-        }
-    }
-    val pendingShareImportCardNowMillis by produceState(
-        initialValue = System.currentTimeMillis(),
-        key1 = state.pendingShareImportTrack?.armedAtMillis
-    ) {
-        value = System.currentTimeMillis()
-        if (state.pendingShareImportTrack == null) return@produceState
-        while (true) {
-            delay(pendingShareImportCardTickMs)
-            value = System.currentTimeMillis()
-        }
-    }
-    val showPendingShareImportCard by remember(
-        state.pendingShareImportTrack,
-        pendingShareImportRepoOverlapCount,
-        pendingShareImportCardNowMillis
-    ) {
-        derivedStateOf {
-            val pending = state.pendingShareImportTrack ?: return@derivedStateOf false
-            val ageMs = (pendingShareImportCardNowMillis - pending.armedAtMillis).coerceAtLeast(0L)
-            val withinVisibleWindow = ageMs <= pendingShareImportCardVisibleWindowMs
-            withinVisibleWindow || pendingShareImportRepoOverlapCount > 0
         }
     }
     GitHubMainContent(
@@ -341,12 +223,12 @@ fun GitHubPage(
         refreshProgress = state.refreshProgress,
         lastRefreshMs = state.lastRefreshMs,
         lookupConfig = state.lookupConfig,
-        overviewMetrics = trackedUi.overviewMetrics,
+        overviewMetrics = contentDerivedState.trackedUi.overviewMetrics,
         cardPressFeedbackEnabled = cardPressFeedbackEnabled,
         trackedItems = state.trackedItems,
-        filteredTracked = trackedUi.filteredTracked,
-        sortedTracked = trackedUi.sortedTracked,
-        appLastUpdatedAtByTrackId = appLastUpdatedAtByTrackId,
+        filteredTracked = contentDerivedState.trackedUi.filteredTracked,
+        sortedTracked = contentDerivedState.trackedUi.sortedTracked,
+        appLastUpdatedAtByTrackId = contentDerivedState.appLastUpdatedAtByTrackId,
         checkStates = state.checkStates,
         itemRefreshLoading = state.itemRefreshLoading,
         apkAssetBundles = state.apkAssetBundles,
@@ -355,8 +237,8 @@ fun GitHubPage(
         apkAssetExpanded = state.apkAssetExpanded,
         trackedCardExpanded = state.trackedCardExpanded,
         pendingShareImportTrack = state.pendingShareImportTrack,
-        showPendingShareImportCard = showPendingShareImportCard,
-        pendingShareImportRepoOverlapCount = pendingShareImportRepoOverlapCount,
+        showPendingShareImportCard = contentDerivedState.showPendingShareImportCard,
+        pendingShareImportRepoOverlapCount = contentDerivedState.pendingShareImportRepoOverlapCount,
         onTrackedSearchChange = { state.trackedSearch = it },
         onShowSortPopupChange = { state.showSortPopup = it },
         onSortModeChange = { state.sortMode = it },
@@ -399,7 +281,7 @@ fun GitHubPage(
         strategyBenchmarkRunning = state.strategyBenchmarkRunning,
         strategyBenchmarkError = state.strategyBenchmarkError,
         strategyBenchmarkReport = state.strategyBenchmarkReport,
-        trackedCount = trackedUi.overviewMetrics.trackedCount,
+        trackedCount = contentDerivedState.trackedUi.overviewMetrics.trackedCount,
         recommendedTokenGuideExpanded = state.recommendedTokenGuideExpanded,
         onDismissRequest = actions::closeStrategySheet,
         onApply = actions::applyLookupConfig,
@@ -422,7 +304,7 @@ fun GitHubPage(
         show = state.showCheckLogicSheet,
         backdrop = backdrops.sheet,
         lookupConfig = state.lookupConfig,
-        trackedCount = trackedUi.overviewMetrics.trackedCount,
+        trackedCount = contentDerivedState.trackedUi.overviewMetrics.trackedCount,
         refreshIntervalHours = state.refreshIntervalHours,
         refreshIntervalHoursInput = state.refreshIntervalHoursInput,
         checkAllTrackedPreReleasesInput = state.checkAllTrackedPreReleasesInput,
