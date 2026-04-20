@@ -313,6 +313,9 @@ fun LiquidActionBar(
         layeredStyleEnabled = layeredStyleEnabled,
         isInLightTheme = isInLightTheme
     )
+    val interactionProgress by remember {
+        derivedStateOf { dampedDragAnimation.pressProgress.fastCoerceIn(0f, 1f) }
+    }
     val interactiveHighlightEnabled = isBlurEnabled &&
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
         (layeredStyleEnabled || isInLightTheme)
@@ -417,13 +420,20 @@ fun LiquidActionBar(
                         panelOffsetPx = effectivePanelOffset,
                         isLtr = isLtr,
                         glowColor = palette.selectionGlowColor,
-                        coreColor = palette.selectionCoreColor
+                        coreColor = palette.selectionCoreColor,
+                        interactionProgress = interactionProgress
                     )
                 } else {
                     Modifier
                 }
             )
-            .then(if (isBlurEnabled && interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
+            .then(
+                if (isBlurEnabled && interactiveHighlight != null && interactionProgress > 0.001f) {
+                    interactiveHighlight.modifier
+                } else {
+                    Modifier
+                }
+            )
             .then(
                 if (!layeredStyleEnabled && isBlurEnabled && interactiveHighlight != null) {
                     interactiveHighlight.gestureModifier

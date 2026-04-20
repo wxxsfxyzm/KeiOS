@@ -22,10 +22,16 @@ internal fun Modifier.liquidActionBarSelectionAura(
     panelOffsetPx: Float,
     isLtr: Boolean,
     glowColor: Color,
-    coreColor: Color
+    coreColor: Color,
+    interactionProgress: Float
 ): Modifier {
     if (!enabled || tabWidthPx <= 0f) return this
     return drawWithContent {
+        val activeProgress = interactionProgress.fastCoerceIn(0f, 1f)
+        if (activeProgress <= 0.001f) {
+            drawContent()
+            return@drawWithContent
+        }
         val centerX = if (isLtr) {
             (animation.value + 0.5f) * tabWidthPx + panelOffsetPx
         } else {
@@ -33,13 +39,15 @@ internal fun Modifier.liquidActionBarSelectionAura(
         }.fastCoerceIn(0f, size.width)
         val center = Offset(centerX, size.height / 2f)
         val pressProgress = animation.pressProgress.fastCoerceIn(0f, 1f)
+        val glowAlpha = (0.04f + pressProgress * 0.16f) * activeProgress
+        val coreAlpha = (0.03f + pressProgress * 0.18f) * activeProgress
         drawCircle(
-            color = glowColor.copy(alpha = (0.10f + pressProgress * 0.06f).fastCoerceIn(0f, 0.22f)),
+            color = glowColor.copy(alpha = glowAlpha.fastCoerceIn(0f, 0.24f)),
             radius = size.height * (0.82f + pressProgress * 0.14f),
             center = center
         )
         drawCircle(
-            color = coreColor.copy(alpha = (0.08f + pressProgress * 0.08f).fastCoerceIn(0f, 0.20f)),
+            color = coreColor.copy(alpha = coreAlpha.fastCoerceIn(0f, 0.22f)),
             radius = size.height * (0.38f + pressProgress * 0.06f),
             center = center
         )
