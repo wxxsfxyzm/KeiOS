@@ -103,15 +103,6 @@ import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBac
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val HOME_HEADER_SINK_PER_HIDDEN_CARD_DP = 22
-private val HOME_BA_CAFE_DAILY_AP_BY_LEVEL = intArrayOf(92, 152, 222, 302, 390, 460, 530, 600, 570, 740)
-private val HOME_KEI_TITLE_GRADIENT_COLORS = listOf(
-    Color(0xFFFFD2DE),
-    Color(0xFFFFCAD9),
-    Color(0xFFFF99BB),
-    Color(0xFFFF76A5),
-    Color(0xFFFF6098),
-    Color(0xFFFF5893)
-)
 
 @Composable
 fun HomePage(
@@ -425,6 +416,125 @@ fun HomePage(
     }
     val hiddenOverviewCardCount = (HomeOverviewCard.entries.size - visibleOverviewCards.size).coerceAtLeast(0)
     val homeHeaderSinkOffset = (hiddenOverviewCardCount * HOME_HEADER_SINK_PER_HIDDEN_CARD_DP).dp
+    val homeHeaderStatusPills = remember(
+        homeStatusMcp,
+        homeStatusGitHub,
+        homeStatusBa,
+        homeStatusShizuku,
+        mcpOverview.running,
+        cacheStateColor,
+        baOverview.loaded,
+        baOverview.activated,
+        shizukuGranted
+    ) {
+        listOf(
+            HomeHeaderStatusPillState(
+                label = homeStatusMcp,
+                color = if (mcpOverview.running) runningColor else stoppedColor,
+                minWidth = 62.dp
+            ),
+            HomeHeaderStatusPillState(
+                label = homeStatusGitHub,
+                color = cacheStateColor,
+                minWidth = 72.dp
+            ),
+            HomeHeaderStatusPillState(
+                label = homeStatusBa,
+                color = when {
+                    !baOverview.loaded -> inactiveColor
+                    baOverview.activated -> runningColor
+                    else -> stoppedColor
+                },
+                minWidth = 62.dp
+            ),
+            HomeHeaderStatusPillState(
+                label = homeStatusShizuku,
+                color = if (shizukuGranted) runningColor else stoppedColor,
+                minWidth = 70.dp,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 5.dp)
+            )
+        )
+    }
+    val mcpOverviewStats = remember(
+        homeStatStatus,
+        mcpStatusText,
+        homeStatRuntime,
+        mcpRuntimeText,
+        homeStatClients,
+        mcpOverview.connectedClients,
+        homeStatNetwork,
+        networkModeText,
+        homeStatPort,
+        mcpOverview.port,
+        homeStatToken,
+        mcpTokenStatusText,
+        homeStatService,
+        mcpOverview.serverName,
+        homeStatPath,
+        mcpOverview.endpointPath
+    ) {
+        listOf(
+            HomeCardStatItem(label = homeStatStatus, value = mcpStatusText, emphasize = true),
+            HomeCardStatItem(label = homeStatRuntime, value = mcpRuntimeText, emphasize = true),
+            HomeCardStatItem(label = homeStatClients, value = mcpOverview.connectedClients.toString()),
+            HomeCardStatItem(label = homeStatNetwork, value = networkModeText),
+            HomeCardStatItem(label = homeStatPort, value = mcpOverview.port.toString()),
+            HomeCardStatItem(label = homeStatToken, value = mcpTokenStatusText),
+            HomeCardStatItem(label = homeStatService, value = mcpOverview.serverName),
+            HomeCardStatItem(label = homeStatPath, value = mcpOverview.endpointPath)
+        )
+    }
+    val githubOverviewStats = remember(
+        homeStatStableUpdates,
+        githubUpdatableLine,
+        homeStatPreReleaseUpdates,
+        githubPreReleaseUpdateLine,
+        homeStatTracked,
+        trackedCountLine,
+        homeStatCached,
+        cacheHitCountLine,
+        homeStatStrategy,
+        githubStrategyText,
+        homeStatApi,
+        githubApiText,
+        homeStatLastUpdate,
+        githubLastUpdateLine
+    ) {
+        listOf(
+            HomeCardStatItem(
+                label = homeStatStableUpdates,
+                value = githubUpdatableLine,
+                emphasize = true
+            ),
+            HomeCardStatItem(
+                label = homeStatPreReleaseUpdates,
+                value = githubPreReleaseUpdateLine,
+                emphasize = true
+            ),
+            HomeCardStatItem(label = homeStatTracked, value = trackedCountLine),
+            HomeCardStatItem(label = homeStatCached, value = cacheHitCountLine),
+            HomeCardStatItem(label = homeStatStrategy, value = githubStrategyText),
+            HomeCardStatItem(label = homeStatApi, value = githubApiText),
+            HomeCardStatItem(label = homeStatLastUpdate, value = githubLastUpdateLine)
+        )
+    }
+    val baOverviewStats = remember(
+        homeStatStatus,
+        baActivationLine,
+        homeStatAp,
+        baApLine,
+        homeStatCafeAp,
+        baCafeApLine,
+        homeStatApRemaining,
+        baApRemainingLine
+    ) {
+        listOf(
+            HomeCardStatItem(label = homeStatStatus, value = baActivationLine, emphasize = true),
+            HomeCardStatItem(label = homeStatAp, value = baApLine, emphasize = true),
+            HomeCardStatItem(label = homeStatCafeAp, value = baCafeApLine),
+            HomeCardStatItem(label = homeStatApRemaining, value = baApRemainingLine)
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -446,93 +556,23 @@ fun HomePage(
             )
         }
     ) { innerPadding ->
-        SnapshotWindowBottomSheet(
+        HomePageControlSheet(
             show = showBottomPageEditor,
-            title = stringResource(R.string.home_sheet_bottom_pages_title),
+            actionBarBackdrop = actionBarBackdrop,
+            visibleBottomPages = visibleBottomPages,
+            visibleOverviewCards = visibleOverviewCards,
+            homeSheetTitle = stringResource(R.string.home_sheet_bottom_pages_title),
+            visiblePagesTitle = stringResource(R.string.home_sheet_visible_pages_title),
+            visiblePagesDesc = stringResource(R.string.home_sheet_visible_pages_desc),
+            visibleCardsTitle = homeVisibleCardsTitle,
+            visibleCardsDesc = homeVisibleCardsDesc,
+            homeCardMcp = homeCardMcp,
+            homeCardGitHub = homeCardGitHub,
+            homeCardBa = homeCardBa,
             onDismissRequest = { showBottomPageEditor = false },
-            startAction = {
-                GlassIconButton(
-                    backdrop = actionBarBackdrop,
-                    variant = GlassVariant.Bar,
-                    icon = appLucideCloseIcon(),
-                    contentDescription = stringResource(R.string.common_close),
-                    onClick = { showBottomPageEditor = false }
-                )
-            }
-        ) {
-            SheetContentColumn(
-                scrollable = false,
-                verticalSpacing = 10.dp
-            ) {
-                SheetSectionTitle(stringResource(R.string.home_sheet_visible_pages_title))
-                SheetSectionCard(verticalSpacing = 10.dp) {
-                    SheetControlRow(
-                        labelContent = {
-                            HomeBottomPageLabel(
-                                page = BottomPage.Home,
-                                modifier = Modifier.defaultMinSize(minHeight = 24.dp)
-                            )
-                        }
-                    ) {
-                        StatusPill(
-                            label = StatusLabelText.FixedVisible,
-                            color = Color(0xFF2563EB)
-                        )
-                    }
-
-                    BottomPage.entries
-                        .filter { it != BottomPage.Home }
-                        .forEach { page ->
-                            SheetControlRow(
-                                labelContent = {
-                                    HomeBottomPageLabel(
-                                        page = page,
-                                        modifier = Modifier.defaultMinSize(minHeight = 24.dp)
-                                    )
-                                }
-                            ) {
-                                Switch(
-                                    checked = visibleBottomPages.contains(page),
-                                    onCheckedChange = { checked ->
-                                        onBottomPageVisibilityChange(page, checked)
-                                    }
-                                )
-                            }
-                        }
-                }
-                SheetDescriptionText(
-                    text = stringResource(R.string.home_sheet_visible_pages_desc)
-                )
-                SheetSectionTitle(homeVisibleCardsTitle)
-                SheetSectionCard(verticalSpacing = 10.dp) {
-                    SheetControlRow(label = homeCardMcp) {
-                        Switch(
-                            checked = visibleOverviewCards.contains(HomeOverviewCard.MCP),
-                            onCheckedChange = { checked ->
-                                setHomeOverviewCardVisible(HomeOverviewCard.MCP, checked)
-                            }
-                        )
-                    }
-                    SheetControlRow(label = homeCardGitHub) {
-                        Switch(
-                            checked = visibleOverviewCards.contains(HomeOverviewCard.GITHUB),
-                            onCheckedChange = { checked ->
-                                setHomeOverviewCardVisible(HomeOverviewCard.GITHUB, checked)
-                            }
-                        )
-                    }
-                    SheetControlRow(label = homeCardBa) {
-                        Switch(
-                            checked = visibleOverviewCards.contains(HomeOverviewCard.BA),
-                            onCheckedChange = { checked ->
-                                setHomeOverviewCardVisible(HomeOverviewCard.BA, checked)
-                            }
-                        )
-                    }
-                }
-                SheetDescriptionText(text = homeVisibleCardsDesc)
-            }
-        }
+            onBottomPageVisibilityChange = onBottomPageVisibilityChange,
+            onOverviewCardVisibilityChange = ::setHomeOverviewCardVisible
+        )
 
         val horizontalSafeInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
         val listContentPadding = PaddingValues(
@@ -554,150 +594,32 @@ fun HomePage(
             effectBackground = effectBackgroundEnabled,
             alpha = bgAlpha,
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        top = logoPadding.calculateTopPadding() + 36.dp + homeHeaderSinkOffset,
-                        start = logoPadding.calculateStartPadding(layoutDirection),
-                        end = logoPadding.calculateEndPadding(layoutDirection)
-                    )
-                    .onSizeChanged { size ->
-                        with(density) { logoHeightDp = size.height.toDp() }
-                    },
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(88.dp)
-                        .graphicsLayer {
-                            alpha = 1f - iconProgress
-                            scaleX = 1f - (iconProgress * 0.05f)
-                            scaleY = 1f - (iconProgress * 0.05f)
-                        }
-                        .onGloballyPositioned { coordinates ->
-                            if (iconY != 0f) return@onGloballyPositioned
-                            iconY = coordinates.positionInWindow().y + coordinates.size.height
-                        }
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_kei_logo_color),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(88.dp)
-                            .graphicsLayer {
-                                alpha = (1f - iconProgress) * 0.95f
-                            }
-                            .homeKeiHdrAccent(
-                                enabled = homeIconHdrEnabled,
-                                sweepProgress = hdrSweepProgress,
-                                radialAlpha = 0.30f,
-                                radialRadiusScale = 0.72f,
-                                radialCenterX = 0.5f,
-                                radialCenterY = 0.48f
-                            )
-                    )
+            HomePageHero(
+                homeIconHdrEnabled = homeIconHdrEnabled,
+                hdrSweepProgress = hdrSweepProgress,
+                homeHeaderSinkOffset = homeHeaderSinkOffset,
+                logoPadding = logoPadding,
+                layoutDirection = layoutDirection,
+                homeAppName = homeAppName,
+                homeTagline = homeTagline,
+                appVersionText = appVersionText,
+                iconProgress = iconProgress,
+                titleProgress = titleProgress,
+                summaryProgress = summaryProgress,
+                statusPills = homeHeaderStatusPills,
+                onHeroHeightChanged = { heightPx ->
+                    with(density) { logoHeightDp = heightPx.toDp() }
+                },
+                onIconBottomChanged = { bottom ->
+                    if (iconY == 0f) iconY = bottom
+                },
+                onTitleBottomChanged = { bottom ->
+                    if (titleY == 0f) titleY = bottom
+                },
+                onSummaryBottomChanged = { bottom ->
+                    if (summaryY == 0f) summaryY = bottom
                 }
-
-                BasicText(
-                    text = homeAppName,
-                    style = TextStyle(
-                        brush = Brush.linearGradient(
-                            colors = HOME_KEI_TITLE_GRADIENT_COLORS,
-                            start = Offset(14f, 6f),
-                            end = Offset(260f, 104f)
-                        ),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 30.sp,
-                        shadow = ComposeTextShadow(
-                            color = Color(0x55FF74A6),
-                            offset = Offset(0f, 3f),
-                            blurRadius = 16f
-                        )
-                    ),
-                    modifier = Modifier
-                        .padding(top = 10.dp, bottom = 4.dp)
-                        .onGloballyPositioned { coordinates ->
-                            if (titleY != 0f) return@onGloballyPositioned
-                            titleY = coordinates.positionInWindow().y + coordinates.size.height
-                        }
-                        .graphicsLayer {
-                            alpha = 1f - titleProgress
-                            scaleX = 1f - (titleProgress * 0.05f)
-                            scaleY = 1f - (titleProgress * 0.05f)
-                        }
-                        .homeKeiHdrAccent(
-                            enabled = homeIconHdrEnabled,
-                            sweepProgress = hdrSweepProgress,
-                            radialAlpha = 0.26f,
-                            radialRadiusScale = 0.82f,
-                            radialCenterX = 0.32f,
-                            radialCenterY = 0.34f
-                        )
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .graphicsLayer {
-                            alpha = 1f - summaryProgress
-                            scaleX = 1f - (summaryProgress * 0.05f)
-                            scaleY = 1f - (summaryProgress * 0.05f)
-                        }
-                        .onGloballyPositioned { coordinates ->
-                            if (summaryY != 0f) return@onGloballyPositioned
-                            summaryY = coordinates.positionInWindow().y + coordinates.size.height
-                        },
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = homeTagline,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center,
-                    )
-                    Text(
-                        text = appVersionText,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
-                    ) {
-                        StatusPill(
-                            label = homeStatusMcp,
-                            color = if (mcpOverview.running) runningColor else stoppedColor,
-                            modifier = Modifier.defaultMinSize(minWidth = 62.dp)
-                        )
-                        StatusPill(
-                            label = homeStatusGitHub,
-                            color = cacheStateColor,
-                            modifier = Modifier.defaultMinSize(minWidth = 72.dp)
-                        )
-                        StatusPill(
-                            label = homeStatusBa,
-                            color = when {
-                                !baOverview.loaded -> inactiveColor
-                                baOverview.activated -> runningColor
-                                else -> stoppedColor
-                            },
-                            modifier = Modifier.defaultMinSize(minWidth = 62.dp)
-                        )
-                        StatusPill(
-                            label = homeStatusShizuku,
-                            color = if (shizukuGranted) runningColor else stoppedColor,
-                            modifier = Modifier.defaultMinSize(minWidth = 70.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 5.dp)
-                        )
-                    }
-                }
-            }
+            )
 
             LazyColumn(
                 state = lazyListState,
@@ -707,21 +629,13 @@ fun HomePage(
                 contentPadding = listContentPadding,
             ) {
                 item(key = "logo_spacer") {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(
-                                logoHeightDp + 36.dp +
-                                    logoPadding.calculateTopPadding() -
-                                    listContentPadding.calculateTopPadding() + 90.dp +
-                                    homeHeaderSinkOffset
-                            )
-                            .onSizeChanged { size ->
-                                logoHeightPx = size.height
-                            }
-                            .onGloballyPositioned { coordinates ->
-                                logoAreaY = coordinates.positionInWindow().y + coordinates.size.height
-                            }
+                    HomePageHeroSpacer(
+                        logoHeightDp = logoHeightDp,
+                        logoPadding = logoPadding,
+                        listContentPadding = listContentPadding,
+                        homeHeaderSinkOffset = homeHeaderSinkOffset,
+                        onLogoHeightPxChanged = { logoHeightPx = it },
+                        onLogoAreaBottomChanged = { bottom -> logoAreaY = bottom }
                     )
                 }
 
@@ -731,132 +645,18 @@ fun HomePage(
                             .fillMaxWidth()
                             .padding(bottom = listContentPadding.calculateBottomPadding())
                     ) {
-                        if (visibleOverviewCards.contains(HomeOverviewCard.MCP)) {
-                            HomeInfoCard(
-                                backdrop = homeCardBackdrop,
-                                blurEnabled = blurEnabled
-                            ) {
-                                HomeInfoGridCard(
-                                    title = homeCardMcp,
-                                    naText = homeNa,
-                                    columns = 3,
-                                    stats = listOf(
-                                        HomeCardStatItem(
-                                            label = homeStatStatus,
-                                            value = mcpStatusText,
-                                            emphasize = true
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatRuntime,
-                                            value = mcpRuntimeText,
-                                            emphasize = true
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatClients,
-                                            value = mcpOverview.connectedClients.toString()
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatNetwork,
-                                            value = networkModeText
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatPort,
-                                            value = mcpOverview.port.toString()
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatToken,
-                                            value = mcpTokenStatusText
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatService,
-                                            value = mcpOverview.serverName
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatPath,
-                                            value = mcpOverview.endpointPath
-                                        )
-                                    )
-                                )
-                            }
-                        }
-
-                        if (visibleOverviewCards.contains(HomeOverviewCard.GITHUB)) {
-                            HomeInfoCard(
-                                backdrop = homeCardBackdrop,
-                                blurEnabled = blurEnabled
-                            ) {
-                                HomeInfoGridCard(
-                                    title = homeCardGitHub,
-                                    naText = homeNa,
-                                    columns = 3,
-                                    stats = listOf(
-                                        HomeCardStatItem(
-                                            label = homeStatStableUpdates,
-                                            value = githubUpdatableLine,
-                                            emphasize = true
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatPreReleaseUpdates,
-                                            value = githubPreReleaseUpdateLine,
-                                            emphasize = true
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatTracked,
-                                            value = trackedCountLine
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatCached,
-                                            value = cacheHitCountLine
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatStrategy,
-                                            value = githubStrategyText
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatApi,
-                                            value = githubApiText
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatLastUpdate,
-                                            value = githubLastUpdateLine
-                                        )
-                                    )
-                                )
-                            }
-                        }
-
-                        if (visibleOverviewCards.contains(HomeOverviewCard.BA)) {
-                            HomeInfoCard(
-                                backdrop = homeCardBackdrop,
-                                blurEnabled = blurEnabled
-                            ) {
-                                HomeInfoGridCard(
-                                    title = homeCardBa,
-                                    naText = homeNa,
-                                    stats = listOf(
-                                        HomeCardStatItem(
-                                            label = homeStatStatus,
-                                            value = baActivationLine,
-                                            emphasize = true
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatAp,
-                                            value = baApLine,
-                                            emphasize = true
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatCafeAp,
-                                            value = baCafeApLine
-                                        ),
-                                        HomeCardStatItem(
-                                            label = homeStatApRemaining,
-                                            value = baApRemainingLine
-                                        )
-                                    )
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(2.dp))
+                        HomePageOverviewCards(
+                            visibleOverviewCards = visibleOverviewCards,
+                            homeCardBackdrop = homeCardBackdrop,
+                            blurEnabled = blurEnabled,
+                            homeNa = homeNa,
+                            homeCardMcp = homeCardMcp,
+                            mcpStats = mcpOverviewStats,
+                            homeCardGitHub = homeCardGitHub,
+                            githubStats = githubOverviewStats,
+                            homeCardBa = homeCardBa,
+                            baStats = baOverviewStats
+                        )
                     }
                 }
             }
