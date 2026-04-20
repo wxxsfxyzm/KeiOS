@@ -2,6 +2,15 @@ package com.example.keios.ui.page.main.student.section.gallery
 
 import android.widget.SeekBar
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -28,10 +37,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.keios.R
 import com.example.keios.ui.page.main.student.BaGuideGalleryItem
 import com.example.keios.ui.page.main.student.section.GuidePressableMediaSurface
 import com.example.keios.ui.page.main.student.GuideRemoteImageAdaptive
@@ -47,6 +58,7 @@ import com.example.keios.ui.page.main.widget.glass.LiquidDropdownImpl
 import com.example.keios.ui.page.main.widget.sheet.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.sheet.SnapshotWindowListPopup
 import com.example.keios.ui.page.main.widget.sheet.capturePopupAnchor
+import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 import com.kyant.backdrop.Backdrop
 import kotlinx.coroutines.flow.MutableStateFlow
 import top.yukonga.miuix.kmp.basic.Card
@@ -137,10 +149,16 @@ fun GuideGalleryExpressionCardItem(
 ) {
     if (items.isEmpty()) return
     val context = LocalContext.current
+    val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
     var showPicker by remember(title, items.size) { mutableStateOf(false) }
     var selectedIndex by rememberSaveable(title, items.size) { mutableStateOf(0) }
+    var previousSelectedIndex by rememberSaveable(title, items.size) { mutableIntStateOf(0) }
+    var showSwipeHint by rememberSaveable(title, items.size) { mutableStateOf(true) }
     LaunchedEffect(items.size) {
         if (selectedIndex !in items.indices) selectedIndex = 0
+    }
+    LaunchedEffect(selectedIndex) {
+        previousSelectedIndex = selectedIndex
     }
     val selectedItem = items.getOrElse(selectedIndex) { items.first() }
     val displayImageUrl = mediaUrlResolver(selectedItem.imageUrl)
@@ -195,6 +213,22 @@ fun GuideGalleryExpressionCardItem(
     }
     val imageProgress by imageProgressState.collectAsState()
     var imageLoading by remember(displayImageUrl) { mutableStateOf(displayImageUrl.isNotBlank()) }
+    val expressionPackTargets = remember(items, optionLabels, mediaUrlResolver) {
+        items.mapIndexedNotNull { index, item ->
+            val rawImage = mediaUrlResolver(item.imageUrl)
+            val rawMedia = mediaUrlResolver(item.mediaUrl)
+            val target = if (item.mediaType.lowercase() == "video") {
+                rawMedia.ifBlank { rawImage }
+            } else {
+                rawImage.ifBlank { rawMedia }
+            }.trim()
+            if (target.isBlank()) {
+                null
+            } else {
+                target to optionLabels.getOrElse(index) { "角色表情${index + 1}" }
+            }
+        }.distinctBy { it.first }
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -252,6 +286,7 @@ fun GuideGalleryExpressionCardItem(
                                         isSelected = selectedIndex == idx,
                                         index = idx,
                                         onSelectedIndexChange = { selected ->
+                                            showSwipeHint = false
                                             selectedIndex = selected
                                             showPicker = false
                                         }
@@ -316,6 +351,27 @@ fun GuideGalleryExpressionCardItem(
                         }
                     )
                 }
+                if (expressionPackTargets.size > 1) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = stringResource(R.string.guide_expression_action_pack_download),
+                        textColor = Color(0xFF3B82F6),
+                        variant = GlassVariant.Compact,
+                        onClick = {
+                            expressionPackTargets.forEach { (url, label) ->
+                                onSaveMedia(url, label)
+                            }
+                            Toast.makeText(
+                                context,
+                                context.getString(
+                                    R.string.guide_expression_pack_download_started,
+                                    expressionPackTargets.size
+                                ),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
+                }
                 if (isImageType && displayImageUrl.isNotBlank()) {
                     val imageProgressValue = if (imageLoading) imageProgress.coerceIn(0f, 1f) else 1f
                     val progressForegroundColor = if (imageProgressValue >= 0.999f) Color(0xFF34C759) else Color(0xFF3B82F6)
@@ -331,6 +387,14 @@ fun GuideGalleryExpressionCardItem(
                     )
                 }
             }
+            if (canSwipeExpressions && showSwipeHint) {
+                Text(
+                    text = stringResource(R.string.guide_expression_swipe_hint),
+                    color = MiuixTheme.colorScheme.onBackgroundVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
             if (displayImageUrl.isNotBlank() && selectedItem.mediaType.lowercase() != "video") {
                 GuidePressableMediaSurface(
@@ -345,11 +409,13 @@ fun GuideGalleryExpressionCardItem(
                             val shouldGoPrev = totalDrag >= swipeThresholdPx || velocity >= 1600f
                             when {
                                 shouldGoNext && selectedIndex < items.lastIndex -> {
+                                    showSwipeHint = false
                                     selectedIndex += 1
                                     showPicker = false
                                 }
 
                                 shouldGoPrev && selectedIndex > 0 -> {
+                                    showSwipeHint = false
                                     selectedIndex -= 1
                                     showPicker = false
                                 }
@@ -358,15 +424,40 @@ fun GuideGalleryExpressionCardItem(
                     ),
                     onClick = { showImageFullscreen = true }
                 ) {
-                    GuideRemoteImageAdaptive(
-                        imageUrl = displayImageUrl,
-                        progressState = if (isImageType) imageProgressState else null,
-                        onLoadingChanged = if (isImageType) {
-                            { loading -> imageLoading = loading }
-                        } else {
-                            null
-                        }
-                    )
+                    val slideToLeft = selectedIndex > previousSelectedIndex
+                    AnimatedContent(
+                        targetState = displayImageUrl,
+                        transitionSpec = {
+                            if (!transitionAnimationsEnabled) {
+                                EnterTransition.None togetherWith ExitTransition.None
+                            } else {
+                                val enter = slideInHorizontally(
+                                    animationSpec = tween(durationMillis = 220),
+                                    initialOffsetX = { fullWidth ->
+                                        if (slideToLeft) fullWidth / 3 else -fullWidth / 3
+                                    }
+                                ) + fadeIn(animationSpec = tween(durationMillis = 180))
+                                val exit = slideOutHorizontally(
+                                    animationSpec = tween(durationMillis = 180),
+                                    targetOffsetX = { fullWidth ->
+                                        if (slideToLeft) -fullWidth / 4 else fullWidth / 4
+                                    }
+                                ) + fadeOut(animationSpec = tween(durationMillis = 140))
+                                enter togetherWith exit
+                            }
+                        },
+                        label = "guide_expression_swipe_transition"
+                    ) { currentImageUrl ->
+                        GuideRemoteImageAdaptive(
+                            imageUrl = currentImageUrl,
+                            progressState = if (isImageType) imageProgressState else null,
+                            onLoadingChanged = if (isImageType) {
+                                { loading -> imageLoading = loading }
+                            } else {
+                                null
+                            }
+                        )
+                    }
                 }
             }
 
