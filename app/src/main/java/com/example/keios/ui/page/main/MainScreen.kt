@@ -542,9 +542,28 @@ private fun MainPagerLayout(
     )
 
     var showBottomBar by remember { mutableStateOf(true) }
-    val nestedScrollConnection = remember {
+    val homePageBottomBarPinned by remember(tabs, pagerState) {
+        derivedStateOf {
+            val current = tabs.getOrElse(pagerState.currentPage) { BottomPage.Home }
+            val target = tabs.getOrElse(pagerState.targetPage) { BottomPage.Home }
+            val settled = tabs.getOrElse(pagerState.settledPage) { BottomPage.Home }
+            current == BottomPage.Home || target == BottomPage.Home || settled == BottomPage.Home
+        }
+    }
+    LaunchedEffect(homePageBottomBarPinned) {
+        if (homePageBottomBarPinned && !showBottomBar) {
+            showBottomBar = true
+        }
+    }
+    val nestedScrollConnection = remember(homePageBottomBarPinned) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (homePageBottomBarPinned) {
+                    if (!showBottomBar) {
+                        showBottomBar = true
+                    }
+                    return Offset.Zero
+                }
                 if (available.y < -1f && showBottomBar) {
                     showBottomBar = false
                 }
