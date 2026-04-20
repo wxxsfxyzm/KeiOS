@@ -1,12 +1,10 @@
 package com.example.keios.mcp.framework.notification.builder
 
 import android.app.PendingIntent
-import android.content.Context
-import android.content.Intent
-import androidx.test.core.app.ApplicationProvider
 import com.example.keios.mcp.notification.McpNotificationPayload
 import kotlin.test.assertEquals
 import org.junit.Test
+import sun.misc.Unsafe
 
 class ModernNotificationSpecResolverTest {
     @Test
@@ -89,14 +87,7 @@ class ModernNotificationSpecResolverTest {
         clients: Int,
         ongoing: Boolean
     ): McpNotificationPayload {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val intent = Intent(context, android.app.Activity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent = createFakePendingIntent()
         return McpNotificationPayload(
             serverName = serverName,
             running = running,
@@ -108,5 +99,13 @@ class ModernNotificationSpecResolverTest {
             openPendingIntent = pendingIntent,
             stopPendingIntent = pendingIntent
         )
+    }
+
+    private fun createFakePendingIntent(): PendingIntent {
+        val unsafeField = Unsafe::class.java.getDeclaredField("theUnsafe").apply {
+            isAccessible = true
+        }
+        val unsafe = unsafeField.get(null) as Unsafe
+        return unsafe.allocateInstance(PendingIntent::class.java) as PendingIntent
     }
 }

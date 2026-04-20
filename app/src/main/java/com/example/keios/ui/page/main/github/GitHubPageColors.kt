@@ -97,7 +97,6 @@ internal fun VersionCheckUi.statusIcon(): ImageVector {
 internal fun VersionCheckUi.statusColor(neutralColor: Color): Color {
     return when {
         loading -> GitHubStatusPalette.Active
-        isLocalAppUninstalled() -> neutralColor
         isFailed() -> GitHubStatusPalette.Error
         recommendsPreRelease -> GitHubStatusPalette.PreRelease
         hasPreReleaseUpdate -> GitHubStatusPalette.PreRelease
@@ -105,6 +104,7 @@ internal fun VersionCheckUi.statusColor(neutralColor: Color): Color {
         hasUpdate == false && isPreRelease -> GitHubStatusPalette.PreRelease
         hasUpdate == false -> GitHubStatusPalette.Stable
         isPreRelease -> GitHubStatusPalette.PreRelease
+        isLocalAppUninstalled() -> neutralColor
         else -> neutralColor
     }
 }

@@ -31,7 +31,7 @@ internal object GitHubShareIntentParser {
         val rawText = text.trim()
         if (rawText.isBlank()) return emptyList()
         return githubUrlRegex.findAll(rawText)
-            .map { match -> match.value.trim().trimEnd('.', ',', ';', ':', '!', '?') }
+            .map { match -> match.value.trim().trimGitHubUrlTrailingPunctuation() }
             .filter { it.isNotBlank() }
             .distinct()
             .toList()
@@ -58,7 +58,7 @@ internal object GitHubShareIntentParser {
     }
 
     fun parseSharedReleaseUrl(rawUrl: String): GitHubSharedReleaseLink? {
-        val normalizedUrl = rawUrl.trim().trimEnd('.', ',', ';', ':', '!', '?')
+        val normalizedUrl = rawUrl.trim().trimGitHubUrlTrailingPunctuation()
         if (normalizedUrl.isBlank()) return null
 
         val uri = runCatching { URI(normalizedUrl) }.getOrNull()
@@ -175,4 +175,14 @@ internal object GitHubShareIntentParser {
             GitHubSharedUrlType.Repo -> 1
         }
     }
+}
+
+private fun String.trimGitHubUrlTrailingPunctuation(): String {
+    val trailingPunctuation = setOf(
+        '.', ',', ';', ':', '!', '?',
+        '。', '，', '；', '：', '！', '？', '、',
+        '）', '】', '》', '」', '』', '〉',
+        '”', '’', ')', ']', '>'
+    )
+    return trimEnd { char -> trailingPunctuation.contains(char) }
 }
