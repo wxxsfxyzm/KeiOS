@@ -23,6 +23,7 @@ import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.ui.page.main.about.model.buildComponentEntries
 import com.example.keios.ui.page.main.about.model.buildPermissionEntries
 import com.example.keios.ui.page.main.about.model.loadPackageDetailInfo
+import com.example.keios.ui.page.main.about.state.rememberAboutPageColorPalette
 import com.example.keios.ui.page.main.about.section.AboutAppCardSection
 import com.example.keios.ui.page.main.about.section.AboutBuildSdkCardSection
 import com.example.keios.ui.page.main.about.section.AboutComponentCardSection
@@ -56,22 +57,7 @@ fun AboutPage(
     onBack: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val accent = MiuixTheme.colorScheme.primary
-    val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant.copy(alpha = 0.90f)
-    val readyColor = Color(0xFF2E7D32)
-    val notReadyColor = Color(0xFFC62828)
-    val infoCardColor = Color(0x223B82F6)
-    val buildCardColor = Color(0x223B82F6)
-    val uiFrameworkCardColor = Color(0x2233A1F4)
-    val networkServiceCardColor = Color(0x2222C55E)
-    val mediaStorageCardColor = Color(0x2260A5FA)
-    val projectLicenseCardColor = Color(0x2243A047)
-    val licenseCardColor = Color(0x2243A047)
-    val runtimeCardColor = if (shizukuStatus.contains("granted", ignoreCase = true)) {
-        Color(0x2222C55E)
-    } else {
-        Color(0x22EF4444)
-    }
+    val palette = rememberAboutPageColorPalette(shizukuStatus = shizukuStatus)
 
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
@@ -136,18 +122,18 @@ fun AboutPage(
                 AboutAppCardSection(
                     appLabel = appLabel,
                     packageInfo = packageInfo,
-                    cardColor = infoCardColor,
-                    accent = accent,
-                    subtitleColor = subtitleColor,
+                    cardColor = palette.infoCardColor,
+                    accent = palette.accent,
+                    subtitleColor = palette.subtitleColor,
                     expanded = appExpanded,
                     onExpandedChange = { appExpanded = it }
                 )
             }
             item {
                 AboutGitHubCardSection(
-                    cardColor = Color(0x2248A6FF),
-                    accent = accent,
-                    subtitleColor = subtitleColor,
+                    cardColor = palette.githubCardColor,
+                    accent = palette.accent,
+                    subtitleColor = palette.subtitleColor,
                     expanded = githubExpanded,
                     onExpandedChange = { githubExpanded = it },
                     onOpenProjectUrl = { url ->
@@ -159,12 +145,12 @@ fun AboutPage(
             }
             item {
                 AboutRuntimeStatusCardSection(
-                    cardColor = runtimeCardColor,
-                    accent = accent,
+                    cardColor = palette.runtimeCardColor,
+                    accent = palette.accent,
                     shizukuReady = shizukuReady,
-                    readyColor = readyColor,
-                    notReadyColor = notReadyColor,
-                    subtitleColor = subtitleColor,
+                    readyColor = palette.readyColor,
+                    notReadyColor = palette.notReadyColor,
+                    subtitleColor = palette.subtitleColor,
                     notificationPermissionGranted = notificationPermissionGranted,
                     shizukuDetailMap = shizukuDetailMap,
                     permissionCount = permissionEntries.size,
@@ -176,11 +162,11 @@ fun AboutPage(
             }
             item {
                 AboutPermissionCardSection(
-                    cardColor = Color(0x2248A6FF),
-                    accent = accent,
-                    subtitleColor = subtitleColor,
-                    readyColor = readyColor,
-                    notReadyColor = notReadyColor,
+                    cardColor = palette.githubCardColor,
+                    accent = palette.accent,
+                    subtitleColor = palette.subtitleColor,
+                    readyColor = palette.readyColor,
+                    notReadyColor = palette.notReadyColor,
                     entries = permissionEntries,
                     expanded = permissionExpanded,
                     onExpandedChange = { permissionExpanded = it }
@@ -189,9 +175,9 @@ fun AboutPage(
             item {
                 AboutComponentCardSection(
                     cardColor = Color(0x2234D399),
-                    titleColor = readyColor,
-                    subtitleColor = subtitleColor,
-                    accent = accent,
+                    titleColor = palette.readyColor,
+                    subtitleColor = palette.subtitleColor,
+                    accent = palette.accent,
                     entries = componentEntries,
                     expanded = componentExpanded,
                     onExpandedChange = { componentExpanded = it }
@@ -199,45 +185,45 @@ fun AboutPage(
             }
             item {
                 AboutBuildSdkCardSection(
-                    cardColor = buildCardColor,
-                    accent = accent,
-                    subtitleColor = subtitleColor,
+                    cardColor = palette.buildCardColor,
+                    accent = palette.accent,
+                    subtitleColor = palette.subtitleColor,
                     expanded = buildExpanded,
                     onExpandedChange = { buildExpanded = it }
                 )
             }
             item {
                 AboutUiFrameworkCardSection(
-                    cardColor = uiFrameworkCardColor,
-                    accent = accent,
-                    subtitleColor = subtitleColor,
+                    cardColor = palette.uiFrameworkCardColor,
+                    accent = palette.accent,
+                    subtitleColor = palette.subtitleColor,
                     expanded = uiFrameworkExpanded,
                     onExpandedChange = { uiFrameworkExpanded = it }
                 )
             }
             item {
                 AboutNetworkServiceCardSection(
-                    cardColor = networkServiceCardColor,
-                    titleColor = readyColor,
-                    subtitleColor = subtitleColor,
+                    cardColor = palette.networkServiceCardColor,
+                    titleColor = palette.readyColor,
+                    subtitleColor = palette.subtitleColor,
                     expanded = networkExpanded,
                     onExpandedChange = { networkExpanded = it }
                 )
             }
             item {
                 AboutMediaStorageCardSection(
-                    cardColor = mediaStorageCardColor,
-                    accent = accent,
-                    subtitleColor = subtitleColor,
+                    cardColor = palette.mediaStorageCardColor,
+                    accent = palette.accent,
+                    subtitleColor = palette.subtitleColor,
                     expanded = mediaExpanded,
                     onExpandedChange = { mediaExpanded = it }
                 )
             }
             item {
                 AboutProjectLicenseCardSection(
-                    cardColor = projectLicenseCardColor,
-                    accent = accent,
-                    subtitleColor = subtitleColor,
+                    cardColor = palette.projectLicenseCardColor,
+                    accent = palette.accent,
+                    subtitleColor = palette.subtitleColor,
                     expanded = projectLicenseExpanded,
                     onExpandedChange = { projectLicenseExpanded = it },
                     onOpenLicenseUrl = { url ->
@@ -249,9 +235,9 @@ fun AboutPage(
             }
             item {
                 AboutLicenseCardSection(
-                    cardColor = licenseCardColor,
-                    accent = accent,
-                    subtitleColor = subtitleColor,
+                    cardColor = palette.licenseCardColor,
+                    accent = palette.accent,
+                    subtitleColor = palette.subtitleColor,
                     expanded = licenseExpanded,
                     onExpandedChange = { licenseExpanded = it },
                     onOpenSourceUrl = { url ->
