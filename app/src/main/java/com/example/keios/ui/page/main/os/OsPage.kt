@@ -58,36 +58,6 @@ fun OsPage(
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val textBundle = rememberOsPageTextBundle()
-    val exportSuccessText = textBundle.exportSuccessText
-    val noRefreshableCardText = textBundle.noRefreshableCardText
-    val refreshCompletedText = textBundle.refreshCompletedText
-    val manageCardsContentDescription = textBundle.manageCardsContentDescription
-    val manageActivitiesContentDescription = textBundle.manageActivitiesContentDescription
-    val manageShellCardsContentDescription = textBundle.manageShellCardsContentDescription
-    val refreshParamsContentDescription = textBundle.refreshParamsContentDescription
-    val searchLabel = textBundle.searchLabel
-    val visibleCardsTitle = textBundle.visibleCardsTitle
-    val visibleActivitiesTitle = textBundle.visibleActivitiesTitle
-    val visibleShellCardsTitle = textBundle.visibleShellCardsTitle
-    val visibleShellCardsDesc = textBundle.visibleShellCardsDesc
-    val googleSystemServiceDefaultTitle = textBundle.googleSystemServiceDefaultTitle
-    val shellSavedCountLabel = textBundle.shellSavedCountLabel
-    val shellCardSavedToast = textBundle.shellCardSavedToast
-    val shellCardDeletedToast = textBundle.shellCardDeletedToast
-    val shellCardCommandRequiredToast = textBundle.shellCardCommandRequiredToast
-    val shellCardDeleteDialogTitle = textBundle.shellCardDeleteDialogTitle
-    val shellRunNoPermissionText = textBundle.shellRunNoPermissionText
-    val shellRunNoOutputText = textBundle.shellRunNoOutputText
-    val editShellCommandCardTitle = textBundle.editShellCommandCardTitle
-    val editActivityCardTitle = textBundle.editActivityCardTitle
-    val addActivityCardTitle = textBundle.addActivityCardTitle
-    val activityCardDeletedToast = textBundle.activityCardDeletedToast
-    val activityCardDeleteDialogTitle = textBundle.activityCardDeleteDialogTitle
-    val cardImportFailedWithReason = textBundle.cardImportFailedWithReason
-    val noMatchedResultsText = textBundle.noMatchedResultsText
-    val googleSystemServiceDefaultIntentFlags = textBundle.googleSystemServiceDefaultIntentFlags
-    val googleSystemServiceDefaults = textBundle.googleSystemServiceDefaults
-    val googleSettingsBuiltInSampleDefaults = textBundle.googleSettingsBuiltInSampleDefaults
     val shizukuReady = shizukuStatus.contains("granted", ignoreCase = true)
     val initialUiSnapshot = remember { OsUiStateStore.loadSnapshot() }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -108,13 +78,13 @@ fun OsPage(
     var activityShortcutCards by remember {
         mutableStateOf(
             OsActivityShortcutCardStore.loadCards(
-                defaults = googleSystemServiceDefaults,
-                builtInSampleDefaults = googleSettingsBuiltInSampleDefaults
+                defaults = textBundle.googleSystemServiceDefaults,
+                builtInSampleDefaults = textBundle.googleSettingsBuiltInSampleDefaults
             )
         )
     }
     val activityCardExpanded = remember { mutableStateMapOf<String, Boolean>() }
-    val overlayState = rememberOsPageOverlayState(googleSystemServiceDefaults)
+    val overlayState = rememberOsPageOverlayState(textBundle.googleSystemServiceDefaults)
     var uiStatePersistenceReady by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
@@ -175,10 +145,10 @@ fun OsPage(
         shellCommandCards = shellCommandCards,
         onShellCommandCardsChange = { shellCommandCards = it },
         shellCommandCardExpanded = shellCommandCardExpanded,
-        googleSystemServiceDefaults = googleSystemServiceDefaults,
-        googleSettingsBuiltInSampleDefaults = googleSettingsBuiltInSampleDefaults,
-        cardImportFailedWithReason = cardImportFailedWithReason,
-        exportSuccessText = exportSuccessText
+        googleSystemServiceDefaults = textBundle.googleSystemServiceDefaults,
+        googleSettingsBuiltInSampleDefaults = textBundle.googleSettingsBuiltInSampleDefaults,
+        cardImportFailedWithReason = textBundle.cardImportFailedWithReason,
+        exportSuccessText = textBundle.exportSuccessText
     )
     val overlayTransferActions = rememberOsPageOverlayTransferActions(
         context = context,
@@ -186,7 +156,7 @@ fun OsPage(
         cardTransferState = cardTransferState,
         activityShortcutCards = activityShortcutCards,
         shellCommandCards = shellCommandCards,
-        googleSystemServiceDefaults = googleSystemServiceDefaults
+        googleSystemServiceDefaults = textBundle.googleSystemServiceDefaults
     )
     var sectionStates by remember {
         mutableStateOf(
@@ -228,17 +198,17 @@ fun OsPage(
         setLinuxEnvExpanded = { linuxEnvExpanded = it },
         activityShortcutCardsProvider = { activityShortcutCards },
         updateActivityShortcutCards = { activityShortcutCards = it },
-        googleSystemServiceDefaults = googleSystemServiceDefaults,
+        googleSystemServiceDefaults = textBundle.googleSystemServiceDefaults,
         updateShellCommandCards = { shellCommandCards = it },
         runningShellCommandCardIdsProvider = { runningShellCommandCardIds },
         onRunningShellCommandCardIdsChange = { runningShellCommandCardIds = it },
         onRefreshingChange = { refreshing = it },
         onRefreshProgressChange = { refreshProgress = it },
-        shellCardCommandRequiredToast = shellCardCommandRequiredToast,
-        shellRunNoPermissionText = shellRunNoPermissionText,
-        shellRunNoOutputText = shellRunNoOutputText,
-        noRefreshableCardText = noRefreshableCardText,
-        refreshCompletedText = refreshCompletedText
+        shellCardCommandRequiredToast = textBundle.shellCardCommandRequiredToast,
+        shellRunNoPermissionText = textBundle.shellRunNoPermissionText,
+        shellRunNoOutputText = textBundle.shellRunNoOutputText,
+        noRefreshableCardText = textBundle.noRefreshableCardText,
+        refreshCompletedText = textBundle.refreshCompletedText
     )
 
     BindOsCardExpandedStateMaps(
@@ -313,7 +283,7 @@ fun OsPage(
         context = context,
         queryApplied = queryApplied,
         shizukuStatus = shizukuStatus,
-        shellSavedCountLabel = shellSavedCountLabel,
+        shellSavedCountLabel = textBundle.shellSavedCountLabel,
         shellCommandCards = shellCommandCards,
         sectionStates = sectionStates,
         topInfoExpanded = topInfoExpanded,
@@ -351,10 +321,10 @@ fun OsPage(
         topBarBackdrop = backdrops.topBar,
         layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
         reduceEffectsDuringPagerScroll = runtime.isPagerScrollInProgress,
-        manageCardsContentDescription = manageCardsContentDescription,
-        manageActivitiesContentDescription = manageActivitiesContentDescription,
-        manageShellCardsContentDescription = manageShellCardsContentDescription,
-        refreshParamsContentDescription = refreshParamsContentDescription,
+        manageCardsContentDescription = textBundle.manageCardsContentDescription,
+        manageActivitiesContentDescription = textBundle.manageActivitiesContentDescription,
+        manageShellCardsContentDescription = textBundle.manageShellCardsContentDescription,
+        refreshParamsContentDescription = textBundle.refreshParamsContentDescription,
         refreshing = refreshing,
         onOpenCardManager = { overlayState.onShowCardManagerChange(true) },
         onOpenActivityVisibilityManager = { overlayState.onShowActivityVisibilityManagerChange(true) },
@@ -364,49 +334,49 @@ fun OsPage(
         searchBarVisible = enableSearchBar && showSearchBar,
         queryInput = queryInput,
         onQueryInputChange = osPageViewModel::updateQueryInput,
-        searchLabel = searchLabel
+        searchLabel = textBundle.searchLabel
     ) { innerPadding ->
         OsPageOverlayHost(
             context = context,
             scope = scope,
             sheetBackdrop = backdrops.sheet,
             overlayState = overlayState,
-            visibleCardsTitle = visibleCardsTitle,
+            visibleCardsTitle = textBundle.visibleCardsTitle,
             visibleCardsHint = "隐藏卡片后会清空对应缓存；重新显示时会立即重新获取并缓存。",
             visibleCards = visibleCards,
             applyCardVisibility = actionState.applyCardVisibility,
-            visibleActivitiesTitle = visibleActivitiesTitle,
+            visibleActivitiesTitle = textBundle.visibleActivitiesTitle,
             visibleActivitiesDesc = stringResource(R.string.os_sheet_visible_activities_desc),
             activityShortcutCards = activityShortcutCards,
-            defaultActivityCardTitle = googleSystemServiceDefaultTitle,
+            defaultActivityCardTitle = textBundle.googleSystemServiceDefaultTitle,
             cardTransferInProgress = overlayState.cardTransferInProgress,
             onExportAllActivityCards = overlayTransferActions.onExportAllActivityCards,
             onImportAllActivityCards = overlayTransferActions.onImportAllActivityCards,
             applyActivityCardVisibility = actionState.applyActivityCardVisibility,
-            visibleShellCardsTitle = visibleShellCardsTitle,
-            visibleShellCardsDesc = visibleShellCardsDesc,
+            visibleShellCardsTitle = textBundle.visibleShellCardsTitle,
+            visibleShellCardsDesc = textBundle.visibleShellCardsDesc,
             shellRunnerVisible = visibleCards.contains(OsSectionCard.SHELL_RUNNER),
             shellCommandCards = shellCommandCards,
             onExportAllShellCards = overlayTransferActions.onExportAllShellCards,
             onImportAllShellCards = overlayTransferActions.onImportAllShellCards,
             applyShellCommandCardVisibility = actionState.applyShellCommandCardVisibility,
-            editShellCommandCardTitle = editShellCommandCardTitle,
+            editShellCommandCardTitle = textBundle.editShellCommandCardTitle,
             onShellCommandCardsChange = { shellCommandCards = it },
             onRemoveShellCommandCardExpanded = { shellCommandCardExpanded.remove(it) },
-            shellCardCommandRequiredToast = shellCardCommandRequiredToast,
-            shellCardSavedToast = shellCardSavedToast,
-            shellCardDeletedToast = shellCardDeletedToast,
-            shellCardDeleteDialogTitle = shellCardDeleteDialogTitle,
-            addActivityCardTitle = addActivityCardTitle,
-            editActivityCardTitle = editActivityCardTitle,
-            noMatchedResultsText = noMatchedResultsText,
+            shellCardCommandRequiredToast = textBundle.shellCardCommandRequiredToast,
+            shellCardSavedToast = textBundle.shellCardSavedToast,
+            shellCardDeletedToast = textBundle.shellCardDeletedToast,
+            shellCardDeleteDialogTitle = textBundle.shellCardDeleteDialogTitle,
+            addActivityCardTitle = textBundle.addActivityCardTitle,
+            editActivityCardTitle = textBundle.editActivityCardTitle,
+            noMatchedResultsText = textBundle.noMatchedResultsText,
             onActivityShortcutCardsChange = { activityShortcutCards = it },
             onRemoveActivityCardExpanded = { activityCardExpanded.remove(it) },
-            googleSystemServiceDefaults = googleSystemServiceDefaults,
-            googleSystemServiceDefaultTitle = googleSystemServiceDefaultTitle,
-            googleSystemServiceDefaultIntentFlags = googleSystemServiceDefaultIntentFlags,
-            activityCardDeletedToast = activityCardDeletedToast,
-            activityCardDeleteDialogTitle = activityCardDeleteDialogTitle
+            googleSystemServiceDefaults = textBundle.googleSystemServiceDefaults,
+            googleSystemServiceDefaultTitle = textBundle.googleSystemServiceDefaultTitle,
+            googleSystemServiceDefaultIntentFlags = textBundle.googleSystemServiceDefaultIntentFlags,
+            activityCardDeletedToast = textBundle.activityCardDeletedToast,
+            activityCardDeleteDialogTitle = textBundle.activityCardDeleteDialogTitle
         )
         OsPageMainList(
             context = context,
@@ -427,7 +397,7 @@ fun OsPage(
             overviewCardColor = overviewCardColor,
             overviewBorderColor = overviewBorderColor,
             overviewMetrics = overviewMetrics,
-            noMatchedResultsText = noMatchedResultsText,
+            noMatchedResultsText = textBundle.noMatchedResultsText,
             query = derivedState.query,
             displayedTopInfoRows = derivedState.displayedTopInfoRows,
             groupedTopInfoRows = derivedState.groupedTopInfoRows,
@@ -452,7 +422,7 @@ fun OsPage(
                 scope.launch { actionState.runShellCommandCard(card) }
             },
             activityShortcutCards = activityShortcutCards,
-            defaultActivityCardTitle = googleSystemServiceDefaultTitle,
+            defaultActivityCardTitle = textBundle.googleSystemServiceDefaultTitle,
             activityCardExpanded = activityCardExpanded,
             onActivityCardExpandedChange = { cardId, expanded ->
                 activityCardExpanded[cardId] = expanded
@@ -461,7 +431,7 @@ fun OsPage(
                 openOsActivityShortcutCard(
                     context = context,
                     card = card,
-                    defaults = googleSystemServiceDefaults,
+                    defaults = textBundle.googleSystemServiceDefaults,
                     invalidTargetMessage = context.getString(R.string.os_google_system_service_toast_invalid_target),
                     openFailedMessage = { error ->
                         context.getString(
@@ -474,7 +444,7 @@ fun OsPage(
             onOpenActivityShortcutCardEditor = { card ->
                 beginEditingOsActivityShortcutCard(
                     card = card,
-                    defaults = googleSystemServiceDefaults,
+                    defaults = textBundle.googleSystemServiceDefaults,
                     onEditModeChange = overlayState.onActivityCardEditModeChange,
                     onEditingCardIdChange = overlayState.onEditingActivityShortcutCardIdChange,
                     onEditingBuiltInChange = overlayState.onEditingActivityShortcutBuiltInChange,
@@ -526,7 +496,7 @@ fun OsPage(
                         ensureLoad = actionState.ensureLoad,
                         sectionStatesProvider = { sectionStates },
                         activityShortcutCardsProvider = { activityShortcutCards },
-                        googleSystemServiceDefaults = googleSystemServiceDefaults,
+                        googleSystemServiceDefaults = textBundle.googleSystemServiceDefaults,
                         context = context,
                         shizukuStatus = shizukuStatus,
                         launchExport = { fileName, payload ->
@@ -547,7 +517,7 @@ fun OsPage(
                 overlayState.onEditingActivityShortcutCardIdChange(null)
                 overlayState.onEditingActivityShortcutBuiltInChange(false)
                 overlayState.onActivityShortcutDraftChange(
-                    createDefaultActivityShortcutDraft(googleSystemServiceDefaults)
+                    createDefaultActivityShortcutDraft(textBundle.googleSystemServiceDefaults)
                 )
                 overlayState.onShowActivityShortcutEditorChange(true)
             }
