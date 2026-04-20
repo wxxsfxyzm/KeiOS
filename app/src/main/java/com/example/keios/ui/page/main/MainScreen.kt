@@ -452,7 +452,31 @@ private fun MainPagerLayout(
     var temporaryBeyondViewportCount by remember { mutableStateOf<Int?>(null) }
     var homeGitHubOverview by remember { mutableStateOf(HomeGitHubOverview()) }
     var homeBaOverview by remember { mutableStateOf(HomeBaOverview()) }
-    var homeOverviewInitialized by rememberSaveable { mutableStateOf(false) }
+    suspend fun refreshHomeOverviewState(reason: String) {
+        val (baOverview, githubOverview) = withContext(Dispatchers.IO) {
+            val loadedBaOverview = runCatching { loadHomeBaOverview() }
+                .onFailure { error ->
+                    AppLogger.w(
+                        "MainScreen",
+                        "loadHomeBaOverview failed (reason=$reason)",
+                        error
+                    )
+                }
+                .getOrElse { HomeBaOverview(loaded = true) }
+            val loadedGitHubOverview = runCatching { loadHomeGitHubOverview() }
+                .onFailure { error ->
+                    AppLogger.w(
+                        "MainScreen",
+                        "loadHomeGitHubOverview failed (reason=$reason)",
+                        error
+                    )
+                }
+                .getOrElse { HomeGitHubOverview(loaded = true) }
+            loadedBaOverview to loadedGitHubOverview
+        }
+        homeBaOverview = baOverview
+        homeGitHubOverview = githubOverview
+    }
     val shouldRenderNonHomeBackground by remember(hasNonHomeBackground, tabs, pagerState) {
         derivedStateOf {
             if (!hasNonHomeBackground) return@derivedStateOf false
@@ -480,16 +504,12 @@ private fun MainPagerLayout(
         temporaryBeyondViewportCount = null
     }
     LaunchedEffect(Unit) {
-        if (homeOverviewInitialized) return@LaunchedEffect
-        homeBaOverview = withContext(Dispatchers.IO) { loadHomeBaOverview() }
-        homeGitHubOverview = withContext(Dispatchers.IO) { loadHomeGitHubOverview() }
-        homeOverviewInitialized = true
+        if (homeBaOverview.loaded && homeGitHubOverview.loaded) return@LaunchedEffect
+        refreshHomeOverviewState(reason = "initial")
     }
     LaunchedEffect(settingsReturnToken) {
         if (settingsReturnToken <= 0) return@LaunchedEffect
-        homeBaOverview = withContext(Dispatchers.IO) { loadHomeBaOverview() }
-        homeGitHubOverview = withContext(Dispatchers.IO) { loadHomeGitHubOverview() }
-        homeOverviewInitialized = true
+        refreshHomeOverviewState(reason = "settings_return_$settingsReturnToken")
     }
     val farJumpBefore: suspend () -> Unit = {
         farJumpAlpha.snapTo(1f)
