@@ -33,7 +33,7 @@ import com.example.keios.mcp.notification.McpNotificationHelper
 import com.example.keios.mcp.server.McpServerManager
 import com.example.keios.ui.page.main.ba.BaApNotificationDispatcher
 import com.example.keios.ui.page.main.ba.support.BASettingsStore
-import com.example.keios.ui.page.main.MainScreen
+import com.example.keios.ui.page.main.host.main.MainScreen
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController

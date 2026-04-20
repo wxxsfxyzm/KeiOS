@@ -70,6 +70,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.keios.R
 import com.example.keios.feature.ba.data.remote.GameKeeFetchHelper
+import com.example.keios.ui.page.main.host.pager.animateTabSwitch
 import com.example.keios.ui.page.main.ba.support.BASettingsStore
 import com.example.keios.ui.page.main.student.BaStudentGuideInfo
 import com.example.keios.ui.page.main.student.BaGuideGalleryItem

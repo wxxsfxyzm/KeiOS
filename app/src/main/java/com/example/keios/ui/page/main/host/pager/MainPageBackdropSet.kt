@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.host.pager
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect

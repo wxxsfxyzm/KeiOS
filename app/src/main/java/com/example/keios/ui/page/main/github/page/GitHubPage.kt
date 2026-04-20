@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.github.page
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import com.example.keios.R
+import com.example.keios.ui.page.main.host.pager.MainPageRuntime
+import com.example.keios.ui.page.main.host.pager.rememberMainPageBackdropSet
 import com.example.keios.ui.page.main.github.query.queryDownloaderOptions
 import com.example.keios.ui.page.main.github.query.queryOnlineShareTargetOptions
 import com.example.keios.ui.page.main.github.query.systemDownloadManagerOption

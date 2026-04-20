@@ -1,10 +1,6 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.home
 
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.layout.defaultMinSize
@@ -33,16 +29,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
@@ -66,6 +58,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.keios.R
+import com.example.keios.ui.page.main.home.model.HomeBaOverview
+import com.example.keios.ui.page.main.home.model.HomeGitHubOverview
+import com.example.keios.ui.page.main.home.model.HomeMcpOverview
+import com.example.keios.ui.page.main.home.model.HomeOverviewCard
+import com.example.keios.ui.page.main.home.model.formatGitHubCacheAgo
+import com.example.keios.ui.page.main.home.model.loadHomeVisibleOverviewCards
+import com.example.keios.ui.page.main.home.model.saveHomeVisibleOverviewCards
+import com.example.keios.ui.page.main.home.state.rememberHomePageHeroMotionState
+import com.example.keios.ui.page.main.home.state.rememberHomePageOverviewCardState
+import com.example.keios.ui.page.main.host.pager.MainPageRuntime
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.widget.glass.GlassIconButton
 import com.example.keios.ui.page.main.widget.glass.GlassVariant
@@ -79,9 +81,6 @@ import com.example.keios.ui.page.main.widget.sheet.SheetSectionTitle
 import com.example.keios.ui.page.main.widget.sheet.SnapshotWindowBottomSheet
 import com.example.keios.ui.page.main.widget.status.StatusPill
 import com.example.keios.ui.page.main.widget.status.StatusLabelText
-import com.example.keios.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
-import com.example.keios.ui.page.main.widget.motion.appMotionFloatState
-import com.example.keios.ui.page.main.widget.motion.resolvedMotionDuration
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption
 import com.example.keios.ui.page.main.mcp.util.formatMcpUptimeText
 import com.example.keios.ui.page.main.os.appLucideCloseIcon
@@ -90,7 +89,6 @@ import com.example.keios.ui.page.main.os.appLucideLayersIcon
 import com.example.keios.ui.page.main.os.osLucideSettingsIcon
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberActionBarBackdrop
-import kotlinx.coroutines.flow.onEach
 import com.rosan.installer.ui.library.effect.BgEffectBackground
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -101,8 +99,6 @@ import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-
-private const val HOME_HEADER_SINK_PER_HIDDEN_CARD_DP = 22
 
 @Composable
 fun HomePage(
@@ -276,59 +272,6 @@ fun HomePage(
         homeStatusLoading
     }
 
-    var logoHeightPx by remember { mutableIntStateOf(0) }
-    val scrollProgress by remember {
-        derivedStateOf {
-            if (logoHeightPx <= 0) {
-                0f
-            } else {
-                val index = lazyListState.firstVisibleItemIndex
-                val offset = lazyListState.firstVisibleItemScrollOffset
-                if (index > 0) 1f else (offset.toFloat() / logoHeightPx).coerceIn(0f, 1f)
-            }
-        }
-    }
-
-    val topBarProgress by appMotionFloatState(
-        targetValue = scrollProgress,
-        label = "home_top_bar_progress"
-    )
-    val bgAlpha by appMotionFloatState(
-        targetValue = 1f - scrollProgress,
-        label = "home_bg_alpha"
-    )
-
-    var logoHeightDp by remember { mutableStateOf(300.dp) }
-    var logoAreaY by remember { mutableFloatStateOf(0f) }
-    var iconY by remember { mutableFloatStateOf(0f) }
-    var titleY by remember { mutableFloatStateOf(0f) }
-    var summaryY by remember { mutableFloatStateOf(0f) }
-    var initialLogoAreaY by remember { mutableFloatStateOf(0f) }
-    val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
-    val hdrSweepProgress = if (
-        homeIconHdrEnabled &&
-        transitionAnimationsEnabled &&
-        !runtime.isPagerScrollInProgress
-    ) {
-        val hdrSweep = rememberInfiniteTransition(label = "kei_hdr_sweep")
-        val animated by hdrSweep.animateFloat(
-            initialValue = -0.35f,
-            targetValue = 1.35f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(
-                    durationMillis = resolvedMotionDuration(4600, transitionAnimationsEnabled),
-                    easing = LinearEasing
-                )
-            ),
-            label = "kei_hdr_sweep_progress"
-        )
-        animated
-    } else {
-        0f
-    }
-    var iconProgress by remember { mutableFloatStateOf(0f) }
-    var titleProgress by remember { mutableFloatStateOf(0f) }
-    var summaryProgress by remember { mutableFloatStateOf(0f) }
     var actionBarSelectedIndex by rememberSaveable { mutableIntStateOf(1) }
     var showBottomPageEditor by rememberSaveable { mutableStateOf(false) }
     var visibleOverviewCards by remember { mutableStateOf(loadHomeVisibleOverviewCards()) }
@@ -339,36 +282,6 @@ fun HomePage(
         }.toSet()
         visibleOverviewCards = updated
         saveHomeVisibleOverviewCards(updated)
-    }
-
-    LaunchedEffect(lazyListState) {
-        snapshotFlow { lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset }
-            .onEach { (index, offset) ->
-                if (index > 0) {
-                    if (iconProgress != 1f) iconProgress = 1f
-                    if (titleProgress != 1f) titleProgress = 1f
-                    if (summaryProgress != 1f) summaryProgress = 1f
-                    return@onEach
-                }
-
-                if (initialLogoAreaY == 0f && logoAreaY > 0f) {
-                    initialLogoAreaY = logoAreaY
-                }
-                val refLogoAreaY = if (initialLogoAreaY > 0f) initialLogoAreaY else logoAreaY
-
-                val stage1 = (refLogoAreaY - summaryY).coerceAtLeast(1f)
-                val stage2 = (summaryY - titleY).coerceAtLeast(1f)
-                val stage3 = (titleY - iconY).coerceAtLeast(1f)
-
-                val summaryDelay = stage1 * 0.5f
-                summaryProgress = ((offset.toFloat() - summaryDelay) / (stage1 - summaryDelay).coerceAtLeast(1f))
-                    .coerceIn(0f, 1f)
-                titleProgress = ((offset.toFloat() - stage1) / stage2)
-                    .coerceIn(0f, 1f)
-                iconProgress = ((offset.toFloat() - stage1 - stage2) / stage3)
-                    .coerceIn(0f, 1f)
-            }
-            .collect { }
     }
 
     DisposableEffect(Unit) {
@@ -415,134 +328,71 @@ fun HomePage(
         )
     }
     val hiddenOverviewCardCount = (HomeOverviewCard.entries.size - visibleOverviewCards.size).coerceAtLeast(0)
-    val homeHeaderSinkOffset = (hiddenOverviewCardCount * HOME_HEADER_SINK_PER_HIDDEN_CARD_DP).dp
-    val homeHeaderStatusPills = remember(
-        homeStatusMcp,
-        homeStatusGitHub,
-        homeStatusBa,
-        homeStatusShizuku,
-        mcpOverview.running,
-        cacheStateColor,
-        baOverview.loaded,
-        baOverview.activated,
-        shizukuGranted
-    ) {
-        listOf(
-            HomeHeaderStatusPillState(
-                label = homeStatusMcp,
-                color = if (mcpOverview.running) runningColor else stoppedColor,
-                minWidth = 62.dp
-            ),
-            HomeHeaderStatusPillState(
-                label = homeStatusGitHub,
-                color = cacheStateColor,
-                minWidth = 72.dp
-            ),
-            HomeHeaderStatusPillState(
-                label = homeStatusBa,
-                color = when {
-                    !baOverview.loaded -> inactiveColor
-                    baOverview.activated -> runningColor
-                    else -> stoppedColor
-                },
-                minWidth = 62.dp
-            ),
-            HomeHeaderStatusPillState(
-                label = homeStatusShizuku,
-                color = if (shizukuGranted) runningColor else stoppedColor,
-                minWidth = 70.dp,
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 5.dp)
-            )
-        )
-    }
-    val mcpOverviewStats = remember(
-        homeStatStatus,
-        mcpStatusText,
-        homeStatRuntime,
-        mcpRuntimeText,
-        homeStatClients,
-        mcpOverview.connectedClients,
-        homeStatNetwork,
-        networkModeText,
-        homeStatPort,
-        mcpOverview.port,
-        homeStatToken,
-        mcpTokenStatusText,
-        homeStatService,
-        mcpOverview.serverName,
-        homeStatPath,
-        mcpOverview.endpointPath
-    ) {
-        listOf(
-            HomeCardStatItem(label = homeStatStatus, value = mcpStatusText, emphasize = true),
-            HomeCardStatItem(label = homeStatRuntime, value = mcpRuntimeText, emphasize = true),
-            HomeCardStatItem(label = homeStatClients, value = mcpOverview.connectedClients.toString()),
-            HomeCardStatItem(label = homeStatNetwork, value = networkModeText),
-            HomeCardStatItem(label = homeStatPort, value = mcpOverview.port.toString()),
-            HomeCardStatItem(label = homeStatToken, value = mcpTokenStatusText),
-            HomeCardStatItem(label = homeStatService, value = mcpOverview.serverName),
-            HomeCardStatItem(label = homeStatPath, value = mcpOverview.endpointPath)
-        )
-    }
-    val githubOverviewStats = remember(
-        homeStatStableUpdates,
-        githubUpdatableLine,
-        homeStatPreReleaseUpdates,
-        githubPreReleaseUpdateLine,
-        homeStatTracked,
-        trackedCountLine,
-        homeStatCached,
-        cacheHitCountLine,
-        homeStatStrategy,
-        githubStrategyText,
-        homeStatApi,
-        githubApiText,
-        homeStatLastUpdate,
-        githubLastUpdateLine
-    ) {
-        listOf(
-            HomeCardStatItem(
-                label = homeStatStableUpdates,
-                value = githubUpdatableLine,
-                emphasize = true
-            ),
-            HomeCardStatItem(
-                label = homeStatPreReleaseUpdates,
-                value = githubPreReleaseUpdateLine,
-                emphasize = true
-            ),
-            HomeCardStatItem(label = homeStatTracked, value = trackedCountLine),
-            HomeCardStatItem(label = homeStatCached, value = cacheHitCountLine),
-            HomeCardStatItem(label = homeStatStrategy, value = githubStrategyText),
-            HomeCardStatItem(label = homeStatApi, value = githubApiText),
-            HomeCardStatItem(label = homeStatLastUpdate, value = githubLastUpdateLine)
-        )
-    }
-    val baOverviewStats = remember(
-        homeStatStatus,
-        baActivationLine,
-        homeStatAp,
-        baApLine,
-        homeStatCafeAp,
-        baCafeApLine,
-        homeStatApRemaining,
-        baApRemainingLine
-    ) {
-        listOf(
-            HomeCardStatItem(label = homeStatStatus, value = baActivationLine, emphasize = true),
-            HomeCardStatItem(label = homeStatAp, value = baApLine, emphasize = true),
-            HomeCardStatItem(label = homeStatCafeAp, value = baCafeApLine),
-            HomeCardStatItem(label = homeStatApRemaining, value = baApRemainingLine)
-        )
-    }
+    val heroMotionState = rememberHomePageHeroMotionState(
+        lazyListState = lazyListState,
+        homeIconHdrEnabled = homeIconHdrEnabled,
+        runtime = runtime,
+        hiddenOverviewCardCount = hiddenOverviewCardCount
+    )
+    val overviewCardState = rememberHomePageOverviewCardState(
+        homeStatusMcp = homeStatusMcp,
+        homeStatusGitHub = homeStatusGitHub,
+        homeStatusBa = homeStatusBa,
+        homeStatusShizuku = homeStatusShizuku,
+        mcpRunning = mcpOverview.running,
+        cacheStateColor = cacheStateColor,
+        baLoaded = baOverview.loaded,
+        baActivated = baOverview.activated,
+        shizukuGranted = shizukuGranted,
+        runningColor = runningColor,
+        stoppedColor = stoppedColor,
+        inactiveColor = inactiveColor,
+        homeStatStatus = homeStatStatus,
+        mcpStatusText = mcpStatusText,
+        homeStatRuntime = homeStatRuntime,
+        mcpRuntimeText = mcpRuntimeText,
+        homeStatClients = homeStatClients,
+        mcpConnectedClients = mcpOverview.connectedClients,
+        homeStatNetwork = homeStatNetwork,
+        networkModeText = networkModeText,
+        homeStatPort = homeStatPort,
+        mcpPort = mcpOverview.port,
+        homeStatPath = homeStatPath,
+        mcpEndpointPath = mcpOverview.endpointPath,
+        homeStatService = homeStatService,
+        mcpServerName = mcpOverview.serverName,
+        homeStatToken = homeStatToken,
+        mcpTokenStatusText = mcpTokenStatusText,
+        homeStatStableUpdates = homeStatStableUpdates,
+        githubUpdatableLine = githubUpdatableLine,
+        homeStatPreReleaseUpdates = homeStatPreReleaseUpdates,
+        githubPreReleaseUpdateLine = githubPreReleaseUpdateLine,
+        homeStatTracked = homeStatTracked,
+        trackedCountLine = trackedCountLine,
+        homeStatCached = homeStatCached,
+        cacheHitCountLine = cacheHitCountLine,
+        homeStatStrategy = homeStatStrategy,
+        githubStrategyText = githubStrategyText,
+        homeStatApi = homeStatApi,
+        githubApiText = githubApiText,
+        homeStatLastUpdate = homeStatLastUpdate,
+        githubLastUpdateLine = githubLastUpdateLine,
+        baActivationLine = baActivationLine,
+        homeStatAp = homeStatAp,
+        baApLine = baApLine,
+        homeStatCafeAp = homeStatCafeAp,
+        baCafeApLine = baCafeApLine,
+        homeStatApRemaining = homeStatApRemaining,
+        baApRemainingLine = baApRemainingLine
+    )
 
     Scaffold(
         topBar = {
             SmallTopAppBar(
                 title = "",
                 scrollBehavior = topAppBarScrollBehavior,
-                color = MiuixTheme.colorScheme.surface.copy(alpha = if (scrollProgress == 1f) 1f else 0f),
-                titleColor = MiuixTheme.colorScheme.onSurface.copy(alpha = topBarProgress),
+                color = MiuixTheme.colorScheme.surface.copy(alpha = if (heroMotionState.scrollProgress == 1f) 1f else 0f),
+                titleColor = MiuixTheme.colorScheme.onSurface.copy(alpha = heroMotionState.topBarProgress),
                 actions = {
                     LiquidActionBar(
                         backdrop = actionBarBackdrop,
@@ -592,33 +442,25 @@ fun HomePage(
             modifier = Modifier.fillMaxSize(),
             bgModifier = Modifier,
             effectBackground = effectBackgroundEnabled,
-            alpha = bgAlpha,
+            alpha = heroMotionState.bgAlpha,
         ) {
             HomePageHero(
                 homeIconHdrEnabled = homeIconHdrEnabled,
-                hdrSweepProgress = hdrSweepProgress,
-                homeHeaderSinkOffset = homeHeaderSinkOffset,
+                hdrSweepProgress = heroMotionState.hdrSweepProgress,
+                homeHeaderSinkOffset = heroMotionState.homeHeaderSinkOffset,
                 logoPadding = logoPadding,
                 layoutDirection = layoutDirection,
                 homeAppName = homeAppName,
                 homeTagline = homeTagline,
                 appVersionText = appVersionText,
-                iconProgress = iconProgress,
-                titleProgress = titleProgress,
-                summaryProgress = summaryProgress,
-                statusPills = homeHeaderStatusPills,
-                onHeroHeightChanged = { heightPx ->
-                    with(density) { logoHeightDp = heightPx.toDp() }
-                },
-                onIconBottomChanged = { bottom ->
-                    if (iconY == 0f) iconY = bottom
-                },
-                onTitleBottomChanged = { bottom ->
-                    if (titleY == 0f) titleY = bottom
-                },
-                onSummaryBottomChanged = { bottom ->
-                    if (summaryY == 0f) summaryY = bottom
-                }
+                iconProgress = heroMotionState.iconProgress,
+                titleProgress = heroMotionState.titleProgress,
+                summaryProgress = heroMotionState.summaryProgress,
+                statusPills = overviewCardState.homeHeaderStatusPills,
+                onHeroHeightChanged = heroMotionState.onHeroHeightPxChanged,
+                onIconBottomChanged = heroMotionState.onIconBottomChanged,
+                onTitleBottomChanged = heroMotionState.onTitleBottomChanged,
+                onSummaryBottomChanged = heroMotionState.onSummaryBottomChanged
             )
 
             LazyColumn(
@@ -630,12 +472,12 @@ fun HomePage(
             ) {
                 item(key = "logo_spacer") {
                     HomePageHeroSpacer(
-                        logoHeightDp = logoHeightDp,
+                        logoHeightDp = heroMotionState.logoHeightDp,
                         logoPadding = logoPadding,
                         listContentPadding = listContentPadding,
-                        homeHeaderSinkOffset = homeHeaderSinkOffset,
-                        onLogoHeightPxChanged = { logoHeightPx = it },
-                        onLogoAreaBottomChanged = { bottom -> logoAreaY = bottom }
+                        homeHeaderSinkOffset = heroMotionState.homeHeaderSinkOffset,
+                        onLogoHeightPxChanged = heroMotionState.onLogoHeightPxChanged,
+                        onLogoAreaBottomChanged = heroMotionState.onLogoAreaBottomChanged
                     )
                 }
 
@@ -651,11 +493,11 @@ fun HomePage(
                             blurEnabled = blurEnabled,
                             homeNa = homeNa,
                             homeCardMcp = homeCardMcp,
-                            mcpStats = mcpOverviewStats,
+                            mcpStats = overviewCardState.mcpOverviewStats,
                             homeCardGitHub = homeCardGitHub,
-                            githubStats = githubOverviewStats,
+                            githubStats = overviewCardState.githubOverviewStats,
                             homeCardBa = homeCardBa,
-                            baStats = baOverviewStats
+                            baStats = overviewCardState.baOverviewStats
                         )
                     }
                 }

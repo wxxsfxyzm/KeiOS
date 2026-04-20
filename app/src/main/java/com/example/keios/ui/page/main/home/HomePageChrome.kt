@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.BasicText
 import com.example.keios.R
+import com.example.keios.ui.page.main.home.model.HomeOverviewCard
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.os.appLucideCloseIcon
 import com.example.keios.ui.page.main.widget.glass.GlassIconButton

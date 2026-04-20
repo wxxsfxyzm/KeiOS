@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.ba
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.keios.ui.page.main.host.pager.MainPageRuntime
+import com.example.keios.ui.page.main.host.pager.rememberMainPageBackdropSet
 import com.example.keios.ui.page.main.ba.support.BASessionState
 import com.example.keios.ui.page.main.ba.support.BASettingsStore
 import com.example.keios.ui.page.main.ba.support.BA_AP_MAX

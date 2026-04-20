@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.home.model
 
 import com.example.keios.feature.github.data.local.GitHubTrackStore
 import com.example.keios.feature.github.model.GitHubLookupStrategyOption

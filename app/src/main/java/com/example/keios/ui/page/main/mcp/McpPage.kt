@@ -44,8 +44,8 @@ import com.example.keios.ui.page.main.widget.motion.appFloatingExit
 import com.example.keios.ui.page.main.widget.chrome.appPageBottomPaddingWithFloatingOverlay
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
-import com.example.keios.ui.page.main.MainPageRuntime
-import com.example.keios.ui.page.main.rememberMainPageBackdropSet
+import com.example.keios.ui.page.main.host.pager.MainPageRuntime
+import com.example.keios.ui.page.main.host.pager.rememberMainPageBackdropSet
 import com.example.keios.ui.page.main.os.appLucideEditIcon
 import com.example.keios.ui.page.main.os.appLucideNotesIcon
 import com.example.keios.ui.page.main.os.appLucidePauseIcon

@@ -1,0 +1,51 @@
+package com.example.keios.ui.page.main.host.pager
+
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.ui.platform.LocalContext
+
+@Composable
+internal fun rememberMainPagerBackdropLifecycle(): LayerBackdrop {
+    val context = LocalContext.current
+    var backdropGeneration by rememberSaveable { mutableIntStateOf(0) }
+    val activityLifecycle = remember(context) { (context as? ComponentActivity)?.lifecycle }
+
+    DisposableEffect(activityLifecycle) {
+        val lifecycle = activityLifecycle ?: return@DisposableEffect onDispose { }
+        var appWentBackground = false
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> appWentBackground = true
+                Lifecycle.Event.ON_START -> {
+                    if (appWentBackground) {
+                        backdropGeneration++
+                        appWentBackground = false
+                    }
+                }
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+
+    val surfaceColor = MiuixTheme.colorScheme.surface
+    return key("main-backdrop-$backdropGeneration") {
+        rememberLayerBackdrop {
+            drawRect(surfaceColor)
+            drawContent()
+        }
+    }
+}

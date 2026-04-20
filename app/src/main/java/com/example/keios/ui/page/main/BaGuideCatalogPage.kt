@@ -68,6 +68,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.keios.R
+import com.example.keios.ui.page.main.host.pager.animateTabSwitch
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogBundle
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogEntry
 import com.example.keios.ui.page.main.student.catalog.BaGuideCatalogIconCache

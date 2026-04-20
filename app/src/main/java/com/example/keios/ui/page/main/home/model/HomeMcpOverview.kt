@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.home.model
 
 import androidx.compose.runtime.Immutable
 

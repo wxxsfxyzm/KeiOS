@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.host.main
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
@@ -66,7 +66,12 @@ import com.example.keios.mcp.notification.McpNotificationHelper
 import com.example.keios.mcp.server.McpServerManager
 import com.example.keios.ui.navigation.KeiosRoute
 import com.example.keios.ui.navigation.Navigator
+import com.example.keios.ui.page.main.BaGuideCatalogPage
+import com.example.keios.ui.page.main.BaStudentGuidePage
+import com.example.keios.ui.page.main.McpSkillPage
+import com.example.keios.ui.page.main.SettingsPage
 import com.example.keios.ui.page.main.about.AboutPage
+import com.example.keios.ui.page.main.host.pager.MainPagerLayout
 import com.example.keios.ui.page.main.model.BottomPage
 import com.example.keios.ui.page.main.student.BaStudentGuideStore
 import com.example.keios.ui.page.main.student.fetch.extractGuideContentIdFromUrl

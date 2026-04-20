@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.host.pager
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box

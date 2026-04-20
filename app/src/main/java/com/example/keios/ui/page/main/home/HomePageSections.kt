@@ -1,4 +1,4 @@
-package com.example.keios.ui.page.main
+package com.example.keios.ui.page.main.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme

@@ -27,11 +27,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.keios.ui.page.main.MainPageRuntime
-import com.example.keios.ui.page.main.rememberMainPageBackdropSet
+import com.example.keios.ui.page.main.host.pager.MainPageRuntime
+import com.example.keios.ui.page.main.host.pager.rememberMainPageBackdropSet
 import com.example.keios.ui.page.main.os.components.OsPageMainList
 import com.example.keios.ui.page.main.os.components.OsPageOverlayHost
 import com.example.keios.ui.page.main.os.components.OsPageOverlaySheets
+import com.example.keios.ui.page.main.os.state.OsCardImportTarget
+import com.example.keios.ui.page.main.os.state.rememberOsPageOverlayState
 import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
 import com.example.keios.ui.page.main.os.shell.OsShellCommandCardStore
 import com.example.keios.ui.page.main.os.shell.OsShellRunnerActivity
@@ -54,11 +56,6 @@ import com.example.keios.ui.page.main.os.shortcut.newOsActivityShortcutCardId
 import com.example.keios.ui.page.main.os.shortcut.normalizeActivityShortcutConfig
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-
-private enum class OsCardImportTarget {
-    Activity,
-    Shell
-}
 
 @Composable
 fun OsPage(
@@ -177,37 +174,10 @@ fun OsPage(
         )
     }
     val activityCardExpanded = remember { mutableStateMapOf<String, Boolean>() }
-    var activityShortcutDraft by remember {
-        mutableStateOf(createDefaultActivityShortcutDraft(googleSystemServiceDefaults))
-    }
-    var showActivityShortcutEditor by rememberSaveable { mutableStateOf(false) }
-    var showActivitySuggestionSheet by rememberSaveable { mutableStateOf(false) }
-    var activityCardEditMode by rememberSaveable { mutableStateOf(OsActivityCardEditMode.Edit) }
-    var editingActivityShortcutCardId by rememberSaveable { mutableStateOf<String?>(null) }
-    var editingActivityShortcutBuiltIn by rememberSaveable { mutableStateOf(false) }
-    var googleSystemServiceSuggestionTarget by remember {
-        mutableStateOf(ShortcutSuggestionField.IntentAction)
-    }
-    var googleSystemServicePackageSuggestions by remember {
-        mutableStateOf<List<ShortcutInstalledAppOption>>(emptyList())
-    }
-    var googleSystemServicePackageSuggestionsLoading by remember { mutableStateOf(false) }
-    var googleSystemServicePackageSuggestionQuery by rememberSaveable { mutableStateOf("") }
-    var googleSystemServiceClassSuggestions by remember {
-        mutableStateOf<List<ShortcutActivityClassOption>>(emptyList())
-    }
-    var googleSystemServiceClassSuggestionsLoading by remember { mutableStateOf(false) }
-    var googleSystemServiceClassSuggestionQuery by rememberSaveable { mutableStateOf("") }
+    val overlayState = rememberOsPageOverlayState(googleSystemServiceDefaults)
     var uiStatePersistenceReady by remember { mutableStateOf(false) }
-    var showCardManager by rememberSaveable { mutableStateOf(false) }
-    var showActivityVisibilityManager by rememberSaveable { mutableStateOf(false) }
-    var showShellCardVisibilityManager by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
-    var pendingExportContent by remember { mutableStateOf<String?>(null) }
-    var pendingImportTarget by remember { mutableStateOf<OsCardImportTarget?>(null) }
-    var cardTransferInProgress by remember { mutableStateOf(false) }
-    var exportingCard by remember { mutableStateOf<OsSectionCard?>(null) }
     var refreshing by remember { mutableStateOf(false) }
     var refreshProgress by remember { mutableStateOf(0f) }
     var shellCommandCards by remember { mutableStateOf(OsShellCommandCardStore.loadCards()) }
@@ -215,11 +185,6 @@ fun OsPage(
     var runningShellCommandCardIds by remember { mutableStateOf(emptySet<String>()) }
     val sectionLoadMutex = remember { Mutex() }
     val sectionLoadDeferreds = remember { mutableStateMapOf<SectionKind, Deferred<List<InfoRow>>>() }
-    var showShellCommandCardEditor by rememberSaveable { mutableStateOf(false) }
-    var editingShellCommandCardId by rememberSaveable { mutableStateOf<String?>(null) }
-    var shellCommandCardDraft by remember { mutableStateOf(createDefaultShellCommandCardDraft()) }
-    var showShellCardDeleteConfirm by rememberSaveable { mutableStateOf(false) }
-    var showActivityCardDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     var showSearchBar by remember { mutableStateOf(true) }
     var searchBarHideOffsetPx by remember { mutableStateOf(0f) }
     val surfaceColor = MiuixTheme.colorScheme.surface
@@ -263,7 +228,7 @@ fun OsPage(
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
-        val content = pendingExportContent
+        val content = overlayState.pendingExportContent
         if (uri == null || content.isNullOrBlank()) return@rememberLauncherForActivityResult
         runCatching {
             context.contentResolver.openOutputStream(uri)?.bufferedWriter().use { writer ->
@@ -282,10 +247,10 @@ fun OsPage(
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
-        val target = pendingImportTarget
-        pendingImportTarget = null
+        val target = overlayState.pendingImportTarget
+        overlayState.onPendingImportTargetChange(null)
         if (uri == null || target == null) {
-            cardTransferInProgress = false
+            overlayState.onCardTransferInProgressChange(false)
             return@rememberLauncherForActivityResult
         }
         scope.launch {
@@ -305,10 +270,10 @@ fun OsPage(
                         activityShortcutCards = result.cards
                         val validIds = result.cards.mapTo(mutableSetOf()) { it.id }
                         activityCardExpanded.keys.retainAll(validIds)
-                        if (!validIds.contains(editingActivityShortcutCardId.orEmpty())) {
-                            showActivityShortcutEditor = false
-                            showActivityCardDeleteConfirm = false
-                            editingActivityShortcutCardId = null
+                        if (!validIds.contains(overlayState.editingActivityShortcutCardId.orEmpty())) {
+                            overlayState.onShowActivityShortcutEditorChange(false)
+                            overlayState.onShowActivityCardDeleteConfirmChange(false)
+                            overlayState.onEditingActivityShortcutCardIdChange(null)
                         }
                         Toast.makeText(
                             context,
@@ -327,10 +292,10 @@ fun OsPage(
                         shellCommandCards = result.cards
                         val validIds = result.cards.mapTo(mutableSetOf()) { it.id }
                         shellCommandCardExpanded.keys.retainAll(validIds)
-                        if (!validIds.contains(editingShellCommandCardId.orEmpty())) {
-                            showShellCommandCardEditor = false
-                            showShellCardDeleteConfirm = false
-                            editingShellCommandCardId = null
+                        if (!validIds.contains(overlayState.editingShellCommandCardId.orEmpty())) {
+                            overlayState.onShowShellCommandCardEditorChange(false)
+                            overlayState.onShowShellCardDeleteConfirmChange(false)
+                            overlayState.onEditingShellCommandCardIdChange(null)
                         }
                         Toast.makeText(
                             context,
@@ -354,7 +319,7 @@ fun OsPage(
                     Toast.LENGTH_SHORT
                 ).show()
             }
-            cardTransferInProgress = false
+            overlayState.onCardTransferInProgressChange(false)
         }
     }
     var sectionStates by remember {
@@ -522,14 +487,14 @@ fun OsPage(
         ensureLoad = { section -> ensureLoad(section) }
     )
     BindOsActivitySuggestionLoadEffect(
-        showActivitySuggestionSheet = showActivitySuggestionSheet,
-        googleSystemServiceSuggestionTarget = googleSystemServiceSuggestionTarget,
-        activityShortcutDraftPackageName = activityShortcutDraft.packageName,
+        showActivitySuggestionSheet = overlayState.showActivitySuggestionSheet,
+        googleSystemServiceSuggestionTarget = overlayState.googleSystemServiceSuggestionTarget,
+        activityShortcutDraftPackageName = overlayState.activityShortcutDraft.packageName,
         context = context,
-        onPackageSuggestionsLoadingChange = { googleSystemServicePackageSuggestionsLoading = it },
-        onPackageSuggestionsChange = { googleSystemServicePackageSuggestions = it },
-        onClassSuggestionsLoadingChange = { googleSystemServiceClassSuggestionsLoading = it },
-        onClassSuggestionsChange = { googleSystemServiceClassSuggestions = it }
+        onPackageSuggestionsLoadingChange = overlayState.onGoogleSystemServicePackageSuggestionsLoadingChange,
+        onPackageSuggestionsChange = overlayState.onGoogleSystemServicePackageSuggestionsChange,
+        onClassSuggestionsLoadingChange = overlayState.onGoogleSystemServiceClassSuggestionsLoadingChange,
+        onClassSuggestionsChange = overlayState.onGoogleSystemServiceClassSuggestionsChange
     )
 
     val derivedState = rememberOsPageDerivedState(
@@ -579,9 +544,9 @@ fun OsPage(
         manageShellCardsContentDescription = manageShellCardsContentDescription,
         refreshParamsContentDescription = refreshParamsContentDescription,
         refreshing = refreshing,
-        onOpenCardManager = { showCardManager = true },
-        onOpenActivityVisibilityManager = { showActivityVisibilityManager = true },
-        onOpenShellCardVisibilityManager = { showShellCardVisibilityManager = true },
+        onOpenCardManager = { overlayState.onShowCardManagerChange(true) },
+        onOpenActivityVisibilityManager = { overlayState.onShowActivityVisibilityManagerChange(true) },
+        onOpenShellCardVisibilityManager = { overlayState.onShowShellCardVisibilityManagerChange(true) },
         onRefresh = { scope.launch { refreshAllSections() } },
         onActionBarInteractingChanged = onActionBarInteractingChanged,
         searchBarVisible = enableSearchBar && showSearchBar,
@@ -593,25 +558,23 @@ fun OsPage(
             context = context,
             scope = scope,
             sheetBackdrop = backdrops.sheet,
-            showCardManager = showCardManager,
+            overlayState = overlayState,
             visibleCardsTitle = visibleCardsTitle,
             visibleCardsHint = "隐藏卡片后会清空对应缓存；重新显示时会立即重新获取并缓存。",
             visibleCards = visibleCards,
-            onShowCardManagerChange = { showCardManager = it },
             applyCardVisibility = ::applyCardVisibility,
-            showActivityVisibilityManager = showActivityVisibilityManager,
             visibleActivitiesTitle = visibleActivitiesTitle,
             visibleActivitiesDesc = stringResource(R.string.os_sheet_visible_activities_desc),
             activityShortcutCards = activityShortcutCards,
             defaultActivityCardTitle = googleSystemServiceDefaultTitle,
-            cardTransferInProgress = cardTransferInProgress,
+            cardTransferInProgress = overlayState.cardTransferInProgress,
             onExportAllActivityCards = {
                 runCatching {
                     val payload = OsActivityShortcutCardStore.buildCardsExportJson(
                         cards = activityShortcutCards,
                         defaults = googleSystemServiceDefaults
                     )
-                    pendingExportContent = payload
+                    overlayState.onPendingExportContentChange(payload)
                     exportLauncher.launch("keios-os-activity-cards.json")
                 }.onFailure { error ->
                     Toast.makeText(
@@ -625,13 +588,11 @@ fun OsPage(
                 }
             },
             onImportAllActivityCards = {
-                pendingImportTarget = OsCardImportTarget.Activity
-                cardTransferInProgress = true
+                overlayState.onPendingImportTargetChange(OsCardImportTarget.Activity)
+                overlayState.onCardTransferInProgressChange(true)
                 importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
             },
-            onShowActivityVisibilityManagerChange = { showActivityVisibilityManager = it },
             applyActivityCardVisibility = ::applyActivityCardVisibility,
-            showShellCardVisibilityManager = showShellCardVisibilityManager,
             visibleShellCardsTitle = visibleShellCardsTitle,
             visibleShellCardsDesc = visibleShellCardsDesc,
             shellRunnerVisible = visibleCards.contains(OsSectionCard.SHELL_RUNNER),
@@ -639,7 +600,7 @@ fun OsPage(
             onExportAllShellCards = {
                 runCatching {
                     val payload = OsShellCommandCardStore.buildCardsExportJson(shellCommandCards)
-                    pendingExportContent = payload
+                    overlayState.onPendingExportContentChange(payload)
                     exportLauncher.launch("keios-os-shell-cards.json")
                 }.onFailure { error ->
                     Toast.makeText(
@@ -653,57 +614,21 @@ fun OsPage(
                 }
             },
             onImportAllShellCards = {
-                pendingImportTarget = OsCardImportTarget.Shell
-                cardTransferInProgress = true
+                overlayState.onPendingImportTargetChange(OsCardImportTarget.Shell)
+                overlayState.onCardTransferInProgressChange(true)
                 importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
             },
-            onShowShellCardVisibilityManagerChange = { showShellCardVisibilityManager = it },
             applyShellCommandCardVisibility = ::applyShellCommandCardVisibility,
-            showShellCommandCardEditor = showShellCommandCardEditor,
             editShellCommandCardTitle = editShellCommandCardTitle,
-            shellCommandCardDraft = shellCommandCardDraft,
-            onShellCommandCardDraftChange = { shellCommandCardDraft = it },
-            editingShellCommandCardId = editingShellCommandCardId,
-            onEditingShellCommandCardIdChange = { editingShellCommandCardId = it },
-            onShowShellCommandCardEditorChange = { showShellCommandCardEditor = it },
-            showShellCardDeleteConfirm = showShellCardDeleteConfirm,
-            onShowShellCardDeleteConfirmChange = { showShellCardDeleteConfirm = it },
             onShellCommandCardsChange = { shellCommandCards = it },
             onRemoveShellCommandCardExpanded = { shellCommandCardExpanded.remove(it) },
             shellCardCommandRequiredToast = shellCardCommandRequiredToast,
             shellCardSavedToast = shellCardSavedToast,
             shellCardDeletedToast = shellCardDeletedToast,
             shellCardDeleteDialogTitle = shellCardDeleteDialogTitle,
-            showActivityShortcutEditor = showActivityShortcutEditor,
-            activityCardEditMode = activityCardEditMode,
             addActivityCardTitle = addActivityCardTitle,
             editActivityCardTitle = editActivityCardTitle,
-            activityShortcutDraft = activityShortcutDraft,
-            onActivityShortcutDraftChange = { activityShortcutDraft = it },
-            showActivitySuggestionSheet = showActivitySuggestionSheet,
-            onShowActivitySuggestionSheetChange = { showActivitySuggestionSheet = it },
-            googleSystemServiceSuggestionTarget = googleSystemServiceSuggestionTarget,
-            onGoogleSystemServiceSuggestionTargetChange = { googleSystemServiceSuggestionTarget = it },
-            googleSystemServicePackageSuggestions = googleSystemServicePackageSuggestions,
-            googleSystemServicePackageSuggestionsLoading = googleSystemServicePackageSuggestionsLoading,
-            googleSystemServicePackageSuggestionQuery = googleSystemServicePackageSuggestionQuery,
-            onGoogleSystemServicePackageSuggestionQueryChange = {
-                googleSystemServicePackageSuggestionQuery = it
-            },
-            googleSystemServiceClassSuggestions = googleSystemServiceClassSuggestions,
-            googleSystemServiceClassSuggestionsLoading = googleSystemServiceClassSuggestionsLoading,
-            googleSystemServiceClassSuggestionQuery = googleSystemServiceClassSuggestionQuery,
-            onGoogleSystemServiceClassSuggestionQueryChange = {
-                googleSystemServiceClassSuggestionQuery = it
-            },
             noMatchedResultsText = noMatchedResultsText,
-            editingActivityShortcutCardId = editingActivityShortcutCardId,
-            onEditingActivityShortcutCardIdChange = { editingActivityShortcutCardId = it },
-            editingActivityShortcutBuiltIn = editingActivityShortcutBuiltIn,
-            onEditingActivityShortcutBuiltInChange = { editingActivityShortcutBuiltIn = it },
-            onShowActivityShortcutEditorChange = { showActivityShortcutEditor = it },
-            showActivityCardDeleteConfirm = showActivityCardDeleteConfirm,
-            onShowActivityCardDeleteConfirmChange = { showActivityCardDeleteConfirm = it },
             onActivityShortcutCardsChange = { activityShortcutCards = it },
             onRemoveActivityCardExpanded = { activityCardExpanded.remove(it) },
             googleSystemServiceDefaults = googleSystemServiceDefaults,
@@ -748,9 +673,9 @@ fun OsPage(
                 shellCommandCardExpanded[cardId] = expanded
             },
             onOpenShellCommandCardEditor = { card ->
-                editingShellCommandCardId = card.id
-                shellCommandCardDraft = card
-                showShellCommandCardEditor = true
+                overlayState.onEditingShellCommandCardIdChange(card.id)
+                overlayState.onShellCommandCardDraftChange(card)
+                overlayState.onShowShellCommandCardEditorChange(true)
             },
             onRunShellCommandCard = { card ->
                 scope.launch { runShellCommandCard(card) }
@@ -779,11 +704,11 @@ fun OsPage(
                 beginEditingOsActivityShortcutCard(
                     card = card,
                     defaults = googleSystemServiceDefaults,
-                    onEditModeChange = { activityCardEditMode = it },
-                    onEditingCardIdChange = { editingActivityShortcutCardId = it },
-                    onEditingBuiltInChange = { editingActivityShortcutBuiltIn = it },
-                    onDraftChange = { activityShortcutDraft = it },
-                    onShowEditorChange = { showActivityShortcutEditor = it }
+                    onEditModeChange = overlayState.onActivityCardEditModeChange,
+                    onEditingCardIdChange = overlayState.onEditingActivityShortcutCardIdChange,
+                    onEditingBuiltInChange = overlayState.onEditingActivityShortcutBuiltInChange,
+                    onDraftChange = overlayState.onActivityShortcutDraftChange,
+                    onShowEditorChange = overlayState.onShowActivityShortcutEditorChange
                 )
             },
             displayedSystemRows = derivedState.displayedSystemRows,
@@ -819,13 +744,13 @@ fun OsPage(
                     size = size
                 )
             },
-            exportingCard = exportingCard,
+            exportingCard = overlayState.exportingCard,
             onExportCard = { card ->
                 scope.launch {
                     exportOsPageCard(
                         card = card,
-                        currentExportingCard = exportingCard,
-                        updateExportingCard = { exportingCard = it },
+                        currentExportingCard = overlayState.exportingCard,
+                        updateExportingCard = overlayState.onExportingCardChange,
                         visibleCardsProvider = { visibleCards },
                         ensureLoad = ::ensureLoad,
                         sectionStatesProvider = { sectionStates },
@@ -834,7 +759,7 @@ fun OsPage(
                         context = context,
                         shizukuStatus = shizukuStatus,
                         launchExport = { fileName, payload ->
-                            pendingExportContent = payload
+                            overlayState.onPendingExportContentChange(payload)
                             exportLauncher.launch(fileName)
                         }
                     )
@@ -842,17 +767,18 @@ fun OsPage(
             },
             onRefreshAll = { scope.launch { refreshAllSections() } },
             contentBottomPadding = runtime.contentBottomPadding,
-            showFloatingAddButton = !showActivityShortcutEditor &&
-                    !showActivitySuggestionSheet &&
-                    !showShellCommandCardEditor &&
-                    !showShellCardVisibilityManager,
+            showFloatingAddButton = !overlayState.showActivityShortcutEditor &&
+                    !overlayState.showActivitySuggestionSheet &&
+                    !overlayState.showShellCommandCardEditor &&
+                    !overlayState.showShellCardVisibilityManager,
             onOpenAddActivityShortcutCard = {
-                activityCardEditMode = OsActivityCardEditMode.Add
-                editingActivityShortcutCardId = null
-                editingActivityShortcutBuiltIn = false
-                activityShortcutDraft =
+                overlayState.onActivityCardEditModeChange(OsActivityCardEditMode.Add)
+                overlayState.onEditingActivityShortcutCardIdChange(null)
+                overlayState.onEditingActivityShortcutBuiltInChange(false)
+                overlayState.onActivityShortcutDraftChange(
                     createDefaultActivityShortcutDraft(googleSystemServiceDefaults)
-                showActivityShortcutEditor = true
+                )
+                overlayState.onShowActivityShortcutEditorChange(true)
             }
         )
     }
