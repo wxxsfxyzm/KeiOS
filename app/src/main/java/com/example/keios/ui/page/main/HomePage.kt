@@ -457,26 +457,17 @@ private data class HomeCardStatItem(
 @Composable
 fun HomePage(
     shizukuStatus: String,
-    mcpRunning: Boolean,
-    mcpRunningSinceEpochMs: Long,
-    mcpPort: Int,
-    mcpEndpointPath: String,
-    mcpServerName: String,
-    mcpAuthTokenConfigured: Boolean,
-    mcpConnectedClients: Int,
-    mcpAllowExternal: Boolean,
+    mcpOverview: HomeMcpOverview = HomeMcpOverview(),
     homeGitHubOverview: HomeGitHubOverview = HomeGitHubOverview(),
     homeBaOverview: HomeBaOverview = HomeBaOverview(),
     homeIconHdrEnabled: Boolean,
+    runtime: MainPageRuntime = MainPageRuntime(),
     liquidActionBarLayeredStyleEnabled: Boolean = true,
-    mainPagerScrollInProgress: Boolean = false,
     visibleBottomPages: Set<BottomPage>,
     onBottomPageVisibilityChange: (BottomPage, Boolean) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
-    onActionBarInteractingChanged: (Boolean) -> Unit = {},
-    contentTopPadding: Dp = 0.dp,
-    contentBottomPadding: Dp = 0.dp
+    onActionBarInteractingChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
@@ -565,22 +556,22 @@ fun HomePage(
     val homeMcpRuntimePending = stringResource(R.string.mcp_runtime_pending)
     val homeCommonFilled = stringResource(R.string.common_filled)
     val homeCommonNotUsed = stringResource(R.string.common_not_used)
-    val networkModeText = if (mcpAllowExternal) {
+    val networkModeText = if (mcpOverview.allowExternal) {
         stringResource(R.string.mcp_network_mode_lan_accessible)
     } else {
         stringResource(R.string.mcp_network_mode_local_only_short)
     }
-    val mcpRuntimeText = if (!mcpRunning || mcpRunningSinceEpochMs <= 0L) {
+    val mcpRuntimeText = if (!mcpOverview.running || mcpOverview.runningSinceEpochMs <= 0L) {
         homeMcpRuntimePending
     } else {
-        formatMcpUptimeText(System.currentTimeMillis() - mcpRunningSinceEpochMs)
+        formatMcpUptimeText(System.currentTimeMillis() - mcpOverview.runningSinceEpochMs)
     }
-    val mcpStatusText = if (mcpRunning) {
+    val mcpStatusText = if (mcpOverview.running) {
         stringResource(R.string.home_mcp_status_running)
     } else {
         stringResource(R.string.home_mcp_status_stopped)
     }
-    val mcpTokenStatusText = if (mcpAuthTokenConfigured) homeCommonFilled else homeCommonNotUsed
+    val mcpTokenStatusText = if (mcpOverview.authTokenConfigured) homeCommonFilled else homeCommonNotUsed
     val githubStrategyText = when (githubOverview.strategy) {
         GitHubLookupStrategyOption.AtomFeed -> stringResource(R.string.github_overview_strategy_atom)
         GitHubLookupStrategyOption.GitHubApiToken -> stringResource(R.string.github_overview_strategy_api)
@@ -667,7 +658,7 @@ fun HomePage(
     val hdrSweepProgress = if (
         homeIconHdrEnabled &&
         transitionAnimationsEnabled &&
-        !mainPagerScrollInProgress
+        !runtime.isPagerScrollInProgress
     ) {
         val hdrSweep = rememberInfiniteTransition(label = "kei_hdr_sweep")
         val animated by hdrSweep.animateFloat(
@@ -787,7 +778,7 @@ fun HomePage(
                     LiquidActionBar(
                         backdrop = actionBarBackdrop,
                         layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                        reduceEffectsDuringPagerScroll = mainPagerScrollInProgress,
+                        reduceEffectsDuringPagerScroll = runtime.isPagerScrollInProgress,
                         items = homeActionItems,
                         selectedIndex = actionBarSelectedIndex,
                         onInteractionChanged = onActionBarInteractingChanged
@@ -887,12 +878,12 @@ fun HomePage(
         val horizontalSafeInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
         val listContentPadding = PaddingValues(
             start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-            top = innerPadding.calculateTopPadding() + contentTopPadding,
+            top = innerPadding.calculateTopPadding() + runtime.contentTopPadding,
             end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-            bottom = innerPadding.calculateBottomPadding() + contentBottomPadding + 16.dp
+            bottom = innerPadding.calculateBottomPadding() + runtime.contentBottomPadding + 16.dp
         )
         val logoPadding = PaddingValues(
-            top = innerPadding.calculateTopPadding() + contentTopPadding + 24.dp,
+            top = innerPadding.calculateTopPadding() + runtime.contentTopPadding + 24.dp,
             start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
             end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
         )
@@ -1022,7 +1013,7 @@ fun HomePage(
                     ) {
                         StatusPill(
                             label = homeStatusMcp,
-                            color = if (mcpRunning) runningColor else stoppedColor,
+                            color = if (mcpOverview.running) runningColor else stoppedColor,
                             modifier = Modifier.defaultMinSize(minWidth = 62.dp)
                         )
                         StatusPill(
@@ -1103,7 +1094,7 @@ fun HomePage(
                                         ),
                                         HomeCardStatItem(
                                             label = homeStatClients,
-                                            value = mcpConnectedClients.toString()
+                                            value = mcpOverview.connectedClients.toString()
                                         ),
                                         HomeCardStatItem(
                                             label = homeStatNetwork,
@@ -1111,7 +1102,7 @@ fun HomePage(
                                         ),
                                         HomeCardStatItem(
                                             label = homeStatPort,
-                                            value = mcpPort.toString()
+                                            value = mcpOverview.port.toString()
                                         ),
                                         HomeCardStatItem(
                                             label = homeStatToken,
@@ -1119,11 +1110,11 @@ fun HomePage(
                                         ),
                                         HomeCardStatItem(
                                             label = homeStatService,
-                                            value = mcpServerName
+                                            value = mcpOverview.serverName
                                         ),
                                         HomeCardStatItem(
                                             label = homeStatPath,
-                                            value = mcpEndpointPath
+                                            value = mcpOverview.endpointPath
                                         )
                                     )
                                 )

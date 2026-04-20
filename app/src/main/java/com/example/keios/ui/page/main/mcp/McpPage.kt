@@ -14,14 +14,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,10 +42,10 @@ import com.example.keios.ui.page.main.widget.chrome.LiquidActionItem
 import com.example.keios.ui.page.main.widget.motion.appFloatingEnter
 import com.example.keios.ui.page.main.widget.motion.appFloatingExit
 import com.example.keios.ui.page.main.widget.chrome.appPageBottomPaddingWithFloatingOverlay
-import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
+import com.example.keios.ui.page.main.MainPageRuntime
+import com.example.keios.ui.page.main.rememberMainPageBackdropSet
 import com.example.keios.ui.page.main.os.appLucideEditIcon
 import com.example.keios.ui.page.main.os.appLucideNotesIcon
 import com.example.keios.ui.page.main.os.appLucidePauseIcon
@@ -77,12 +74,9 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun McpPage(
     mcpServerManager: McpServerManager,
-    contentBottomPadding: Dp = 72.dp,
-    scrollToTopSignal: Int = 0,
-    isPageActive: Boolean = true,
+    runtime: MainPageRuntime = MainPageRuntime(contentBottomPadding = 72.dp),
     cardPressFeedbackEnabled: Boolean = true,
     liquidActionBarLayeredStyleEnabled: Boolean = true,
-    mainPagerScrollInProgress: Boolean = false,
     onOpenSkill: () -> Unit = {},
     onActionBarInteractingChanged: (Boolean) -> Unit = {}
 ) {
@@ -116,11 +110,11 @@ fun McpPage(
         initialValue = System.currentTimeMillis(),
         key1 = uiState.running,
         key2 = uiState.runningSinceEpochMs,
-        key3 = isPageActive
+        key3 = runtime.isPageActive
     ) {
         value = System.currentTimeMillis()
         while (uiState.running && uiState.runningSinceEpochMs > 0L) {
-            delay(if (isPageActive) 1_000L else 3_000L)
+            delay(if (runtime.isPageActive) 1_000L else 3_000L)
             value = System.currentTimeMillis()
         }
     }
@@ -247,36 +241,16 @@ fun McpPage(
             }
         }
     }
-    val surfaceColor = MiuixTheme.colorScheme.surface
-    var activationCount by rememberSaveable { mutableIntStateOf(0) }
-    DisposableEffect(Unit) {
-        activationCount++
-        onDispose { }
-    }
-    val topBarBackdrop: LayerBackdrop = key("mcp-topbar-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
-    val contentBackdrop: LayerBackdrop = key("mcp-content-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
-    val sheetBackdrop: LayerBackdrop = key("mcp-sheet-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
+    val backdrops = rememberMainPageBackdropSet(
+        keyPrefix = "mcp",
+        refreshOnCompositionEnter = true
+    )
     val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     DisposableEffect(Unit) {
         onDispose { onActionBarInteractingChanged(false) }
     }
-    LaunchedEffect(scrollToTopSignal, isPageActive) {
-        if (isPageActive && scrollToTopSignal > 0) listState.animateScrollToItem(0)
+    LaunchedEffect(runtime.scrollToTopSignal, runtime.isPageActive) {
+        if (runtime.isPageActive && runtime.scrollToTopSignal > 0) listState.animateScrollToItem(0)
     }
     val logsExportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -392,9 +366,9 @@ fun McpPage(
         topBarColor = topBarMaterialBackdrop.getMiuixAppBarColor(),
         actions = {
             LiquidActionBar(
-                backdrop = topBarBackdrop,
+                backdrop = backdrops.topBar,
                 layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                reduceEffectsDuringPagerScroll = mainPagerScrollInProgress,
+                reduceEffectsDuringPagerScroll = runtime.isPagerScrollInProgress,
                 items = actionItems,
                 onInteractionChanged = onActionBarInteractingChanged
             )
@@ -411,7 +385,7 @@ fun McpPage(
                 modifier = Modifier
                     .fillMaxSize()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
-                bottomExtra = appPageBottomPaddingWithFloatingOverlay(contentBottomPadding),
+                bottomExtra = appPageBottomPaddingWithFloatingOverlay(runtime.contentBottomPadding),
                 sectionSpacing = 12.dp
             ) {
                 item {
@@ -432,7 +406,7 @@ fun McpPage(
                 }
                 item {
                     McpServiceControlSection(
-                        backdrop = contentBackdrop,
+                        backdrop = backdrops.content,
                         expanded = controlExpanded,
                         onExpandedChange = { controlExpanded = it },
                         mcpServerManager = mcpServerManager,
@@ -442,7 +416,7 @@ fun McpPage(
                 }
                 item {
                     McpToolsSection(
-                        backdrop = contentBackdrop,
+                        backdrop = backdrops.content,
                         expanded = configExpanded,
                         onExpandedChange = { configExpanded = it },
                         uiState = uiState
@@ -450,7 +424,7 @@ fun McpPage(
                 }
                 item {
                     McpLogsSection(
-                        backdrop = contentBackdrop,
+                        backdrop = backdrops.content,
                         expanded = logsExpanded,
                         onExpandedChange = { logsExpanded = it },
                         uiState = uiState,
@@ -488,7 +462,7 @@ fun McpPage(
                 modifier = Modifier.align(Alignment.BottomEnd)
             ) {
                 GlassIconButton(
-                    backdrop = contentBackdrop,
+                    backdrop = backdrops.content,
                     icon = if (uiState.running) appLucidePauseIcon() else osLucideRunIcon(),
                     contentDescription = if (uiState.running) {
                         stringResource(R.string.mcp_action_stop_service)
@@ -496,7 +470,7 @@ fun McpPage(
                         stringResource(R.string.mcp_action_start_service)
                     },
                     onClick = toggleServer,
-                    modifier = Modifier.padding(end = 14.dp, bottom = contentBottomPadding - 24.dp),
+                    modifier = Modifier.padding(end = 14.dp, bottom = runtime.contentBottomPadding - 24.dp),
                     width = 60.dp,
                     height = 44.dp,
                     iconTint = if (uiState.running) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.primary,
@@ -509,7 +483,7 @@ fun McpPage(
 
     McpEditServiceSheet(
         show = showEditSheet,
-        backdrop = sheetBackdrop,
+        backdrop = backdrops.sheet,
         serverName = serverName,
         onServerNameChange = { serverName = it },
         serverNameFieldWidth = serverNameFieldWidth,

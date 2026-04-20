@@ -4,15 +4,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -37,8 +34,6 @@ import com.example.keios.ui.page.main.ba.buildBaSettingsSheetState
 import com.example.keios.ui.page.main.ba.openBaExternalLink
 import com.example.keios.ui.page.main.ba.rememberBaPageUiController
 import com.example.keios.ui.page.main.ba.saveBaPageSettings
-import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
 import kotlinx.coroutines.delay
@@ -48,14 +43,10 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun BAPage(
-    contentBottomPadding: Dp = 72.dp,
-    scrollToTopSignal: Int = 0,
-    isPageActive: Boolean = true,
-    isDataActive: Boolean = true,
+    runtime: MainPageRuntime = MainPageRuntime(contentBottomPadding = 72.dp),
     preloadingEnabled: Boolean = false,
     cardPressFeedbackEnabled: Boolean = true,
     liquidActionBarLayeredStyleEnabled: Boolean = true,
-    mainPagerScrollInProgress: Boolean = false,
     onOpenPoolStudentGuide: (String) -> Unit = {},
     onOpenGuideCatalog: () -> Unit = {},
     onActionBarInteractingChanged: (Boolean) -> Unit = {}
@@ -63,30 +54,10 @@ fun BAPage(
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
-    val surfaceColor = MiuixTheme.colorScheme.surface
-    var activationCount by rememberSaveable { mutableIntStateOf(0) }
-    DisposableEffect(Unit) {
-        activationCount++
-        onDispose { }
-    }
-    val topBarBackdrop: LayerBackdrop = key("ba-topbar-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
-    val contentBackdrop: LayerBackdrop = key("ba-content-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
-    val sheetBackdrop: LayerBackdrop = key("ba-sheet-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
+    val backdrops = rememberMainPageBackdropSet(
+        keyPrefix = "ba",
+        refreshOnCompositionEnter = true
+    )
     val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     val baSmallTitleMargin = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
     val serverOptions = remember { listOf("国服", "国际服", "日服") }
@@ -119,7 +90,7 @@ fun BAPage(
 
     val settingsSheetState = buildBaSettingsSheetState(ui)
     val pageContentState = buildBaPageContentState(
-        isPageActive = isPageActive,
+        isPageActive = runtime.isPageActive,
         officeSmallTitle = officeSmallTitle,
         baSmallTitleMargin = baSmallTitleMargin,
         office = office,
@@ -129,7 +100,7 @@ fun BAPage(
         baCalendarEntries = baCalendarEntries,
         baPoolEntries = baPoolEntries,
     )
-    val syncPageActive = if (preloadingEnabled) isDataActive else isPageActive
+    val syncPageActive = if (preloadingEnabled) runtime.isDataActive else runtime.isPageActive
 
     fun openSettingsSheet() {
         ui.openSettingsSheet(office)
@@ -171,8 +142,8 @@ fun BAPage(
 
     BaPageCommonEffects(
         listState = listState,
-        scrollToTopSignal = scrollToTopSignal,
-        isPageActive = isPageActive,
+        scrollToTopSignal = runtime.scrollToTopSignal,
+        isPageActive = runtime.isPageActive,
         consumedScrollToTopSignal = ui.consumedScrollToTopSignal,
         onConsumedScrollToTopSignalChange = { ui.consumedScrollToTopSignal = it },
         onDisposeActionBarInteraction = { onActionBarInteractingChanged(false) },
@@ -240,9 +211,9 @@ fun BAPage(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             BaTopBar(
-                backdrop = topBarBackdrop,
+                backdrop = backdrops.topBar,
                 liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                reduceEffectsDuringPagerScroll = mainPagerScrollInProgress,
+                reduceEffectsDuringPagerScroll = runtime.isPagerScrollInProgress,
                 topBarColor = topBarMaterialBackdrop.getMiuixAppBarColor(),
                 scrollBehavior = scrollBehavior,
                 showCalendarIntervalPopup = ui.showCalendarIntervalPopup,
@@ -269,9 +240,9 @@ fun BAPage(
         },
     ) { innerPadding ->
         BaPageContent(
-            backdrop = contentBackdrop,
+            backdrop = backdrops.content,
             innerPadding = innerPadding,
-            contentBottomPadding = contentBottomPadding,
+            contentBottomPadding = runtime.contentBottomPadding,
             listState = listState,
             nestedScrollConnection = scrollBehavior.nestedScrollConnection,
             state = pageContentState,
@@ -281,7 +252,7 @@ fun BAPage(
 
     BaSettingsSheet(
         show = ui.showSettingsSheet,
-        backdrop = sheetBackdrop,
+        backdrop = backdrops.sheet,
         state = settingsSheetState,
         onApNotifyEnabledChange = { ui.sheetApNotifyEnabled = it },
         onArenaRefreshNotifyEnabledChange = { ui.sheetArenaRefreshNotifyEnabled = it },

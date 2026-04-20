@@ -15,21 +15,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.keios.R
 import com.example.keios.core.system.ShizukuApiUtils
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
-import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.keios.ui.page.main.MainPageRuntime
+import com.example.keios.ui.page.main.rememberMainPageBackdropSet
 import com.example.keios.ui.page.main.os.components.OsPageMainList
 import com.example.keios.ui.page.main.os.components.OsPageOverlaySheets
 import com.example.keios.ui.page.main.os.shell.OsShellCommandCard
@@ -62,15 +61,11 @@ private enum class OsCardImportTarget {
 
 @Composable
 fun OsPage(
-    scrollToTopSignal: Int,
-    isPageActive: Boolean = true,
-    isDataActive: Boolean = true,
+    runtime: MainPageRuntime,
     shizukuStatus: String,
     shizukuApiUtils: ShizukuApiUtils,
     cardPressFeedbackEnabled: Boolean = true,
     liquidActionBarLayeredStyleEnabled: Boolean = true,
-    mainPagerScrollInProgress: Boolean = false,
-    contentBottomPadding: Dp = 72.dp,
     enableSearchBar: Boolean = true,
     onActionBarInteractingChanged: (Boolean) -> Unit = {}
 ) {
@@ -227,29 +222,10 @@ fun OsPage(
     var showSearchBar by remember { mutableStateOf(true) }
     var searchBarHideOffsetPx by remember { mutableStateOf(0f) }
     val surfaceColor = MiuixTheme.colorScheme.surface
-    var activationCount by rememberSaveable { mutableIntStateOf(0) }
-    DisposableEffect(Unit) {
-        activationCount++
-        onDispose { }
-    }
-    val topBarBackdrop: LayerBackdrop = key("os-topbar-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
-    val contentBackdrop: LayerBackdrop = key("os-content-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
-    val sheetBackdrop: LayerBackdrop = key("os-sheet-$activationCount") {
-        rememberLayerBackdrop {
-            drawRect(surfaceColor)
-            drawContent()
-        }
-    }
+    val backdrops = rememberMainPageBackdropSet(
+        keyPrefix = "os",
+        refreshOnCompositionEnter = true
+    )
     val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     val searchBarHideThresholdPx = remember(density) { with(density) { 28.dp.toPx() } }
     val searchBarScrollConnection = remember(searchBarHideThresholdPx) {
@@ -496,7 +472,7 @@ fun OsPage(
     )
 
     BindOsScrollToTopEffect(
-        scrollToTopSignal = scrollToTopSignal,
+        scrollToTopSignal = runtime.scrollToTopSignal,
         listState = listState
     )
 
@@ -507,7 +483,7 @@ fun OsPage(
         onCachePersistedChange = { cachePersisted = it },
         onCacheLoadedChange = { cacheLoaded = it },
         onUiStatePersistenceReadyChange = { uiStatePersistenceReady = it },
-        isPageActive = isDataActive,
+        isPageActive = runtime.isDataActive,
         ensureLoad = ::ensureLoad
     )
 
@@ -532,46 +508,46 @@ fun OsPage(
         }
     )
 
-    LaunchedEffect(systemTableExpanded, visibleCards, cacheLoaded, isDataActive) {
+    LaunchedEffect(systemTableExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isDataActive && systemTableExpanded && isCardVisible(
+        if (runtime.isDataActive && systemTableExpanded && isCardVisible(
                 visibleCards,
                 OsSectionCard.SYSTEM
             )
         ) ensureLoad(SectionKind.SYSTEM)
     }
-    LaunchedEffect(secureTableExpanded, visibleCards, cacheLoaded, isDataActive) {
+    LaunchedEffect(secureTableExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isDataActive && secureTableExpanded && isCardVisible(
+        if (runtime.isDataActive && secureTableExpanded && isCardVisible(
                 visibleCards,
                 OsSectionCard.SECURE
             )
         ) ensureLoad(SectionKind.SECURE)
     }
-    LaunchedEffect(globalTableExpanded, visibleCards, cacheLoaded, isDataActive) {
+    LaunchedEffect(globalTableExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isDataActive && globalTableExpanded && isCardVisible(
+        if (runtime.isDataActive && globalTableExpanded && isCardVisible(
                 visibleCards,
                 OsSectionCard.GLOBAL
             )
         ) ensureLoad(SectionKind.GLOBAL)
     }
-    LaunchedEffect(androidPropsExpanded, visibleCards, cacheLoaded, isDataActive) {
+    LaunchedEffect(androidPropsExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isDataActive && androidPropsExpanded && isCardVisible(
+        if (runtime.isDataActive && androidPropsExpanded && isCardVisible(
                 visibleCards,
                 OsSectionCard.ANDROID
             )
         ) ensureLoad(SectionKind.ANDROID)
     }
-    LaunchedEffect(javaPropsExpanded, visibleCards, cacheLoaded, isDataActive) {
+    LaunchedEffect(javaPropsExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isDataActive && javaPropsExpanded && isCardVisible(visibleCards, OsSectionCard.JAVA)) ensureLoad(
+        if (runtime.isDataActive && javaPropsExpanded && isCardVisible(visibleCards, OsSectionCard.JAVA)) ensureLoad(
             SectionKind.JAVA)
     }
-    LaunchedEffect(linuxEnvExpanded, visibleCards, cacheLoaded, isDataActive) {
+    LaunchedEffect(linuxEnvExpanded, visibleCards, cacheLoaded, runtime.isDataActive) {
         if (!cacheLoaded) return@LaunchedEffect
-        if (isDataActive && linuxEnvExpanded && isCardVisible(visibleCards, OsSectionCard.LINUX)) ensureLoad(
+        if (runtime.isDataActive && linuxEnvExpanded && isCardVisible(visibleCards, OsSectionCard.LINUX)) ensureLoad(
             SectionKind.LINUX)
     }
     LaunchedEffect(
@@ -826,9 +802,9 @@ fun OsPage(
     OsPageScaffoldShell(
         scrollBehavior = scrollBehavior,
         topBarColor = topBarMaterialBackdrop.getMiuixAppBarColor(),
-        topBarBackdrop = topBarBackdrop,
+        topBarBackdrop = backdrops.topBar,
         layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-        reduceEffectsDuringPagerScroll = mainPagerScrollInProgress,
+        reduceEffectsDuringPagerScroll = runtime.isPagerScrollInProgress,
         manageCardsContentDescription = manageCardsContentDescription,
         manageActivitiesContentDescription = manageActivitiesContentDescription,
         manageShellCardsContentDescription = manageShellCardsContentDescription,
@@ -847,7 +823,7 @@ fun OsPage(
         OsPageOverlaySheets(
             showCardManager = showCardManager,
             visibleCardsTitle = visibleCardsTitle,
-            sheetBackdrop = sheetBackdrop,
+            sheetBackdrop = backdrops.sheet,
             cardsHintText = "隐藏卡片后会清空对应缓存；重新显示时会立即重新获取并缓存。",
             visibleCards = visibleCards,
             onDismissCardManager = { showCardManager = false },
@@ -1134,7 +1110,7 @@ fun OsPage(
             innerPadding = innerPadding,
             searchBarScrollConnection = searchBarScrollConnection,
             scrollBehaviorConnection = scrollBehavior.nestedScrollConnection,
-            contentBackdrop = contentBackdrop,
+            contentBackdrop = backdrops.content,
             isDark = isDark,
             titleColor = titleColor,
             cardPressFeedbackEnabled = cardPressFeedbackEnabled,
@@ -1255,7 +1231,7 @@ fun OsPage(
             exportingCard = exportingCard,
             onExportCard = { card -> scope.launch { exportCard(card) } },
             onRefreshAll = { scope.launch { refreshAllSections() } },
-            contentBottomPadding = contentBottomPadding,
+            contentBottomPadding = runtime.contentBottomPadding,
             showFloatingAddButton = !showActivityShortcutEditor &&
                     !showActivitySuggestionSheet &&
                     !showShellCommandCardEditor &&

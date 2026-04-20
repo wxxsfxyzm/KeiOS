@@ -27,8 +27,6 @@ import com.example.keios.ui.page.main.github.sheet.GitHubDeleteTrackDialog
 import com.example.keios.ui.page.main.github.sheet.GitHubStrategySheet
 import com.example.keios.ui.page.main.github.sheet.GitHubTrackEditSheet
 import com.example.keios.ui.page.main.github.sheet.GitHubTrackImportDialog
-import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.example.keios.core.ui.effect.getMiuixAppBarColor
 import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
 import com.example.keios.ui.page.main.github.GitHubSortMode
@@ -51,13 +49,10 @@ private const val pendingShareImportCardTickMs = 15_000L
 
 @Composable
 fun GitHubPage(
-    contentBottomPadding: Dp = 72.dp,
-    scrollToTopSignal: Int = 0,
-    isPageActive: Boolean = true,
+    runtime: MainPageRuntime = MainPageRuntime(contentBottomPadding = 72.dp),
     externalRefreshTriggerToken: Int = 0,
     cardPressFeedbackEnabled: Boolean = true,
     liquidActionBarLayeredStyleEnabled: Boolean = true,
-    mainPagerScrollInProgress: Boolean = false,
     enableSearchBar: Boolean = true,
     onActionBarInteractingChanged: (Boolean) -> Unit = {}
 ) {
@@ -68,20 +63,7 @@ fun GitHubPage(
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     val isDark = isSystemInDarkTheme()
-    val surfaceColor = MiuixTheme.colorScheme.surface
-
-    val topBarBackdrop: LayerBackdrop = rememberLayerBackdrop {
-        drawRect(surfaceColor)
-        drawContent()
-    }
-    val contentBackdrop: LayerBackdrop = rememberLayerBackdrop {
-        drawRect(surfaceColor)
-        drawContent()
-    }
-    val sheetBackdrop: LayerBackdrop = rememberLayerBackdrop {
-        drawRect(surfaceColor)
-        drawContent()
-    }
+    val backdrops = rememberMainPageBackdropSet(keyPrefix = "github")
     val topBarColor = rememberMiuixBlurBackdrop(enableBlur = true).getMiuixAppBarColor()
 
     val state = rememberGitHubPageState()
@@ -207,8 +189,8 @@ fun GitHubPage(
     BindGitHubPageEffects(
         context = context,
         listState = listState,
-        scrollToTopSignal = scrollToTopSignal,
-        isPageActive = isPageActive,
+        scrollToTopSignal = runtime.scrollToTopSignal,
+        isPageActive = runtime.isPageActive,
         state = state,
         actions = actions,
         installedOnlineShareTargets = installedOnlineShareTargets,
@@ -336,16 +318,16 @@ fun GitHubPage(
         }
     }
     GitHubMainContent(
-        contentBottomPadding = contentBottomPadding,
+        contentBottomPadding = runtime.contentBottomPadding,
         listState = listState,
         scrollBehavior = scrollBehavior,
         addButtonScrollConnection = state.addButtonScrollConnection,
-        topBarBackdrop = topBarBackdrop,
-        contentBackdrop = contentBackdrop,
+        topBarBackdrop = backdrops.topBar,
+        contentBackdrop = backdrops.content,
         topBarColor = topBarColor,
         enableSearchBar = enableSearchBar,
         liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-        reduceEffectsDuringPagerScroll = mainPagerScrollInProgress,
+        reduceEffectsDuringPagerScroll = runtime.isPagerScrollInProgress,
         showSearchBar = state.showSearchBar,
         trackedSearch = state.trackedSearch,
         sortMode = state.sortMode,
@@ -404,7 +386,7 @@ fun GitHubPage(
 
     GitHubStrategySheet(
         show = state.showStrategySheet,
-        backdrop = sheetBackdrop,
+        backdrop = backdrops.sheet,
         lookupConfig = state.lookupConfig,
         selectedStrategyInput = state.selectedStrategyInput,
         githubApiTokenInput = state.githubApiTokenInput,
@@ -436,7 +418,7 @@ fun GitHubPage(
 
     GitHubCheckLogicSheet(
         show = state.showCheckLogicSheet,
-        backdrop = sheetBackdrop,
+        backdrop = backdrops.sheet,
         lookupConfig = state.lookupConfig,
         trackedCount = trackedUi.overviewMetrics.trackedCount,
         refreshIntervalHours = state.refreshIntervalHours,
@@ -505,7 +487,7 @@ fun GitHubPage(
 
     GitHubTrackEditSheet(
         show = state.showAddSheet,
-        backdrop = sheetBackdrop,
+        backdrop = backdrops.sheet,
         editingTrackedItem = state.editingTrackedItem,
         repoUrlInput = state.repoUrlInput,
         appSearch = state.appSearch,
