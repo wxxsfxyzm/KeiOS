@@ -31,7 +31,8 @@
     <string name="mcp_network_mode_local_only_short">仅本机</string>
     <string name="mcp_network_mode_local_only_summary">仅允许本机客户端通过 127.0.0.1 访问</string>
     <string name="mcp_network_mode_lan_short">局域网</string>
-    <string name="mcp_network_mode_lan_summary">允许同一局域网设备接入，请注意网络安全</string>
+    <string name="mcp_network_mode_lan_summary">允许同一局域网设备接入，请注意网络安全
+本机客户端依旧应该通过 127.0.0.1 / localhost 访问</string>
     <string name="mcp_input_service_name_hint">输入服务名称</string>
     <string name="mcp_input_port_hint">输入端口</string>
     <string name="mcp_action_edit_service_params">编辑服务参数</string>
