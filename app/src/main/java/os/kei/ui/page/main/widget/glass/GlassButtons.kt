@@ -164,6 +164,11 @@ private fun GlassIconButtonContainer(
     )
     val showBorder = glass.showBorder
     val containerOverlay = resolvedContainerColor?.copy(alpha = glassContainerOverlayAlpha(variant, isDark))
+    val pressedOverlayColor = appControlPressedOverlayColor(
+        isDark = isDark,
+        variant = variant,
+        accentColor = resolvedContainerColor ?: Color.Unspecified
+    )
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val animatedScale by appMotionFloatState(
@@ -255,7 +260,7 @@ private fun GlassIconButtonContainer(
                 modifier = Modifier
                     .matchParentSize()
                     .clip(shape)
-                    .background(appControlPressedOverlayColor(isDark).copy(alpha = pressedOverlayAlpha))
+                    .background(pressedOverlayColor.copy(alpha = pressedOverlayAlpha))
             )
         }
         content()
@@ -308,6 +313,11 @@ fun GlassTextButton(
         isDark = isDark
     )
     val containerOverlay = resolvedContainerColor?.copy(alpha = glassContainerOverlayAlpha(variant, isDark))
+    val pressedOverlayColor = appControlPressedOverlayColor(
+        isDark = isDark,
+        variant = variant,
+        accentColor = resolvedContainerColor ?: textColor
+    )
     val borderModifier = if (glass.showBorder) {
         Modifier.border(
             width = glass.borderWidth,
@@ -414,7 +424,7 @@ fun GlassTextButton(
                 modifier = Modifier
                     .matchParentSize()
                     .clip(ContinuousCapsule)
-                    .background(appControlPressedOverlayColor(isDark).copy(alpha = pressedOverlayAlpha))
+                    .background(pressedOverlayColor.copy(alpha = pressedOverlayAlpha))
             )
         }
         Row(

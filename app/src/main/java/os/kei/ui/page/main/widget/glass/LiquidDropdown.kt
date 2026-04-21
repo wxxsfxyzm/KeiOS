@@ -284,6 +284,11 @@ fun LiquidDropdownItem(
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val pressedOverlayColor = appControlPressedOverlayColor(
+        isDark = isDark,
+        variant = variant,
+        accentColor = accentColor
+    )
     val animatedScale by appMotionFloatState(
         targetValue = if (isPressed) AppInteractiveTokens.pressedScale else 1f,
         durationMillis = 110,
@@ -351,7 +356,7 @@ fun LiquidDropdownItem(
                 modifier = Modifier
                     .matchParentSize()
                     .clip(itemShape)
-                    .background(appControlPressedOverlayColor(isDark).copy(alpha = pressedOverlayAlpha))
+                    .background(pressedOverlayColor.copy(alpha = pressedOverlayAlpha))
             )
         }
     }

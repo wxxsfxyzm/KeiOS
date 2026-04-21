@@ -1,6 +1,7 @@
 package os.kei.ui.page.main.widget.glass
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -79,10 +80,31 @@ internal fun appControlPressedOverlayAlpha(isPressed: Boolean, isDark: Boolean):
     }
 }
 
-internal fun appControlPressedOverlayColor(isDark: Boolean): Color {
-    return if (isDark) {
-        Color.White
-    } else {
-        Color(0xFF3B82F6)
+internal fun appControlPressedOverlayColor(
+    isDark: Boolean,
+    variant: GlassVariant = GlassVariant.SheetAction,
+    accentColor: Color = Color.Unspecified
+): Color {
+    val variantAccent = when (variant) {
+        GlassVariant.SheetDangerAction -> Color(0xFFE25B6A)
+        GlassVariant.SheetPrimaryAction -> Color(0xFF3B82F6)
+        else -> Color.Unspecified
     }
+    return when {
+        accentColor.isPreferredPressedOverlayAccent() -> accentColor.toPressedOverlayTint()
+        variantAccent.isPreferredPressedOverlayAccent() -> variantAccent.toPressedOverlayTint()
+        isDark -> Color.White
+        else -> Color(0xFF3B82F6)
+    }
+}
+
+private fun Color.isPreferredPressedOverlayAccent(): Boolean {
+    if (!isSpecified || alpha <= 0.01f) return false
+    val maxChannel = maxOf(red, green, blue)
+    val minChannel = minOf(red, green, blue)
+    return (maxChannel - minChannel) >= 0.08f
+}
+
+private fun Color.toPressedOverlayTint(): Color {
+    return copy(alpha = 1f)
 }
