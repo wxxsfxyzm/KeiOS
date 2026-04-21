@@ -23,6 +23,17 @@ internal fun extractGiftClassImageUrls(raw: String, classKeyword: String, source
     return out.distinct()
 }
 
+private fun extractGiftClassImageUrlsByAliases(
+    raw: String,
+    classKeywords: List<String>,
+    sourceUrl: String
+): List<String> {
+    if (raw.isBlank()) return emptyList()
+    return classKeywords
+        .flatMap { keyword -> extractGiftClassImageUrls(raw, keyword, sourceUrl) }
+        .distinct()
+}
+
 internal fun extractGiftImageUrlsFromCell(
     cell: JSONObject?,
     sourceUrl: String
@@ -93,6 +104,8 @@ internal fun parseGiftPreferenceRowsFromBaseData(
     var continuationQuota = 0
     var continuationEmojiImages: List<String> = emptyList()
     var continuationNote = ""
+    val giftImageClassAliases = listOf("gif-img", "gift-img")
+    val giftEmojiClassAliases = listOf("gif-emoji", "gift-emoji")
 
     for (i in 0 until baseData.length()) {
         val row = baseData.optJSONArray(i) ?: continue
@@ -127,8 +140,8 @@ internal fun parseGiftPreferenceRowsFromBaseData(
             continue
         }
 
-        val keyGiftImages = extractGiftClassImageUrls(rawKey, "gift-img", sourceUrl)
-        val keyEmojiImages = extractGiftClassImageUrls(rawKey, "gift-emoji", sourceUrl)
+        val keyGiftImages = extractGiftClassImageUrlsByAliases(rawKey, giftImageClassAliases, sourceUrl)
+        val keyEmojiImages = extractGiftClassImageUrlsByAliases(rawKey, giftEmojiClassAliases, sourceUrl)
         val keyGenericImages = extractGiftImageUrlsFromCell(keyCell, sourceUrl)
 
         val rowGiftImages = mutableListOf<String>()
@@ -139,8 +152,8 @@ internal fun parseGiftPreferenceRowsFromBaseData(
             val cell = row.optJSONObject(j) ?: continue
             val rawValue = cell.optString("value").trim()
             if (rawValue.isNotBlank()) {
-                rowGiftImages += extractGiftClassImageUrls(rawValue, "gift-img", sourceUrl)
-                rowEmojiImages += extractGiftClassImageUrls(rawValue, "gift-emoji", sourceUrl)
+                rowGiftImages += extractGiftClassImageUrlsByAliases(rawValue, giftImageClassAliases, sourceUrl)
+                rowEmojiImages += extractGiftClassImageUrlsByAliases(rawValue, giftEmojiClassAliases, sourceUrl)
                 val note = stripHtml(rawValue)
                 if (note.isNotBlank()) {
                     rowTextNotes += note
@@ -202,9 +215,16 @@ internal fun parseGiftPreferenceRowsFromBaseData(
         val emojiImages = if (isContinuationRow) {
             continuationEmojiImages
         } else {
+            val genericEmojiImages = (
+                keyGenericImages.filter(::isLikelyGiftPreferenceIconUrl) +
+                    rowGenericImages.filter(::isLikelyGiftPreferenceIconUrl)
+                )
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .distinct()
             explicitEmojiImages
                 .ifEmpty {
-                    rowGenericImages.filter(::isLikelyGiftPreferenceIconUrl)
+                    genericEmojiImages
                 }
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
