@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.R
 import com.example.keios.ui.page.main.os.InfoRow
@@ -75,7 +76,10 @@ internal fun LazyListScope.addTopInfoCard(
                 OsVirtualizedInfoRows(
                     rows = displayedTopInfoRows,
                     valueSingleLine = true,
-                    valueHorizontalScroll = true
+                    labelMinWidth = 56.dp,
+                    labelMaxWidth = 92.dp,
+                    labelMaxLines = 1,
+                    valueMinWidth = 112.dp
                 )
             } else {
                 OsVirtualizedGroupedTopInfoRows(groupedRows = groupedTopInfoRows)
@@ -217,8 +221,10 @@ internal fun LazyListScope.addKeyValueSectionCard(
 private fun OsVirtualizedInfoRows(
     rows: List<InfoRow>,
     valueSingleLine: Boolean = false,
-    valueMarquee: Boolean = false,
-    valueHorizontalScroll: Boolean = false
+    labelMinWidth: Dp = 72.dp,
+    labelMaxWidth: Dp = 136.dp,
+    labelMaxLines: Int = Int.MAX_VALUE,
+    valueMinWidth: Dp = Dp.Unspecified
 ) {
     LazyColumn(
         modifier = Modifier
@@ -234,8 +240,10 @@ private fun OsVirtualizedInfoRows(
                 label = row.key,
                 value = row.value,
                 valueSingleLine = valueSingleLine,
-                valueMarquee = valueMarquee,
-                valueHorizontalScroll = valueHorizontalScroll
+                labelMinWidth = labelMinWidth,
+                labelMaxWidth = labelMaxWidth,
+                labelMaxLines = labelMaxLines,
+                valueMinWidth = valueMinWidth
             )
         }
     }
@@ -288,7 +296,10 @@ private fun OsVirtualizedGroupedTopInfoRows(groupedRows: List<Pair<String, List<
                         label = item.row.key,
                         value = item.row.value,
                         valueSingleLine = true,
-                        valueHorizontalScroll = true
+                        labelMinWidth = 56.dp,
+                        labelMaxWidth = 92.dp,
+                        labelMaxLines = 1,
+                        valueMinWidth = 112.dp
                     )
                 }
             }

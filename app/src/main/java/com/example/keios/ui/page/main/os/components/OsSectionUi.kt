@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.os.OsSectionCard
 import com.example.keios.ui.page.main.os.appLucideAppWindowIcon
@@ -62,8 +63,10 @@ internal fun OsSectionInfoRow(
     value: String,
     copyValueOnly: Boolean = false,
     valueSingleLine: Boolean = false,
-    valueMarquee: Boolean = false,
-    valueHorizontalScroll: Boolean = false,
+    labelMinWidth: Dp = 72.dp,
+    labelMaxWidth: Dp = 136.dp,
+    labelMaxLines: Int = Int.MAX_VALUE,
+    valueMinWidth: Dp = Dp.Unspecified,
     modifier: Modifier = Modifier
 ) {
     val displayValue = value.ifBlank { "N/A" }
@@ -73,20 +76,19 @@ internal fun OsSectionInfoRow(
         modifier = modifier,
         labelColor = MiuixTheme.colorScheme.onBackgroundVariant,
         valueColor = MiuixTheme.colorScheme.onBackground,
-        labelMinWidth = 72.dp,
-        labelMaxWidth = 136.dp,
+        labelMinWidth = labelMinWidth,
+        labelMaxWidth = labelMaxWidth,
+        valueMinWidth = valueMinWidth,
         horizontalSpacing = CardLayoutRhythm.infoRowGap,
         rowVerticalPadding = CardLayoutRhythm.infoRowVerticalPadding,
         valueTextAlign = TextAlign.End,
-        labelMaxLines = Int.MAX_VALUE,
+        labelMaxLines = labelMaxLines,
         valueMaxLines = if (valueSingleLine) 1 else 6,
         valueOverflow = if (valueSingleLine) TextOverflow.Clip else TextOverflow.Ellipsis,
         labelFontSize = AppTypographyTokens.Body.fontSize,
         labelLineHeight = AppTypographyTokens.Body.lineHeight,
         valueFontSize = AppTypographyTokens.Body.fontSize,
         valueLineHeight = AppTypographyTokens.Body.lineHeight,
-        valueMarquee = valueMarquee,
-        valueHorizontalScroll = valueHorizontalScroll,
         emphasizedValue = true,
         copyPayloadOverride = if (copyValueOnly) displayValue else null
     )

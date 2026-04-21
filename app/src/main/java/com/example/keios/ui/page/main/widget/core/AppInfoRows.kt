@@ -1,10 +1,6 @@
 package com.example.keios.ui.page.main.widget.core
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,7 +27,6 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  * Keeps typography and spacing consistent while allowing lightweight per-page tuning.
  */
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 fun AppInfoRow(
     label: String,
     value: String,
@@ -42,6 +37,7 @@ fun AppInfoRow(
     labelMaxWidth: Dp = Dp.Unspecified,
     labelWeight: Float? = null,
     valueWeight: Float = 1f,
+    valueMinWidth: Dp = Dp.Unspecified,
     horizontalSpacing: Dp = CardLayoutRhythm.infoRowGap,
     rowVerticalPadding: Dp = CardLayoutRhythm.infoRowVerticalPadding,
     valueTextAlign: TextAlign = TextAlign.End,
@@ -53,8 +49,6 @@ fun AppInfoRow(
     labelLineHeight: TextUnit = AppTypographyTokens.Supporting.lineHeight,
     valueFontSize: TextUnit = AppTypographyTokens.Body.fontSize,
     valueLineHeight: TextUnit = AppTypographyTokens.Body.lineHeight,
-    valueMarquee: Boolean = false,
-    valueHorizontalScroll: Boolean = false,
     emphasizedValue: Boolean = true,
     copyPayloadOverride: String? = null,
     onClick: (() -> Unit)? = null,
@@ -93,8 +87,8 @@ fun AppInfoRow(
             } else {
                 Modifier.wrapContentWidth()
             }
-            val valueModifier = if (valueMarquee) {
-                baseValueModifier.basicMarquee()
+            val valueModifier = if (valueMinWidth != Dp.Unspecified) {
+                baseValueModifier.widthIn(min = valueMinWidth)
             } else {
                 baseValueModifier
             }
@@ -107,37 +101,17 @@ fun AppInfoRow(
                 maxLines = labelMaxLines,
                 overflow = labelOverflow
             )
-            if (valueHorizontalScroll) {
-                val valueScrollState = androidx.compose.foundation.rememberScrollState()
-                Box(
-                    modifier = valueModifier.horizontalScroll(valueScrollState),
-                    contentAlignment = Alignment.CenterEnd
-                ) {
-                    Text(
-                        text = displayValue,
-                        color = valueColor,
-                        fontSize = valueFontSize,
-                        lineHeight = valueLineHeight,
-                        fontWeight = if (emphasizedValue) FontWeight.Medium else FontWeight.Normal,
-                        textAlign = valueTextAlign,
-                        modifier = Modifier.wrapContentWidth(unbounded = true),
-                        maxLines = valueMaxLines,
-                        overflow = valueOverflow
-                    )
-                }
-            } else {
-                Text(
-                    text = displayValue,
-                    color = valueColor,
-                    fontSize = valueFontSize,
-                    lineHeight = valueLineHeight,
-                    fontWeight = if (emphasizedValue) FontWeight.Medium else FontWeight.Normal,
-                    textAlign = valueTextAlign,
-                    modifier = valueModifier,
-                    maxLines = valueMaxLines,
-                    overflow = valueOverflow
-                )
-            }
+            Text(
+                text = displayValue,
+                color = valueColor,
+                fontSize = valueFontSize,
+                lineHeight = valueLineHeight,
+                fontWeight = if (emphasizedValue) FontWeight.Medium else FontWeight.Normal,
+                textAlign = valueTextAlign,
+                modifier = valueModifier,
+                maxLines = valueMaxLines,
+                overflow = valueOverflow
+            )
         }
     }
 }
