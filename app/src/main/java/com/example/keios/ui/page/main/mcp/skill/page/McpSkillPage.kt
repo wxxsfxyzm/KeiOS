@@ -5,6 +5,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.keios.mcp.server.McpServerManager
+import com.example.keios.core.ui.effect.getMiuixAppBarColor
+import com.example.keios.core.ui.effect.rememberMiuixBlurBackdrop
 import com.example.keios.ui.page.main.mcp.skill.component.McpSkillContentList
 import com.example.keios.ui.page.main.mcp.skill.state.rememberMcpSkillPageContentState
 import com.example.keios.ui.page.main.mcp.skill.state.rememberMcpSkillPageTextBundle
@@ -28,6 +30,7 @@ fun McpSkillPage(
     val subtitleColor = MiuixTheme.colorScheme.onBackgroundVariant
     val accentColor = MiuixTheme.colorScheme.primary
     val codeColor = MiuixTheme.colorScheme.primary.copy(alpha = 0.10f)
+    val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     val contentState = rememberMcpSkillPageContentState(
         mcpServerManager = mcpServerManager,
         listState = listState,
@@ -42,7 +45,7 @@ fun McpSkillPage(
         title = textBundle.pageTitle,
         modifier = Modifier.fillMaxSize(),
         scrollBehavior = scrollBehavior,
-        topBarColor = MiuixTheme.colorScheme.surface,
+        topBarColor = topBarMaterialBackdrop.getMiuixAppBarColor(),
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
