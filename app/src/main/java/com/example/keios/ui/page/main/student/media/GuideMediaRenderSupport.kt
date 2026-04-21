@@ -4,8 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,9 +29,6 @@ import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal fun normalizeGuideMediaSource(raw: String): String {
     val value = raw.trim()
@@ -112,10 +108,7 @@ fun GuideRemoteImageAdaptive(
     modifier: Modifier = Modifier,
     maxDecodeDimension: Int = 2048,
     progressState: MutableStateFlow<Float>? = null,
-    onLoadingChanged: ((Boolean) -> Unit)? = null,
-    placeholderRatioMin: Float = 0.4f,
-    placeholderRatioMax: Float = 4f,
-    showLoadingIndicator: Boolean = false
+    onLoadingChanged: ((Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val target = remember(imageUrl) { normalizeGuideMediaSource(imageUrl) }
@@ -132,44 +125,43 @@ fun GuideRemoteImageAdaptive(
             initialValue = target,
             target
         ) {
-            if (target.isBlank()) {
+            if (!isHttpMediaSource(target)) {
                 value = target
                 return@produceState
             }
-            val localCached = BaGuideTempMediaCache.resolveCachedUrl(
-                context = context,
-                sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
-                rawUrl = target
-            )
-            val cachedScheme = runCatching { Uri.parse(localCached).scheme.orEmpty() }
-                .getOrDefault("")
-            if (cachedScheme.equals("file", ignoreCase = true)) {
-                value = localCached
-                return@produceState
-            }
-            value = target
-            val targetScheme = runCatching { Uri.parse(target).scheme.orEmpty() }.getOrDefault("")
-            val isHttp = targetScheme.equals("http", ignoreCase = true) || targetScheme.equals("https", ignoreCase = true)
-            if (!isHttp) return@produceState
-            val cachedAfterFetch = withContext(Dispatchers.IO) {
+            progressState?.value = 0f
+            onLoadingChanged?.invoke(true)
+            val warmed = withContext(Dispatchers.IO) {
                 runCatching {
                     BaGuideTempMediaCache.prefetchForGuide(
                         context = context,
                         sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
-                        rawUrls = listOf(target),
+                        rawUrls = listOf(target)
                     )
                 }
-                BaGuideTempMediaCache.resolveCachedUrl(
+                var resolved = BaGuideTempMediaCache.resolveCachedUrl(
                     context = context,
                     sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
                     rawUrl = target
                 )
+                if (!isFileMediaSource(resolved)) {
+                    runCatching {
+                        BaGuideTempMediaCache.prefetchForGuide(
+                            context = context,
+                            sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
+                            rawUrls = listOf(target),
+                            forceReDownload = true
+                        )
+                    }
+                    resolved = BaGuideTempMediaCache.resolveCachedUrl(
+                        context = context,
+                        sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
+                        rawUrl = target
+                    )
+                }
+                resolved
             }
-            val fetchedScheme = runCatching { Uri.parse(cachedAfterFetch).scheme.orEmpty() }
-                .getOrDefault("")
-            if (fetchedScheme.equals("file", ignoreCase = true)) {
-                value = cachedAfterFetch
-            }
+            value = warmed.ifBlank { target }
         }
         val ratio = remember(resolvedGifTarget, target) {
             detectMediaRatioFromUrl(resolvedGifTarget.ifBlank { target }) ?: (16f / 9f)
@@ -227,33 +219,12 @@ fun GuideRemoteImageAdaptive(
     }
     val rendered = bitmap
     if (rendered == null) {
-        val placeholderRatio = stableRatio.coerceIn(
-            placeholderRatioMin.coerceAtLeast(0.2f),
-            placeholderRatioMax.coerceAtLeast(placeholderRatioMin.coerceAtLeast(0.2f))
-        )
-        Box(
+        Spacer(
             modifier = modifier
                 .fillMaxWidth()
-                .aspectRatio(placeholderRatio)
-                .background(
-                    color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.36f),
-                    shape = RoundedCornerShape(14.dp)
-                )
+                .aspectRatio(stableRatio)
                 .clip(RoundedCornerShape(14.dp))
-        ) {
-            if (showLoadingIndicator) {
-                CircularProgressIndicator(
-                    progress = progressState?.value?.coerceIn(0f, 1f)?.coerceAtLeast(0.06f) ?: 0.35f,
-                    size = 22.dp,
-                    strokeWidth = 2.dp,
-                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                        foregroundColor = MiuixTheme.colorScheme.primary,
-                        backgroundColor = MiuixTheme.colorScheme.primary.copy(alpha = 0.28f)
-                    ),
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-        }
+        )
         return
     }
     val ratio = remember(rendered.width, rendered.height) {
@@ -294,6 +265,21 @@ internal fun isGifMediaSource(source: String): Boolean {
             magic == "GIF87a" || magic == "GIF89a"
         }
     }.getOrDefault(false)
+}
+
+internal fun isFileMediaSource(source: String): Boolean {
+    val value = source.trim()
+    if (value.isBlank()) return false
+    val uri = runCatching { Uri.parse(value) }.getOrNull() ?: return false
+    return uri.scheme.equals("file", ignoreCase = true)
+}
+
+internal fun isHttpMediaSource(source: String): Boolean {
+    val value = source.trim()
+    if (value.isBlank()) return false
+    val uri = runCatching { Uri.parse(value) }.getOrNull() ?: return false
+    val scheme = uri.scheme.orEmpty()
+    return scheme.equals("http", ignoreCase = true) || scheme.equals("https", ignoreCase = true)
 }
 
 internal fun detectMediaRatioFromUrl(source: String): Float? {
