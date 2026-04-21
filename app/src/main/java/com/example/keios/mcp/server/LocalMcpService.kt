@@ -160,6 +160,7 @@ class LocalMcpService(
             McpToolMeta("keios.mcp.runtime.status", "读取 MCP 运行态（endpoint/clientCount/error）。"),
             McpToolMeta("keios.mcp.runtime.logs", "读取 MCP 日志（limit=1..200）。"),
             McpToolMeta("keios.mcp.runtime.config", "生成可导入 MCP JSON（mode=auto|local|lan，支持 endpoint/serverName 覆盖）。"),
+            McpToolMeta("keios.mcp.claw.skill.guide", "生成 Claw 接入引导（导入 JSON + SKILL.md + 注册步骤）。"),
             McpToolMeta("keios.system.topinfo.query", "查询系统 TopInfo 缓存（query/limit）。"),
             McpToolMeta("keios.os.cards.snapshot", "读取 OS 页面卡片总览（可见性/展开态/缓存体积/统计）。"),
             McpToolMeta("keios.os.activity.cards", "读取活动 card 列表（query/onlyVisible/limit）。"),
@@ -281,6 +282,31 @@ class LocalMcpService(
             val serverName = argString(request.arguments?.get("serverName")).trim()
             callText(
                 buildRuntimeConfigJson(
+                    state = state,
+                    mode = mode,
+                    endpointOverride = endpoint,
+                    serverNameOverride = serverName
+                )
+            )
+        }
+
+        server.addTool(
+            name = "keios.mcp.claw.skill.guide",
+            description = "Build Claw onboarding guide with import JSON + SKILL.md content. Args: mode(local|lan|auto), endpoint(optional), serverName(optional).",
+            inputSchema = ToolSchema(
+                properties = buildJsonObject {
+                    put("mode", buildJsonObject { put("type", JsonPrimitive("string")) })
+                    put("endpoint", buildJsonObject { put("type", JsonPrimitive("string")) })
+                    put("serverName", buildJsonObject { put("type", JsonPrimitive("string")) })
+                }
+            )
+        ) { request ->
+            val state = mcpStateProvider?.invoke()
+            val mode = argString(request.arguments?.get("mode"))
+            val endpoint = argString(request.arguments?.get("endpoint")).trim()
+            val serverName = argString(request.arguments?.get("serverName")).trim()
+            callText(
+                buildClawSkillGuideText(
                     state = state,
                     mode = mode,
                     endpointOverride = endpoint,
@@ -764,7 +790,8 @@ class LocalMcpService(
             "keios.health.ping",
             "keios.mcp.runtime.status",
             "keios.mcp.runtime.logs",
-            "keios.mcp.runtime.config"
+            "keios.mcp.runtime.config",
+            "keios.mcp.claw.skill.guide"
         )
         val osTools = listOf(
             "keios.os.cards.snapshot",
@@ -856,6 +883,12 @@ class LocalMcpService(
                     appendLine("- 同机客户端优先 mode=local。")
                     appendLine("- 跨设备调试使用 mode=lan。")
                     appendLine("- 需要临时目标时可传 endpoint 覆盖。")
+                }
+
+                "keios.mcp.claw.skill.guide" -> {
+                    appendLine("- 直接生成 Claw 接入完整引导。")
+                    appendLine("- 输出包含可导入 JSON、Skill 资源 URI 和完整 SKILL.md 文本。")
+                    appendLine("- mode 建议先用 auto，定向调试再切 local 或 lan。")
                 }
 
                 "keios.system.topinfo.query" -> {
@@ -1027,6 +1060,52 @@ class LocalMcpService(
             servers = servers,
             token = state?.authToken ?: "YOUR_TOKEN"
         )
+    }
+
+    private fun buildClawSkillGuideText(
+        state: McpServerUiState?,
+        mode: String,
+        endpointOverride: String,
+        serverNameOverride: String
+    ): String {
+        val fixedMode = normalizeConfigMode(mode)
+        val configJson = buildRuntimeConfigJson(
+            state = state,
+            mode = fixedMode,
+            endpointOverride = endpointOverride,
+            serverNameOverride = serverNameOverride
+        )
+        val skillMarkdown = loadSkillMarkdown()
+        return buildString {
+            appendLine("target=claw")
+            appendLine("mode=$fixedMode")
+            appendLine("skillResource=$SKILL_RESOURCE_URI")
+            appendLine("skillOverviewResource=$SKILL_OVERVIEW_URI")
+            appendLine("skillToolTemplate=$SKILL_TOOL_TEMPLATE_URI")
+            appendLine("bootstrapPrompt=$BOOTSTRAP_PROMPT")
+            appendLine("configTool=keios.mcp.runtime.config")
+            appendLine("defaultFlow=keios.health.ping->keios.mcp.runtime.status->keios.mcp.runtime.config")
+            appendLine()
+            appendLine("## Step 1 · 导入 MCP 配置")
+            appendLine("```json")
+            appendLine(configJson)
+            appendLine("```")
+            appendLine()
+            appendLine("## Step 2 · 载入 Skill")
+            appendLine("- 读取资源 $SKILL_RESOURCE_URI")
+            appendLine("- 读取摘要 $SKILL_OVERVIEW_URI")
+            appendLine("- 按工具读取模板 $SKILL_TOOL_TEMPLATE_URI")
+            appendLine()
+            appendLine("## Step 3 · 在 Claw 注册 Skill")
+            appendLine("- 建议名称：KeiOS MCP Skill")
+            appendLine("- 将下方 SKILL.md 内容保存到 Claw Skill")
+            appendLine("- 初始化后先执行 keios.health.ping 与 keios.mcp.runtime.status")
+            appendLine()
+            appendLine("## SKILL.md")
+            appendLine("```markdown")
+            appendLine(skillMarkdown)
+            appendLine("```")
+        }.trim()
     }
 
     private fun buildMcpConfigJson(

@@ -10,8 +10,9 @@
 ## 快速接入
 1. 先读取资源 `{{RESOURCE_CONFIG_URI}}`，拿到默认可导入 JSON（auto）。
 2. 需要指定模式时读取模板 `{{RESOURCE_CONFIG_TEMPLATE_URI}}`，填入 `mode=auto|local|lan`。
-3. 客户端不支持资源读取时，调用 `keios.mcp.runtime.config` 生成同等配置。
-4. 接入完成后执行 `keios.health.ping` 与 `keios.mcp.runtime.status` 验证连通性。
+3. Claw 接入可调用 `keios.mcp.claw.skill.guide`，一次获取导入 JSON、Skill 资源 URI 与完整 SKILL.md 内容。
+4. 客户端不支持资源读取时，调用 `keios.mcp.runtime.config` 生成同等配置。
+5. 接入完成后执行 `keios.health.ping` 与 `keios.mcp.runtime.status` 验证连通性。
 
 ## 初始化顺序
 1. 读取资源 `{{RESOURCE_OVERVIEW_URI}}` 获取入口摘要。
