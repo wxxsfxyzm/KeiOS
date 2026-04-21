@@ -2,12 +2,14 @@ package com.example.keios.ui.page.main.widget.core
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -52,6 +54,7 @@ fun AppInfoRow(
     valueFontSize: TextUnit = AppTypographyTokens.Body.fontSize,
     valueLineHeight: TextUnit = AppTypographyTokens.Body.lineHeight,
     valueMarquee: Boolean = false,
+    valueHorizontalScroll: Boolean = false,
     emphasizedValue: Boolean = true,
     copyPayloadOverride: String? = null,
     onClick: (() -> Unit)? = null,
@@ -104,17 +107,37 @@ fun AppInfoRow(
                 maxLines = labelMaxLines,
                 overflow = labelOverflow
             )
-            Text(
-                text = displayValue,
-                color = valueColor,
-                fontSize = valueFontSize,
-                lineHeight = valueLineHeight,
-                fontWeight = if (emphasizedValue) FontWeight.Medium else FontWeight.Normal,
-                textAlign = valueTextAlign,
-                modifier = valueModifier,
-                maxLines = valueMaxLines,
-                overflow = valueOverflow
-            )
+            if (valueHorizontalScroll) {
+                val valueScrollState = androidx.compose.foundation.rememberScrollState()
+                Box(
+                    modifier = valueModifier.horizontalScroll(valueScrollState),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Text(
+                        text = displayValue,
+                        color = valueColor,
+                        fontSize = valueFontSize,
+                        lineHeight = valueLineHeight,
+                        fontWeight = if (emphasizedValue) FontWeight.Medium else FontWeight.Normal,
+                        textAlign = valueTextAlign,
+                        modifier = Modifier.wrapContentWidth(unbounded = true),
+                        maxLines = valueMaxLines,
+                        overflow = valueOverflow
+                    )
+                }
+            } else {
+                Text(
+                    text = displayValue,
+                    color = valueColor,
+                    fontSize = valueFontSize,
+                    lineHeight = valueLineHeight,
+                    fontWeight = if (emphasizedValue) FontWeight.Medium else FontWeight.Normal,
+                    textAlign = valueTextAlign,
+                    modifier = valueModifier,
+                    maxLines = valueMaxLines,
+                    overflow = valueOverflow
+                )
+            }
         }
     }
 }

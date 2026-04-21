@@ -63,6 +63,7 @@ internal fun OsSectionInfoRow(
     copyValueOnly: Boolean = false,
     valueSingleLine: Boolean = false,
     valueMarquee: Boolean = false,
+    valueHorizontalScroll: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val displayValue = value.ifBlank { "N/A" }
@@ -85,6 +86,7 @@ internal fun OsSectionInfoRow(
         valueFontSize = AppTypographyTokens.Body.fontSize,
         valueLineHeight = AppTypographyTokens.Body.lineHeight,
         valueMarquee = valueMarquee,
+        valueHorizontalScroll = valueHorizontalScroll,
         emphasizedValue = true,
         copyPayloadOverride = if (copyValueOnly) displayValue else null
     )

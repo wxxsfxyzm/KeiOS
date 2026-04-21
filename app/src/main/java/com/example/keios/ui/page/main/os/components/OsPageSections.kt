@@ -75,7 +75,7 @@ internal fun LazyListScope.addTopInfoCard(
                 OsVirtualizedInfoRows(
                     rows = displayedTopInfoRows,
                     valueSingleLine = true,
-                    valueMarquee = true
+                    valueHorizontalScroll = true
                 )
             } else {
                 OsVirtualizedGroupedTopInfoRows(groupedRows = groupedTopInfoRows)
@@ -217,7 +217,8 @@ internal fun LazyListScope.addKeyValueSectionCard(
 private fun OsVirtualizedInfoRows(
     rows: List<InfoRow>,
     valueSingleLine: Boolean = false,
-    valueMarquee: Boolean = false
+    valueMarquee: Boolean = false,
+    valueHorizontalScroll: Boolean = false
 ) {
     LazyColumn(
         modifier = Modifier
@@ -233,7 +234,8 @@ private fun OsVirtualizedInfoRows(
                 label = row.key,
                 value = row.value,
                 valueSingleLine = valueSingleLine,
-                valueMarquee = valueMarquee
+                valueMarquee = valueMarquee,
+                valueHorizontalScroll = valueHorizontalScroll
             )
         }
     }
@@ -286,7 +288,7 @@ private fun OsVirtualizedGroupedTopInfoRows(groupedRows: List<Pair<String, List<
                         label = item.row.key,
                         value = item.row.value,
                         valueSingleLine = true,
-                        valueMarquee = true
+                        valueHorizontalScroll = true
                     )
                 }
             }
