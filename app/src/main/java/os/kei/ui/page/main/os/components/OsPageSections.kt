@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import os.kei.R
@@ -488,12 +487,7 @@ internal fun OsActivityVisibilityManagerSheet(
                             onClick = onExportAllCards,
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !transferInProgress,
-                            variant = GlassVariant.SheetAction,
-                            pressScaleEnabled = false,
-                            pressOverlayEnabled = true,
-                            textMaxLines = 1,
-                            textOverflow = TextOverflow.Ellipsis,
-                            textSoftWrap = false
+                            variant = GlassVariant.SheetAction
                         )
                     }
                     Box(modifier = Modifier.weight(1f)) {
@@ -503,12 +497,7 @@ internal fun OsActivityVisibilityManagerSheet(
                             onClick = onImportAllCards,
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !transferInProgress,
-                            variant = GlassVariant.SheetAction,
-                            pressScaleEnabled = false,
-                            pressOverlayEnabled = true,
-                            textMaxLines = 1,
-                            textOverflow = TextOverflow.Ellipsis,
-                            textSoftWrap = false
+                            variant = GlassVariant.SheetAction
                         )
                     }
                 }

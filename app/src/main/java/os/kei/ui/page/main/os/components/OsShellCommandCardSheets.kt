@@ -227,12 +227,7 @@ internal fun OsShellCommandVisibilityManagerSheet(
                             onClick = onExportAllCards,
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !transferInProgress,
-                            variant = GlassVariant.SheetAction,
-                            pressScaleEnabled = false,
-                            pressOverlayEnabled = true,
-                            textMaxLines = 1,
-                            textOverflow = TextOverflow.Ellipsis,
-                            textSoftWrap = false
+                            variant = GlassVariant.SheetAction
                         )
                     }
                     Box(modifier = Modifier.weight(1f)) {
@@ -242,12 +237,7 @@ internal fun OsShellCommandVisibilityManagerSheet(
                             onClick = onImportAllCards,
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !transferInProgress,
-                            variant = GlassVariant.SheetAction,
-                            pressScaleEnabled = false,
-                            pressOverlayEnabled = true,
-                            textMaxLines = 1,
-                            textOverflow = TextOverflow.Ellipsis,
-                            textSoftWrap = false
+                            variant = GlassVariant.SheetAction
                         )
                     }
                 }
