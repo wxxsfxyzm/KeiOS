@@ -60,6 +60,7 @@ import com.example.keios.ui.page.main.student.GuideBottomTab
 import com.example.keios.ui.page.main.student.page.component.BaStudentGuideBottomBar
 import com.example.keios.ui.page.main.student.page.component.BaStudentGuidePagerContent
 import com.example.keios.ui.page.main.student.page.support.rememberGuideSyncProgress
+import com.example.keios.ui.page.main.student.page.support.resolveGuideBottomTabs
 import com.example.keios.ui.page.main.student.page.state.BindBaStudentGuideInfoLoadEffect
 import com.example.keios.ui.page.main.student.page.state.rememberBaStudentGuideMediaSaveAction
 import com.example.keios.ui.page.main.student.page.state.rememberBaStudentGuideMediaPackSaveAction
@@ -149,7 +150,9 @@ fun BaStudentGuidePage(
     var error by remember { mutableStateOf<String?>(null) }
     var refreshSignal by remember { mutableStateOf(0) }
     var manualRefreshRequested by remember { mutableStateOf(false) }
-    var selectedBottomTabIndex by rememberSaveable(sourceUrl) { mutableIntStateOf(0) }
+    var selectedBottomTabOrdinal by rememberSaveable(sourceUrl) {
+        mutableIntStateOf(GuideBottomTab.Archive.ordinal)
+    }
     var selectedVoiceLanguage by rememberSaveable(sourceUrl) { mutableStateOf("") }
     var playingVoiceUrl by rememberSaveable(sourceUrl) { mutableStateOf("") }
     var isVoicePlaying by remember(sourceUrl) { mutableStateOf(false) }
@@ -157,19 +160,26 @@ fun BaStudentGuidePage(
     var galleryPrefetchRequested by rememberSaveable(sourceUrl, guideSyncToken) { mutableStateOf(false) }
     var staticImagePrefetchStage by rememberSaveable(sourceUrl, guideSyncToken) { mutableIntStateOf(0) }
     var galleryCacheRevision by remember(sourceUrl) { mutableIntStateOf(0) }
-    val bottomTabs = GuideBottomTab.entries
-    val bottomTabsList = remember { bottomTabs.toList() }
+    val bottomTabsList = remember(info) { resolveGuideBottomTabs(info) }
+    LaunchedEffect(bottomTabsList, selectedBottomTabOrdinal) {
+        if (bottomTabsList.none { it.ordinal == selectedBottomTabOrdinal }) {
+            selectedBottomTabOrdinal = bottomTabsList.firstOrNull()?.ordinal ?: GuideBottomTab.Archive.ordinal
+        }
+    }
+    val selectedBottomTabIndex = bottomTabsList.indexOfFirst { tab ->
+        tab.ordinal == selectedBottomTabOrdinal
+    }.takeIf { it >= 0 } ?: 0
     val pagerState = rememberPagerState(
         initialPage = selectedBottomTabIndex,
-        pageCount = { bottomTabs.size }
+        pageCount = { bottomTabsList.size }
     )
     ReportPagerPerformanceState(
         scope = "guide_detail_pager",
-        currentPage = bottomTabs.getOrElse(pagerState.currentPage) { GuideBottomTab.Archive }.name,
-        targetPage = bottomTabs.getOrElse(pagerState.targetPage) { GuideBottomTab.Archive }.name,
+        currentPage = bottomTabsList.getOrElse(pagerState.currentPage) { GuideBottomTab.Archive }.name,
+        targetPage = bottomTabsList.getOrElse(pagerState.targetPage) { GuideBottomTab.Archive }.name,
         scrolling = pagerState.isScrollInProgress
     )
-    val activeBottomTab = bottomTabs.getOrElse(pagerState.currentPage) { GuideBottomTab.Archive }
+    val activeBottomTab = bottomTabsList.getOrElse(pagerState.currentPage) { GuideBottomTab.Archive }
     val pageScope = rememberCoroutineScope()
     val syncProgress = rememberGuideSyncProgress(
         loading = loading,
@@ -185,7 +195,12 @@ fun BaStudentGuidePage(
         transitionAnimationsEnabled = transitionAnimationsEnabled,
         farJumpAlpha = farJumpAlpha,
         onShowBottomBarChange = { showBottomBar = it },
-        onSelectedBottomTabIndexChange = { selectedBottomTabIndex = it }
+        onSelectedBottomTabIndexChange = { selectedIndex ->
+            selectedBottomTabOrdinal = bottomTabsList
+                .getOrNull(selectedIndex)
+                ?.ordinal
+                ?: GuideBottomTab.Archive.ordinal
+        }
     )
     val bottomBarNestedScrollConnection = remember {
         object : NestedScrollConnection {
@@ -255,10 +270,15 @@ fun BaStudentGuidePage(
     )
     BindBaStudentGuidePagerSyncEffects(
         sourceUrl = sourceUrl,
-        bottomTabsSize = bottomTabs.size,
+        bottomTabsSize = bottomTabsList.size,
         selectedBottomTabIndex = selectedBottomTabIndex,
         pagerState = pagerState,
-        onSelectedBottomTabIndexChange = { selectedBottomTabIndex = it }
+        onSelectedBottomTabIndexChange = { selectedIndex ->
+            selectedBottomTabOrdinal = bottomTabsList
+                .getOrNull(selectedIndex)
+                ?.ordinal
+                ?: GuideBottomTab.Archive.ordinal
+        }
     )
     BindBaStudentGuideVoiceProgressEffect(
         activeBottomTab = activeBottomTab,
