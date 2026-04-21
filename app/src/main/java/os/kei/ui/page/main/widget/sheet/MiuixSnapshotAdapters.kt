@@ -43,9 +43,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.PopupPositionProvider as ComposePopupPositionProvider
+import os.kei.ui.page.main.widget.dialog.AppWindowDialogHost
 import os.kei.ui.page.main.widget.glass.AppInteractiveTokens
 import os.kei.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
@@ -296,17 +295,10 @@ fun SnapshotWindowBottomSheet(
     val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
     if (!transitionAnimationsEnabled) {
         if (!show) return
-        Dialog(
-            onDismissRequest = {
-                if (allowDismiss) {
-                    onDismissRequest?.invoke()
-                }
-            },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnBackPress = allowDismiss,
-                dismissOnClickOutside = allowDismiss
-            )
+        AppWindowDialogHost(
+            show = true,
+            onDismissRequest = onDismissRequest,
+            dismissible = allowDismiss
         ) {
             Box(
                 modifier = Modifier

@@ -28,8 +28,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import os.kei.ui.page.main.ba.support.BASettingsStore
 import os.kei.ui.page.main.student.IMAGE_TAP_DISMISS_GESTURE_COOLDOWN_MS
 import os.kei.ui.page.main.student.IMAGE_TAP_DISMISS_OFFSET_EPSILON_PX
@@ -40,6 +38,7 @@ import os.kei.ui.page.main.student.loadGuideBitmapSource
 import os.kei.ui.page.main.student.normalizeGuideMediaSource
 import os.kei.ui.page.main.student.rememberDeviceRotationDegrees
 import os.kei.ui.page.main.student.rememberSystemAutoRotateEnabled
+import os.kei.ui.page.main.widget.dialog.AppWindowDialogHost
 import os.kei.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 import os.kei.ui.page.main.widget.motion.resolvedMotionDuration
 import com.github.panpf.zoomimage.CoilZoomAsyncImage
@@ -125,13 +124,9 @@ internal fun GuideImageFullscreenDialog(
     }
     val backGestureState = rememberGuideFullscreenBackGestureState(onDismiss = onDismiss)
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false,
-            dismissOnBackPress = true
-        )
+    AppWindowDialogHost(
+        show = true,
+        onDismissRequest = onDismiss
     ) {
         Box(
             modifier = Modifier
@@ -286,12 +281,9 @@ internal fun GuideVideoFullscreenDialog(
         onPlayerErrorChanged = { errorCode -> loadError = errorCode }
     )
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+    AppWindowDialogHost(
+        show = true,
+        onDismissRequest = onDismiss
     ) {
         Box(
             modifier = Modifier
