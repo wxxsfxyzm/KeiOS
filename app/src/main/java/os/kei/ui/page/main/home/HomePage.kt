@@ -85,7 +85,7 @@ import os.kei.ui.page.main.os.appLucideLayersIcon
 import os.kei.ui.page.main.os.osLucideSettingsIcon
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberActionBarBackdrop
-import com.rosan.installer.ui.library.effect.BgEffectBackground
+import os.kei.core.ui.effect.background.BgEffectBackground
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar

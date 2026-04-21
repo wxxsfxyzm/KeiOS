@@ -1,12 +1,13 @@
 // Copyright 2026, compose-miuix-ui contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package com.rosan.installer.ui.library.effect
+package os.kei.core.ui.effect.background
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,7 +21,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.rosan.installer.ui.theme.InstallerTheme
 import top.yukonga.miuix.kmp.blur.asComposeShader
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -39,7 +39,7 @@ inline fun BgEffectBackground(
     val painter = remember { if (shaderSupported) BgEffectPainter() else null }
 
     var currentBrush by remember { mutableStateOf<ShaderBrush?>(null) }
-    val isDark = InstallerTheme.isDark
+    val isDark = isSystemInDarkTheme()
 
     var targetSize by remember { mutableStateOf(IntSize.Zero) }
     val logoHeight = with(LocalDensity.current) { 600.dp.toPx() }

@@ -1,7 +1,7 @@
 // Copyright 2026, compose-miuix-ui contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package com.rosan.installer.ui.library.effect
+package os.kei.core.ui.effect.background
 
 const val OS3_BG_FRAG = """
     uniform vec2 uResolution;

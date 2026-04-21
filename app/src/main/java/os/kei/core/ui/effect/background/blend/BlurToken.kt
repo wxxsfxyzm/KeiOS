@@ -1,7 +1,7 @@
 // Copyright 2026, compose-miuix-ui contributors
 // SPDX-License-Identifier: Apache-2.0
 
-package com.rosan.installer.ui.library.blend
+package os.kei.core.ui.effect.background.blend
 
 class BlurToken {
     class BlendColor {
