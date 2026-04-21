@@ -3,15 +3,15 @@ package com.example.keios.ui.page.main.widget.sheet
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -36,10 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
@@ -67,6 +69,13 @@ enum class SnapshotPopupPlacement {
     ActionBarCenter
 }
 
+private val SnapshotPopupFractionAnimationSpec =
+    spring<Float>(dampingRatio = 0.82f, stiffness = 362.5f, visibilityThreshold = 0.0001f)
+private val SnapshotPopupSizeAnimationSpec =
+    spring<IntSize>(dampingRatio = 0.82f, stiffness = 362.5f)
+private val SnapshotPopupAlphaEnterAnimationSpec = tween<Float>(durationMillis = 200)
+private val SnapshotPopupAlphaExitAnimationSpec = tween<Float>(durationMillis = 150)
+
 @Composable
 fun SnapshotWindowListPopup(
     show: Boolean,
@@ -85,9 +94,9 @@ fun SnapshotWindowListPopup(
     content: @Composable () -> Unit,
 ) {
     val configuration = LocalConfiguration.current
+    val layoutDirection = LocalLayoutDirection.current
     val density = LocalDensity.current
     val explicitAnchorBounds = anchorBounds
-    val popupAnimationOffsetPx = with(density) { AppInteractiveTokens.popupAnimationOffset.roundToPx() }
     val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
     val screenHeightPx = with(density) { configuration.screenHeightDp.dp.roundToPx() }
     val anchorWidthDp = remember(explicitAnchorBounds, density) {
@@ -105,6 +114,20 @@ fun SnapshotWindowListPopup(
             val availableAbove = it.top
             availableBelow >= availableAbove
         } ?: true
+    }
+    val normalizedAlignment = remember(alignment, layoutDirection) {
+        alignment.normalizeForDropdown(layoutDirection)
+    }
+    val popupTransformOrigin = remember(normalizedAlignment, placement, opensDownward) {
+        val pivotX = when (placement) {
+            SnapshotPopupPlacement.Dropdown -> {
+                if (normalizedAlignment == PopupPositionProvider.Align.End) 1f else 0f
+            }
+            SnapshotPopupPlacement.ButtonEnd -> 1f
+            SnapshotPopupPlacement.ActionBarCenter -> 0.5f
+        }
+        val pivotY = if (opensDownward) 0f else 1f
+        TransformOrigin(pivotFractionX = pivotX, pivotFractionY = pivotY)
     }
     var wasVisible by remember { mutableStateOf(false) }
     var popupRender by remember { mutableStateOf(show) }
@@ -189,32 +212,31 @@ fun SnapshotWindowListPopup(
     }
 
     if (popupRender) {
+        val expandAlignment = if (opensDownward) Alignment.Top else Alignment.Bottom
         val popupEnter = if (transitionAnimationsEnabled) {
             fadeIn(
-                animationSpec = tween(durationMillis = 140)
+                animationSpec = SnapshotPopupAlphaEnterAnimationSpec
+            ) + expandVertically(
+                expandFrom = expandAlignment,
+                animationSpec = SnapshotPopupSizeAnimationSpec
             ) + scaleIn(
                 initialScale = 0.92f,
-                animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
-            ) + slideInVertically(
-                initialOffsetY = {
-                    if (opensDownward) -popupAnimationOffsetPx else popupAnimationOffsetPx
-                },
-                animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
+                transformOrigin = popupTransformOrigin,
+                animationSpec = SnapshotPopupFractionAnimationSpec
             )
         } else {
             EnterTransition.None
         }
         val popupExit = if (transitionAnimationsEnabled) {
             fadeOut(
-                animationSpec = tween(durationMillis = 100)
+                animationSpec = SnapshotPopupAlphaExitAnimationSpec
+            ) + shrinkVertically(
+                shrinkTowards = expandAlignment,
+                animationSpec = SnapshotPopupSizeAnimationSpec
             ) + scaleOut(
-                targetScale = 0.96f,
-                animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing)
-            ) + slideOutVertically(
-                targetOffsetY = {
-                    if (opensDownward) -popupAnimationOffsetPx else popupAnimationOffsetPx
-                },
-                animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing)
+                targetScale = 0.94f,
+                transformOrigin = popupTransformOrigin,
+                animationSpec = SnapshotPopupFractionAnimationSpec
             )
         } else {
             ExitTransition.None
