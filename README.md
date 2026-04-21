@@ -6,6 +6,12 @@ Build docs:
 - [Build Guide (EN)](README_BUILD.md)
 - [构建指南 (CN)](README_CN_BUILD.md)
 
+## Current Distribution
+
+- GitHub distribution is source-first during daily rapid iteration.
+- Early adopters can clone this repository and build locally with the guides above.
+- Packaged release cadence resumes after the current iteration window stabilizes.
+
 ## Project Snapshot
 
 - Android app focused on system utility + GitHub tracking + BA content pages.

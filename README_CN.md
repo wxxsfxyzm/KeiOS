@@ -6,6 +6,12 @@
 - [Build Guide (EN)](README_BUILD.md)
 - [构建指南 (CN)](README_CN_BUILD.md)
 
+## 当前分发方式
+
+- 当前处于每日快速迭代阶段，GitHub 分发采用源码优先。
+- 尝鲜用户可直接 clone 本仓库，并按上方构建指南本地构建安装。
+- 安装包分发节奏会在本轮迭代窗口稳定后恢复。
+
 ## 项目概览
 
 - 这是一个聚焦系统工具、GitHub 跟踪、BA 内容页的 Android 应用。

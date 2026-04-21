@@ -2,6 +2,12 @@
 
 [Main README](README.md)
 
+## Current Install Channel
+
+- This build guide is the primary install path during daily rapid iteration.
+- GitHub distribution is source-first, and early adopters install via clone + local build.
+- Use the commands in `Common Local Commands` to generate a debug APK.
+
 ## Local Build Notes
 
 This repo keeps machine-specific paths and secrets out of VCS on purpose.
