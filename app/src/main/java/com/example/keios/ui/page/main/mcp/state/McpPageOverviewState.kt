@@ -96,15 +96,17 @@ internal fun rememberMcpPageOverviewState(
             ),
             McpOverviewMetric(
                 label = context.getString(R.string.mcp_overview_label_endpoint_short),
-                value = uiState.endpointPath
+                value = uiState.endpointPath,
+                valueMaxLines = 1,
+                labelWeight = 0.34f,
+                valueWeight = 0.66f
             ),
             McpOverviewMetric(
                 label = context.getString(R.string.mcp_overview_label_bind_short),
                 value = bindAddress,
-                spanFullWidth = true,
                 valueMaxLines = 1,
-                labelWeight = 0.28f,
-                valueWeight = 0.72f
+                labelWeight = 0.24f,
+                valueWeight = 0.76f
             ),
             McpOverviewMetric(
                 label = context.getString(R.string.mcp_overview_label_port_short),
