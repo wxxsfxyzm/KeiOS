@@ -2,7 +2,6 @@ package os.kei.ui.page.main.os.components
 
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +36,7 @@ import os.kei.ui.page.main.os.osLucideEnterIcon
 import os.kei.ui.page.main.widget.chrome.AppChromeTokens
 import os.kei.ui.page.main.widget.core.AppOverviewCard
 import os.kei.ui.page.main.widget.chrome.AppPageLazyColumn
+import os.kei.ui.page.main.widget.core.AppCompactIconAction
 import os.kei.ui.page.main.widget.core.CardLayoutRhythm
 import os.kei.ui.page.main.widget.glass.GlassIconButton
 import os.kei.ui.page.main.widget.glass.GlassVariant
@@ -45,7 +45,6 @@ import os.kei.ui.page.main.widget.motion.appFloatingEnter
 import os.kei.ui.page.main.widget.motion.appFloatingExit
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -249,11 +248,10 @@ internal fun OsPageMainList(
                 rows = shellRunnerRows,
                 noMatchedResultsText = noMatchedResultsText,
                 exportAction = {
-                    Icon(
-                        imageVector = osLucideEnterIcon(),
+                    AppCompactIconAction(
+                        icon = osLucideEnterIcon(),
                         contentDescription = stringResource(R.string.os_shell_card_cd_open),
-                        tint = MiuixTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onOpenShellRunner() }
+                        onClick = onOpenShellRunner
                     )
                 }
             )

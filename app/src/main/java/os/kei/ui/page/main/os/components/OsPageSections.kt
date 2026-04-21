@@ -1,6 +1,5 @@
 package os.kei.ui.page.main.os.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +28,7 @@ import os.kei.ui.page.main.os.shortcut.ShortcutActivityIcon
 import os.kei.ui.page.main.os.appLucideCloseIcon
 import os.kei.ui.page.main.os.shortcut.normalizeShortcutIntentExtras
 import os.kei.ui.page.main.os.osLucideEnterIcon
+import os.kei.ui.page.main.widget.core.AppCompactIconAction
 import os.kei.ui.page.main.widget.core.AppStatusPillSize
 import os.kei.ui.page.main.widget.core.AppTypographyTokens
 import os.kei.ui.page.main.widget.glass.GlassIconButton
@@ -117,11 +117,10 @@ internal fun LazyListScope.addShortcutActivityCards(
                     )
                 },
                 headerActions = {
-                    Icon(
-                        imageVector = osLucideEnterIcon(),
+                    AppCompactIconAction(
+                        icon = osLucideEnterIcon(),
                         contentDescription = stringResource(R.string.os_google_system_service_cd_open_activity),
-                        tint = MiuixTheme.colorScheme.primary,
-                        modifier = Modifier.clickable { onOpenActivity(card) }
+                        onClick = { onOpenActivity(card) }
                     )
                 },
                 onHeaderLongClick = { onHeaderLongClick(card) }

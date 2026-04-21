@@ -1,12 +1,10 @@
 package os.kei.ui.page.main.os
 
 import android.content.Context
-import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import os.kei.R
 import os.kei.ui.page.main.os.shortcut.buildGoogleSystemServiceRows
-import top.yukonga.miuix.kmp.basic.Icon
+import os.kei.ui.page.main.widget.core.AppCompactIconAction
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal fun visibleSectionKinds(visibleCards: Set<OsSectionCard>): Set<SectionKind> = buildSet {
@@ -107,12 +105,11 @@ internal fun OsCardExportAction(
     val isExporting = exportingCard == card
     val enabled = exportingCard == null || isExporting
     val tint = if (enabled) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onBackgroundVariant
-    Icon(
-        imageVector = if (isExporting) appLucideRefreshIcon() else appLucideDownloadIcon(),
+    AppCompactIconAction(
+        icon = if (isExporting) appLucideRefreshIcon() else appLucideDownloadIcon(),
         contentDescription = if (isExporting) "准备导出中" else "导出${card.title}",
         tint = tint,
-        modifier = Modifier.clickable(enabled = enabled && !isExporting) {
-            onExportClick()
-        }
+        enabled = enabled && !isExporting,
+        onClick = onExportClick
     )
 }

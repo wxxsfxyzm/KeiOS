@@ -1,7 +1,6 @@
 package os.kei.ui.page.main.mcp.section
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -18,6 +17,7 @@ import os.kei.ui.page.main.os.appLucideConfigIcon
 import os.kei.ui.page.main.os.appLucideDownloadIcon
 import os.kei.ui.page.main.os.appLucideNotesIcon
 import os.kei.ui.page.main.os.appLucideRefreshIcon
+import os.kei.ui.page.main.widget.core.AppCompactIconAction
 import os.kei.ui.page.main.widget.core.AppDualActionRow
 import os.kei.ui.page.main.widget.core.CardLayoutRhythm
 import os.kei.ui.page.main.widget.glass.GlassTextButton
@@ -25,7 +25,6 @@ import os.kei.ui.page.main.widget.glass.GlassVariant
 import os.kei.ui.page.main.widget.glass.MiuixExpandableSection
 import os.kei.ui.page.main.widget.core.MiuixInfoItem
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -152,8 +151,8 @@ internal fun McpLogsSection(
             )
         },
         headerActions = {
-            Icon(
-                imageVector = if (logsExporting) {
+            AppCompactIconAction(
+                icon = if (logsExporting) {
                     appLucideRefreshIcon()
                 } else {
                     appLucideDownloadIcon()
@@ -164,7 +163,8 @@ internal fun McpLogsSection(
                 } else {
                     MiuixTheme.colorScheme.primary
                 },
-                modifier = Modifier.clickable(enabled = !logsExporting) {
+                enabled = !logsExporting,
+                onClick = {
                     val generatedAt = SimpleDateFormat(
                         "yyyy-MM-dd HH:mm:ss.SSS",
                         Locale.getDefault()

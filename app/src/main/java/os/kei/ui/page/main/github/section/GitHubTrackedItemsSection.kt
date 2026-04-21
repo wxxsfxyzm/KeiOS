@@ -5,7 +5,6 @@ import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -64,6 +63,7 @@ import os.kei.ui.page.main.github.stableVersionColor
 import os.kei.ui.page.main.github.statusActionUrl
 import os.kei.ui.page.main.github.statusColor
 import os.kei.ui.page.main.github.statusIcon
+import os.kei.ui.page.main.widget.core.AppCompactIconAction
 import os.kei.ui.page.main.widget.core.AppInfoListBody
 import os.kei.ui.page.main.widget.chrome.AppPageLazyColumn
 import os.kei.ui.page.main.widget.core.AppStatusPillSize
@@ -198,8 +198,12 @@ internal fun LazyListScope.GitHubTrackedItemsSection(
                         else -> state.statusIcon()
                     }
                     val iconTint = if (alwaysLatestReleaseDownload) latestReleaseAccent else statusColor
-                    val clickableModifier = if (canLoadApkAssets || statusReleaseUrl.isNotBlank()) {
-                        Modifier.clickable {
+                    AppCompactIconAction(
+                        icon = statusIcon,
+                        contentDescription = state.message.ifBlank { stringResource(R.string.github_cd_status) },
+                        tint = iconTint,
+                        enabled = canLoadApkAssets || statusReleaseUrl.isNotBlank(),
+                        onClick = {
                             if (canLoadApkAssets) {
                                 if (isAssetPanelExpanded) {
                                     onCollapseApkAssetPanel(item, state)
@@ -210,14 +214,6 @@ internal fun LazyListScope.GitHubTrackedItemsSection(
                                 onOpenExternalUrl(statusReleaseUrl)
                             }
                         }
-                    } else {
-                        Modifier
-                    }
-                    top.yukonga.miuix.kmp.basic.Icon(
-                        imageVector = statusIcon,
-                        contentDescription = state.message.ifBlank { stringResource(R.string.github_cd_status) },
-                        tint = iconTint,
-                        modifier = clickableModifier
                     )
                     if (isItemRefreshLoading) {
                         val checkingContentDescription = stringResource(R.string.github_msg_checking)
@@ -240,16 +236,12 @@ internal fun LazyListScope.GitHubTrackedItemsSection(
                             )
                         }
                     } else {
-                        val refreshModifier = if (state.loading) {
-                            Modifier
-                        } else {
-                            Modifier.clickable { onRefreshTrackedItem(item) }
-                        }
-                        top.yukonga.miuix.kmp.basic.Icon(
-                            imageVector = appLucideRefreshIcon(),
+                        AppCompactIconAction(
+                            icon = appLucideRefreshIcon(),
                             contentDescription = stringResource(R.string.common_refresh),
                             tint = if (state.loading) iconTint.copy(alpha = 0.68f) else iconTint,
-                            modifier = refreshModifier
+                            enabled = !state.loading,
+                            onClick = { onRefreshTrackedItem(item) }
                         )
                     }
                 }

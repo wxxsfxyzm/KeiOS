@@ -1,6 +1,5 @@
 package os.kei.ui.page.main.os.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -25,6 +24,7 @@ import os.kei.ui.page.main.os.shell.defaultOsShellCommandCardTitle
 import os.kei.ui.page.main.os.formatEpochMillis
 import os.kei.ui.page.main.os.osLucideCardIcon
 import os.kei.ui.page.main.os.osLucideRunIcon
+import os.kei.ui.page.main.widget.core.AppCompactIconAction
 import os.kei.ui.page.main.widget.core.AppStatusPillSize
 import os.kei.ui.page.main.widget.glass.GlassIconButton
 import os.kei.ui.page.main.widget.glass.GlassTextButton
@@ -87,11 +87,10 @@ internal fun LazyListScope.addShellCommandCards(
                             )
                         )
                     } else {
-                        Icon(
-                            imageVector = osLucideRunIcon(),
+                        AppCompactIconAction(
+                            icon = osLucideRunIcon(),
                             contentDescription = stringResource(R.string.os_shell_card_cd_run_saved),
-                            tint = MiuixTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { onRunCard(card) }
+                            onClick = { onRunCard(card) }
                         )
                     }
                 },
