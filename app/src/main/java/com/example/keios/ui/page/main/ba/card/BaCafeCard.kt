@@ -138,7 +138,7 @@ internal fun BaCafeCard(
         BaInlineActionPanel(
             backdrop = backdrop,
             buttonText = "摸摸头",
-            buttonIconRes = R.drawable.mp_bond,
+            buttonIconRes = R.drawable.fx_tex_ch0071_prop_05,
             countdownText = nextHeadpatText,
             timeText = headpatTimeText,
             accentColor = accentPink,
