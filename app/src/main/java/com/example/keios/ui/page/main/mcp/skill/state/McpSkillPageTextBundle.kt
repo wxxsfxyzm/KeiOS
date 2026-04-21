@@ -9,7 +9,6 @@ import com.example.keios.R
 @Stable
 internal data class McpSkillPageTextBundle(
     val pageTitle: String,
-    val markdownSubtitle: String,
     val emptyMarkdown: String,
     val emptyItemText: String,
     val defaultRootTitle: String,
@@ -26,7 +25,6 @@ internal data class McpSkillPageTextBundle(
 @Composable
 internal fun rememberMcpSkillPageTextBundle(): McpSkillPageTextBundle {
     val pageTitle = stringResource(R.string.mcp_skill_page_title)
-    val markdownSubtitle = stringResource(R.string.mcp_skill_page_subtitle)
     val emptyMarkdown = stringResource(R.string.mcp_skill_markdown_empty)
     val emptyItemText = stringResource(R.string.mcp_skill_section_empty_items)
     val defaultRootTitle = stringResource(R.string.mcp_skill_section_default_root)
@@ -40,7 +38,6 @@ internal fun rememberMcpSkillPageTextBundle(): McpSkillPageTextBundle {
     val clawPromptCopiedToast = stringResource(R.string.mcp_skill_toast_claw_prompt_copied)
     return remember(
         pageTitle,
-        markdownSubtitle,
         emptyMarkdown,
         emptyItemText,
         defaultRootTitle,
@@ -55,7 +52,6 @@ internal fun rememberMcpSkillPageTextBundle(): McpSkillPageTextBundle {
     ) {
         McpSkillPageTextBundle(
             pageTitle = pageTitle,
-            markdownSubtitle = markdownSubtitle,
             emptyMarkdown = emptyMarkdown,
             emptyItemText = emptyItemText,
             defaultRootTitle = defaultRootTitle,

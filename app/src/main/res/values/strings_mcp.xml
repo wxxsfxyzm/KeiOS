@@ -1,6 +1,5 @@
 <resources>
     <string name="mcp_skill_page_title">MCP Skill</string>
-    <string name="mcp_skill_page_subtitle">SKILL.md</string>
     <string name="mcp_skill_markdown_empty"># MCP Skill\n\n暂无内容</string>
     <string name="mcp_skill_section_empty_items">暂无条目</string>
     <string name="mcp_skill_section_default_root">MCP Skill</string>

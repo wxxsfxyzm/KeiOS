@@ -16,20 +16,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.keios.ui.page.main.os.osLucideCopyIcon
 import com.example.keios.ui.page.main.mcp.skill.support.buildInlineStyledText
 import com.example.keios.ui.page.main.mcp.util.copyToClipboard
 import com.example.keios.ui.page.main.widget.core.AppSurfaceCard
+import com.example.keios.ui.page.main.widget.glass.GlassIconButton
+import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import com.example.keios.ui.page.main.widget.support.CopyModeSelectionContainer
 import com.example.keios.ui.page.main.widget.support.copyModeAwareRow
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 
 @Composable
 internal fun McpSkillClawGuideCard(
     title: String,
     summary: String,
     prompt: String,
-    copyButtonText: String,
+    copyContentDescription: String,
     copiedToastText: String,
     titleColor: Color,
     subtitleColor: Color,
@@ -37,6 +39,7 @@ internal fun McpSkillClawGuideCard(
     codeColor: Color
 ) {
     val context = LocalContext.current
+    val copyIcon = osLucideCopyIcon()
     AppSurfaceCard(
         containerColor = Color(0x223B82F6),
         contentColor = titleColor,
@@ -55,16 +58,23 @@ internal fun McpSkillClawGuideCard(
             ) {
                 Text(
                     text = title,
+                    modifier = Modifier.weight(1f),
                     color = titleColor,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp
                 )
-                TextButton(
-                    text = copyButtonText,
+                GlassIconButton(
+                    backdrop = null,
+                    icon = copyIcon,
+                    contentDescription = copyContentDescription,
                     onClick = {
                         copyToClipboard(context, "claw-skill-prompt", prompt)
                         Toast.makeText(context, copiedToastText, Toast.LENGTH_SHORT).show()
-                    }
+                    },
+                    width = 34.dp,
+                    height = 28.dp,
+                    variant = GlassVariant.Content,
+                    iconTint = accentColor
                 )
             }
 

@@ -33,7 +33,6 @@ fun McpSkillPage(
     val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = true)
     val contentState = rememberMcpSkillPageContentState(
         mcpServerManager = mcpServerManager,
-        listState = listState,
         emptyMarkdown = textBundle.emptyMarkdown,
         defaultRootTitle = textBundle.defaultRootTitle,
         defaultOverviewTitle = textBundle.defaultOverviewTitle,
@@ -61,7 +60,6 @@ fun McpSkillPage(
             listState = listState,
             nestedScrollConnection = scrollBehavior.nestedScrollConnection,
             contentState = contentState,
-            markdownSubtitle = textBundle.markdownSubtitle,
             clawCardTitle = textBundle.clawCardTitle,
             clawCardSummary = textBundle.clawCardSummary,
             clawPrompt = textBundle.clawPrompt,
