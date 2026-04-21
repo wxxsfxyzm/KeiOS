@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -162,7 +161,9 @@ private fun BaIdFieldRow(
                 Image(
                     painter = painterResource(id = labelIconRes),
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier
+                        .width(30.dp)
+                        .height(24.dp),
                 )
             }
         }
