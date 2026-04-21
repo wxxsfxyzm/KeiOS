@@ -25,6 +25,11 @@ internal fun McpSkillContentList(
     nestedScrollConnection: NestedScrollConnection,
     contentState: McpSkillPageContentState,
     markdownSubtitle: String,
+    clawCardTitle: String,
+    clawCardSummary: String,
+    clawPrompt: String,
+    copyClawPromptText: String,
+    clawPromptCopiedToast: String,
     emptyItemText: String,
     titleColor: Color,
     subtitleColor: Color,
@@ -42,6 +47,19 @@ internal fun McpSkillContentList(
         bottomExtra = 16.dp,
         sectionSpacing = 10.dp
     ) {
+        item {
+            McpSkillClawGuideCard(
+                title = clawCardTitle,
+                summary = clawCardSummary,
+                prompt = clawPrompt,
+                copyButtonText = copyClawPromptText,
+                copiedToastText = clawPromptCopiedToast,
+                titleColor = titleColor,
+                subtitleColor = subtitleColor,
+                accentColor = accentColor,
+                codeColor = codeColor
+            )
+        }
         item {
             SmallTitle(
                 modifier = Modifier.alpha(contentState.subtitleAlpha),
