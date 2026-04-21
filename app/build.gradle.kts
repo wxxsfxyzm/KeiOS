@@ -162,6 +162,9 @@ android {
             isDebuggable = false
             buildConfigField("boolean", "LOG_DEBUG_DEFAULT", "false")
             matchingFallbacks += listOf("release")
+            ndk {
+                abiFilters += "arm64-v8a"
+            }
         }
     }
 
