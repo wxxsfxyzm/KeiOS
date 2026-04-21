@@ -397,8 +397,8 @@ internal fun GuideGiftPreferenceGrid(
                         if (item.emojiImageUrl.isNotBlank()) {
                             Box(
                                 modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 3.dp, end = 3.dp)
+                                    .align(Alignment.BottomEnd)
+                                    .padding(bottom = 3.dp, end = 3.dp)
                                     .clip(ContinuousCapsule)
                                     .background(
                                         if (isDark) Color(0x663B82F6) else Color(0xCCEFF6FF)
