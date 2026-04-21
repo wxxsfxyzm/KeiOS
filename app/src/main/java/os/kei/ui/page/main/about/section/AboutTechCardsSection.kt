@@ -223,6 +223,7 @@ fun AboutGitHubCardSection(
         BuildConfig.BASE_VERSION_NAME,
         BuildConfig.NEXT_VERSION_NAME,
         BuildConfig.GIT_COMMIT_COUNT,
+        BuildConfig.GIT_TOTAL_COMMIT_COUNT,
         BuildConfig.GIT_SHORT_HASH,
         dirtySuffix,
         BuildConfig.VERSION_CODE
@@ -232,6 +233,11 @@ fun AboutGitHubCardSection(
             R.string.about_row_github_repo_id,
             repoId,
             appLucideLayersIcon()
+        ),
+        AboutInfoRow(
+            R.string.about_row_github_anchor,
+            BuildConfig.VERSION_ANCHOR_TAG,
+            appLucideVersionIcon()
         ),
         AboutInfoRow(
             R.string.about_row_github_build_version,
@@ -249,6 +255,11 @@ fun AboutGitHubCardSection(
             appLucideListIcon()
         ),
         AboutInfoRow(
+            R.string.about_row_github_total_commit_count,
+            BuildConfig.GIT_TOTAL_COMMIT_COUNT.toString(),
+            appLucideListIcon()
+        ),
+        AboutInfoRow(
             R.string.about_row_github_commit_hash,
             BuildConfig.GIT_SHORT_HASH,
             appLucideNotesIcon()
@@ -260,7 +271,7 @@ fun AboutGitHubCardSection(
         ),
         AboutInfoRow(
             R.string.about_row_github_data_source,
-            stringResource(R.string.about_value_github_data_source),
+            stringResource(R.string.about_value_github_data_source, BuildConfig.VERSION_ANCHOR_TAG),
             appLucideInfoIcon()
         ),
         AboutInfoRow(

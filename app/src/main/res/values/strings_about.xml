@@ -25,7 +25,7 @@
     <string name="about_card_ui_title">UI与框架</string>
     <string name="about_card_ui_subtitle">页面渲染、导航与材质能力</string>
     <string name="about_card_github_title">GitHub</string>
-    <string name="about_card_github_subtitle">项目仓库、版本追踪、抓取策略与后台刷新链路</string>
+    <string name="about_card_github_subtitle">项目仓库、版本演进、抓取策略与后台刷新链路</string>
     <string name="about_card_network_title">网络与服务</string>
     <string name="about_card_network_subtitle">MCP 与请求服务栈</string>
     <string name="about_card_media_title">媒体与存储</string>
@@ -64,9 +64,11 @@
     <string name="about_row_permission_bridge">权限桥接</string>
     <string name="about_row_github_strategy">抓取策略</string>
     <string name="about_row_github_repo_id">仓库标识</string>
+    <string name="about_row_github_anchor">版本锚点</string>
     <string name="about_row_github_build_version">当前构建版本</string>
     <string name="about_row_github_branch">构建分支</string>
-    <string name="about_row_github_commit_count">本地提交总数</string>
+    <string name="about_row_github_commit_count">锚点后提交</string>
+    <string name="about_row_github_total_commit_count">总提交数</string>
     <string name="about_row_github_commit_hash">当前提交哈希</string>
     <string name="about_row_github_worktree">工作区状态</string>
     <string name="about_row_github_data_source">Git 数据来源</string>
@@ -84,8 +86,8 @@
     <string name="about_value_github_strategy">Atom Feed / Releases API（可选 Token）</string>
     <string name="about_value_github_worktree_clean">clean</string>
     <string name="about_value_github_worktree_dirty">dirty</string>
-    <string name="about_value_github_data_source">git rev-list --count v1.0.0..HEAD / git rev-parse --short HEAD / git rev-parse --abbrev-ref HEAD</string>
-    <string name="about_value_github_version_source">Anchor: %1$s · Release: %2$s · DevBase: %3$s · RelativeCommits: %4$d · Hash: %5$s%6$s · VersionCode: %7$d</string>
+    <string name="about_value_github_data_source">git rev-list --count HEAD / git rev-list --count %1$s..HEAD / git rev-parse --short HEAD / git rev-parse --abbrev-ref HEAD</string>
+    <string name="about_value_github_version_source">Anchor: %1$s · Release: %2$s · DevBase: %3$s · Relative: %4$d · Total: %5$d · Hash: %6$s%7$s · VersionCode: %8$d</string>
     <string name="about_value_github_tracking">Stable/Pre-release 对比、更新建议与资源入口</string>
     <string name="about_value_github_notify">刷新进度通知 + Live Update / 超级岛样式</string>
     <string name="about_value_github_cache">MMKV 跟踪配置与检查缓存 + Release 资源缓存</string>

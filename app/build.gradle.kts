@@ -29,6 +29,7 @@ data class AppSemVer(
 
 data class GitVersionSnapshot(
     val relativeCommitCount: Int,
+    val totalCommitCount: Int,
     val shortHash: String,
     val branchName: String,
     val worktreeDirty: Boolean,
@@ -49,6 +50,10 @@ fun gitRelativeCommitCountOrNull(anchorTag: String): Int? {
     return runGitCommandOrNull("rev-list", "--count", "$anchorTag..HEAD")?.toIntOrNull()
 }
 
+fun gitTotalCommitCountOrNull(): Int? {
+    return runGitCommandOrNull("rev-list", "--count", "HEAD")?.toIntOrNull()
+}
+
 val releaseVersion = AppSemVer(major = 1, minor = 0, patch = 0)
 val nonReleaseVersion = releaseVersion.copy(patch = releaseVersion.patch + 1)
 val versionAnchorTag = "v${releaseVersion.name}"
@@ -56,13 +61,16 @@ val gitShortHashValue = runGitCommandOrNull("rev-parse", "--short", "HEAD")
 val gitBranchNameValue = runGitCommandOrNull("rev-parse", "--abbrev-ref", "HEAD")
 val gitDirtyValue = runGitCommandOrNull("status", "--porcelain")?.isNotBlank() ?: false
 val gitRelativeCommitCount = gitRelativeCommitCountOrNull(versionAnchorTag)
+val gitTotalCommitCount = gitTotalCommitCountOrNull()
 val gitVersionSnapshot = if (
     gitShortHashValue != null &&
     gitBranchNameValue != null &&
-    gitRelativeCommitCount != null
+    gitRelativeCommitCount != null &&
+    gitTotalCommitCount != null
 ) {
     GitVersionSnapshot(
         relativeCommitCount = gitRelativeCommitCount,
+        totalCommitCount = gitTotalCommitCount,
         shortHash = gitShortHashValue,
         branchName = gitBranchNameValue,
         worktreeDirty = gitDirtyValue,
@@ -71,6 +79,7 @@ val gitVersionSnapshot = if (
 } else {
     GitVersionSnapshot(
         relativeCommitCount = 0,
+        totalCommitCount = 0,
         shortHash = "unknown",
         branchName = "unknown",
         worktreeDirty = false,
@@ -181,6 +190,7 @@ android {
         buildConfigField("String", "VERSION_ANCHOR_TAG", "\"$versionAnchorTag\"")
         buildConfigField("long", "BUILD_TIME_MILLIS", "${buildTimestampMillis}L")
         buildConfigField("int", "GIT_COMMIT_COUNT", gitVersionSnapshot.relativeCommitCount.toString())
+        buildConfigField("int", "GIT_TOTAL_COMMIT_COUNT", gitVersionSnapshot.totalCommitCount.toString())
         buildConfigField("String", "GIT_SHORT_HASH", "\"${gitVersionSnapshot.shortHash}\"")
         buildConfigField("String", "GIT_BRANCH_NAME", "\"${gitVersionSnapshot.branchName}\"")
         buildConfigField("boolean", "GIT_WORKTREE_DIRTY", gitVersionSnapshot.worktreeDirty.toString())
