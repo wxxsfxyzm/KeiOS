@@ -15,6 +15,26 @@ fun runGitCommandOrNull(vararg args: String): String? {
     }
 }
 
+data class AppSemVer(
+    val major: Int,
+    val minor: Int,
+    val patch: Int
+) {
+    val name: String = "$major.$minor.$patch"
+
+    fun toVersionCode(commitCount: Int): Int {
+        return (major * 10_000_000) + (minor * 100_000) + (patch * 1_000) + commitCount
+    }
+}
+
+data class GitVersionSnapshot(
+    val relativeCommitCount: Int,
+    val shortHash: String,
+    val branchName: String,
+    val worktreeDirty: Boolean,
+    val gitAvailable: Boolean
+)
+
 fun readLocalPropertyOrNull(key: String): String? {
     val localPropsFile = rootProject.file("local.properties")
     if (!localPropsFile.exists()) return null
@@ -25,21 +45,49 @@ fun readLocalPropertyOrNull(key: String): String? {
     }.getOrNull()
 }
 
-val baseVersionName = "1.0"
-val gitCommitCount = runGitCommandOrNull("rev-list", "--count", "HEAD")?.toIntOrNull() ?: 1
-val gitShortHash = runGitCommandOrNull("rev-parse", "--short", "HEAD") ?: "nogit"
-val gitBranchName = runGitCommandOrNull("rev-parse", "--abbrev-ref", "HEAD") ?: "unknown"
-val gitDirty = runGitCommandOrNull("status", "--porcelain").isNullOrBlank().not()
-val buildTimestampMillis = System.currentTimeMillis()
-val autoVersionCode = 10_000 + gitCommitCount
-val autoVersionName = buildString {
-    append(baseVersionName)
-    append(".")
-    append(gitCommitCount)
-    append("-")
-    append(gitShortHash)
-    if (gitDirty) append("-dirty")
+fun gitRelativeCommitCountOrNull(anchorTag: String): Int? {
+    return runGitCommandOrNull("rev-list", "--count", "$anchorTag..HEAD")?.toIntOrNull()
 }
+
+val releaseVersion = AppSemVer(major = 1, minor = 0, patch = 0)
+val nonReleaseVersion = releaseVersion.copy(patch = releaseVersion.patch + 1)
+val versionAnchorTag = "v${releaseVersion.name}"
+val gitShortHashValue = runGitCommandOrNull("rev-parse", "--short", "HEAD")
+val gitBranchNameValue = runGitCommandOrNull("rev-parse", "--abbrev-ref", "HEAD")
+val gitDirtyValue = runGitCommandOrNull("status", "--porcelain")?.isNotBlank() ?: false
+val gitRelativeCommitCount = gitRelativeCommitCountOrNull(versionAnchorTag)
+val gitVersionSnapshot = if (
+    gitShortHashValue != null &&
+    gitBranchNameValue != null &&
+    gitRelativeCommitCount != null
+) {
+    GitVersionSnapshot(
+        relativeCommitCount = gitRelativeCommitCount,
+        shortHash = gitShortHashValue,
+        branchName = gitBranchNameValue,
+        worktreeDirty = gitDirtyValue,
+        gitAvailable = true
+    )
+} else {
+    GitVersionSnapshot(
+        relativeCommitCount = 0,
+        shortHash = "unknown",
+        branchName = "unknown",
+        worktreeDirty = false,
+        gitAvailable = false
+    )
+}
+val buildTimestampMillis = System.currentTimeMillis()
+val releaseVersionName = releaseVersion.name
+val releaseVersionCode = releaseVersion.toVersionCode(commitCount = 0)
+val nonReleaseVersionName = if (gitVersionSnapshot.gitAvailable) {
+    "${nonReleaseVersion.name}+${gitVersionSnapshot.relativeCommitCount}.g${gitVersionSnapshot.shortHash}"
+} else {
+    "${nonReleaseVersion.name}+0.unknown"
+}
+val nonReleaseVersionCode = nonReleaseVersion.toVersionCode(
+    commitCount = gitVersionSnapshot.relativeCommitCount
+)
 // Machine-local overrides should live in ~/.gradle/gradle.properties (preferred) or local.properties.
 // JDK resolution itself is intentionally not hardcoded here: the project already tracks a cross-platform
 // Gradle daemon JVM (JetBrains Java 21) for macOS/Windows/Linux. Use org.gradle.java.home only as a
@@ -95,15 +143,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.keios"
+    namespace = "os.kei"
     compileSdk = projectCompileSdk
 
     defaultConfig {
-        applicationId = "com.example.keios"
+        applicationId = "os.kei"
         minSdk = projectMinSdk
         targetSdk = projectTargetSdk
-        versionCode = autoVersionCode
-        versionName = autoVersionName
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
         buildConfigField("String", "MIUIX_VERSION", "\"$miuixVersion\"")
         buildConfigField("String", "COMPOSE_VERSION", "\"$composeVersion\"")
         buildConfigField("String", "NAVIGATION3_VERSION", "\"$navigation3Version\"")
@@ -125,12 +173,15 @@ android {
         buildConfigField("String", "SHIZUKU_VERSION", "\"$shizukuVersion\"")
         buildConfigField("String", "FOCUS_API_VERSION", "\"$focusApiVersion\"")
         buildConfigField("String", "GRADLE_VERSION", "\"$projectGradleVersion\"")
-        buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
+        buildConfigField("String", "BASE_VERSION_NAME", "\"${releaseVersion.name}\"")
+        buildConfigField("String", "NEXT_VERSION_NAME", "\"${nonReleaseVersion.name}\"")
+        buildConfigField("String", "VERSION_ANCHOR_TAG", "\"$versionAnchorTag\"")
         buildConfigField("long", "BUILD_TIME_MILLIS", "${buildTimestampMillis}L")
-        buildConfigField("int", "GIT_COMMIT_COUNT", gitCommitCount.toString())
-        buildConfigField("String", "GIT_SHORT_HASH", "\"$gitShortHash\"")
-        buildConfigField("String", "GIT_BRANCH_NAME", "\"$gitBranchName\"")
-        buildConfigField("boolean", "GIT_WORKTREE_DIRTY", gitDirty.toString())
+        buildConfigField("int", "GIT_COMMIT_COUNT", gitVersionSnapshot.relativeCommitCount.toString())
+        buildConfigField("String", "GIT_SHORT_HASH", "\"${gitVersionSnapshot.shortHash}\"")
+        buildConfigField("String", "GIT_BRANCH_NAME", "\"${gitVersionSnapshot.branchName}\"")
+        buildConfigField("boolean", "GIT_WORKTREE_DIRTY", gitVersionSnapshot.worktreeDirty.toString())
+        buildConfigField("boolean", "VERSION_GIT_AVAILABLE", gitVersionSnapshot.gitAvailable.toString())
         buildConfigField("int", "COMPILE_SDK_VERSION", projectCompileSdk.toString())
         buildConfigField("int", "MIN_SDK_VERSION", projectMinSdk.toString())
         buildConfigField("int", "TARGET_SDK_VERSION", projectTargetSdk.toString())
@@ -143,6 +194,7 @@ android {
 
     buildTypes {
         getByName("debug") {
+            applicationIdSuffix = ".debug"
             buildConfigField("boolean", "LOG_DEBUG_DEFAULT", "true")
         }
 
@@ -158,6 +210,7 @@ android {
 
         create("benchmark") {
             initWith(getByName("release"))
+            applicationIdSuffix = ".benchmark"
             signingConfig = signingConfigs.getByName("debug")
             isDebuggable = false
             buildConfigField("boolean", "LOG_DEBUG_DEFAULT", "false")
@@ -185,6 +238,27 @@ android {
             // Keep unit tests on the desktop OkHttp platform. Live GitHub tests read secrets from
             // JVM properties, env vars, or ~/.gradle/gradle.properties; see README.md.
             it.systemProperty("okhttp.platform", "jdk9")
+        }
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.outputs.forEach { output ->
+            output.versionName.set(releaseVersionName)
+            output.versionCode.set(releaseVersionCode)
+        }
+    }
+    onVariants(selector().withBuildType("debug")) { variant ->
+        variant.outputs.forEach { output ->
+            output.versionName.set(nonReleaseVersionName)
+            output.versionCode.set(nonReleaseVersionCode)
+        }
+    }
+    onVariants(selector().withBuildType("benchmark")) { variant ->
+        variant.outputs.forEach { output ->
+            output.versionName.set(nonReleaseVersionName)
+            output.versionCode.set(nonReleaseVersionCode)
         }
     }
 }

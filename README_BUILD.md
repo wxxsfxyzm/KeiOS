@@ -70,10 +70,10 @@ Shared UI primitives use `Roborazzi` screenshot baselines under `app/src/test/sc
 
 ```bash
 # record / refresh baselines
-./gradlew :app:recordRoborazziDebug --tests "com.example.keios.ui.page.main.widget.AppDesignSystemScreenshotTest"
+./gradlew :app:recordRoborazziDebug --tests "os.kei.ui.page.main.widget.AppDesignSystemScreenshotTest"
 
 # verify current rendering against baselines
-./gradlew :app:verifyRoborazziDebug --tests "com.example.keios.ui.page.main.widget.AppDesignSystemScreenshotTest"
+./gradlew :app:verifyRoborazziDebug --tests "os.kei.ui.page.main.widget.AppDesignSystemScreenshotTest"
 ```
 
 Current baseline scope:
@@ -140,14 +140,14 @@ Notes:
 ### Run
 
 ```bash
-./gradlew :app:testDebugUnitTest --tests "com.example.keios.feature.github.data.remote.GitHubStrategyLiveBenchmarkTest"
+./gradlew :app:testDebugUnitTest --tests "os.kei.feature.github.data.remote.GitHubStrategyLiveBenchmarkTest"
 ```
 
 One-off CLI example (without editing local properties):
 
 ```bash
 ./gradlew :app:testDebugUnitTest \
-  --tests "com.example.keios.feature.github.data.remote.GitHubStrategyLiveBenchmarkTest" \
+  --tests "os.kei.feature.github.data.remote.GitHubStrategyLiveBenchmarkTest" \
   -Dkeios.github.liveBenchmark=true \
   -Dkeios.github.api.token=ghp_xxx \
   -Dkeios.github.liveTargets=topjohnwu/Magisk,neovim/neovim

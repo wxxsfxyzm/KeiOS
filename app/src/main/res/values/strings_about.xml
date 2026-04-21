@@ -84,8 +84,8 @@
     <string name="about_value_github_strategy">Atom Feed / Releases API（可选 Token）</string>
     <string name="about_value_github_worktree_clean">clean</string>
     <string name="about_value_github_worktree_dirty">dirty</string>
-    <string name="about_value_github_data_source">git rev-list --count HEAD / git rev-parse --short HEAD / git rev-parse --abbrev-ref HEAD</string>
-    <string name="about_value_github_version_source">VersionName: %1$s.%2$d-%3$s%4$s · VersionCode: 10000 + %2$d = %5$d</string>
+    <string name="about_value_github_data_source">git rev-list --count v1.0.0..HEAD / git rev-parse --short HEAD / git rev-parse --abbrev-ref HEAD</string>
+    <string name="about_value_github_version_source">Anchor: %1$s · Release: %2$s · DevBase: %3$s · RelativeCommits: %4$d · Hash: %5$s%6$s · VersionCode: %7$d</string>
     <string name="about_value_github_tracking">Stable/Pre-release 对比、更新建议与资源入口</string>
     <string name="about_value_github_notify">刷新进度通知 + Live Update / 超级岛样式</string>
     <string name="about_value_github_cache">MMKV 跟踪配置与检查缓存 + Release 资源缓存</string>

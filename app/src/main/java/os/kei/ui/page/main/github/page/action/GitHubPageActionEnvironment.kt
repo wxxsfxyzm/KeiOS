@@ -1,0 +1,48 @@
+package os.kei.ui.page.main.github.page.action
+
+import android.content.Context
+import android.widget.Toast
+import androidx.annotation.StringRes
+import os.kei.core.background.AppBackgroundScheduler
+import os.kei.feature.github.data.local.GitHubTrackStore
+import os.kei.feature.github.data.local.GitHubTrackStoreSignals
+import os.kei.ui.page.main.github.page.GitHubPageState
+import os.kei.ui.page.main.github.query.DownloaderOption
+import kotlinx.coroutines.CoroutineScope
+
+internal class GitHubPageActionEnvironment(
+    val context: Context,
+    val scope: CoroutineScope,
+    val state: GitHubPageState,
+    val systemDmOption: DownloaderOption,
+    val openLinkFailureMessage: String
+) {
+    fun string(@StringRes resId: Int, vararg args: Any): String {
+        return context.getString(resId, *args)
+    }
+
+    fun toast(@StringRes resId: Int, vararg args: Any) {
+        Toast.makeText(context, string(resId, *args), Toast.LENGTH_SHORT).show()
+    }
+
+    fun toast(message: String?) {
+        if (message.isNullOrBlank()) return
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+
+    fun saveTrackedItems(refreshTrackIds: Set<String> = emptySet()) {
+        state.retainTrackedFirstInstallAtByTrackedItems()
+        state.retainTrackedAddedAtByTrackedItems()
+        GitHubTrackStore.save(state.trackedItems.toList())
+        GitHubTrackStore.saveTrackedFirstInstallAtByPackage(state.trackedFirstInstallAtByPackage)
+        GitHubTrackStore.saveTrackedAddedAtById(state.trackedAddedAtById)
+        AppBackgroundScheduler.scheduleGitHubRefresh(context)
+        refreshTrackIds.forEach { trackId ->
+            GitHubTrackStoreSignals.requestTrackRefresh(
+                trackId = trackId,
+                notifyChangeSignal = false
+            )
+        }
+        GitHubTrackStoreSignals.notifyChanged()
+    }
+}

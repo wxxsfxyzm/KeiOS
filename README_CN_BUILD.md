@@ -69,10 +69,10 @@ JDK 兜底示例路径：
 
 ```bash
 # 录制 / 刷新截图基线
-./gradlew :app:recordRoborazziDebug --tests "com.example.keios.ui.page.main.widget.AppDesignSystemScreenshotTest"
+./gradlew :app:recordRoborazziDebug --tests "os.kei.ui.page.main.widget.AppDesignSystemScreenshotTest"
 
 # 校验当前渲染结果是否与基线一致
-./gradlew :app:verifyRoborazziDebug --tests "com.example.keios.ui.page.main.widget.AppDesignSystemScreenshotTest"
+./gradlew :app:verifyRoborazziDebug --tests "os.kei.ui.page.main.widget.AppDesignSystemScreenshotTest"
 ```
 
 当前基线覆盖范围：
@@ -138,14 +138,14 @@ keios.github.forceGuest=false
 ### 运行方式
 
 ```bash
-./gradlew :app:testDebugUnitTest --tests "com.example.keios.feature.github.data.remote.GitHubStrategyLiveBenchmarkTest"
+./gradlew :app:testDebugUnitTest --tests "os.kei.feature.github.data.remote.GitHubStrategyLiveBenchmarkTest"
 ```
 
 一次性命令示例（不改本地配置文件）：
 
 ```bash
 ./gradlew :app:testDebugUnitTest \
-  --tests "com.example.keios.feature.github.data.remote.GitHubStrategyLiveBenchmarkTest" \
+  --tests "os.kei.feature.github.data.remote.GitHubStrategyLiveBenchmarkTest" \
   -Dkeios.github.liveBenchmark=true \
   -Dkeios.github.api.token=ghp_xxx \
   -Dkeios.github.liveTargets=topjohnwu/Magisk,neovim/neovim

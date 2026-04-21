@@ -1,16 +1,16 @@
 # ---------- KeiOS R8 baseline ----------
 # Keep enum member names stable because multiple stores persist enum.name across app restarts/upgrades.
--keepclassmembernames enum com.example.keios.** { *; }
+-keepclassmembernames enum os.kei.** { *; }
 
 # Keep manifest component class names stable for runtime introspection in About page.
--keepnames class com.example.keios.KeiOSApp
--keepnames class com.example.keios.MainActivity
--keepnames class com.example.keios.ui.page.main.github.share.GitHubShareImportActivity
--keepnames class com.example.keios.ui.page.main.os.shell.OsShellRunnerActivity
--keepnames class com.example.keios.ui.page.main.student.GuideVideoFullscreenActivity
--keepnames class com.example.keios.mcp.service.McpKeepAliveService
--keepnames class com.example.keios.feature.notification.NotificationActionReceiver
--keepnames class com.example.keios.core.background.AppBackgroundTickReceiver
+-keepnames class os.kei.KeiOSApp
+-keepnames class os.kei.MainActivity
+-keepnames class os.kei.ui.page.main.github.share.GitHubShareImportActivity
+-keepnames class os.kei.ui.page.main.os.shell.OsShellRunnerActivity
+-keepnames class os.kei.ui.page.main.student.GuideVideoFullscreenActivity
+-keepnames class os.kei.mcp.service.McpKeepAliveService
+-keepnames class os.kei.feature.notification.NotificationActionReceiver
+-keepnames class os.kei.core.background.AppBackgroundTickReceiver
 
 # ShizukuApiUtils reflects these no-arg static method names.
 # Keep only the reflective surface so the rest can still be optimized/shrunk.

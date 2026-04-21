@@ -1,0 +1,104 @@
+package os.kei.ui.page.main.os.components
+
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import os.kei.ui.page.main.os.OsSectionCard
+import os.kei.ui.page.main.os.appLucideAppWindowIcon
+import os.kei.ui.page.main.os.appLucideConfigIcon
+import os.kei.ui.page.main.os.appLucideFilterIcon
+import os.kei.ui.page.main.os.appLucideInfoIcon
+import os.kei.ui.page.main.os.appLucideLayersIcon
+import os.kei.ui.page.main.os.appLucideListIcon
+import os.kei.ui.page.main.os.appLucideLockIcon
+import os.kei.ui.page.main.os.appLucidePackageIcon
+import os.kei.ui.page.main.os.osLucideConsoleIcon
+import os.kei.ui.page.main.widget.core.AppInfoRow
+import os.kei.ui.page.main.widget.core.AppTypographyTokens
+import os.kei.ui.page.main.widget.core.CardLayoutRhythm
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+internal data class OsOverviewMetric(
+    val label: String,
+    val value: String,
+    val valueColor: Color? = null
+)
+
+@Composable
+internal fun sectionCardIcon(card: OsSectionCard): ImageVector = when (card) {
+    OsSectionCard.TOP_INFO -> appLucideInfoIcon()
+    OsSectionCard.SHELL_RUNNER -> osLucideConsoleIcon()
+    OsSectionCard.GOOGLE_SYSTEM_SERVICE -> appLucidePackageIcon()
+    OsSectionCard.SYSTEM -> appLucideListIcon()
+    OsSectionCard.SECURE -> appLucideLockIcon()
+    OsSectionCard.GLOBAL -> appLucideLayersIcon()
+    OsSectionCard.ANDROID -> appLucideAppWindowIcon()
+    OsSectionCard.JAVA -> appLucideConfigIcon()
+    OsSectionCard.LINUX -> appLucideFilterIcon()
+}
+
+@Composable
+internal fun OsSectionHeaderIcon(card: OsSectionCard, modifier: Modifier = Modifier) {
+    Icon(
+        imageVector = sectionCardIcon(card),
+        contentDescription = card.title,
+        tint = MiuixTheme.colorScheme.primary,
+        modifier = modifier
+            .size(22.dp)
+            .defaultMinSize(minHeight = 22.dp)
+    )
+}
+
+@Composable
+internal fun OsSectionInfoRow(
+    label: String,
+    value: String,
+    copyValueOnly: Boolean = false,
+    valueSingleLine: Boolean = false,
+    labelMinWidth: Dp = 72.dp,
+    labelMaxWidth: Dp = 136.dp,
+    labelMaxLines: Int = Int.MAX_VALUE,
+    valueMinWidth: Dp = Dp.Unspecified,
+    modifier: Modifier = Modifier
+) {
+    val displayValue = value.ifBlank { "N/A" }
+    AppInfoRow(
+        label = label,
+        value = displayValue,
+        modifier = modifier,
+        labelColor = MiuixTheme.colorScheme.onBackgroundVariant,
+        valueColor = MiuixTheme.colorScheme.onBackground,
+        labelMinWidth = labelMinWidth,
+        labelMaxWidth = labelMaxWidth,
+        valueMinWidth = valueMinWidth,
+        horizontalSpacing = CardLayoutRhythm.infoRowGap,
+        rowVerticalPadding = CardLayoutRhythm.infoRowVerticalPadding,
+        valueTextAlign = TextAlign.End,
+        labelMaxLines = labelMaxLines,
+        valueMaxLines = if (valueSingleLine) 1 else 6,
+        valueOverflow = if (valueSingleLine) TextOverflow.Clip else TextOverflow.Ellipsis,
+        labelFontSize = AppTypographyTokens.Body.fontSize,
+        labelLineHeight = AppTypographyTokens.Body.lineHeight,
+        valueFontSize = AppTypographyTokens.Body.fontSize,
+        valueLineHeight = AppTypographyTokens.Body.lineHeight,
+        emphasizedValue = true,
+        copyPayloadOverride = if (copyValueOnly) displayValue else null
+    )
+}
+
+internal data class OsActivityVisibilityItem(
+    val id: String,
+    val title: String,
+    val packageName: String,
+    val className: String,
+    val builtInSample: Boolean,
+    val visible: Boolean
+)
