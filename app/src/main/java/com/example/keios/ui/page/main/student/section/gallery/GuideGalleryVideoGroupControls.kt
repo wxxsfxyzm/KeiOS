@@ -9,7 +9,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.dp
 import com.example.keios.ui.page.main.os.appLucideFullscreenIcon
 import com.example.keios.ui.page.main.widget.glass.AppDropdownAnchorButton
 import com.example.keios.ui.page.main.widget.glass.GlassTextButton
@@ -20,9 +19,7 @@ import com.example.keios.ui.page.main.widget.sheet.SnapshotPopupPlacement
 import com.example.keios.ui.page.main.widget.sheet.SnapshotWindowListPopup
 import com.example.keios.ui.page.main.widget.sheet.capturePopupAnchor
 import com.kyant.backdrop.Backdrop
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Pause
@@ -38,8 +35,6 @@ internal fun GuideGalleryVideoGroupHeaderActions(
     saveTargetUrl: String,
     videoInlineExpanded: Boolean,
     videoInlinePlaying: Boolean,
-    videoInlineBuffering: Boolean,
-    isVideoCached: Boolean,
     backdrop: Backdrop?,
     onToggleInlinePlay: () -> Unit,
     onOpenFullscreen: () -> Unit,
@@ -88,31 +83,6 @@ internal fun GuideGalleryVideoGroupHeaderActions(
     }
 
     if (displayMediaUrl.isNotBlank()) {
-        // Header indicator represents readiness/cache status, not playback progress.
-        val indicatorProgress = when {
-            isVideoCached -> 1f
-            videoInlineBuffering -> 0.35f
-            else -> 0.08f
-        }
-        val progressForegroundColor = if (isVideoCached) {
-            Color(0xFF34C759)
-        } else {
-            Color(0xFF3B82F6)
-        }
-        val progressBackgroundColor = if (isVideoCached) {
-            Color(0x5534C759)
-        } else {
-            Color(0x553B82F6)
-        }
-        CircularProgressIndicator(
-            progress = indicatorProgress,
-            size = 18.dp,
-            strokeWidth = 2.dp,
-            colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                foregroundColor = progressForegroundColor,
-                backgroundColor = progressBackgroundColor
-            )
-        )
         GlassTextButton(
             backdrop = backdrop,
             text = "",

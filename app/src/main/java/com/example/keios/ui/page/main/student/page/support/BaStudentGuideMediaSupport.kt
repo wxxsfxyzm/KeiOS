@@ -16,6 +16,7 @@ import com.example.keios.ui.page.main.student.BaStudentGuideInfo
 import com.example.keios.ui.page.main.student.fetch.normalizeGuideUrl
 import com.example.keios.ui.page.main.student.hasRenderableGalleryMedia
 import com.example.keios.ui.page.main.student.isMemoryHallFileGalleryItem
+import com.example.keios.ui.page.main.student.isRenderableGalleryGifUrl
 import com.example.keios.ui.page.main.student.isRenderableGalleryStaticImageUrl
 import com.example.keios.ui.page.main.widget.motion.resolvedMotionDuration
 import java.io.File
@@ -66,12 +67,14 @@ internal fun collectGuideStaticImagePrefetchUrls(info: BaStudentGuideInfo): List
     }
 
     galleryItems.forEach { item ->
+        val mediaType = item.mediaType.trim().lowercase()
+        if (mediaType == "video" || mediaType == "audio") return@forEach
         val imageUrl = normalizeGuideUrl(item.imageUrl)
-        if (isRenderableGalleryStaticImageUrl(imageUrl)) {
+        if (isRenderableGalleryStaticImageUrl(imageUrl) && !isRenderableGalleryGifUrl(imageUrl)) {
             orderedUrls += imageUrl
         }
         val mediaUrl = normalizeGuideUrl(item.mediaUrl)
-        if (isRenderableGalleryStaticImageUrl(mediaUrl)) {
+        if (isRenderableGalleryStaticImageUrl(mediaUrl) && !isRenderableGalleryGifUrl(mediaUrl)) {
             orderedUrls += mediaUrl
         }
     }

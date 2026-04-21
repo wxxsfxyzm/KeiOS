@@ -32,7 +32,6 @@ import com.example.keios.ui.page.main.widget.support.CopyModeSelectionContainer
 import com.example.keios.ui.page.main.widget.glass.GlassTextButton
 import com.example.keios.ui.page.main.widget.glass.GlassVariant
 import com.kyant.backdrop.Backdrop
-import kotlinx.coroutines.delay
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,44 +54,16 @@ fun GuideGalleryVideoGroupCardItem(
         if (selectedIndex !in items.indices) selectedIndex = 0
     }
     val selectedItem = items.getOrElse(selectedIndex) { items.first() }
-    var displayMediaUrl by remember(selectedItem.mediaUrl) {
-        mutableStateOf(mediaUrlResolver(selectedItem.mediaUrl))
-    }
-    var displayPreviewUrl by remember(selectedItem.imageUrl, previewFallbackUrl) {
-        mutableStateOf(mediaUrlResolver(selectedItem.imageUrl.ifBlank { previewFallbackUrl }))
-    }
-    LaunchedEffect(selectedItem.mediaUrl, selectedItem.imageUrl, previewFallbackUrl) {
-        repeat(30) {
-            delay(1_000L)
-            val nextMediaUrl = mediaUrlResolver(selectedItem.mediaUrl)
-            val nextPreviewUrl = mediaUrlResolver(selectedItem.imageUrl.ifBlank { previewFallbackUrl })
-            var changed = false
-            if (nextMediaUrl != displayMediaUrl) {
-                displayMediaUrl = nextMediaUrl
-                changed = true
-            }
-            if (nextPreviewUrl != displayPreviewUrl) {
-                displayPreviewUrl = nextPreviewUrl
-                changed = true
-            }
-            if (!changed &&
-                normalizeGuideMediaSource(displayMediaUrl).startsWith("file://", ignoreCase = true) &&
-                (displayPreviewUrl.isBlank() || normalizeGuideMediaSource(displayPreviewUrl).startsWith("file://", ignoreCase = true))
-            ) {
-                return@LaunchedEffect
-            }
-        }
-    }
+    val displayMediaUrl = mediaUrlResolver(selectedItem.mediaUrl)
+    val displayPreviewUrl = mediaUrlResolver(
+        selectedItem.imageUrl.ifBlank { previewFallbackUrl }
+    )
     val saveTargetUrl = remember(displayMediaUrl, displayPreviewUrl) {
         displayMediaUrl.ifBlank { displayPreviewUrl }
     }
     var videoInlineExpanded by remember(displayMediaUrl) { mutableStateOf(false) }
     var videoInlinePlaying by remember(displayMediaUrl) { mutableStateOf(false) }
-    var videoInlineBuffering by remember(displayMediaUrl) { mutableStateOf(false) }
     var videoControlRequestId by remember(displayMediaUrl) { mutableIntStateOf(0) }
-    val isVideoCached = remember(displayMediaUrl) {
-        normalizeGuideMediaSource(displayMediaUrl).startsWith("file://", ignoreCase = true)
-    }
     val noteText = selectedItem.note.trim()
     val optionLabels = remember(title, items) {
         if (items.size <= 1) {
@@ -120,8 +91,6 @@ fun GuideGalleryVideoGroupCardItem(
                 saveTargetUrl = saveTargetUrl,
                 videoInlineExpanded = videoInlineExpanded,
                 videoInlinePlaying = videoInlinePlaying,
-                videoInlineBuffering = videoInlineBuffering,
-                isVideoCached = isVideoCached,
                 backdrop = backdrop,
                 onToggleInlinePlay = {
                     if (normalizeGuideMediaSource(displayMediaUrl).isBlank()) {
@@ -167,7 +136,6 @@ fun GuideGalleryVideoGroupCardItem(
                 controlAction = GuideVideoControlAction.TogglePlayPause,
                 controlActionToken = videoControlRequestId,
                 onIsPlayingChange = { playing -> videoInlinePlaying = playing },
-                onBufferingChange = { buffering -> videoInlineBuffering = buffering },
                 showCollapsedPreview = false
             )
         }

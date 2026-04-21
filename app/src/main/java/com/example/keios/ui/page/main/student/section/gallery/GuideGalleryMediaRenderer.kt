@@ -42,7 +42,6 @@ internal fun GuideGalleryCardContent(
     displayTitle: String,
     mediaTypeLabel: String,
     showMediaTypeLabel: Boolean,
-    isMemoryHallBgmTitle: Boolean,
     audioTargetUrl: String,
     displayMediaUrl: String,
     displayImageUrl: String,
@@ -81,35 +80,6 @@ internal fun GuideGalleryCardContent(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            if (isMemoryHallBgmTitle && audioTargetUrl.isNotBlank()) {
-                val resolvedAudioSource = normalizeGuideMediaSource(displayMediaUrl)
-                val cachedAudioReady = resolvedAudioSource.startsWith("file://", ignoreCase = true)
-                // Header indicator keeps a stable readiness meaning: cached = ready.
-                val indicatorProgress = when {
-                    cachedAudioReady -> 1f
-                    audioState.isBuffering -> 0.35f
-                    else -> 0.06f
-                }
-                val progressForegroundColor = if (indicatorProgress >= 0.999f) {
-                    Color(0xFF34C759)
-                } else {
-                    Color(0xFF3B82F6)
-                }
-                val progressBackgroundColor = if (indicatorProgress >= 0.999f) {
-                    Color(0x5534C759)
-                } else {
-                    Color(0x553B82F6)
-                }
-                CircularProgressIndicator(
-                    progress = indicatorProgress,
-                    size = 18.dp,
-                    strokeWidth = 2.dp,
-                    colors = ProgressIndicatorDefaults.progressIndicatorColors(
-                        foregroundColor = progressForegroundColor,
-                        backgroundColor = progressBackgroundColor
-                    )
-                )
-            }
             if (showMediaTypeLabel && mediaTypeLabel.isNotBlank()) {
                 GlassTextButton(
                     backdrop = backdrop,

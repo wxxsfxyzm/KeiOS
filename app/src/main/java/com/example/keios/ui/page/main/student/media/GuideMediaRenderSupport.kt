@@ -128,53 +128,11 @@ fun GuideRemoteImageAdaptive(
     var stableRatio by remember { mutableStateOf(fallbackRatio.coerceIn(0.4f, 4f)) }
     val isGifSource = remember(target) { isGifMediaSource(target) }
     if (isGifSource) {
-        val resolvedGifTarget by produceState(
-            initialValue = target,
-            target
-        ) {
-            if (!isHttpMediaSource(target)) {
-                value = target
-                return@produceState
-            }
-            progressState?.value = 0f
-            onLoadingChanged?.invoke(true)
-            val warmed = withContext(Dispatchers.IO) {
-                runCatching {
-                    BaGuideTempMediaCache.prefetchForGuide(
-                        context = context,
-                        sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
-                        rawUrls = listOf(target)
-                    )
-                }
-                var resolved = BaGuideTempMediaCache.resolveCachedUrl(
-                    context = context,
-                    sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
-                    rawUrl = target
-                )
-                if (!isFileMediaSource(resolved)) {
-                    runCatching {
-                        BaGuideTempMediaCache.prefetchForGuide(
-                            context = context,
-                            sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
-                            rawUrls = listOf(target),
-                            forceReDownload = true
-                        )
-                    }
-                    resolved = BaGuideTempMediaCache.resolveCachedUrl(
-                        context = context,
-                        sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
-                        rawUrl = target
-                    )
-                }
-                resolved
-            }
-            value = warmed.ifBlank { target }
-        }
-        val ratio = remember(resolvedGifTarget, target) {
-            detectMediaRatioFromUrl(resolvedGifTarget.ifBlank { target }) ?: (16f / 9f)
+        val ratio = remember(target) {
+            detectMediaRatioFromUrl(target) ?: (16f / 9f)
         }
         AsyncImage(
-            model = resolvedGifTarget,
+            model = target,
             contentDescription = null,
             contentScale = ContentScale.Fit,
             onLoading = {
@@ -293,21 +251,6 @@ internal fun isGifMediaSource(source: String): Boolean {
             magic == "GIF87a" || magic == "GIF89a"
         }
     }.getOrDefault(false)
-}
-
-internal fun isFileMediaSource(source: String): Boolean {
-    val value = source.trim()
-    if (value.isBlank()) return false
-    val uri = runCatching { Uri.parse(value) }.getOrNull() ?: return false
-    return uri.scheme.equals("file", ignoreCase = true)
-}
-
-internal fun isHttpMediaSource(source: String): Boolean {
-    val value = source.trim()
-    if (value.isBlank()) return false
-    val uri = runCatching { Uri.parse(value) }.getOrNull() ?: return false
-    val scheme = uri.scheme.orEmpty()
-    return scheme.equals("http", ignoreCase = true) || scheme.equals("https", ignoreCase = true)
 }
 
 internal fun detectMediaRatioFromUrl(source: String): Float? {

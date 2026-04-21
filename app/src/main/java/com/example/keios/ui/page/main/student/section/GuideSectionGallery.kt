@@ -3,7 +3,6 @@ package com.example.keios.ui.page.main.student.section
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,7 +25,6 @@ import com.example.keios.ui.page.main.student.section.gallery.rememberGuideGalle
 import com.example.keios.ui.page.main.student.section.gallery.rememberGuideGalleryGestureState
 import com.example.keios.ui.page.main.student.stripGuideWebLinks
 import com.kyant.backdrop.Backdrop
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -77,42 +75,13 @@ fun GuideGalleryCardItem(
         "imageset" -> "图集"
         else -> ""
     }
-    var displayImageUrl by remember(preferredImageRaw) {
-        mutableStateOf(mediaUrlResolver(preferredImageRaw))
-    }
-    var displayMediaUrl by remember(item.mediaUrl, preferredImageRaw) {
-        mutableStateOf(mediaUrlResolver(item.mediaUrl.ifBlank { preferredImageRaw }))
-    }
-    LaunchedEffect(item.mediaUrl, preferredImageRaw) {
-        repeat(30) {
-            delay(1_000L)
-            val nextImageUrl = mediaUrlResolver(preferredImageRaw)
-            val nextMediaUrl = mediaUrlResolver(item.mediaUrl.ifBlank { preferredImageRaw })
-            var changed = false
-            if (nextImageUrl != displayImageUrl) {
-                displayImageUrl = nextImageUrl
-                changed = true
-            }
-            if (nextMediaUrl != displayMediaUrl) {
-                displayMediaUrl = nextMediaUrl
-                changed = true
-            }
-            if (!changed &&
-                normalizeGuideMediaSource(displayMediaUrl).startsWith("file://", ignoreCase = true) &&
-                (displayImageUrl.isBlank() || normalizeGuideMediaSource(displayImageUrl).startsWith("file://", ignoreCase = true))
-            ) {
-                return@LaunchedEffect
-            }
-        }
-    }
+    val displayImageUrl = mediaUrlResolver(preferredImageRaw)
+    val displayMediaUrl = mediaUrlResolver(item.mediaUrl.ifBlank { preferredImageRaw })
     val noteText = item.note.trim()
     val noteLinks = remember(noteText) { extractGuideWebLinks(noteText) }
     val notePlainText = remember(noteText) { stripGuideWebLinks(noteText) }
     val displayTitle = remember(item.title, normalizedMediaType) {
         normalizeGalleryDisplayTitle(item.title, normalizedMediaType)
-    }
-    val isMemoryHallBgmTitle = remember(displayTitle, normalizedMediaType) {
-        normalizedMediaType == "audio" && displayTitle.startsWith("回忆大厅BGM")
     }
     val saveTargetUrl = remember(
         normalizedMediaType,
@@ -165,7 +134,6 @@ fun GuideGalleryCardItem(
             displayTitle = displayTitle,
             mediaTypeLabel = mediaTypeLabel,
             showMediaTypeLabel = showMediaTypeLabel,
-            isMemoryHallBgmTitle = isMemoryHallBgmTitle,
             audioTargetUrl = audioTargetUrl,
             displayMediaUrl = displayMediaUrl,
             displayImageUrl = displayImageUrl,
