@@ -128,11 +128,54 @@ fun GuideRemoteImageAdaptive(
     var stableRatio by remember { mutableStateOf(fallbackRatio.coerceIn(0.4f, 4f)) }
     val isGifSource = remember(target) { isGifMediaSource(target) }
     if (isGifSource) {
-        val ratio = remember(target) {
-            detectMediaRatioFromUrl(target) ?: (16f / 9f)
+        val resolvedGifTarget by produceState(
+            initialValue = target,
+            target
+        ) {
+            if (target.isBlank()) {
+                value = target
+                return@produceState
+            }
+            val localCached = BaGuideTempMediaCache.resolveCachedUrl(
+                context = context,
+                sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
+                rawUrl = target
+            )
+            val cachedScheme = runCatching { Uri.parse(localCached).scheme.orEmpty() }
+                .getOrDefault("")
+            if (cachedScheme.equals("file", ignoreCase = true)) {
+                value = localCached
+                return@produceState
+            }
+            value = target
+            val targetScheme = runCatching { Uri.parse(target).scheme.orEmpty() }.getOrDefault("")
+            val isHttp = targetScheme.equals("http", ignoreCase = true) || targetScheme.equals("https", ignoreCase = true)
+            if (!isHttp) return@produceState
+            val cachedAfterFetch = withContext(Dispatchers.IO) {
+                runCatching {
+                    BaGuideTempMediaCache.prefetchForGuide(
+                        context = context,
+                        sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
+                        rawUrls = listOf(target),
+                    )
+                }
+                BaGuideTempMediaCache.resolveCachedUrl(
+                    context = context,
+                    sourceUrl = GUIDE_INLINE_GIF_CACHE_SCOPE,
+                    rawUrl = target
+                )
+            }
+            val fetchedScheme = runCatching { Uri.parse(cachedAfterFetch).scheme.orEmpty() }
+                .getOrDefault("")
+            if (fetchedScheme.equals("file", ignoreCase = true)) {
+                value = cachedAfterFetch
+            }
+        }
+        val ratio = remember(resolvedGifTarget, target) {
+            detectMediaRatioFromUrl(resolvedGifTarget.ifBlank { target }) ?: (16f / 9f)
         }
         AsyncImage(
-            model = target,
+            model = resolvedGifTarget,
             contentDescription = null,
             contentScale = ContentScale.Fit,
             onLoading = {
