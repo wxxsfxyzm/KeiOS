@@ -173,13 +173,26 @@ internal fun parseGiftPreferenceRowsFromBaseData(
             continue
         }
 
-        val giftImages = when {
-            isContinuationRow -> rowGenericImages.distinct()
-            explicitGiftImages.isNotEmpty() -> (explicitGiftImages + rowGenericImages).distinct()
-            hasGiftIconKey && rowGenericImages.isNotEmpty() -> rowGenericImages.distinct()
-            else -> keyGenericImages.distinct()
+        val normalizedGiftImages = if (isContinuationRow) {
+            rowGenericImages
+                .filterNot(::isLikelyGiftPreferenceIconUrl)
+                .filter { looksLikeImageUrl(it) }
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .distinct()
+        } else {
+            if (explicitGiftImages.isNotEmpty()) {
+                explicitGiftImages
+            } else {
+                rowGenericImages
+                    .filterNot(::isLikelyGiftPreferenceIconUrl)
+                    .filter { looksLikeImageUrl(it) }
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+            }
         }
-        if (giftImages.isEmpty()) {
+        if (normalizedGiftImages.isEmpty()) {
             if (isContinuationRow) {
                 continuationQuota = (continuationQuota - 1).coerceAtLeast(0)
             }
@@ -204,18 +217,11 @@ internal fun parseGiftPreferenceRowsFromBaseData(
             if (isContinuationRow) continuationNote else ""
         }
 
-        giftImages.forEachIndexed { index, giftImage ->
-            val emojiImage = when {
-                emojiImages.isEmpty() -> ""
-                emojiImages.size == giftImages.size -> emojiImages.getOrElse(index) { emojiImages.first() }
-                else -> emojiImages.first()
-            }
+        normalizedGiftImages.forEach { giftImage ->
             val imageUrls = buildList {
                 add(giftImage)
-                if (emojiImage.isNotBlank() && emojiImage != giftImage) {
-                    add(emojiImage)
-                }
-            }
+                addAll(emojiImages)
+            }.distinct()
             out += BaGuideRow(
                 key = "礼物偏好礼物$giftIndex",
                 value = note,
