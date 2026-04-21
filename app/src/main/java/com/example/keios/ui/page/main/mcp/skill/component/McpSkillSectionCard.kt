@@ -40,7 +40,6 @@ internal fun SkillSectionCard(
     }
 
     AppSurfaceCard(
-        containerColor = Color(0x223B82F6),
         contentColor = titleColor,
         showIndication = false
     ) {

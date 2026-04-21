@@ -41,7 +41,6 @@ internal fun McpSkillClawGuideCard(
     val context = LocalContext.current
     val copyIcon = osLucideCopyIcon()
     AppSurfaceCard(
-        containerColor = Color(0x223B82F6),
         contentColor = titleColor,
         showIndication = false
     ) {
