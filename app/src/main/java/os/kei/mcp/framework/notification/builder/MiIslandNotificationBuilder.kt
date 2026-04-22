@@ -6,10 +6,11 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.Icon
 import androidx.core.app.NotificationCompat
+import com.xzakota.hyper.notification.focus.FocusNotification
+import com.xzakota.hyper.notification.island.model.TextInfo
 import os.kei.R
 import os.kei.core.log.AppLogger
 import os.kei.mcp.notification.McpNotificationPayload
-import com.xzakota.hyper.notification.focus.FocusNotification
 
 class MiIslandNotificationBuilder(
     private val context: Context
@@ -84,6 +85,11 @@ class MiIslandNotificationBuilder(
         } else {
             state.shortText.ifEmpty { state.title(context) }
         }
+        val compactContent = if (state.running) {
+            rightTitle
+        } else {
+            state.statusText(context)
+        }
         val actions = mutableListOf(
             IslandAction(
                 key = "mcp_action_open",
@@ -106,15 +112,25 @@ class MiIslandNotificationBuilder(
         FocusNotification.buildV3 {
             val lightLogoKey = createPicture("key_logo_light", lightLogoIcon)
             val darkLogoKey = createPicture("key_logo_dark", darkLogoIcon)
-            val showAppIcon = false
-            val displayIconKey = if (showAppIcon) lightLogoKey else darkLogoKey
+            val displayIconKey = darkLogoKey
+            val openActionKey = createAction(
+                "mcp_reopen",
+                Notification.Action.Builder(
+                    Icon.createWithResource(context, islandIconResId),
+                    context.getString(R.string.common_open),
+                    state.openPendingIntent
+                ).build()
+            )
 
             islandFirstFloat = true
             // Keep island clickable in status bar even for ongoing sessions.
             enableFloat = true
             updatable = true
+            showSmallIcon = false
+            reopen = openActionKey
             ticker = state.title(context)
             tickerPic = lightLogoKey
+            tickerPicDark = darkLogoKey
             if (payload.settings.miIslandOuterGlow) {
                 outEffectSrc = "outer_glow"
             }
@@ -122,18 +138,14 @@ class MiIslandNotificationBuilder(
             island {
                 islandProperty = 1
                 bigIslandArea {
-                    imageTextInfoLeft {
+                    picInfo {
                         type = 1
-                        picInfo {
-                            type = 1
-                            pic = displayIconKey
-                        }
+                        pic = displayIconKey
                     }
-                    imageTextInfoRight {
-                        type = 3
-                        textInfo {
-                            title = rightTitle
-                        }
+                    textInfo = TextInfo().apply {
+                        title = state.title(context)
+                        content = compactContent
+                        narrowFont = true
                     }
                 }
                 smallIslandArea {
@@ -144,21 +156,10 @@ class MiIslandNotificationBuilder(
                 }
             }
 
-            if (!showAppIcon) {
-                baseInfo {
-                    type = 2
-                    title = state.title(context)
-                    content = state.content(context).ifBlank { " " }
-                }
-            } else {
-                iconTextInfo {
-                    title = state.title(context)
-                    content = state.content(context).ifBlank { " " }
-                    animIconInfo {
-                        type = 0
-                        src = displayIconKey
-                    }
-                }
+            baseInfo {
+                type = 2
+                title = state.title(context)
+                content = state.content(context).ifBlank { " " }
             }
 
             picInfo {
@@ -171,12 +172,16 @@ class MiIslandNotificationBuilder(
                 textButton {
                     actions.take(2).forEach { actionItem ->
                         addActionInfo {
-                            val nativeAction = Notification.Action.Builder(
-                                Icon.createWithResource(context, islandIconResId),
-                                actionItem.title,
-                                actionItem.pendingIntent
-                            ).build()
-                            action = createAction(actionItem.key, nativeAction)
+                            action = if (actionItem.key == "mcp_action_open") {
+                                openActionKey
+                            } else {
+                                val nativeAction = Notification.Action.Builder(
+                                    Icon.createWithResource(context, islandIconResId),
+                                    actionItem.title,
+                                    actionItem.pendingIntent
+                                ).build()
+                                createAction(actionItem.key, nativeAction)
+                            }
                             actionTitle = actionItem.title
                             if (actionItem.isHighlighted) {
                                 actionBgColor = HIGHLIGHT_BG_COLOR

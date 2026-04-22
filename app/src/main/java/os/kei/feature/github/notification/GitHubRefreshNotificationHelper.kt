@@ -11,13 +11,14 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.xzakota.hyper.notification.focus.FocusNotification
+import com.xzakota.hyper.notification.island.model.TextInfo
 import os.kei.MainActivity
 import os.kei.R
 import os.kei.core.log.AppLogger
 import os.kei.core.prefs.UiPrefs
 import os.kei.feature.notification.NotificationActionReceiver
 import os.kei.mcp.framework.notification.NotificationHelper
-import com.xzakota.hyper.notification.focus.FocusNotification
 import kotlin.math.roundToInt
 
 object GitHubRefreshNotificationHelper {
@@ -322,29 +323,36 @@ object GitHubRefreshNotificationHelper {
             val darkLogoIcon = Icon.createWithResource(context, iconResId)
             val light = createPicture("github_logo_light", lightLogoIcon)
             val dark = createPicture("github_logo_dark", darkLogoIcon)
+            val openActionKey = createAction(
+                "github_reopen",
+                Notification.Action.Builder(
+                    Icon.createWithResource(context, iconResId),
+                    context.getString(R.string.common_open),
+                    openPendingIntent
+                ).build()
+            )
 
             islandFirstFloat = true
             // Keep island clickable in status bar even for ongoing refresh.
             enableFloat = true
             updatable = true
+            showSmallIcon = false
+            reopen = openActionKey
             ticker = title
             tickerPic = light
+            tickerPicDark = dark
 
             island {
                 islandProperty = 1
                 bigIslandArea {
-                    imageTextInfoLeft {
+                    picInfo {
                         type = 1
-                        picInfo {
-                            type = 1
-                            pic = dark
-                        }
+                        pic = dark
                     }
-                    imageTextInfoRight {
-                        type = 3
-                        textInfo {
-                            this.title = rightTitle
-                        }
+                    textInfo = TextInfo().apply {
+                        this.title = title
+                        this.content = rightTitle
+                        narrowFont = true
                     }
                 }
                 smallIslandArea {
@@ -369,12 +377,7 @@ object GitHubRefreshNotificationHelper {
 
             textButton {
                 addActionInfo {
-                    val nativeAction = Notification.Action.Builder(
-                        Icon.createWithResource(context, iconResId),
-                        context.getString(R.string.common_open),
-                        openPendingIntent
-                    ).build()
-                    action = createAction("github_action_open", nativeAction)
+                    action = openActionKey
                     actionTitle = context.getString(R.string.common_open)
                     actionBgColor = "#006EFF"
                     actionBgColorDark = "#006EFF"
