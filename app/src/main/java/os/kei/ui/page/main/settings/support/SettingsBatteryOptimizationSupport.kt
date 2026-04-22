@@ -71,8 +71,8 @@ private fun buildBatteryOptimizationIntent(
     val candidateIntents = buildList {
         if (!alreadyIgnored) {
             add(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, packageUri))
+            add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
-        add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         add(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri))
     }
     return candidateIntents.firstOrNull { intent ->

@@ -228,7 +228,44 @@ private fun buildOemAutoStartLaunchPlan(context: Context): SettingsOemAutoStartL
     }
     val directCandidates = buildList {
         when (vendor) {
-            OemAutoStartVendor.HyperOs,
+            OemAutoStartVendor.HyperOs -> {
+                add(
+                    Intent().setComponent(
+                        ComponentName(
+                            OEM_SECURITY_CENTER_PACKAGE,
+                            OEM_APPLICATION_DETAILS_ACTIVITY
+                        )
+                    ).apply {
+                        putMiuiAppManagerExtras(context)
+                    }
+                )
+                add(
+                    Intent("miui.intent.action.APP_PERM_EDITOR_PRIVATE").apply {
+                        putMiuiPermissionExtras(context)
+                    }
+                )
+                add(
+                    Intent().setComponent(
+                        ComponentName(
+                            OEM_SECURITY_CENTER_PACKAGE,
+                            OEM_PERMISSIONS_EDITOR_ACTIVITY
+                        )
+                    ).apply {
+                        putMiuiPermissionExtras(context)
+                    }
+                )
+                add(
+                    Intent().setComponent(
+                        ComponentName(
+                            OEM_SECURITY_CENTER_PACKAGE,
+                            OEM_AUTO_START_ACTIVITY
+                        )
+                    ).apply {
+                        putMiuiPermissionExtras(context)
+                    }
+                )
+            }
+
             OemAutoStartVendor.Miui,
             OemAutoStartVendor.Xiaomi -> {
                 add(
@@ -248,8 +285,7 @@ private fun buildOemAutoStartLaunchPlan(context: Context): SettingsOemAutoStartL
                 )
                 add(
                     Intent("miui.intent.action.APP_PERM_EDITOR").apply {
-                        putExtra("extra_pkgname", packageName)
-                        putExtra("packageName", packageName)
+                        putMiuiPermissionExtras(context)
                     }
                 )
                 add(
@@ -464,8 +500,21 @@ private fun Intent.putMiuiPermissionExtras(context: Context): Intent {
     putExtra("extra_pkgname", context.packageName)
     putExtra("packageName", context.packageName)
     putExtra("package_name", context.packageName)
+    putExtra("app_packageName", context.packageName)
+    putExtra("am_app_pkgname", context.packageName)
     putExtra("userId", 0)
+    putExtra("miui.intent.extra.USER_ID", 0)
     putExtra("start_pkg", context.packageName)
+    return this
+}
+
+private fun Intent.putMiuiAppManagerExtras(context: Context): Intent {
+    data = Uri.parse("package:${context.packageName}")
+    putMiuiPermissionExtras(context)
+    putExtra("enter_from_appmanagermainactivity", true)
+    putExtra("enter_way", "00001")
+    putExtra("size", 0L)
+    putExtra("am_app_uid", context.applicationInfo.uid)
     return this
 }
 
@@ -512,6 +561,8 @@ private enum class OemAutoStartVendor(
 }
 
 private const val OEM_SECURITY_CENTER_PACKAGE = "com.miui.securitycenter"
+private const val OEM_APPLICATION_DETAILS_ACTIVITY =
+    "com.miui.appmanager.ApplicationsDetailsActivity"
 private const val OEM_AUTO_START_ACTIVITY =
     "com.miui.permcenter.autostart.AutoStartManagementActivity"
 private const val OEM_PERMISSIONS_EDITOR_ACTIVITY =
