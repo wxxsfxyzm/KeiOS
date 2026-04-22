@@ -10,6 +10,8 @@ internal object HyperOsSettingsIntents {
     private const val SECURITY_CENTER_PACKAGE = "com.miui.securitycenter"
     private const val POWER_DETAIL_ACTIVITY =
         "com.miui.powercenter.legacypowerrank.PowerDetailActivity"
+    private const val APP_PERMISSION_EDITOR_ACTION = "miui.intent.action.APP_PERM_EDITOR"
+    private const val APP_PERMISSIONS_SETTINGS_ACTION = "android.settings.APP_PERMISSIONS_SETTINGS"
     private const val HYPER_OS_VERSION_PREFIX = "OS3"
 
     fun isHyperOs3Device(): Boolean {
@@ -41,6 +43,14 @@ internal object HyperOsSettingsIntents {
         val packageManager = context.packageManager
         val packageUri = Uri.parse("package:${context.packageName}")
         val candidateIntents = buildList {
+            if (isHyperOs3Device()) {
+                add(buildHyperOsAppPermissionEditorIntent(context))
+            }
+            add(
+                Intent(APP_PERMISSIONS_SETTINGS_ACTION).apply {
+                    putExtra(Intent.EXTRA_PACKAGE_NAME, context.packageName)
+                }
+            )
             add(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri))
         }
         return candidateIntents.firstOrNull { intent ->
@@ -60,6 +70,13 @@ internal object HyperOsSettingsIntents {
             putExtra("uid", context.applicationInfo.uid)
             putExtra("showMenus", false)
             putExtra("UserId", resolveAndroidUserId(context.applicationInfo.uid))
+        }
+    }
+
+    private fun buildHyperOsAppPermissionEditorIntent(context: Context): Intent {
+        return Intent(APP_PERMISSION_EDITOR_ACTION).apply {
+            setPackage(SECURITY_CENTER_PACKAGE)
+            putExtra("extra_pkgname", context.packageName)
         }
     }
 
