@@ -3,9 +3,6 @@ package os.kei.mcp.framework.notification.builder
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
 import androidx.core.app.NotificationCompat
 import com.xzakota.hyper.notification.focus.FocusNotification
@@ -35,6 +32,7 @@ class MiIslandNotificationBuilder(
         private const val HIGHLIGHT_BG_COLOR = "#006EFF"
         private const val HIGHLIGHT_TITLE_COLOR = "#FFFFFF"
         private const val ISLAND_ICON_RES_ID_DEFAULT = R.drawable.ic_notification_logo
+        private const val ISLAND_FOCUS_ICON_RES_ID_DEFAULT = R.drawable.ic_kei_logo_island
         private const val ISLAND_ICON_RES_ID_AP = R.drawable.ic_ba_ap_island_notification
         private const val ISLAND_ICON_RES_ID_BA_CAFE_VISIT = R.drawable.ic_ba_schale_island
         private const val ISLAND_ICON_RES_ID_BA_ARENA_REFRESH = R.drawable.ic_ba_schale_island
@@ -79,7 +77,7 @@ class MiIslandNotificationBuilder(
                 darkIcon = Icon.createWithResource(context, islandIconResId)
             )
         } else {
-            buildDefaultLauncherIslandIcons()
+            buildDefaultFocusIslandIcons()
         }
         val lightLogoIcon = iconBundle.lightIcon
         val darkLogoIcon = iconBundle.darkIcon
@@ -225,27 +223,11 @@ class MiIslandNotificationBuilder(
         AppLogger.e(TAG, "Build FocusNotification extras failed", it)
     }.getOrNull()
 
-    private fun buildDefaultLauncherIslandIcons(): IslandIconBundle {
-        val drawable = resolveDefaultIslandDrawable().mutate()
-        val sizePx = (context.resources.displayMetrics.density * 48f).toInt().coerceAtLeast(72)
-        val insetPx = (sizePx * 0.18f).toInt().coerceAtLeast(6)
-        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(
-            insetPx,
-            insetPx,
-            sizePx - insetPx,
-            sizePx - insetPx
-        )
-        drawable.draw(canvas)
-        val icon = Icon.createWithAdaptiveBitmap(bitmap)
+    private fun buildDefaultFocusIslandIcons(): IslandIconBundle {
+        val icon = Icon.createWithResource(context, ISLAND_FOCUS_ICON_RES_ID_DEFAULT)
         return IslandIconBundle(
             lightIcon = icon,
             darkIcon = icon
         )
-    }
-
-    private fun resolveDefaultIslandDrawable(): Drawable {
-        return context.packageManager.getApplicationIcon(context.applicationInfo)
     }
 }
