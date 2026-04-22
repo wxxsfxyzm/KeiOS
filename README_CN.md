@@ -8,10 +8,11 @@
 
 ## 当前分发方式
 
-- 当前处于每日快速迭代阶段，GitHub 分发采用源码优先。
-- 尝鲜用户可直接 clone 本仓库，并按上方构建指南本地构建安装。
-- 安装包分发节奏会在本轮迭代窗口稳定后恢复。
-- `CI / Benchmark APK` 工作流（`.github/workflows/ci-benchmark-apk.yml`）支持手动构建 Benchmark APK，并上传可下载 Artifact。
+- 稳定版安装包已发布到 [GitHub Releases](https://github.com/hosizoraru/KeiOS/releases)。
+- 当前公开正式版本为 [KeiOS v1.1.0](https://github.com/hosizoraru/KeiOS/releases/tag/v1.1.0)。
+- 正式版基线：`os.kei`、`arm64-v8a`、`Android 15+`（`minSdk 35`）。
+- 对于源码用户、贡献者和尝鲜验证场景，依旧推荐 clone 仓库后按构建指南本地构建。
+- `CI / Benchmark APK` 工作流（`.github/workflows/ci-benchmark-apk.yml`）依旧支持手动构建 Benchmark APK，并上传可下载 Artifact。
 
 ## 项目概览
 

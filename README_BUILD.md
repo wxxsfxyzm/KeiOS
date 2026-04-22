@@ -2,11 +2,12 @@
 
 [Main README](README.md)
 
-## Current Install Channel
+## Install Channels
 
-- This build guide is the primary install path during daily rapid iteration.
-- GitHub distribution is source-first, and early adopters install via clone + local build.
-- Use the commands in `Common Local Commands` to generate a debug APK.
+- Stable installs should use [GitHub Releases](https://github.com/hosizoraru/KeiOS/releases).
+- The latest public release is [KeiOS v1.1.0](https://github.com/hosizoraru/KeiOS/releases/tag/v1.1.0).
+- This build guide covers local source builds, debug packages, and contributor workflows.
+- Use the commands in `Common Local Commands` to generate a debug APK for development or preview validation.
 
 ## Local Build Notes
 
@@ -88,6 +89,7 @@ Workflow: `.github/workflows/ci-debug-apk.yml`
 
 - Trigger: `push` with any commit message containing `Build-CI`.
 - Job output: debug APK artifact uploaded to GitHub Actions.
+- Intended use: quick preview builds for development validation.
 - APK file name format: `KeiOS-debug-YYYYMMDD-HHMMSS-<shortSha>.apk` (UTC).
 - Artifact name format: `KeiOS-debug-YYYYMMDD-HHMMSS-<shortSha>-run<run_number>`.
 
@@ -106,6 +108,7 @@ Workflow: `.github/workflows/ci-benchmark-apk.yml`
 - Default behavior: build latest commit on selected branch when `commit` is empty.
 - Build task: `./gradlew :app:assembleBenchmark --stacktrace`.
 - Job output: benchmark APK artifact uploaded to GitHub Actions.
+- Intended use: manual benchmark / preview verification outside the stable release channel.
 - APK file name format: `KeiOS-benchmark-YYYYMMDD-HHMMSS-<shortSha>.apk` (UTC).
 - Artifact name format: `KeiOS-benchmark-YYYYMMDD-HHMMSS-<shortSha>-run<run_number>`.
 

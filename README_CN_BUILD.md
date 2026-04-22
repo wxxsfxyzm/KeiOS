@@ -2,11 +2,12 @@
 
 [主 README](README_CN.md)
 
-## 当前安装路径
+## 安装方式
 
-- 本构建指南是每日快速迭代阶段的主要安装路径。
-- GitHub 当前采用源码优先分发，尝鲜用户通过 clone + 本地构建完成安装。
-- 使用 `常用本地命令` 中的命令即可产出 Debug APK。
+- 稳定安装建议直接使用 [GitHub Releases](https://github.com/hosizoraru/KeiOS/releases)。
+- 当前公开正式版本为 [KeiOS v1.1.0](https://github.com/hosizoraru/KeiOS/releases/tag/v1.1.0)。
+- 本构建指南覆盖源码本地构建、Debug 包生成和贡献者开发流程。
+- 使用 `常用本地命令` 中的命令即可产出用于开发或预览验证的 Debug APK。
 
 ## 本地构建说明（Local Build Notes）
 
@@ -87,6 +88,7 @@ JDK 兜底示例路径：
 
 - 触发方式：`push` 事件中任一 commit message 包含 `Build-CI`。
 - 构建产物：自动构建并上传 Debug APK 到 GitHub Actions。
+- 使用场景：开发过程中的快速预览与验证。
 - APK 文件名格式：`KeiOS-debug-YYYYMMDD-HHMMSS-<shortSha>.apk`（UTC 时间）。
 - Artifact 名称格式：`KeiOS-debug-YYYYMMDD-HHMMSS-<shortSha>-run<run_number>`。
 
@@ -105,6 +107,7 @@ chore: tune guide cache Build-CI
 - 默认行为：`commit` 为空时构建所选分支的最新提交。
 - 构建任务：`./gradlew :app:assembleBenchmark --stacktrace`。
 - 构建产物：自动上传 Benchmark APK 到 GitHub Actions Artifact。
+- 使用场景：稳定版通道之外的手动基准验证与尝鲜预览。
 - APK 文件名格式：`KeiOS-benchmark-YYYYMMDD-HHMMSS-<shortSha>.apk`（UTC 时间）。
 - Artifact 名称格式：`KeiOS-benchmark-YYYYMMDD-HHMMSS-<shortSha>-run<run_number>`。
 

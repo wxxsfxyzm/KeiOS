@@ -8,10 +8,11 @@ Build docs:
 
 ## Current Distribution
 
-- GitHub distribution is source-first during daily rapid iteration.
-- Early adopters can clone this repository and build locally with the guides above.
-- Packaged release cadence resumes after the current iteration window stabilizes.
-- `CI / Benchmark APK` workflow (`.github/workflows/ci-benchmark-apk.yml`) supports manual benchmark APK builds and uploads downloadable artifacts.
+- Stable release APKs are available on [GitHub Releases](https://github.com/hosizoraru/KeiOS/releases).
+- The latest public release is [KeiOS v1.1.0](https://github.com/hosizoraru/KeiOS/releases/tag/v1.1.0).
+- Release package baseline: `os.kei`, `arm64-v8a`, `Android 15+` (`minSdk 35`).
+- Local clone + build remains the preferred path for source users, contributors, and rapid preview validation.
+- `CI / Benchmark APK` workflow (`.github/workflows/ci-benchmark-apk.yml`) still supports manual benchmark APK builds and uploads downloadable artifacts.
 
 ## Project Snapshot
 
