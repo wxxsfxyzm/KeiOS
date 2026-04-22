@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.provider.Settings
+import os.kei.core.system.HyperOsSettingsIntents
 import os.kei.feature.github.model.GitHubReleaseChannel
 import os.kei.feature.github.model.GitHubVersionCandidate
 import os.kei.feature.github.model.GitHubVersionCandidateSource
@@ -42,19 +42,7 @@ object GitHubVersionUtils {
     }
 
     fun buildAppListPermissionIntent(context: Context): Intent? {
-        val pm = context.packageManager
-        val miuiIntent = Intent("miui.intent.action.APP_PERM_EDITOR").apply {
-            putExtra("extra_pkgname", context.packageName)
-        }
-        if (miuiIntent.resolveActivity(pm) != null) return miuiIntent
-
-        val detailIntent = Intent(
-            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-            android.net.Uri.parse("package:${context.packageName}")
-        )
-        if (detailIntent.resolveActivity(pm) != null) return detailIntent
-
-        return null
+        return HyperOsSettingsIntents.buildAppListPermissionIntent(context)
     }
 
     fun queryInstalledLaunchableApps(

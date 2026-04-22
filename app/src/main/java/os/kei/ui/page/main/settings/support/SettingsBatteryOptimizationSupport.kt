@@ -2,15 +2,14 @@ package os.kei.ui.page.main.settings.support
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.PowerManager
-import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import os.kei.core.system.HyperOsSettingsIntents
 
 @Stable
 internal class SettingsBatteryOptimizationController(
@@ -66,18 +65,8 @@ private fun buildBatteryOptimizationIntent(
     context: Context,
     alreadyIgnored: Boolean
 ): Intent? {
-    val packageManager = context.packageManager
-    val packageUri = Uri.parse("package:${context.packageName}")
-    val candidateIntents = buildList {
-        if (!alreadyIgnored) {
-            add(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, packageUri))
-            add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-        }
-        add(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri))
-    }
-    return candidateIntents.firstOrNull { intent ->
-        intent.resolveActivity(packageManager) != null
-    }?.apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
+    return HyperOsSettingsIntents.buildBatteryOptimizationIntent(
+        context = context,
+        alreadyIgnored = alreadyIgnored
+    )
 }
