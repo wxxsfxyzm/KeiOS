@@ -11,7 +11,6 @@
 -keepnames class os.kei.mcp.service.McpKeepAliveService
 -keepnames class os.kei.feature.notification.NotificationActionReceiver
 -keepnames class os.kei.core.background.AppBackgroundTickReceiver
--keep class com.miui.permcenter.AppPermissionInfo { *; }
 
 # ShizukuApiUtils reflects these no-arg static method names.
 # Keep only the reflective surface so the rest can still be optimized/shrunk.
