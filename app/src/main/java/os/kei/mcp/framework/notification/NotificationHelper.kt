@@ -2,7 +2,7 @@ package os.kei.mcp.framework.notification
 
 import android.content.Context
 import android.os.Build
-import android.provider.Settings
+import com.xzakota.hyper.notification.focus.util.FocusUtils
 import os.kei.core.system.findPropString
 import os.kei.mcp.notification.McpNotificationHelper
 import os.kei.mcp.framework.notification.builder.NotificationRenderStyle
@@ -22,9 +22,18 @@ class NotificationHelper(
 
     val isSupportMiIsland: Boolean by lazy {
         runCatching {
-            Settings.System.getInt(context.contentResolver, "notification_focus_protocol", 0) == 3
+            FocusUtils.getFocusProtocolVersion(context) == 3
         }.getOrDefault(false)
     }
+
+    val hasMiIslandPermission: Boolean by lazy {
+        runCatching {
+            FocusUtils.hasFocusPermission(context)
+        }.getOrDefault(false)
+    }
+
+    val isMiIslandAvailable: Boolean
+        get() = isSupportMiIsland && hasMiIslandPermission
 
     val isModernLiveUpdateEligible: Boolean
         get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA

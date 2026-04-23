@@ -513,6 +513,20 @@ object McpNotificationHelper {
         notificationManager.notify(notificationId, notification)
     }
 
+    fun dispatchNotification(
+        context: Context,
+        notificationId: Int,
+        notification: Notification,
+        useXiaomiMagic: Boolean
+    ) {
+        notifyWithResolvedDispatcher(
+            context = context,
+            notificationId = notificationId,
+            notification = notification,
+            useXiaomiMagic = useXiaomiMagic
+        )
+    }
+
     private fun notifyWithXiaomiMagic(
         context: Context,
         notificationId: Int,
@@ -674,6 +688,8 @@ object McpNotificationHelper {
         val helpText = shizukuApiUtils.execCommand("cmd connectivity help").orEmpty()
         val resolved = when {
             helpText.contains("set-package-networking-enabled") -> XiaomiMagicCommandSet.PACKAGE_NETWORKING
+            helpText.contains("set-firewall-chain-enabled") &&
+                helpText.contains("set-uid-firewall-rule") -> XiaomiMagicCommandSet.UID_FIREWALL
             else -> XiaomiMagicCommandSet.NONE
         }
         commandSet = resolved

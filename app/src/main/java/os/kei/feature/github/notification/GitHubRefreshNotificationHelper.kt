@@ -12,20 +12,28 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.xzakota.hyper.notification.focus.FocusNotification
-import com.xzakota.hyper.notification.island.model.TextInfo
 import os.kei.MainActivity
 import os.kei.R
 import os.kei.core.log.AppLogger
 import os.kei.core.prefs.UiPrefs
 import os.kei.feature.notification.NotificationActionReceiver
 import os.kei.mcp.framework.notification.NotificationHelper
+import os.kei.mcp.notification.McpNotificationHelper
 import kotlin.math.roundToInt
 
 object GitHubRefreshNotificationHelper {
     private const val TAG = "GitHubRefreshNotify"
-    const val CHANNEL_ID = "github_refresh_channel_v1"
+    const val CHANNEL_ID = "github_refresh_channel_v2"
     const val NOTIFICATION_ID = 38990
     private const val ISLAND_ICON_RES_ID = R.drawable.ic_github_invertocat_island_blue
+    private const val MI_PROGRESS_COLOR = "#1A73E8"
+    private const val MI_PROGRESS_TRACK_COLOR = "#334155"
+
+    private data class NotificationBuildResult(
+        val notification: Notification,
+        val style: RenderStyle,
+        val useXiaomiMagic: Boolean
+    )
 
     private data class RefreshState(
         val current: Int,
@@ -60,7 +68,7 @@ object GitHubRefreshNotificationHelper {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 context.getString(R.string.github_refresh_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = context.getString(R.string.github_refresh_channel_desc)
                 setShowBadge(false)
@@ -171,25 +179,54 @@ object GitHubRefreshNotificationHelper {
         }
     }
 
+    private fun resolveCompactProgressText(context: Context, state: RefreshState): String {
+        return context.getString(R.string.github_refresh_progress_percent, state.progressPercent)
+    }
+
+    private fun resolveCompactFractionText(context: Context, state: RefreshState): String {
+        return context.getString(
+            R.string.github_refresh_progress_fraction,
+            state.safeCurrent,
+            state.safeTotal
+        )
+    }
+
+    private fun resolveCompactStateTitle(context: Context, state: RefreshState): String {
+        return when {
+            state.running -> context.getString(R.string.github_refresh_island_running)
+            state.cancelled -> context.getString(R.string.github_refresh_island_cancelled)
+            else -> context.getString(R.string.github_refresh_island_completed)
+        }
+    }
+
     private fun notifyInternal(
         context: Context,
         state: RefreshState,
         onlyAlertOnce: Boolean
     ) {
         ensureChannel(context)
-        val notification = buildNotification(
+        val buildResult = buildNotification(
             context = context,
             state = state,
             onlyAlertOnce = onlyAlertOnce
         )
-        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+        if (buildResult.style == RenderStyle.MI_ISLAND) {
+            McpNotificationHelper.dispatchNotification(
+                context = context,
+                notificationId = NOTIFICATION_ID,
+                notification = buildResult.notification,
+                useXiaomiMagic = buildResult.useXiaomiMagic
+            )
+            return
+        }
+        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, buildResult.notification)
     }
 
     private fun buildNotification(
         context: Context,
         state: RefreshState,
         onlyAlertOnce: Boolean
-    ): Notification {
+    ): NotificationBuildResult {
         val helper = NotificationHelper(context)
         val preferSuperIsland = UiPrefs.isSuperIslandNotificationEnabled(defaultValue = false)
         val style = if (preferSuperIsland && helper.isSupportMiIsland) {
@@ -197,7 +234,12 @@ object GitHubRefreshNotificationHelper {
         } else {
             RenderStyle.LIVE_UPDATE
         }
-        return when (style) {
+        AppLogger.i(
+            TAG,
+            "buildNotification preferSuperIsland=$preferSuperIsland supportMiIsland=${helper.isSupportMiIsland} " +
+                "focusPermission=${helper.hasMiIslandPermission} style=$style"
+        )
+        val notification = when (style) {
             RenderStyle.MI_ISLAND -> buildMiIslandNotification(context, state, onlyAlertOnce)
             RenderStyle.LIVE_UPDATE -> {
                 if (helper.isModernLiveUpdateEligible) {
@@ -207,6 +249,12 @@ object GitHubRefreshNotificationHelper {
                 }
             }
         }
+        return NotificationBuildResult(
+            notification = notification,
+            style = style,
+            useXiaomiMagic = style == RenderStyle.MI_ISLAND &&
+                UiPrefs.isSuperIslandBypassRestrictionEnabled(defaultValue = false)
+        )
     }
 
     private fun buildModernLiveUpdateNotification(
@@ -282,62 +330,64 @@ object GitHubRefreshNotificationHelper {
         val title = resolveTitle(context, state)
         val content = resolveContent(context, state)
         val openPendingIntent = buildOpenPendingIntent(context)
-        val readPendingIntent = buildMarkReadPendingIntent(context)
+        val shortCriticalText = if (state.running) {
+            resolveCompactProgressText(context, state)
+        } else {
+            resolveCompactFractionText(context, state)
+        }
         val baseBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(iconResId)
             .setContentTitle(title)
             .setContentText(content.ifBlank { " " })
             .setContentIntent(openPendingIntent)
-            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setCategory(
+                if (state.running) NotificationCompat.CATEGORY_PROGRESS
+                else NotificationCompat.CATEGORY_STATUS
+            )
             .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setColorized(true)
+            .setColor(Color.parseColor(MI_PROGRESS_COLOR))
             .setOngoing(state.running || state.keepUntilRead)
             .setOnlyAlertOnce(onlyAlertOnce)
             .setAutoCancel(false)
+            .setRequestPromotedOngoing(state.running || state.keepUntilRead)
+            .setShortCriticalText(shortCriticalText)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setProgress(
+                if (state.running) 100 else 0,
+                if (state.running) state.progressPercent else 0,
+                false
+            )
 
         buildMiIslandFocusExtras(
             context = context,
+            state = state,
             iconResId = iconResId,
             title = title,
-            content = content,
-            rightTitle = state.shortText,
-            ongoing = state.running,
-            openPendingIntent = openPendingIntent,
-            readPendingIntent = readPendingIntent
+            content = content
         )?.let(baseBuilder::addExtras)
         return baseBuilder.build()
     }
 
     private fun buildMiIslandFocusExtras(
         context: Context,
+        state: RefreshState,
         iconResId: Int,
         title: String,
-        content: String,
-        rightTitle: String,
-        ongoing: Boolean,
-        openPendingIntent: PendingIntent,
-        readPendingIntent: PendingIntent
+        content: String
     ) = runCatching {
+        val progressPercent = state.progressPercent.coerceIn(0, 100)
+        val fractionText = resolveCompactFractionText(context, state)
+        val compactStateTitle = resolveCompactStateTitle(context, state)
         FocusNotification.buildV3 {
             val lightLogoIcon = Icon.createWithResource(context, iconResId)
             val darkLogoIcon = Icon.createWithResource(context, iconResId)
             val light = createPicture("github_logo_light", lightLogoIcon)
             val dark = createPicture("github_logo_dark", darkLogoIcon)
-            val openActionKey = createAction(
-                "github_reopen",
-                Notification.Action.Builder(
-                    Icon.createWithResource(context, iconResId),
-                    context.getString(R.string.common_open),
-                    openPendingIntent
-                ).build()
-            )
 
             islandFirstFloat = true
-            // Keep island clickable in status bar even for ongoing refresh.
-            enableFloat = true
+            enableFloat = !state.running
             updatable = true
-            showSmallIcon = false
-            reopen = openActionKey
             ticker = title
             tickerPic = light
             tickerPicDark = dark
@@ -345,14 +395,32 @@ object GitHubRefreshNotificationHelper {
             island {
                 islandProperty = 1
                 bigIslandArea {
-                    picInfo {
+                    imageTextInfoLeft {
                         type = 1
-                        pic = dark
+                        picInfo {
+                            type = 1
+                            pic = dark
+                        }
                     }
-                    textInfo = TextInfo().apply {
-                        this.title = title
-                        this.content = rightTitle
-                        narrowFont = true
+                    if (state.running) {
+                        imageTextInfoRight {
+                            type = 3
+                            progressInfo {
+                                progress = progressPercent
+                                isCCW = true
+                                colorReach = MI_PROGRESS_COLOR
+                                colorUnReach = MI_PROGRESS_TRACK_COLOR
+                            }
+                        }
+                    } else {
+                        imageTextInfoRight {
+                            type = 3
+                            textInfo {
+                                this.title = compactStateTitle
+                                this.content = fractionText
+                                this.showHighlightColor = !state.cancelled
+                            }
+                        }
                     }
                 }
                 smallIslandArea {
@@ -369,29 +437,43 @@ object GitHubRefreshNotificationHelper {
                 this.content = content.ifBlank { " " }
             }
 
+            if (state.running) {
+                multiProgressInfo {
+                    progress = progressPercent
+                    color = MI_PROGRESS_COLOR
+                }
+            }
+
             picInfo {
                 type = 1
                 pic = light
                 picDark = dark
             }
 
-            textButton {
-                addActionInfo {
-                    action = openActionKey
-                    actionTitle = context.getString(R.string.common_open)
-                    actionBgColor = "#006EFF"
-                    actionBgColorDark = "#006EFF"
-                    actionTitleColor = "#FFFFFF"
-                    actionTitleColorDark = "#FFFFFF"
-                }
-                addActionInfo {
-                    val nativeAction = Notification.Action.Builder(
-                        Icon.createWithResource(context, iconResId),
-                        context.getString(R.string.common_acknowledge),
-                        readPendingIntent
-                    ).build()
-                    action = createAction("github_action_read", nativeAction)
-                    actionTitle = context.getString(R.string.common_acknowledge)
+            if (!state.running) {
+                textButton {
+                    addActionInfo {
+                        val nativeAction = Notification.Action.Builder(
+                            Icon.createWithResource(context, iconResId),
+                            context.getString(R.string.common_open),
+                            buildOpenPendingIntent(context)
+                        ).build()
+                        action = createAction("github_action_open", nativeAction)
+                        actionTitle = context.getString(R.string.common_open)
+                        actionBgColor = "#006EFF"
+                        actionBgColorDark = "#006EFF"
+                        actionTitleColor = "#FFFFFF"
+                        actionTitleColorDark = "#FFFFFF"
+                    }
+                    addActionInfo {
+                        val nativeAction = Notification.Action.Builder(
+                            Icon.createWithResource(context, iconResId),
+                            context.getString(R.string.common_acknowledge),
+                            buildMarkReadPendingIntent(context)
+                        ).build()
+                        action = createAction("github_action_read", nativeAction)
+                        actionTitle = context.getString(R.string.common_acknowledge)
+                    }
                 }
             }
         }

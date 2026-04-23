@@ -3,10 +3,10 @@ package os.kei.mcp.framework.notification.builder
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
+import android.graphics.Color
 import android.graphics.drawable.Icon
 import androidx.core.app.NotificationCompat
 import com.xzakota.hyper.notification.focus.FocusNotification
-import com.xzakota.hyper.notification.island.model.TextInfo
 import os.kei.R
 import os.kei.core.log.AppLogger
 import os.kei.mcp.notification.McpNotificationPayload
@@ -14,7 +14,6 @@ import os.kei.mcp.notification.McpNotificationPayload
 class MiIslandNotificationBuilder(
     private val context: Context
 ) : SessionNotificationBuilder {
-
     private data class IslandAction(
         val key: String,
         val title: String,
@@ -22,17 +21,11 @@ class MiIslandNotificationBuilder(
         val isHighlighted: Boolean = false
     )
 
-    private data class IslandIconBundle(
-        val lightIcon: Icon,
-        val darkIcon: Icon
-    )
-
     private companion object {
         private const val TAG = "McpMiIslandBuilder"
         private const val HIGHLIGHT_BG_COLOR = "#006EFF"
         private const val HIGHLIGHT_TITLE_COLOR = "#FFFFFF"
-        private const val ISLAND_ICON_RES_ID_DEFAULT = R.drawable.ic_notification_logo
-        private const val ISLAND_FOCUS_ICON_RES_ID_DEFAULT = R.drawable.ic_kei_logo_island
+        private const val ISLAND_ICON_RES_ID_DEFAULT = R.drawable.ic_kei_logo_island
         private const val ISLAND_ICON_RES_ID_AP = R.drawable.ic_ba_ap_island_notification
         private const val ISLAND_ICON_RES_ID_BA_CAFE_VISIT = R.drawable.ic_ba_schale_island
         private const val ISLAND_ICON_RES_ID_BA_ARENA_REFRESH = R.drawable.ic_ba_schale_island
@@ -70,30 +63,34 @@ class MiIslandNotificationBuilder(
         val isBlueArchiveAp = McpNotificationPayload.isBaApServerName(state.serverName)
         val isBlueArchiveCafeVisit = McpNotificationPayload.isBaCafeVisitServerName(state.serverName)
         val isBlueArchiveArenaRefresh = McpNotificationPayload.isBaArenaRefreshServerName(state.serverName)
-        val isBlueArchiveNotification = isBlueArchiveAp || isBlueArchiveCafeVisit || isBlueArchiveArenaRefresh
-        val iconBundle = if (isBlueArchiveNotification) {
-            IslandIconBundle(
-                lightIcon = Icon.createWithResource(context, islandIconResId),
-                darkIcon = Icon.createWithResource(context, islandIconResId)
-            )
+        val isBlueArchiveNotification =
+            isBlueArchiveAp || isBlueArchiveCafeVisit || isBlueArchiveArenaRefresh
+        val lightLogoIcon = if (isBlueArchiveNotification) {
+            Icon.createWithResource(context, islandIconResId)
         } else {
-            buildDefaultFocusIslandIcons()
+            Icon.createWithResource(context, islandIconResId).setTint(Color.BLACK)
         }
-        val lightLogoIcon = iconBundle.lightIcon
-        val darkLogoIcon = iconBundle.darkIcon
-        val rightTitle = if (isBlueArchiveAp && state.running) {
-            "${state.port.coerceAtLeast(0)}/${state.clients.coerceAtLeast(0)}"
-        } else if (isBlueArchiveCafeVisit && state.running) {
-            context.getString(R.string.ba_cafe_visit_notification_island_text)
-        } else if (isBlueArchiveArenaRefresh && state.running) {
-            context.getString(R.string.ba_arena_refresh_notification_island_text)
+        val darkLogoIcon = if (isBlueArchiveNotification) {
+            Icon.createWithResource(context, islandIconResId)
         } else {
-            state.shortText.ifEmpty { state.title(context) }
+            Icon.createWithResource(context, islandIconResId).setTint(Color.WHITE)
         }
-        val compactContent = if (state.running) {
-            rightTitle
-        } else {
-            state.statusText(context)
+        val rightTitle = when {
+            isBlueArchiveAp && state.running -> {
+                "${state.port.coerceAtLeast(0)}/${state.clients.coerceAtLeast(0)}"
+            }
+
+            isBlueArchiveCafeVisit && state.running -> {
+                context.getString(R.string.ba_cafe_visit_notification_island_text)
+            }
+
+            isBlueArchiveArenaRefresh && state.running -> {
+                context.getString(R.string.ba_arena_refresh_notification_island_text)
+            }
+
+            else -> {
+                state.shortText.ifEmpty { state.title(context) }
+            }
         }
         val actions = mutableListOf(
             IslandAction(
@@ -118,21 +115,10 @@ class MiIslandNotificationBuilder(
             val lightLogoKey = createPicture("key_logo_light", lightLogoIcon)
             val darkLogoKey = createPicture("key_logo_dark", darkLogoIcon)
             val displayIconKey = darkLogoKey
-            val openActionKey = createAction(
-                "mcp_reopen",
-                Notification.Action.Builder(
-                    Icon.createWithResource(context, islandIconResId),
-                    context.getString(R.string.common_open),
-                    state.openPendingIntent
-                ).build()
-            )
 
             islandFirstFloat = true
-            // Keep island clickable in status bar even for ongoing sessions.
             enableFloat = true
             updatable = true
-            showSmallIcon = false
-            reopen = openActionKey
             ticker = state.title(context)
             tickerPic = lightLogoKey
             tickerPicDark = darkLogoKey
@@ -143,33 +129,17 @@ class MiIslandNotificationBuilder(
             island {
                 islandProperty = 1
                 bigIslandArea {
-                    if (isBlueArchiveNotification) {
-                        imageTextInfoLeft {
-                            type = 1
-                            picInfo {
-                                type = 1
-                                pic = displayIconKey
-                            }
-                        }
-                        imageTextInfoRight {
-                            type = 3
-                            textInfo {
-                                title = if (isBlueArchiveAp && state.running) {
-                                    rightTitle
-                                } else {
-                                    state.title(context)
-                                }
-                            }
-                        }
-                    } else {
+                    imageTextInfoLeft {
+                        type = 1
                         picInfo {
                             type = 1
                             pic = displayIconKey
                         }
-                        textInfo = TextInfo().apply {
-                            title = state.title(context)
-                            content = compactContent
-                            narrowFont = true
+                    }
+                    imageTextInfoRight {
+                        type = 3
+                        textInfo {
+                            title = rightTitle
                         }
                     }
                 }
@@ -197,16 +167,12 @@ class MiIslandNotificationBuilder(
                 textButton {
                     actions.take(2).forEach { actionItem ->
                         addActionInfo {
-                            action = if (actionItem.key == "mcp_action_open") {
-                                openActionKey
-                            } else {
-                                val nativeAction = Notification.Action.Builder(
-                                    Icon.createWithResource(context, islandIconResId),
-                                    actionItem.title,
-                                    actionItem.pendingIntent
-                                ).build()
-                                createAction(actionItem.key, nativeAction)
-                            }
+                            val nativeAction = Notification.Action.Builder(
+                                Icon.createWithResource(context, islandIconResId),
+                                actionItem.title,
+                                actionItem.pendingIntent
+                            ).build()
+                            action = createAction(actionItem.key, nativeAction)
                             actionTitle = actionItem.title
                             if (actionItem.isHighlighted) {
                                 actionBgColor = HIGHLIGHT_BG_COLOR
@@ -222,12 +188,4 @@ class MiIslandNotificationBuilder(
     }.onFailure {
         AppLogger.e(TAG, "Build FocusNotification extras failed", it)
     }.getOrNull()
-
-    private fun buildDefaultFocusIslandIcons(): IslandIconBundle {
-        val icon = Icon.createWithResource(context, ISLAND_FOCUS_ICON_RES_ID_DEFAULT)
-        return IslandIconBundle(
-            lightIcon = icon,
-            darkIcon = icon
-        )
-    }
 }

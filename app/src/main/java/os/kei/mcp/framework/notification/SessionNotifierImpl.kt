@@ -1,5 +1,6 @@
 package os.kei.mcp.framework.notification
 
+import os.kei.core.log.AppLogger
 import os.kei.core.prefs.UiPrefs
 import os.kei.mcp.notification.McpNotificationPayload
 import os.kei.mcp.domain.notification.SessionNotifier
@@ -14,6 +15,9 @@ import os.kei.mcp.framework.notification.builder.UserSettings
 class SessionNotifierImpl(
     private val helper: NotificationHelper
 ) : SessionNotifier {
+    private companion object {
+        private const val TAG = "McpSessionNotifier"
+    }
 
     private val modernBuilder by lazy { ModernNotificationBuilder(helper.context) }
     private val legacyBuilder by lazy { LegacyNotificationBuilder(helper.context) }
@@ -23,6 +27,11 @@ class SessionNotifierImpl(
         val preferSuperIsland = UiPrefs.isSuperIslandNotificationEnabled(defaultValue = false)
         val bypassRestriction = UiPrefs.isSuperIslandBypassRestrictionEnabled(defaultValue = false)
         val style = resolveStyle(preferSuperIsland = preferSuperIsland)
+        AppLogger.i(
+            TAG,
+            "build preferSuperIsland=$preferSuperIsland supportMiIsland=${helper.isSupportMiIsland} " +
+                "focusPermission=${helper.hasMiIslandPermission} style=$style bypass=$bypassRestriction"
+        )
         val wrapped = NotificationPayload(
             state = payload,
             settings = UserSettings(miIslandOuterGlow = payload.outerGlow),
