@@ -7,9 +7,11 @@ import android.graphics.Color
 import android.graphics.drawable.Icon
 import androidx.core.app.NotificationCompat
 import com.xzakota.hyper.notification.focus.FocusNotification
+import com.xzakota.hyper.notification.focus.template.FocusTemplateV3
 import os.kei.R
 import os.kei.core.log.AppLogger
 import os.kei.mcp.notification.McpNotificationPayload
+import kotlin.math.roundToInt
 
 class MiIslandNotificationBuilder(
     private val context: Context
@@ -25,13 +27,26 @@ class MiIslandNotificationBuilder(
         val allowFloat: Boolean,
         val showTextButtons: Boolean,
         val rightTitle: String,
-        val rightContent: String? = null
+        val rightContent: String? = null,
+        val notificationOngoing: Boolean,
+        val requestPromotedOngoing: Boolean,
+        val focusUpdatable: Boolean,
+        val focusShowNotification: Boolean? = null,
+        val showProgressRing: Boolean = false,
+        val showExpandedProgress: Boolean = false,
+        val progressPercent: Int = 0,
+        val progressColor: String = BA_AP_PROGRESS_COLOR,
+        val progressTrackColor: String = BA_AP_PROGRESS_TRACK_COLOR,
+        val notificationAccentColor: String? = null
     )
 
     private companion object {
         private const val TAG = "McpMiIslandBuilder"
         private const val HIGHLIGHT_BG_COLOR = "#006EFF"
         private const val HIGHLIGHT_TITLE_COLOR = "#FFFFFF"
+        private const val BA_AP_PROGRESS_COLOR = "#4DA3FF"
+        private const val BA_AP_PROGRESS_TRACK_COLOR = "#374151"
+        private const val BA_EVENT_ACCENT_COLOR = "#4DA3FF"
         private const val ISLAND_ICON_RES_ID_DEFAULT = R.drawable.ic_kei_logo_island
         private const val ISLAND_ICON_RES_ID_AP = R.drawable.ic_ba_ap_island_notification
         private const val ISLAND_ICON_RES_ID_BA_CAFE_VISIT = R.drawable.ic_ba_schale_island
@@ -57,26 +72,40 @@ class MiIslandNotificationBuilder(
             isBlueArchiveCafeVisit = isBlueArchiveCafeVisit,
             isBlueArchiveArenaRefresh = isBlueArchiveArenaRefresh
         )
+        val presentation = resolvePresentation(
+            state = state,
+            isBlueArchiveAp = isBlueArchiveAp,
+            isBlueArchiveCafeVisit = isBlueArchiveCafeVisit,
+            isBlueArchiveArenaRefresh = isBlueArchiveArenaRefresh
+        )
         val builder = NotificationCompat.Builder(context, payload.environment.channelId)
             .setSmallIcon(islandIconResId)
             .setContentTitle(state.title(context))
             .setContentText(state.content(context).ifBlank { " " })
             .setContentIntent(state.openPendingIntent)
             .setCategory(
-                if (!isBlueArchiveNotification && state.running) {
-                    NotificationCompat.CATEGORY_SERVICE
-                } else {
-                    NotificationCompat.CATEGORY_STATUS
+                when {
+                    isBlueArchiveAp && state.running -> NotificationCompat.CATEGORY_PROGRESS
+                    !isBlueArchiveNotification && state.running -> NotificationCompat.CATEGORY_SERVICE
+                    else -> NotificationCompat.CATEGORY_STATUS
                 }
             )
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setOngoing(state.ongoing)
+            .setOngoing(presentation.notificationOngoing)
             .setOnlyAlertOnce(state.onlyAlertOnce)
             .setAutoCancel(false)
-            .setRequestPromotedOngoing(state.running || state.ongoing)
+            .setRequestPromotedOngoing(presentation.requestPromotedOngoing)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
 
+        presentation.notificationAccentColor?.let { accentColor ->
+            builder
+                .setColorized(true)
+                .setColor(Color.parseColor(accentColor))
+        }
         shortCriticalText?.let(builder::setShortCriticalText)
+        if (presentation.showExpandedProgress) {
+            builder.setProgress(100, presentation.progressPercent.coerceIn(0, 100), false)
+        }
         buildFocusExtras(payload, islandIconResId)?.let(builder::addExtras)
         return builder.build()
     }
@@ -128,7 +157,8 @@ class MiIslandNotificationBuilder(
 
             islandFirstFloat = true
             enableFloat = presentation.allowFloat
-            updatable = true
+            updatable = presentation.focusUpdatable
+            focusShowNotification(presentation.focusShowNotification)
             ticker = state.title(context)
             tickerPic = lightLogoKey
             tickerPicDark = darkLogoKey
@@ -146,13 +176,27 @@ class MiIslandNotificationBuilder(
                             pic = displayIconKey
                         }
                     }
-                    imageTextInfoRight {
-                        type = 3
-                        textInfo {
-                            title = presentation.rightTitle
-                            content = presentation.rightContent
-                            narrowFont = presentation.rightTitle.length >= 6 ||
-                                (presentation.rightContent?.length ?: 0) >= 12
+                    if (presentation.showProgressRing) {
+                        progressTextInfo {
+                            progressInfo {
+                                progress = presentation.progressPercent.coerceIn(0, 100)
+                                isCCW = true
+                                colorReach = presentation.progressColor
+                                colorUnReach = presentation.progressTrackColor
+                            }
+                            textInfo {
+                                title = " "
+                            }
+                        }
+                    } else {
+                        imageTextInfoRight {
+                            type = 3
+                            textInfo {
+                                title = presentation.rightTitle
+                                content = presentation.rightContent
+                                narrowFont = presentation.rightTitle.length >= 6 ||
+                                    (presentation.rightContent?.length ?: 0) >= 12
+                            }
                         }
                     }
                 }
@@ -170,6 +214,13 @@ class MiIslandNotificationBuilder(
                 content = state.content(context).ifBlank { " " }
             }
 
+            if (presentation.showExpandedProgress) {
+                multiProgressInfo {
+                    progress = presentation.progressPercent.coerceIn(0, 100)
+                    color = presentation.progressColor
+                }
+            }
+
             picInfo {
                 type = 1
                 pic = lightLogoKey
@@ -180,6 +231,7 @@ class MiIslandNotificationBuilder(
                 textButton {
                     actions.take(2).forEach { actionItem ->
                         addActionInfo {
+                            type = 2
                             val nativeAction = Notification.Action.Builder(
                                 Icon.createWithResource(context, islandIconResId),
                                 actionItem.title,
@@ -210,23 +262,43 @@ class MiIslandNotificationBuilder(
     ): IslandPresentation {
         if (isBlueArchiveAp && state.running) {
             return IslandPresentation(
-                allowFloat = true,
+                allowFloat = false,
                 showTextButtons = true,
-                rightTitle = "${state.port.coerceAtLeast(0)}/${state.clients.coerceAtLeast(0)}"
+                rightTitle = "${state.port.coerceAtLeast(0)}/${state.clients.coerceAtLeast(0)}",
+                notificationOngoing = true,
+                requestPromotedOngoing = true,
+                focusUpdatable = true,
+                focusShowNotification = true,
+                showProgressRing = true,
+                showExpandedProgress = true,
+                progressPercent = resolveApProgressPercent(state),
+                notificationAccentColor = BA_AP_PROGRESS_COLOR
             )
         }
         if (isBlueArchiveCafeVisit && state.running) {
             return IslandPresentation(
                 allowFloat = true,
                 showTextButtons = true,
-                rightTitle = context.getString(R.string.ba_cafe_visit_notification_island_text)
+                rightTitle = context.getString(R.string.ba_cafe_visit_notification_island_text),
+                notificationOngoing = false,
+                requestPromotedOngoing = false,
+                focusUpdatable = true,
+                focusShowNotification = true,
+                rightContent = resolveBaEventDetail(state),
+                notificationAccentColor = BA_EVENT_ACCENT_COLOR
             )
         }
         if (isBlueArchiveArenaRefresh && state.running) {
             return IslandPresentation(
                 allowFloat = true,
                 showTextButtons = true,
-                rightTitle = context.getString(R.string.ba_arena_refresh_notification_island_text)
+                rightTitle = context.getString(R.string.ba_arena_refresh_notification_island_text),
+                notificationOngoing = false,
+                requestPromotedOngoing = false,
+                focusUpdatable = true,
+                focusShowNotification = true,
+                rightContent = resolveBaEventDetail(state),
+                notificationAccentColor = BA_EVENT_ACCENT_COLOR
             )
         }
         if (state.running) {
@@ -234,13 +306,20 @@ class MiIslandNotificationBuilder(
                 allowFloat = false,
                 showTextButtons = false,
                 rightTitle = state.onlineText(context),
+                notificationOngoing = state.ongoing,
+                requestPromotedOngoing = state.running || state.ongoing,
+                focusUpdatable = true,
                 rightContent = resolveDefaultEndpointSummary(state)
             )
         }
         return IslandPresentation(
             allowFloat = true,
             showTextButtons = true,
-            rightTitle = state.statusText(context)
+            rightTitle = state.statusText(context),
+            notificationOngoing = state.ongoing,
+            requestPromotedOngoing = state.ongoing,
+            focusUpdatable = true,
+            focusShowNotification = true
         )
     }
 
@@ -266,6 +345,25 @@ class MiIslandNotificationBuilder(
             "$port $path"
         } else {
             port.toString()
+        }
+    }
+
+    private fun resolveApProgressPercent(state: McpNotificationPayload): Int {
+        if (!state.running) return 0
+        val limit = state.clients.coerceAtLeast(1)
+        val current = state.port.coerceAtLeast(0).coerceAtMost(limit)
+        return ((current.toFloat() / limit.toFloat()) * 100f).roundToInt().coerceIn(0, 100)
+    }
+
+    private fun resolveBaEventDetail(state: McpNotificationPayload): String? {
+        return state.content(context)
+            .trim()
+            .takeIf { it.isNotEmpty() && it != state.title(context) }
+    }
+
+    private fun FocusTemplateV3.focusShowNotification(show: Boolean?) {
+        if (show != null) {
+            isShowNotification = show
         }
     }
 }
