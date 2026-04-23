@@ -24,18 +24,14 @@ class LegacyNotificationBuilder(
 
     override fun build(payload: NotificationPayload): android.app.Notification {
         val state = payload.state
-        val isBlueArchiveAp = McpNotificationPayload.isBaApServerName(state.serverName)
-        val isBlueArchiveCafeVisit = McpNotificationPayload.isBaCafeVisitServerName(state.serverName)
-        val isBlueArchiveArenaRefresh = McpNotificationPayload.isBaArenaRefreshServerName(state.serverName)
+        val spec = ModernNotificationSpecResolver.resolve(state)
+        val isBlueArchiveAp = spec.kind == ModernNotificationKind.BA_AP
+        val isBlueArchiveCafeVisit = spec.kind == ModernNotificationKind.BA_CAFE_VISIT
+        val isBlueArchiveArenaRefresh = spec.kind == ModernNotificationKind.BA_ARENA_REFRESH
         val progressState = computeProgressState(state = state, isBlueArchiveAp = isBlueArchiveAp)
-        val iconRes = when {
-            isBlueArchiveAp -> ICON_AP
-            isBlueArchiveCafeVisit -> ICON_BA_CAFE_VISIT
-            isBlueArchiveArenaRefresh -> ICON_BA_ARENA_REFRESH
-            else -> ICON_DEFAULT
-        }
         val builder = NotificationCompat.Builder(context, payload.environment.channelId)
-            .setSmallIcon(iconRes)
+            .setSmallIcon(spec.iconResId)
+            .setLargeIcon(NotificationLargeIconFactory.create(context, spec.expandedIconResId))
             .setContentTitle(state.title(context))
             .setContentText(state.content(context).ifBlank { " " })
             .setSubText(
@@ -46,7 +42,7 @@ class LegacyNotificationBuilder(
                 }
             )
             .setContentIntent(state.openPendingIntent)
-            .setCategory(if (state.running) NotificationCompat.CATEGORY_PROGRESS else NotificationCompat.CATEGORY_STATUS)
+            .setCategory(spec.category)
             .setColorized(true)
             .setColor(0xFF2563EB.toInt())
             .setOngoing(state.ongoing)

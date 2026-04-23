@@ -30,6 +30,7 @@ class ModernNotificationBuilder(
             .setOngoing(spec.ongoing)
             .setRequestPromotedOngoing(spec.requestPromotedOngoing)
             .setSmallIcon(spec.iconResId)
+            .setLargeIcon(NotificationLargeIconFactory.create(context, spec.expandedIconResId))
             .setContentTitle(state.title(context))
             .setContentText(state.content(context).ifBlank { " " })
             .setContentIntent(state.openPendingIntent)

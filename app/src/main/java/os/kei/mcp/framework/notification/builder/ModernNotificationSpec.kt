@@ -21,6 +21,7 @@ internal enum class ModernShortCriticalMode {
 internal data class ModernNotificationSpec(
     val kind: ModernNotificationKind,
     val iconResId: Int,
+    val expandedIconResId: Int?,
     val progressPercent: Int,
     val progressColor: Int,
     val category: String,
@@ -36,6 +37,9 @@ internal object ModernNotificationSpecResolver {
     private const val ICON_AP = R.drawable.ic_ba_ap_live_update
     private const val ICON_BA_CAFE_VISIT = R.drawable.ic_ba_schale_live_update
     private const val ICON_BA_ARENA_REFRESH = R.drawable.ic_ba_schale_live_update
+    private const val EXPANDED_ICON_AP = R.drawable.ic_kei_logo_color
+    private const val EXPANDED_ICON_BA_CAFE_VISIT = R.drawable.ic_kei_logo_color
+    private const val EXPANDED_ICON_BA_ARENA_REFRESH = R.drawable.ic_kei_logo_color
 
     fun resolve(state: McpNotificationPayload): ModernNotificationSpec {
         val kind = resolveKind(state.serverName)
@@ -43,6 +47,7 @@ internal object ModernNotificationSpecResolver {
         return ModernNotificationSpec(
             kind = kind,
             iconResId = resolveIcon(kind),
+            expandedIconResId = resolveExpandedIcon(kind),
             progressPercent = resolveProgressPercent(state = state, kind = kind),
             progressColor = if (isRunning) PROGRESS_ACTIVE_COLOR else PROGRESS_IDLE_COLOR,
             category = if (isRunning) {
@@ -71,6 +76,15 @@ internal object ModernNotificationSpecResolver {
             ModernNotificationKind.BA_AP -> ICON_AP
             ModernNotificationKind.BA_CAFE_VISIT -> ICON_BA_CAFE_VISIT
             ModernNotificationKind.BA_ARENA_REFRESH -> ICON_BA_ARENA_REFRESH
+        }
+    }
+
+    private fun resolveExpandedIcon(kind: ModernNotificationKind): Int? {
+        return when (kind) {
+            ModernNotificationKind.DEFAULT -> null
+            ModernNotificationKind.BA_AP -> EXPANDED_ICON_AP
+            ModernNotificationKind.BA_CAFE_VISIT -> EXPANDED_ICON_BA_CAFE_VISIT
+            ModernNotificationKind.BA_ARENA_REFRESH -> EXPANDED_ICON_BA_ARENA_REFRESH
         }
     }
 
