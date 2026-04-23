@@ -39,9 +39,9 @@ internal fun glassStyle(
     variant: GlassVariant,
     blurRadius: Dp?
 ): GlassStyle {
-    val reducedEffects = LocalReducedGlassEffectsEnabled.current
-    fun blur(dp: Dp): Dp = dp.reduceGlassBlurIfNeeded(reducedEffects).clampGlassBlur()
-    fun lens(dp: Dp): Dp = dp.reduceGlassLensIfNeeded(reducedEffects)
+    val glassRuntime = glassEffectRuntime()
+    fun blur(dp: Dp): Dp = (dp * glassRuntime.blurScaleFor(variant)).clampGlassBlur()
+    fun lens(dp: Dp): Dp = dp * glassRuntime.lensScaleFor(variant)
 
     return when (variant) {
         GlassVariant.Bar -> GlassStyle(

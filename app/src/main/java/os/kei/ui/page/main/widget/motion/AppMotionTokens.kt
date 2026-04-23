@@ -26,6 +26,7 @@ object AppMotionTokens {
     const val floatingSlideInMs = 220
     const val floatingFadeOutMs = 120
     const val floatingSlideOutMs = 180
+    const val glassEffectRelaxMs = 240
     const val farJumpDimMs = 70
     const val farJumpRestoreMs = 120
     const val farJumpRestoreEmphasisMs = 130

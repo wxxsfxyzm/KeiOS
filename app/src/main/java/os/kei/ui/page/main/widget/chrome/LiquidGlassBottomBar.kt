@@ -52,6 +52,7 @@ import androidx.compose.ui.util.lerp
 import os.kei.ui.animation.DampedDragAnimation
 import os.kei.ui.animation.InteractiveHighlight
 import os.kei.ui.page.main.widget.glass.UiPerformanceBudget
+import os.kei.ui.page.main.widget.motion.AppMotionTokens
 import os.kei.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 import os.kei.ui.page.main.widget.motion.appMotionFloatState
 import com.kyant.backdrop.Backdrop
@@ -265,17 +266,16 @@ fun LiquidGlassBottomBar(
     }
 
     val pressProgress = if (isLiquidEffectEnabled) dampedDragAnimation.pressProgress else 0f
-    val effectBlurDp = if (reduceEffectsDuringPagerScroll) {
-        UiPerformanceBudget.backdropBlur * 0.72f
-    } else {
-        UiPerformanceBudget.backdropBlur
-    }
-    val effectLensDp = if (reduceEffectsDuringPagerScroll) {
-        UiPerformanceBudget.backdropLens * 0.70f
-    } else {
-        UiPerformanceBudget.backdropLens
-    }
-    val interactionLensScale = if (reduceEffectsDuringPagerScroll) 0.62f else 1f
+    val reducedEffectsProgress by appMotionFloatState(
+        targetValue = if (reduceEffectsDuringPagerScroll) 1f else 0f,
+        durationMillis = AppMotionTokens.glassEffectRelaxMs,
+        label = "liquidBottomBarGlassReduce"
+    )
+    val effectBlurScale = lerp(1f, 0.80f, reducedEffectsProgress)
+    val effectLensScale = lerp(1f, 0.78f, reducedEffectsProgress)
+    val interactionLensScale = lerp(1f, 0.84f, reducedEffectsProgress)
+    val effectBlurDp = UiPerformanceBudget.backdropBlur * effectBlurScale
+    val effectLensDp = UiPerformanceBudget.backdropLens * effectLensScale
 
     val selectionProgressProvider: (Int) -> Float = remember(dampedDragAnimation) {
         { tabIndex ->

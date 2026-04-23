@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -40,11 +39,10 @@ fun MiuixExpandableSection(
     content: @Composable () -> Unit
 ) {
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-    val reducedEffects = reducedGlassEffectsEnabled()
     val sectionSurface = containerColor ?: MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
     val shouldDrawSurface = sectionSurface.alpha > 0f
-    val blurRadius = UiPerformanceBudget.backdropBlur.reduceGlassBlurIfNeeded(reducedEffects)
-    val lensRadius = UiPerformanceBudget.backdropLens.reduceGlassLensIfNeeded(reducedEffects)
+    val blurRadius = resolvedGlassBlurDp(UiPerformanceBudget.backdropBlur, GlassVariant.Content)
+    val lensRadius = resolvedGlassLensDp(UiPerformanceBudget.backdropLens, GlassVariant.Content)
     val shadowColor = if (isDark) {
         Color.Black.copy(alpha = 0.20f)
     } else {
@@ -108,7 +106,3 @@ fun MiuixExpandableSection(
         }
     }
 }
-
-@Composable
-@ReadOnlyComposable
-private fun reducedGlassEffectsEnabled(): Boolean = LocalReducedGlassEffectsEnabled.current

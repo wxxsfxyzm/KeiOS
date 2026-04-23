@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -18,7 +19,10 @@ import os.kei.ui.page.main.home.HomePage
 import os.kei.ui.page.main.model.BottomPage
 import os.kei.ui.page.main.mcp.McpPage
 import os.kei.ui.page.main.os.OsPage
-import os.kei.ui.page.main.widget.glass.LocalReducedGlassEffectsEnabled
+import os.kei.ui.page.main.widget.glass.GlassEffectRuntime
+import os.kei.ui.page.main.widget.glass.LocalGlassEffectRuntime
+import os.kei.ui.page.main.widget.motion.AppMotionTokens
+import os.kei.ui.page.main.widget.motion.appMotionFloatState
 
 @Composable
 internal fun MainPagerPageHost(
@@ -64,8 +68,13 @@ internal fun MainPagerPageHost(
             BottomPage.GitHub -> githubScrollToTopSignal
         }
     )
+    val reducedGlassProgress by appMotionFloatState(
+        targetValue = if (runtime.isPagerScrollInProgress) 1f else 0f,
+        durationMillis = AppMotionTokens.glassEffectRelaxMs,
+        label = "mainPagerGlassEffectProgress"
+    )
     CompositionLocalProvider(
-        LocalReducedGlassEffectsEnabled provides runtime.isPagerScrollInProgress
+        LocalGlassEffectRuntime provides GlassEffectRuntime(reducedProgress = reducedGlassProgress)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             when (pageType) {
