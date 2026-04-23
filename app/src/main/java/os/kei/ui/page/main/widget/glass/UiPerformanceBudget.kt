@@ -39,13 +39,13 @@ object UiPerformanceBudget {
             )
         }
         return PreloadPolicy(
-            mainPagerBeyondViewportPageCount = 2,
-            catalogPagerBeyondViewportPageCount = 1,
-            guidePagerBeyondViewportPageCount = 1,
-            guideStaticPrefetchInitialCount = 10,
-            guideStaticPrefetchGalleryExtraCount = 18,
-            includeTargetPageInHeavyRender = true,
-            initialFetchDelayMs = 0
+            mainPagerBeyondViewportPageCount = 1,
+            catalogPagerBeyondViewportPageCount = 0,
+            guidePagerBeyondViewportPageCount = 0,
+            guideStaticPrefetchInitialCount = 8,
+            guideStaticPrefetchGalleryExtraCount = 12,
+            includeTargetPageInHeavyRender = false,
+            initialFetchDelayMs = 40
         )
     }
 }

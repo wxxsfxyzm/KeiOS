@@ -145,7 +145,7 @@ fun BAPage(
     BaPageCommonEffects(
         listState = listState,
         scrollToTopSignal = runtime.scrollToTopSignal,
-        isPageActive = runtime.isPageActive,
+        isPageActive = runtime.isDataActive,
         consumedScrollToTopSignal = ui.consumedScrollToTopSignal,
         onConsumedScrollToTopSignalChange = { ui.consumedScrollToTopSignal = it },
         onDisposeActionBarInteraction = { onActionBarInteractingChanged(false) },

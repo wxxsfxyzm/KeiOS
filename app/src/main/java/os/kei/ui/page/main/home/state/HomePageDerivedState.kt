@@ -93,6 +93,7 @@ internal fun rememberHomePageHeroMotionState(
     val hdrSweepProgress = if (
         homeIconHdrEnabled &&
         transitionAnimationsEnabled &&
+        runtime.isDataActive &&
         !runtime.isPagerScrollInProgress
     ) {
         val hdrSweep = rememberInfiniteTransition(label = "kei_hdr_sweep")

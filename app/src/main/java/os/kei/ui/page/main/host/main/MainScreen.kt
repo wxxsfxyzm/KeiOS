@@ -94,19 +94,6 @@ fun MainScreen(
         requestedGitHubRefreshToken = requestedGitHubRefreshToken,
         onRequestedBottomPageConsumed = onRequestedBottomPageConsumed
     )
-    if (!view.isInEditMode) {
-        SideEffect {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@SideEffect
-            val activity = view.context as? Activity ?: return@SideEffect
-            runCatching {
-                activity.window.colorMode = if (uiPrefsState.homeIconHdrEnabled) {
-                    ActivityInfo.COLOR_MODE_HDR
-                } else {
-                    ActivityInfo.COLOR_MODE_DEFAULT
-                }
-            }
-        }
-    }
     MainScreenNavHost(
         backStack = backStack,
         navigator = navigator,

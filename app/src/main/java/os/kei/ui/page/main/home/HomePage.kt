@@ -116,8 +116,11 @@ fun HomePage(
     val topAppBarScrollBehavior = MiuixScrollBehavior()
 
     val blurEnabled = isRenderEffectSupported()
-    val dynamicBackgroundEnabled = isRuntimeShaderSupported()
-    val effectBackgroundEnabled = isRuntimeShaderSupported()
+    val shaderSupported = isRuntimeShaderSupported()
+    val effectBackgroundEnabled = shaderSupported && runtime.isPageActive
+    val dynamicBackgroundEnabled = shaderSupported &&
+        runtime.isDataActive &&
+        !runtime.isPagerScrollInProgress
     val surfaceColor = MiuixTheme.colorScheme.surface
     val backdrop = rememberMiuixLayerBackdrop()
     val actionBarBackdrop = rememberActionBarBackdrop {

@@ -49,11 +49,11 @@ internal fun rememberMcpPageOverviewState(
         initialValue = System.currentTimeMillis(),
         key1 = uiState.running,
         key2 = uiState.runningSinceEpochMs,
-        key3 = runtime.isPageActive
+        key3 = runtime.isDataActive
     ) {
         value = System.currentTimeMillis()
         while (uiState.running && uiState.runningSinceEpochMs > 0L) {
-            delay(if (runtime.isPageActive) 1_000L else 3_000L)
+            delay(if (runtime.isDataActive) 1_000L else 3_000L)
             value = System.currentTimeMillis()
         }
     }

@@ -1,5 +1,8 @@
 package os.kei.ui.page.main.host.pager
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -94,6 +97,7 @@ internal fun MainPagerLayout(
     onRequestedBottomPageConsumed: () -> Unit
 ) {
     val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
+    val context = LocalContext.current
     val insets = rememberMainPagerInsets()
     val coordinator = rememberMainPagerCoordinator(
         settingsReturnToken = settingsReturnToken,
@@ -108,6 +112,39 @@ internal fun MainPagerLayout(
         requestedBottomPageToken = requestedBottomPageToken,
         onRequestedBottomPageConsumed = onRequestedBottomPageConsumed
     )
+    DisposableEffect(
+        context,
+        homeIconHdrEnabled,
+        coordinator.tabs,
+        coordinator.pagerState.currentPage,
+        coordinator.pagerState.targetPage,
+        coordinator.pagerState.settledPage
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            onDispose { }
+        } else {
+            val activity = context as? Activity
+            val homeVisibleInPager = listOf(
+                coordinator.pagerState.currentPage,
+                coordinator.pagerState.targetPage,
+                coordinator.pagerState.settledPage
+            ).any { pageIndex ->
+                coordinator.tabs.getOrElse(pageIndex) { BottomPage.Home } == BottomPage.Home
+            }
+            runCatching {
+                activity?.window?.colorMode = if (homeIconHdrEnabled && homeVisibleInPager) {
+                    ActivityInfo.COLOR_MODE_HDR
+                } else {
+                    ActivityInfo.COLOR_MODE_DEFAULT
+                }
+            }
+            onDispose {
+                runCatching {
+                    activity?.window?.colorMode = ActivityInfo.COLOR_MODE_DEFAULT
+                }
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier
