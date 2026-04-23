@@ -26,6 +26,16 @@
 # Keep annotation/signature metadata used by Kotlin + library runtime features.
 -keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*
 
+# focus-api ships without consumer rules, but its HyperOS payload builder relies on:
+# 1) kotlinx.serialization for miui.focus.param JSON
+# 2) a sealed factory whose fully qualified subclass name becomes the JSON "type"
+# 3) declaredFields reflection when copying template state
+# Preserve the library surface so release builds keep the same island/live-update payload shape.
+-keep class com.xzakota.hyper.notification.** { *; }
+-keepnames class com.xzakota.hyper.notification.focus.FocusNotification
+-keepnames class com.xzakota.hyper.notification.focus.FocusNotification$FocusTemplateFactory
+-keepnames class com.xzakota.hyper.notification.focus.FocusNotification$FocusTemplateFactory$*
+
 # Drop release log calls to reduce overhead and method count.
 -assumenosideeffects class android.util.Log {
     public static int v(...);

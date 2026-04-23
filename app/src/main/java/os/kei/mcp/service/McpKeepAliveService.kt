@@ -22,6 +22,8 @@ import kotlinx.coroutines.launch
 class McpKeepAliveService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var heartbeatJob: Job? = null
+    private var islandRefreshJob: Job? = null
+    private var isForegroundPromoted: Boolean = false
     private var currentRunning: Boolean = false
     private var currentPort: Int = 38888
     private var currentPath: String = "/mcp"
@@ -62,9 +64,11 @@ class McpKeepAliveService : Service() {
             }
 
             ACTION_STOP -> {
+                stopIslandRefresh()
                 stopHeartbeat()
                 McpNotificationHelper.restoreXiaomiNetworkIfNeeded(this)
                 stopForeground(STOP_FOREGROUND_REMOVE)
+                isForegroundPromoted = false
                 stopSelf()
                 return START_NOT_STICKY
             }
@@ -83,6 +87,7 @@ class McpKeepAliveService : Service() {
                 ) ?: McpNotificationHelper.KEEPALIVE_NOTIFICATION_ID
                 val heartbeatEnabled = intent?.getBooleanExtra(EXTRA_HEARTBEAT_ENABLED, true) == true
                 val isBlueArchiveNotification = McpNotificationPayload.isBaNotificationServerName(serverName)
+                val previousNotificationId = currentNotificationId
                 currentRunning = running
                 currentPort = port
                 currentPath = path
@@ -97,25 +102,35 @@ class McpKeepAliveService : Service() {
                     path = path,
                     clients = clients
                 )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    startForeground(
-                        notificationId,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-                    )
-                } else {
-                    startForeground(notificationId, notification)
+                val shouldPromoteForeground =
+                    !isBlueArchiveNotification &&
+                        (!isForegroundPromoted ||
+                            intent?.action == ACTION_START ||
+                            previousNotificationId != notificationId)
+                if (shouldPromoteForeground) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        startForeground(
+                            notificationId,
+                            notification,
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                        )
+                    } else {
+                        startForeground(notificationId, notification)
+                    }
+                    isForegroundPromoted = true
                 }
                 if (!isBlueArchiveNotification) {
-                    McpNotificationHelper.refreshForegroundAsIsland(
-                        context = this,
+                    refreshForegroundNotification(
                         notificationId = notificationId,
                         serverName = serverName,
                         running = running,
                         port = port,
                         path = path,
-                        clients = clients
+                        clients = clients,
+                        settleForeground = shouldPromoteForeground
                     )
+                } else {
+                    stopIslandRefresh()
                 }
                 startHeartbeat()
                 return START_STICKY
@@ -125,8 +140,10 @@ class McpKeepAliveService : Service() {
     }
 
     override fun onDestroy() {
+        stopIslandRefresh()
         stopHeartbeat()
         McpNotificationHelper.restoreXiaomiNetworkIfNeeded(this)
+        isForegroundPromoted = false
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -176,6 +193,93 @@ class McpKeepAliveService : Service() {
         heartbeatJob = null
     }
 
+    private fun refreshForegroundNotification(
+        notificationId: Int,
+        serverName: String,
+        running: Boolean,
+        port: Int,
+        path: String,
+        clients: Int,
+        settleForeground: Boolean
+    ) {
+        McpNotificationHelper.refreshForegroundAsIsland(
+            context = this,
+            notificationId = notificationId,
+            serverName = serverName,
+            running = running,
+            port = port,
+            path = path,
+            clients = clients
+        )
+        if (settleForeground) {
+            scheduleIslandRefresh(
+                notificationId = notificationId,
+                serverName = serverName,
+                port = port,
+                path = path,
+                clients = clients
+            )
+        } else {
+            stopIslandRefresh()
+        }
+    }
+
+    private fun scheduleIslandRefresh(
+        notificationId: Int,
+        serverName: String,
+        port: Int,
+        path: String,
+        clients: Int
+    ) {
+        islandRefreshJob?.cancel()
+        islandRefreshJob = serviceScope.launch {
+            // Foreground-service bookkeeping can overwrite the first island update on some
+            // HyperOS builds, so we re-apply once the service is fully settled.
+            delay(350)
+            if (!canRefreshIsland(notificationId, serverName, port, path, clients)) return@launch
+            McpNotificationHelper.refreshForegroundAsIsland(
+                context = this@McpKeepAliveService,
+                notificationId = notificationId,
+                serverName = serverName,
+                running = currentRunning,
+                port = port,
+                path = path,
+                clients = clients
+            )
+            delay(850)
+            if (!canRefreshIsland(notificationId, serverName, port, path, clients)) return@launch
+            McpNotificationHelper.refreshForegroundAsIsland(
+                context = this@McpKeepAliveService,
+                notificationId = notificationId,
+                serverName = serverName,
+                running = currentRunning,
+                port = port,
+                path = path,
+                clients = clients
+            )
+        }
+    }
+
+    private fun canRefreshIsland(
+        notificationId: Int,
+        serverName: String,
+        port: Int,
+        path: String,
+        clients: Int
+    ): Boolean {
+        return currentRunning &&
+            currentNotificationId == notificationId &&
+            currentServerName == serverName &&
+            currentPort == port &&
+            currentPath == path &&
+            currentClients == clients
+    }
+
+    private fun stopIslandRefresh() {
+        islandRefreshJob?.cancel()
+        islandRefreshJob = null
+    }
+
     companion object {
         private const val ACTION_START = "os.kei.mcp.keepalive.START"
         private const val ACTION_UPDATE = "os.kei.mcp.keepalive.UPDATE"
@@ -217,7 +321,11 @@ class McpKeepAliveService : Service() {
                         notificationId == McpNotificationHelper.BA_ARENA_REFRESH_NOTIFICATION_ID
                 )
             }
-            ContextCompat.startForegroundService(context, intent)
+            if (forceStart) {
+                ContextCompat.startForegroundService(context, intent)
+            } else {
+                context.startService(intent)
+            }
         }
 
         fun stop(context: Context) {
