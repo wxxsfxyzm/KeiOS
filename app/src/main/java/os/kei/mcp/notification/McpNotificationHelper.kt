@@ -234,17 +234,15 @@ object McpNotificationHelper {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             ) to context.getString(R.string.common_mark_read)
         } else {
-            val toggleIntent = Intent(context, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                putExtra(MainActivity.EXTRA_TARGET_BOTTOM_PAGE, MainActivity.TARGET_BOTTOM_PAGE_MCP)
-                putExtra(MainActivity.EXTRA_MCP_SERVER_ACTION, MainActivity.MCP_SERVER_ACTION_TOGGLE)
+            val stopIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+                action = NotificationActionReceiver.ACTION_STOP_MCP_SERVER
             }
-            PendingIntent.getActivity(
+            PendingIntent.getBroadcast(
                 context,
                 secondaryRequestCode,
-                toggleIntent,
+                stopIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            ) to context.getString(R.string.mcp_action_toggle_service)
+            ) to context.getString(R.string.mcp_action_stop_service)
         }
 
         val payload = McpNotificationPayload(

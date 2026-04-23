@@ -206,6 +206,7 @@ class McpServerManager(
             val host = if (allowExternal) "0.0.0.0" else "127.0.0.1"
             val current = _uiState.value
             if (current.running && current.port == port && current.allowExternal == allowExternal) {
+                McpServerRuntimeRegistry.registerRunning(this)
                 refreshNow()
                 syncKeepAliveNotification(forceStart = false)
                 appendLog("INFO", "MCP server already running on $host:$port")
@@ -242,6 +243,7 @@ class McpServerManager(
             }
             newEngine.start(wait = false)
             engine = newEngine
+            McpServerRuntimeRegistry.registerRunning(this)
             lastConnectedCount = 0
             startSessionMonitor(server)
             _uiState.value = _uiState.value.copy(
@@ -447,6 +449,7 @@ ${headersText.prependIndent("        ")}
         val current = engine ?: return
         runCatching { current.stop(gracePeriodMillis = 500, timeoutMillis = 2_000) }
         engine = null
+        McpServerRuntimeRegistry.clearRunning(this)
     }
 
     private fun startSessionMonitor(server: Server) {
