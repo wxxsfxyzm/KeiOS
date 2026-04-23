@@ -26,6 +26,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import os.kei.ui.page.main.model.BottomPage
+import os.kei.ui.page.main.widget.glass.GlassVariant
+import os.kei.ui.page.main.widget.glass.resolvedGlassBlurDp
+import os.kei.ui.page.main.widget.glass.resolvedGlassLensDp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -89,6 +92,8 @@ internal fun HomeInfoCard(
     content: @Composable () -> Unit,
 ) {
     val isInLightTheme = !isSystemInDarkTheme()
+    val blurRadius = resolvedGlassBlurDp(8.dp, GlassVariant.Content)
+    val lensRadius = resolvedGlassLensDp(24.dp, GlassVariant.Content)
     val containerColor = if (blurEnabled) {
         MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
     } else {
@@ -105,8 +110,8 @@ internal fun HomeInfoCard(
                 effects = {
                     if (blurEnabled) {
                         vibrancy()
-                        blur(8.dp.toPx())
-                        lens(24.dp.toPx(), 24.dp.toPx())
+                        blur(blurRadius.toPx())
+                        lens(lensRadius.toPx(), lensRadius.toPx())
                     }
                 },
                 highlight = {

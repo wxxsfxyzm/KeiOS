@@ -14,6 +14,7 @@ import os.kei.ui.page.main.ba.support.fetchBaCalendarEntries
 import os.kei.ui.page.main.ba.support.fetchBaPoolEntries
 import os.kei.ui.page.main.ba.support.isNetworkAvailable
 import os.kei.ui.page.main.ba.support.runWithHardTimeout
+import os.kei.ui.page.main.widget.glass.UiPerformanceBudget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -49,6 +50,7 @@ internal object BaCalendarPoolRepository {
             )
         }
         val now = System.currentTimeMillis()
+        val networkAvailable = isNetworkAvailable(context)
         val cacheSnapshot = withContext(Dispatchers.IO) {
             BASettingsStore.loadCalendarCacheSnapshot(serverIndex)
         }
@@ -64,13 +66,12 @@ internal object BaCalendarPoolRepository {
                     context = context,
                     serverIndex = serverIndex,
                     entries = cachedEntries,
-                    localOnly = true
+                    localOnly = !networkAvailable
                 )
             }
         } else {
             emptyList()
         }
-        val networkAvailable = isNetworkAvailable(context)
         val intervalMs = calendarRefreshIntervalHours.coerceAtLeast(1) * 60L * 60L * 1000L
         val cacheExpired = !hasCache ||
             cacheSnapshot.syncMs <= 0L ||
@@ -121,25 +122,28 @@ internal object BaCalendarPoolRepository {
             val entries = result.getOrThrow()
             if (entries.isNotEmpty()) {
                 val entriesWithLocalImages = withContext(Dispatchers.IO) {
-                    BASettingsStore.saveCalendarCache(serverIndex,
-                        encodeBaCalendarEntries(entries), now)
+                    BASettingsStore.saveCalendarCache(
+                        serverIndex,
+                        encodeBaCalendarEntries(entries),
+                        now
+                    )
                     BaCalendarPoolImageCache.prefetchForCalendar(
                         context = context,
                         serverIndex = serverIndex,
-                        entries = entries
-                    )
-                    BaCalendarPoolImageCache.pruneCalendarStale(
-                        context = context,
-                        serverIndex = serverIndex,
-                        entries = entries
+                        entries = entries.take(UiPerformanceBudget.baCalendarPoolPriorityPrefetchCount)
                     )
                     BaCalendarPoolImageCache.applyCachedCalendarImageUrls(
                         context = context,
                         serverIndex = serverIndex,
                         entries = entries,
-                        localOnly = true
+                        localOnly = false
                     )
                 }
+                BaCalendarPoolImageCache.scheduleCalendarWarm(
+                    context = context,
+                    serverIndex = serverIndex,
+                    entries = entries
+                )
                 return BaCalendarSyncSnapshot(
                     entries = entriesWithLocalImages,
                     loading = false,
@@ -184,6 +188,7 @@ internal object BaCalendarPoolRepository {
             )
         }
         val now = System.currentTimeMillis()
+        val networkAvailable = isNetworkAvailable(context)
         val cacheSnapshot = withContext(Dispatchers.IO) {
             BASettingsStore.loadPoolCacheSnapshot(serverIndex)
         }
@@ -199,13 +204,12 @@ internal object BaCalendarPoolRepository {
                     context = context,
                     serverIndex = serverIndex,
                     entries = cachedEntries,
-                    localOnly = true
+                    localOnly = !networkAvailable
                 )
             }
         } else {
             emptyList()
         }
-        val networkAvailable = isNetworkAvailable(context)
         val intervalMs = calendarRefreshIntervalHours.coerceAtLeast(1) * 60L * 60L * 1000L
         val cacheExpired = !hasCache ||
             cacheSnapshot.syncMs <= 0L ||
@@ -256,24 +260,28 @@ internal object BaCalendarPoolRepository {
             val entries = result.getOrThrow()
             if (entries.isNotEmpty()) {
                 val entriesWithLocalImages = withContext(Dispatchers.IO) {
-                    BASettingsStore.savePoolCache(serverIndex, encodeBaPoolEntries(entries), now)
+                    BASettingsStore.savePoolCache(
+                        serverIndex,
+                        encodeBaPoolEntries(entries),
+                        now
+                    )
                     BaCalendarPoolImageCache.prefetchForPool(
                         context = context,
                         serverIndex = serverIndex,
-                        entries = entries
-                    )
-                    BaCalendarPoolImageCache.prunePoolStale(
-                        context = context,
-                        serverIndex = serverIndex,
-                        entries = entries
+                        entries = entries.take(UiPerformanceBudget.baCalendarPoolPriorityPrefetchCount)
                     )
                     BaCalendarPoolImageCache.applyCachedPoolImageUrls(
                         context = context,
                         serverIndex = serverIndex,
                         entries = entries,
-                        localOnly = true
+                        localOnly = false
                     )
                 }
+                BaCalendarPoolImageCache.schedulePoolWarm(
+                    context = context,
+                    serverIndex = serverIndex,
+                    entries = entries
+                )
                 return BaPoolSyncSnapshot(
                     entries = entriesWithLocalImages,
                     loading = false,

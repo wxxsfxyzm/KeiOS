@@ -13,6 +13,8 @@ object UiPerformanceBudget {
     const val guideStaticPrefetchInitialCount: Int = 5
     const val guideStaticPrefetchGalleryExtraCount: Int = 10
     const val mediaCacheParallelDownloads: Int = 3
+    const val baCalendarPoolPriorityPrefetchCount: Int = 4
+    const val baCalendarPoolDeferredWarmDelayMs: Long = 220L
 
     data class PreloadPolicy(
         val mainPagerBeyondViewportPageCount: Int,
