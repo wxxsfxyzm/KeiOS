@@ -47,6 +47,9 @@ captures/
 *.aab
 *.ap_
 *.dex
+/app/release/
+/app/debug/
+/app/benchmark/
 
 # Logs / crash dumps
 *.log
