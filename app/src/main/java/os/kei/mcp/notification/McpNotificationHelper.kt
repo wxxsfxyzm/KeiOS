@@ -169,7 +169,6 @@ object McpNotificationHelper {
             clients = clients,
             ongoing = ongoing,
             onlyAlertOnce = onlyAlertOnce,
-            allowMiIslandStyle = false,
             notificationId = notificationId
         ).notification
     }
@@ -184,7 +183,6 @@ object McpNotificationHelper {
         ongoing: Boolean,
         onlyAlertOnce: Boolean,
         secondaryActionMode: SecondaryActionMode = SecondaryActionMode.DEFAULT,
-        allowMiIslandStyle: Boolean = true,
         notificationId: Int = KEEPALIVE_NOTIFICATION_ID
     ): SessionNotifier.NotificationBuildResult {
         val isBlueArchiveNotification = McpNotificationPayload.Companion.isBaNotificationServerName(serverName)
@@ -261,18 +259,8 @@ object McpNotificationHelper {
             stopPendingIntent = stopPendingIntent,
             secondaryActionLabel = secondaryActionLabel
         )
-        val helper = NotificationHelper(context)
-        val styleOverride = if (allowMiIslandStyle) {
-            null
-        } else if (helper.isModernLiveUpdateEligible) {
-            NotificationRenderStyle.LIVE_UPDATE
-        } else {
-            NotificationRenderStyle.LEGACY
-        }
-        // startForeground() posts immediately, so we bootstrap with a non-island style first.
-        // The promoted island version is refreshed through the shared Xiaomi magic path right after.
-        val notifier = SessionNotifierImpl(helper)
-        return notifier.build(payload, styleOverride = styleOverride)
+        val notifier = SessionNotifierImpl(NotificationHelper(context))
+        return notifier.build(payload)
     }
 
     fun notifyTest(
