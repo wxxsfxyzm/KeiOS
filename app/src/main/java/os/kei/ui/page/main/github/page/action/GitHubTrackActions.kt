@@ -3,6 +3,7 @@ package os.kei.ui.page.main.github.page.action
 import os.kei.R
 import os.kei.feature.github.data.remote.GitHubVersionUtils
 import os.kei.feature.github.model.GitHubTrackedApp
+import os.kei.feature.github.model.defaultKeiOsTrackedApp
 
 internal class GitHubTrackActions(
     private val env: GitHubPageActionEnvironment,
@@ -32,6 +33,18 @@ internal class GitHubTrackActions(
 
     fun dismissTrackSheet() {
         state.dismissTrackSheet()
+    }
+
+    fun ensureKeiOsSelfTrack() {
+        val newItem = defaultKeiOsTrackedApp()
+        if (state.trackedItems.any { it.id == newItem.id }) {
+            env.toast(R.string.github_toast_track_exists)
+            return
+        }
+        state.trackedItems.add(newItem)
+        state.recordTrackedAddedAt(newItem.id, System.currentTimeMillis())
+        env.saveTrackedItems(refreshTrackIds = setOf(newItem.id))
+        env.toast(R.string.github_toast_track_current_app_added)
     }
 
     fun requestDeleteEditingItem() {

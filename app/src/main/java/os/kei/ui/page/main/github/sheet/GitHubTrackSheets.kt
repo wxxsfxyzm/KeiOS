@@ -75,10 +75,12 @@ internal fun GitHubCheckLogicSheet(
     downloaderPopupAnchorBounds: IntRect?,
     onlineShareTargetPopupAnchorBounds: IntRect?,
     downloaderOptions: List<DownloaderOption>,
+    hasKeiOsSelfTrack: Boolean,
     exportInProgress: Boolean,
     importInProgress: Boolean,
     onDismissRequest: () -> Unit,
     onApply: () -> Unit,
+    onEnsureKeiOsSelfTrack: () -> Unit,
     onExportTrackedItems: () -> Unit,
     onImportTrackedItems: () -> Unit,
     onRefreshIntervalHoursInputChange: (Int) -> Unit,
@@ -277,6 +279,26 @@ internal fun GitHubCheckLogicSheet(
                         } else {
                             MiuixTheme.colorScheme.onBackgroundVariant
                         }
+                    )
+                }
+                SheetControlRow(
+                    label = stringResource(R.string.github_check_sheet_label_track_current_app),
+                    summary = if (hasKeiOsSelfTrack) {
+                        stringResource(R.string.github_check_sheet_summary_track_current_app_exists)
+                    } else {
+                        stringResource(R.string.github_check_sheet_summary_track_current_app_missing)
+                    }
+                ) {
+                    GlassTextButton(
+                        backdrop = backdrop,
+                        text = if (hasKeiOsSelfTrack) {
+                            stringResource(R.string.github_check_sheet_action_track_current_app_exists)
+                        } else {
+                            stringResource(R.string.github_check_sheet_action_track_current_app)
+                        },
+                        onClick = onEnsureKeiOsSelfTrack,
+                        enabled = !hasKeiOsSelfTrack && !exportInProgress && !importInProgress,
+                        variant = GlassVariant.SheetAction
                     )
                 }
                 SheetInputTitle(stringResource(R.string.github_check_sheet_label_track_transfer))

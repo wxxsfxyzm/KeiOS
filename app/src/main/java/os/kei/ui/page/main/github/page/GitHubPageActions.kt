@@ -201,6 +201,8 @@ internal class GitHubPageActions(
 
     fun openTrackSheetForAdd() = trackActions.openTrackSheetForAdd()
 
+    fun ensureKeiOsSelfTrack() = trackActions.ensureKeiOsSelfTrack()
+
     fun openTrackSheetForEdit(item: GitHubTrackedApp) = trackActions.openTrackSheetForEdit(item)
 
     fun dismissTrackSheet() = trackActions.dismissTrackSheet()

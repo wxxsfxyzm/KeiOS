@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -33,12 +34,19 @@ import os.kei.core.ui.effect.rememberMiuixBlurBackdrop
 import os.kei.ui.page.main.github.page.BindGitHubPageEffects
 import os.kei.ui.page.main.github.page.GitHubPageActions
 import os.kei.ui.page.main.github.page.rememberGitHubPageState
+import os.kei.feature.github.model.isKeiOsSelfTrack
+import os.kei.ui.page.main.widget.glass.GlassEffectRuntime
+import os.kei.ui.page.main.widget.glass.LocalGlassEffectRuntime
+import os.kei.ui.page.main.widget.glass.glassEffectRuntime
+import os.kei.ui.page.main.widget.motion.AppMotionTokens
+import os.kei.ui.page.main.widget.motion.appMotionFloatState
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.max
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -58,7 +66,13 @@ fun GitHubPage(
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
     val isDark = isSystemInDarkTheme()
-    val fullBackdropEffectsEnabled = runtime.isPageActive && !runtime.isPagerScrollInProgress
+    val isListScrolling by remember(listState) {
+        derivedStateOf { listState.isScrollInProgress }
+    }
+    val fullBackdropEffectsEnabled =
+        runtime.isPageActive &&
+            !runtime.isPagerScrollInProgress &&
+            !isListScrolling
     val backdrops = rememberMainPageBackdropSet(
         keyPrefix = "github",
         distinctLayers = fullBackdropEffectsEnabled
@@ -200,6 +214,23 @@ fun GitHubPage(
     )
 
     val contentDerivedState = rememberGitHubPageContentDerivedState(state = state)
+    val hasKeiOsSelfTrack by remember {
+        derivedStateOf { state.trackedItems.any { it.isKeiOsSelfTrack() } }
+    }
+    val upstreamGlassRuntime = glassEffectRuntime()
+    val listScrollGlassProgress by appMotionFloatState(
+        targetValue = if (isListScrolling) 1f else 0f,
+        durationMillis = AppMotionTokens.glassEffectRelaxMs,
+        label = "githubListGlassEffectProgress"
+    )
+    val githubGlassRuntime = remember(upstreamGlassRuntime, listScrollGlassProgress) {
+        upstreamGlassRuntime.copy(
+            reducedProgress = max(
+                upstreamGlassRuntime.reducedProgress,
+                listScrollGlassProgress * 0.72f
+            )
+        )
+    }
     val checkLogicDownloaderOptions = remember(state.showCheckLogicSheet) {
         if (state.showCheckLogicSheet) {
             queryDownloaderOptions(context)
@@ -207,72 +238,75 @@ fun GitHubPage(
             emptyList()
         }
     }
-    GitHubMainContent(
-        contentBottomPadding = runtime.contentBottomPadding,
-        listState = listState,
-        scrollBehavior = scrollBehavior,
-        addButtonScrollConnection = state.addButtonScrollConnection,
-        topBarBackdrop = backdrops.topBar,
-        contentBackdrop = backdrops.content,
-        topBarColor = topBarColor,
-        enableSearchBar = enableSearchBar,
-        liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-        reduceEffectsDuringPagerScroll = runtime.isPagerScrollInProgress,
-        showSearchBar = state.showSearchBar,
-        trackedSearch = state.trackedSearch,
-        sortMode = state.sortMode,
-        showSortPopup = state.showSortPopup,
-        showFloatingAddButton = state.showFloatingAddButton,
-        deleteInProgress = state.deleteInProgress,
-        isDark = isDark,
-        overviewRefreshState = state.overviewRefreshState,
-        refreshProgress = state.refreshProgress,
-        lastRefreshMs = state.lastRefreshMs,
-        lookupConfig = state.lookupConfig,
-        overviewMetrics = contentDerivedState.trackedUi.overviewMetrics,
-        cardPressFeedbackEnabled = cardPressFeedbackEnabled,
-        trackedItems = state.trackedItems,
-        filteredTracked = contentDerivedState.trackedUi.filteredTracked,
-        sortedTracked = contentDerivedState.trackedUi.sortedTracked,
-        appLastUpdatedAtByTrackId = contentDerivedState.appLastUpdatedAtByTrackId,
-        checkStates = state.checkStates,
-        itemRefreshLoading = state.itemRefreshLoading,
-        apkAssetBundles = state.apkAssetBundles,
-        apkAssetLoading = state.apkAssetLoading,
-        apkAssetErrors = state.apkAssetErrors,
-        apkAssetExpanded = state.apkAssetExpanded,
-        trackedCardExpanded = state.trackedCardExpanded,
-        pendingShareImportTrack = state.pendingShareImportTrack,
-        showPendingShareImportCard = contentDerivedState.showPendingShareImportCard,
-        pendingShareImportRepoOverlapCount = contentDerivedState.pendingShareImportRepoOverlapCount,
-        onTrackedSearchChange = { state.trackedSearch = it },
-        onShowSortPopupChange = { state.showSortPopup = it },
-        onSortModeChange = { state.sortMode = it },
-        onOpenStrategySheet = actions::openStrategySheet,
-        onOpenCheckLogicSheet = actions::openCheckLogicSheet,
-        onRefreshAllTracked = { actions.refreshAllTracked(showToast = true) },
-        onRefreshTrackedItem = { actions.refreshTrackedItem(it, showToastOnError = true) },
-        onOpenTrackSheetForAdd = actions::openTrackSheetForAdd,
-        onOpenTrackSheetForEdit = actions::openTrackSheetForEdit,
-        onClearApkAssetUiState = actions::clearApkAssetUiState,
-        onCollapseApkAssetPanel = { item, itemState ->
-            actions.clearApkAssetUiState(item.id)
-            actions.clearApkAssetCache(item, itemState)
-        },
-        onLoadApkAssets = { item, itemState, toggleOnlyWhenCached, includeAllAssets ->
-            actions.loadApkAssets(
-                item = item,
-                itemState = itemState,
-                toggleOnlyWhenCached = toggleOnlyWhenCached,
-                includeAllAssets = includeAllAssets
-            )
-        },
-        onOpenExternalUrl = actions::openExternalUrl,
-        onOpenApkInDownloader = actions::openApkInDownloader,
-        onShareApkLink = actions::shareApkLink,
-        onCancelPendingShareImportTrack = actions::cancelPendingShareImportTrack,
-        onActionBarInteractingChanged = onActionBarInteractingChanged
-    )
+    CompositionLocalProvider(LocalGlassEffectRuntime provides githubGlassRuntime) {
+        GitHubMainContent(
+            contentBottomPadding = runtime.contentBottomPadding,
+            listState = listState,
+            scrollBehavior = scrollBehavior,
+            addButtonScrollConnection = state.addButtonScrollConnection,
+            topBarBackdrop = backdrops.topBar,
+            contentBackdrop = backdrops.content,
+            topBarColor = topBarColor,
+            enableSearchBar = enableSearchBar,
+            liquidActionBarLayeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
+            reduceEffectsDuringPagerScroll = runtime.isPagerScrollInProgress,
+            reduceEffectsDuringListScroll = isListScrolling,
+            showSearchBar = state.showSearchBar,
+            trackedSearch = state.trackedSearch,
+            sortMode = state.sortMode,
+            showSortPopup = state.showSortPopup,
+            showFloatingAddButton = state.showFloatingAddButton,
+            deleteInProgress = state.deleteInProgress,
+            isDark = isDark,
+            overviewRefreshState = state.overviewRefreshState,
+            refreshProgress = state.refreshProgress,
+            lastRefreshMs = state.lastRefreshMs,
+            lookupConfig = state.lookupConfig,
+            overviewMetrics = contentDerivedState.trackedUi.overviewMetrics,
+            cardPressFeedbackEnabled = cardPressFeedbackEnabled,
+            trackedItems = state.trackedItems,
+            filteredTracked = contentDerivedState.trackedUi.filteredTracked,
+            sortedTracked = contentDerivedState.trackedUi.sortedTracked,
+            appLastUpdatedAtByTrackId = contentDerivedState.appLastUpdatedAtByTrackId,
+            checkStates = state.checkStates,
+            itemRefreshLoading = state.itemRefreshLoading,
+            apkAssetBundles = state.apkAssetBundles,
+            apkAssetLoading = state.apkAssetLoading,
+            apkAssetErrors = state.apkAssetErrors,
+            apkAssetExpanded = state.apkAssetExpanded,
+            trackedCardExpanded = state.trackedCardExpanded,
+            pendingShareImportTrack = state.pendingShareImportTrack,
+            showPendingShareImportCard = contentDerivedState.showPendingShareImportCard,
+            pendingShareImportRepoOverlapCount = contentDerivedState.pendingShareImportRepoOverlapCount,
+            onTrackedSearchChange = { state.trackedSearch = it },
+            onShowSortPopupChange = { state.showSortPopup = it },
+            onSortModeChange = { state.sortMode = it },
+            onOpenStrategySheet = actions::openStrategySheet,
+            onOpenCheckLogicSheet = actions::openCheckLogicSheet,
+            onRefreshAllTracked = { actions.refreshAllTracked(showToast = true) },
+            onRefreshTrackedItem = { actions.refreshTrackedItem(it, showToastOnError = true) },
+            onOpenTrackSheetForAdd = actions::openTrackSheetForAdd,
+            onOpenTrackSheetForEdit = actions::openTrackSheetForEdit,
+            onClearApkAssetUiState = actions::clearApkAssetUiState,
+            onCollapseApkAssetPanel = { item, itemState ->
+                actions.clearApkAssetUiState(item.id)
+                actions.clearApkAssetCache(item, itemState)
+            },
+            onLoadApkAssets = { item, itemState, toggleOnlyWhenCached, includeAllAssets ->
+                actions.loadApkAssets(
+                    item = item,
+                    itemState = itemState,
+                    toggleOnlyWhenCached = toggleOnlyWhenCached,
+                    includeAllAssets = includeAllAssets
+                )
+            },
+            onOpenExternalUrl = actions::openExternalUrl,
+            onOpenApkInDownloader = actions::openApkInDownloader,
+            onShareApkLink = actions::shareApkLink,
+            onCancelPendingShareImportTrack = actions::cancelPendingShareImportTrack,
+            onActionBarInteractingChanged = onActionBarInteractingChanged
+        )
+    }
 
     val onExportTrackedItems = {
         if (!(tracksExporting || tracksImporting)) {
@@ -350,19 +384,23 @@ fun GitHubPage(
         }
     }
 
-    GitHubPageSheetHost(
-        context = context,
-        backdrops = backdrops,
-        state = state,
-        actions = actions,
-        contentDerivedState = contentDerivedState,
-        installedOnlineShareTargets = installedOnlineShareTargets,
-        checkLogicDownloaderOptions = checkLogicDownloaderOptions,
-        tracksExporting = tracksExporting,
-        tracksImporting = tracksImporting,
-        onExportTrackedItems = onExportTrackedItems,
-        onImportTrackedItems = onImportTrackedItems,
-        onConfirmTrackImport = onConfirmTrackImport
-    )
+    CompositionLocalProvider(LocalGlassEffectRuntime provides githubGlassRuntime) {
+        GitHubPageSheetHost(
+            context = context,
+            backdrops = backdrops,
+            state = state,
+            actions = actions,
+            contentDerivedState = contentDerivedState,
+            installedOnlineShareTargets = installedOnlineShareTargets,
+            checkLogicDownloaderOptions = checkLogicDownloaderOptions,
+            hasKeiOsSelfTrack = hasKeiOsSelfTrack,
+            tracksExporting = tracksExporting,
+            tracksImporting = tracksImporting,
+            onEnsureKeiOsSelfTrack = actions::ensureKeiOsSelfTrack,
+            onExportTrackedItems = onExportTrackedItems,
+            onImportTrackedItems = onImportTrackedItems,
+            onConfirmTrackImport = onConfirmTrackImport
+        )
+    }
 
 }
