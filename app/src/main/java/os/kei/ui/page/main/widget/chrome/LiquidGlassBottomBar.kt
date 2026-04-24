@@ -399,6 +399,7 @@ fun LiquidGlassBottomBar(
                         onDrawSurface = {
                             drawRect(palette.baseFillColor)
                             drawRect(palette.readabilityScrimBrush)
+                            drawRect(palette.contentShieldColor)
                             drawRect(palette.edgeHighlightBrush)
                             drawRect(palette.edgeDepthBrush)
                         }
@@ -440,6 +441,7 @@ fun LiquidGlassBottomBar(
                             onDrawSurface = {
                                 drawRect(palette.baseFillColor)
                                 drawRect(palette.readabilityScrimBrush, alpha = 0.72f)
+                                drawRect(palette.contentShieldColor, alpha = 0.72f)
                                 if (liquidInteractionActive) {
                                     drawRect(palette.edgeHighlightBrush, alpha = combinedPressProgress)
                                 }
@@ -544,10 +546,11 @@ private fun rememberLiquidBottomBarPalette(
             inactiveContentColor = onSurface,
             activeContentColor = primary,
             readabilityScrimBrush = Brush.verticalGradient(
-                0.00f to surfaceContainer.copy(alpha = 0.18f),
-                0.50f to surfaceContainer.copy(alpha = 0.12f),
-                1.00f to surfaceContainer.copy(alpha = 0.18f)
+                0.00f to surfaceContainer.copy(alpha = 0.26f),
+                0.50f to surfaceContainer.copy(alpha = 0.18f),
+                1.00f to surfaceContainer.copy(alpha = 0.26f)
             ),
+            contentShieldColor = surfaceContainer.copy(alpha = 0.18f),
             edgeHighlightBrush = Brush.verticalGradient(
                 0.00f to Color.White.copy(alpha = 0.08f),
                 0.45f to Color.Transparent,
@@ -568,14 +571,15 @@ private fun rememberLiquidBottomBarPalette(
 
     if (isInLightTheme) {
         return@remember LiquidBottomBarPalette(
-            baseFillColor = surfaceContainer.copy(alpha = 0.68f),
+            baseFillColor = surfaceContainer.copy(alpha = 0.82f),
             inactiveContentColor = onSurface.copy(alpha = 0.88f),
             activeContentColor = primary,
             readabilityScrimBrush = Brush.verticalGradient(
-                0.00f to Color.White.copy(alpha = 0.22f),
-                0.42f to Color.White.copy(alpha = 0.14f),
-                1.00f to Color.White.copy(alpha = 0.24f)
+                0.00f to Color.White.copy(alpha = 0.34f),
+                0.42f to Color.White.copy(alpha = 0.24f),
+                1.00f to Color.White.copy(alpha = 0.36f)
             ),
+            contentShieldColor = Color.White.copy(alpha = 0.18f),
             edgeHighlightBrush = Brush.verticalGradient(
                 0.00f to Color.White.copy(alpha = 0.18f),
                 0.36f to Color.White.copy(alpha = 0.03f),
@@ -595,14 +599,15 @@ private fun rememberLiquidBottomBarPalette(
     }
 
     return@remember LiquidBottomBarPalette(
-        baseFillColor = surfaceContainer.copy(alpha = 0.34f),
+        baseFillColor = surfaceContainer.copy(alpha = 0.48f),
         inactiveContentColor = onSurface.copy(alpha = 0.84f),
         activeContentColor = primary.copy(alpha = 0.98f),
         readabilityScrimBrush = Brush.verticalGradient(
-            0.00f to Color.Black.copy(alpha = 0.16f),
-            0.42f to Color.Black.copy(alpha = 0.09f),
-            1.00f to Color.Black.copy(alpha = 0.18f)
+            0.00f to Color.Black.copy(alpha = 0.24f),
+            0.42f to Color.Black.copy(alpha = 0.16f),
+            1.00f to Color.Black.copy(alpha = 0.26f)
         ),
+        contentShieldColor = Color.Black.copy(alpha = 0.12f),
         edgeHighlightBrush = Brush.verticalGradient(
             0.00f to Color.White.copy(alpha = 0.13f),
             0.34f to Color.White.copy(alpha = 0.02f),
@@ -627,6 +632,7 @@ private class LiquidBottomBarPalette(
     val inactiveContentColor: Color,
     val activeContentColor: Color,
     val readabilityScrimBrush: Brush,
+    val contentShieldColor: Color,
     val edgeHighlightBrush: Brush,
     val edgeDepthBrush: Brush,
     val indicatorSpecularBrush: Brush
