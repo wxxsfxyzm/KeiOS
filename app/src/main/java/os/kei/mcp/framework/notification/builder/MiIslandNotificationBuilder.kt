@@ -160,7 +160,10 @@ class MiIslandNotificationBuilder(
         FocusNotification.buildV3 {
             val lightLogoKey = createPicture("key_logo_light", lightLogoIcon)
             val darkLogoKey = createPicture("key_logo_dark", darkLogoIcon)
-            val displayIconKey = darkLogoKey
+            val displayIconKey = createPicture(
+                "key_logo_display",
+                Icon.createWithResource(context, islandIconResId)
+            )
 
             islandFirstFloat = true
             enableFloat = presentation.allowFloat
