@@ -38,7 +38,6 @@ import os.kei.ui.page.main.ba.rememberBaPageUiController
 import os.kei.ui.page.main.ba.saveBaPageSettings
 import os.kei.core.ui.effect.getMiuixAppBarColor
 import os.kei.core.ui.effect.rememberMiuixBlurBackdrop
-import kotlinx.coroutines.delay
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -106,7 +105,7 @@ fun BAPage(
         baCalendarEntries = baCalendarEntries,
         baPoolEntries = baPoolEntries,
     )
-    val syncPageActive = if (preloadingEnabled) runtime.isDataActive else runtime.isPageActive
+    val syncPageActive = if (preloadingEnabled) runtime.isPageActive else runtime.isDataActive
 
     fun openSettingsSheet() {
         ui.openSettingsSheet(office)
@@ -164,7 +163,6 @@ fun BAPage(
             ui.calendarHydrationReady = false
             ui.poolHydrationReady = false
             ui.calendarHydrationReady = true
-            delay(96)
             ui.poolHydrationReady = true
         },
         context = context,

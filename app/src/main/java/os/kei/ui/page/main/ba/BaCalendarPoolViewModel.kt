@@ -75,7 +75,9 @@ internal class BaCalendarPoolViewModel(
         lastCalendarRequestKey = key
         calendarJob?.cancel()
         calendarJob = viewModelScope.launch {
-            _calendarUiState.value = _calendarUiState.value.copy(loading = true, error = null)
+            val current = _calendarUiState.value
+            val showLoading = current.entries.isEmpty() || reloadSignal > 0
+            _calendarUiState.value = current.copy(loading = showLoading, error = null)
             val snapshot = BaCalendarPoolRepository.syncCalendar(
                 context = appContext,
                 isPageActive = isPageActive,
@@ -111,7 +113,9 @@ internal class BaCalendarPoolViewModel(
         lastPoolRequestKey = key
         poolJob?.cancel()
         poolJob = viewModelScope.launch {
-            _poolUiState.value = _poolUiState.value.copy(loading = true, error = null)
+            val current = _poolUiState.value
+            val showLoading = current.entries.isEmpty() || reloadSignal > 0
+            _poolUiState.value = current.copy(loading = showLoading, error = null)
             val snapshot = BaCalendarPoolRepository.syncPool(
                 context = appContext,
                 isPageActive = isPageActive,
