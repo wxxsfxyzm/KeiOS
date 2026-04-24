@@ -490,8 +490,8 @@ object McpNotificationHelper {
         val xmsfUid = resolveXmsfUid(context)
         magicScope.launch {
             networkMutex.withLock {
-                if (xmsfUid != null && isXmsfNetworkBlocked) {
-                    restoreXmsfNetworkingLocked(xmsfUid)
+                if (xmsfUid != null && shizukuApiUtils.canUseCommand()) {
+                    healXmsfNetworkingLocked(xmsfUid)
                 }
             }
         }
@@ -628,6 +628,7 @@ object McpNotificationHelper {
         magicScope.launch {
             networkMutex.withLock {
                 try {
+                    healXmsfNetworkingLocked(nonNullUid)
                     AppLogger.i(TAG, "blocking xmsf network for uid=$nonNullUid")
                     blockXmsfNetworkingLocked(nonNullUid)
                     notificationManager.notify(notificationId, notification)
@@ -635,6 +636,7 @@ object McpNotificationHelper {
                 } finally {
                     AppLogger.i(TAG, "restoring xmsf network for uid=$nonNullUid")
                     restoreXmsfNetworkingLocked(nonNullUid)
+                    healXmsfNetworkingLocked(nonNullUid)
                 }
             }
         }
@@ -711,17 +713,32 @@ object McpNotificationHelper {
                 } else {
                     true
                 }
-                val chainDisabled = if (isUidFirewallChainEnabled) {
-                    execMagicCommand("cmd connectivity set-firewall-chain-enabled 9 false")
-                } else {
-                    true
-                }
-                ruleRestored && chainDisabled
+                ruleRestored
             }
 
             XiaomiMagicCommandSet.NONE -> false
         }
         AppLogger.i(TAG, "restoreXmsfNetworkingLocked: uid=$uid mode=$mode restored=$restored")
+        isXmsfNetworkBlocked = false
+        isUidFirewallChainEnabled = false
+    }
+
+    private fun healXmsfNetworkingLocked(uid: Int) {
+        when (resolveMagicCommandSet()) {
+            XiaomiMagicCommandSet.PACKAGE_NETWORKING -> {
+                val restored = execMagicCommand("cmd connectivity set-package-networking-enabled true $XMSF_PACKAGE_NAME")
+                AppLogger.i(TAG, "healXmsfNetworkingLocked(package): uid=$uid restored=$restored")
+            }
+
+            XiaomiMagicCommandSet.UID_FIREWALL -> {
+                val ruleRestored = execMagicCommand("cmd connectivity set-uid-firewall-rule 9 $uid 0")
+                AppLogger.i(TAG, "healXmsfNetworkingLocked(uid): uid=$uid ruleRestored=$ruleRestored")
+            }
+
+            XiaomiMagicCommandSet.NONE -> {
+                AppLogger.w(TAG, "healXmsfNetworkingLocked skipped: no supported connectivity command")
+            }
+        }
         isXmsfNetworkBlocked = false
         isUidFirewallChainEnabled = false
     }
