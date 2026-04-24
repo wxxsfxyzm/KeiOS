@@ -35,6 +35,22 @@
 -keepnames class com.xzakota.hyper.notification.focus.FocusNotification
 -keepnames class com.xzakota.hyper.notification.focus.FocusNotification$FocusTemplateFactory
 -keepnames class com.xzakota.hyper.notification.focus.FocusNotification$FocusTemplateFactory$*
+-keep class com.xzakota.hyper.notification.**$$serializer { *; }
+-keepclassmembers class com.xzakota.hyper.notification.** {
+    public static ** Companion;
+    public static ** INSTANCE;
+    public static *** serializer(...);
+    <fields>;
+}
+
+# Keep our thin Focus builders readable and stable around the payload boundary.
+# The system only consumes the Bundle/JSON emitted by focus-api; these helpers should not
+# be reshaped in ways that make release-only notification debugging opaque.
+-keep class os.kei.core.notification.focus.** { *; }
+-keep class os.kei.mcp.framework.notification.builder.MiIslandNotificationBuilder { *; }
+-keep class os.kei.mcp.framework.notification.builder.MiIslandNotificationBuilder$* { *; }
+-keep class os.kei.feature.github.notification.GitHubRefreshNotificationHelper { *; }
+-keep class os.kei.feature.github.notification.GitHubRefreshNotificationHelper$* { *; }
 
 # Drop release log calls to reduce overhead and method count.
 -assumenosideeffects class android.util.Log {
