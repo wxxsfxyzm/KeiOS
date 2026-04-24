@@ -141,8 +141,9 @@ fun McpPage(
         val visibleChars = portText.trim().ifBlank { "38888" }.length.coerceIn(4, 6)
         (visibleChars * 14 + 28).dp
     }
-    val fullBackdropEffectsEnabled = runtime.isPageActive &&
-        !runtime.isPagerScrollInProgress &&
+    val pageBackdropEffectsEnabled = runtime.isPageActive &&
+        !runtime.isPagerScrollInProgress
+    val fullBackdropEffectsEnabled = pageBackdropEffectsEnabled &&
         !listState.isScrollInProgress
     val toggleServer: () -> Unit = {
         if (uiState.running) {
@@ -174,7 +175,7 @@ fun McpPage(
         refreshOnCompositionEnter = true,
         distinctLayers = fullBackdropEffectsEnabled
     )
-    val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = fullBackdropEffectsEnabled)
+    val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = pageBackdropEffectsEnabled)
     DisposableEffect(Unit) {
         onDispose { onActionBarInteractingChanged(false) }
     }

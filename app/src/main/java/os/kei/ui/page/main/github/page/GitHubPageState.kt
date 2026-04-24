@@ -92,6 +92,8 @@ internal class GitHubPageState(
     var deleteInProgress by mutableStateOf(false)
     var showFloatingAddButton by mutableStateOf(true)
     var showSearchBar by mutableStateOf(true)
+    private var canScrollBackward by mutableStateOf(false)
+    private var canScrollForward by mutableStateOf(false)
     private val searchBarVisibilityController = ScrollChromeVisibilityController(searchBarHideThresholdPx)
     private val addButtonVisibilityController = ScrollChromeVisibilityController(searchBarHideThresholdPx)
 
@@ -109,14 +111,32 @@ internal class GitHubPageState(
 
     val addButtonScrollConnection = object : NestedScrollConnection {
         override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-            addButtonVisibilityController.update(available.y, showFloatingAddButton) {
+            addButtonVisibilityController.updateWithinScrollBounds(
+                deltaY = available.y,
+                visible = showFloatingAddButton,
+                canScrollBackward = canScrollBackward,
+                canScrollForward = canScrollForward
+            ) {
                 showFloatingAddButton = it
             }
-            searchBarVisibilityController.update(available.y, showSearchBar) {
+            searchBarVisibilityController.updateWithinScrollBounds(
+                deltaY = available.y,
+                visible = showSearchBar,
+                canScrollBackward = canScrollBackward,
+                canScrollForward = canScrollForward
+            ) {
                 showSearchBar = it
             }
             return Offset.Zero
         }
+    }
+
+    fun updateScrollBounds(
+        canScrollBackward: Boolean,
+        canScrollForward: Boolean
+    ) {
+        this.canScrollBackward = canScrollBackward
+        this.canScrollForward = canScrollForward
     }
 
     fun activeStrategyId(): String = lookupConfig.selectedStrategy.storageId

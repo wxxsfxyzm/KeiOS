@@ -6,6 +6,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,15 +73,24 @@ fun GitHubPage(
         runtime.isPageActive &&
             !runtime.isPagerScrollInProgress &&
             !isListScrolling
+    val topBarBackdropEffectsEnabled =
+        runtime.isPageActive &&
+            !runtime.isPagerScrollInProgress
     val backdrops = rememberMainPageBackdropSet(
         keyPrefix = "github",
         distinctLayers = fullBackdropEffectsEnabled
     )
     val topBarColor = rememberMiuixBlurBackdrop(
-        enableBlur = fullBackdropEffectsEnabled
+        enableBlur = topBarBackdropEffectsEnabled
     ).getMiuixAppBarColor()
 
     val state = rememberGitHubPageState()
+    SideEffect {
+        state.updateScrollBounds(
+            canScrollBackward = listState.canScrollBackward,
+            canScrollForward = listState.canScrollForward
+        )
+    }
     var pendingTrackedExportContent by remember { mutableStateOf<String?>(null) }
     var pendingTrackedExportFileName by remember { mutableStateOf<String?>(null) }
     var tracksExporting by remember { mutableStateOf(false) }

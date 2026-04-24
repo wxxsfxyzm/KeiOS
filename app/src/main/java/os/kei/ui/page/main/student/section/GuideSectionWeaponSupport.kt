@@ -20,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntRect
@@ -40,11 +39,6 @@ internal fun GuidePressableMediaSurface(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val pressScale by appMotionFloatState(
-        targetValue = if (pressed) 0.994f else 1f,
-        durationMillis = 120,
-        label = "guide_media_press_scale"
-    )
     val pressOverlayAlpha by appMotionFloatState(
         targetValue = if (pressed) 0.065f else 0f,
         durationMillis = 130,
@@ -53,10 +47,6 @@ internal fun GuidePressableMediaSurface(
     Box(
         modifier = modifier
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,

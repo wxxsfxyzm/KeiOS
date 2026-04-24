@@ -49,10 +49,13 @@ fun OsPage(
     onActionBarInteractingChanged: (Boolean) -> Unit = {}
 ) {
     val listState = rememberLazyListState()
+    val pageBackdropEffectsEnabled = runtime.isPageActive &&
+        !runtime.isPagerScrollInProgress
+    val fullBackdropEffectsEnabled = pageBackdropEffectsEnabled &&
+        !listState.isScrollInProgress
     val uiContext = rememberOsPageUiContext(
-        enableFullBackdropEffects = runtime.isPageActive &&
-            !runtime.isPagerScrollInProgress &&
-            !listState.isScrollInProgress
+        enableFullBackdropEffects = fullBackdropEffectsEnabled,
+        enableTopBarBackdropEffects = pageBackdropEffectsEnabled
     )
     val context = uiContext.context
     val density = uiContext.density
@@ -111,7 +114,12 @@ fun OsPage(
     val searchBarScrollConnection = remember(searchBarVisibilityController) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                searchBarVisibilityController.update(available.y, showSearchBar) { showSearchBar = it }
+                searchBarVisibilityController.updateWithinScrollBounds(
+                    deltaY = available.y,
+                    visible = showSearchBar,
+                    canScrollBackward = listState.canScrollBackward,
+                    canScrollForward = listState.canScrollForward
+                ) { showSearchBar = it }
                 return Offset.Zero
             }
         }

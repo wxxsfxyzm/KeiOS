@@ -63,7 +63,7 @@ fun AppOverviewCard(
             contentColor = contentColor
         ),
         insideMargin = PaddingValues(0.dp),
-        showIndication = showIndication && (onClick != null || onLongClick != null),
+        showIndication = false,
         onClick = onClick,
         onLongPress = onLongClick
     ) {

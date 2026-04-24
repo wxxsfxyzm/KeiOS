@@ -37,6 +37,25 @@ internal class ScrollChromeVisibilityController(
         }
     }
 
+    fun updateWithinScrollBounds(
+        deltaY: Float,
+        visible: Boolean,
+        canScrollBackward: Boolean,
+        canScrollForward: Boolean,
+        onVisibleChange: (Boolean) -> Unit
+    ) {
+        val canMoveInDragDirection = when {
+            deltaY < -1f -> canScrollForward
+            deltaY > 1f -> canScrollBackward
+            else -> true
+        }
+        if (!canMoveInDragDirection) {
+            reset()
+            return
+        }
+        update(deltaY, visible, onVisibleChange)
+    }
+
     fun showNow(
         visible: Boolean,
         onVisibleChange: (Boolean) -> Unit

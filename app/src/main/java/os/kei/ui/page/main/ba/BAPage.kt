@@ -55,15 +55,16 @@ fun BAPage(
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val scrollBehavior = MiuixScrollBehavior()
-    val fullBackdropEffectsEnabled = runtime.isPageActive &&
-        !runtime.isPagerScrollInProgress &&
+    val pageBackdropEffectsEnabled = runtime.isPageActive &&
+        !runtime.isPagerScrollInProgress
+    val fullBackdropEffectsEnabled = pageBackdropEffectsEnabled &&
         !listState.isScrollInProgress
     val backdrops = rememberMainPageBackdropSet(
         keyPrefix = "ba",
         refreshOnCompositionEnter = true,
         distinctLayers = fullBackdropEffectsEnabled
     )
-    val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = fullBackdropEffectsEnabled)
+    val topBarMaterialBackdrop = rememberMiuixBlurBackdrop(enableBlur = pageBackdropEffectsEnabled)
     val baSmallTitleMargin = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
     val serverOptions = remember { listOf("国服", "国际服", "日服") }
     val cafeLevelOptions = remember { (1..10).toList() }
