@@ -130,6 +130,7 @@ class MiIslandNotificationBuilder(
             isBlueArchiveCafeVisit = isBlueArchiveCafeVisit,
             isBlueArchiveArenaRefresh = isBlueArchiveArenaRefresh
         )
+        val showLeadingIslandIcon = !isBlueArchiveCafeVisit && !isBlueArchiveArenaRefresh
         val lightLogoIcon = if (isBlueArchiveNotification) {
             Icon.createWithResource(context, islandIconResId)
         } else {
@@ -176,11 +177,13 @@ class MiIslandNotificationBuilder(
             island {
                 islandProperty = 1
                 bigIslandArea {
-                    imageTextInfoLeft {
-                        type = 1
-                        picInfo {
+                    if (showLeadingIslandIcon) {
+                        imageTextInfoLeft {
                             type = 1
-                            pic = displayIconKey
+                            picInfo {
+                                type = 1
+                                pic = displayIconKey
+                            }
                         }
                     }
                     if (presentation.showProgressRing) {
@@ -289,12 +292,11 @@ class MiIslandNotificationBuilder(
             return IslandPresentation(
                 allowFloat = true,
                 showTextButtons = true,
-                rightTitle = context.getString(R.string.ba_cafe_visit_notification_island_compact_text),
+                rightTitle = context.getString(R.string.ba_cafe_visit_notification_island_text),
                 notificationOngoing = false,
                 requestPromotedOngoing = false,
                 focusUpdatable = true,
                 focusShowNotification = true,
-                rightContent = resolveBaEventDetail(state),
                 notificationAccentColor = BA_EVENT_ACCENT_COLOR
             )
         }
@@ -302,12 +304,11 @@ class MiIslandNotificationBuilder(
             return IslandPresentation(
                 allowFloat = true,
                 showTextButtons = true,
-                rightTitle = context.getString(R.string.ba_arena_refresh_notification_island_compact_text),
+                rightTitle = context.getString(R.string.ba_arena_refresh_notification_island_text),
                 notificationOngoing = false,
                 requestPromotedOngoing = false,
                 focusUpdatable = true,
                 focusShowNotification = true,
-                rightContent = resolveBaEventDetail(state),
                 notificationAccentColor = BA_EVENT_ACCENT_COLOR
             )
         }
@@ -343,8 +344,7 @@ class MiIslandNotificationBuilder(
         return when {
             !state.running -> state.statusText(context)
             isBlueArchiveAp -> ""
-            isBlueArchiveCafeVisit -> context.getString(R.string.ba_cafe_visit_notification_island_compact_text)
-            isBlueArchiveArenaRefresh -> context.getString(R.string.ba_arena_refresh_notification_island_compact_text)
+            isBlueArchiveCafeVisit || isBlueArchiveArenaRefresh -> state.onlineText(context)
             else -> state.onlineText(context)
         }.takeIf { it.isNotBlank() }
     }
@@ -365,12 +365,6 @@ class MiIslandNotificationBuilder(
         val limit = state.clients.coerceAtLeast(1)
         val current = state.port.coerceAtLeast(0).coerceAtMost(limit)
         return ((current.toFloat() / limit.toFloat()) * 100f).roundToInt().coerceIn(0, 100)
-    }
-
-    private fun resolveBaEventDetail(state: McpNotificationPayload): String? {
-        return state.content(context)
-            .trim()
-            .takeIf { it.isNotEmpty() && it != state.title(context) }
     }
 
     private fun FocusTemplateV3.focusShowNotification(show: Boolean?) {
