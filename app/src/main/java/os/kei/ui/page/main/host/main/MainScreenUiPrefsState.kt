@@ -23,6 +23,7 @@ internal class MainScreenUiPrefsState(
     var liquidActionBarLayeredStyleEnabled by mutableStateOf(snapshot.liquidActionBarLayeredStyleEnabled)
     var liquidGlassSwitchEnabled by mutableStateOf(snapshot.liquidGlassSwitchEnabled)
     var transitionAnimationsEnabled by mutableStateOf(snapshot.transitionAnimationsEnabled)
+    var predictiveBackAnimationsEnabled by mutableStateOf(snapshot.predictiveBackAnimationsEnabled)
     var cardPressFeedbackEnabled by mutableStateOf(snapshot.cardPressFeedbackEnabled)
     var homeIconHdrEnabled by mutableStateOf(snapshot.homeIconHdrEnabled)
     var preloadingEnabled by mutableStateOf(snapshot.preloadingEnabled)
@@ -55,6 +56,11 @@ internal class MainScreenUiPrefsState(
     fun updateTransitionAnimationsEnabled(value: Boolean) {
         transitionAnimationsEnabled = value
         UiPrefs.setTransitionAnimationsEnabled(value)
+    }
+
+    fun updatePredictiveBackAnimationsEnabled(value: Boolean) {
+        predictiveBackAnimationsEnabled = value
+        UiPrefs.setPredictiveBackAnimationsEnabled(value)
     }
 
     fun updateCardPressFeedbackEnabled(value: Boolean) {

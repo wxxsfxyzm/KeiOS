@@ -13,6 +13,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.Dp
 
 val LocalTransitionAnimationsEnabled = staticCompositionLocalOf { true }
+val LocalPredictiveBackAnimationsEnabled = staticCompositionLocalOf { true }
 
 object AppMotionTokens {
     const val disabledDurationMs = 0

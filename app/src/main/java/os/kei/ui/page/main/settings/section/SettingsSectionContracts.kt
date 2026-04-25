@@ -51,11 +51,13 @@ internal data class SettingsVisualSectionActions(
 
 @Immutable
 internal data class SettingsAnimationSectionState(
-    val transitionAnimationsEnabled: Boolean
+    val transitionAnimationsEnabled: Boolean,
+    val predictiveBackAnimationsEnabled: Boolean
 )
 
 internal data class SettingsAnimationSectionActions(
-    val onTransitionAnimationsChanged: (Boolean) -> Unit
+    val onTransitionAnimationsChanged: (Boolean) -> Unit,
+    val onPredictiveBackAnimationsChanged: (Boolean) -> Unit
 )
 
 @Immutable

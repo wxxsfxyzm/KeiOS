@@ -17,6 +17,7 @@ data class UiPrefsSnapshot(
     val liquidActionBarLayeredStyleEnabled: Boolean,
     val liquidGlassSwitchEnabled: Boolean,
     val transitionAnimationsEnabled: Boolean,
+    val predictiveBackAnimationsEnabled: Boolean,
     val cardPressFeedbackEnabled: Boolean,
     val homeIconHdrEnabled: Boolean,
     val preloadingEnabled: Boolean,
@@ -39,6 +40,7 @@ object UiPrefs {
     private const val KEY_LIQUID_ACTION_BAR_LAYERED_STYLE = "liquid_action_bar_layered_style"
     private const val KEY_LIQUID_GLASS_SWITCH = "liquid_glass_switch"
     private const val KEY_TRANSITION_ANIMATIONS = "transition_animations"
+    private const val KEY_PREDICTIVE_BACK_ANIMATIONS = "predictive_back_animations"
     private const val KEY_CARD_PRESS_FEEDBACK = "card_press_feedback"
     private const val KEY_HOME_ICON_HDR = "home_icon_hdr"
     private const val KEY_PRELOADING_ENABLED = "preloading_enabled"
@@ -101,6 +103,14 @@ object UiPrefs {
 
     fun setTransitionAnimationsEnabled(value: Boolean) {
         kv().encode(KEY_TRANSITION_ANIMATIONS, value)
+    }
+
+    fun isPredictiveBackAnimationsEnabled(defaultValue: Boolean = true): Boolean {
+        return kv().decodeBool(KEY_PREDICTIVE_BACK_ANIMATIONS, defaultValue)
+    }
+
+    fun setPredictiveBackAnimationsEnabled(value: Boolean) {
+        kv().encode(KEY_PREDICTIVE_BACK_ANIMATIONS, value)
     }
 
     fun isCardPressFeedbackEnabled(defaultValue: Boolean = true): Boolean {
@@ -261,6 +271,7 @@ object UiPrefs {
             liquidActionBarLayeredStyleEnabled = true,
             liquidGlassSwitchEnabled = false,
             transitionAnimationsEnabled = true,
+            predictiveBackAnimationsEnabled = true,
             cardPressFeedbackEnabled = false,
             homeIconHdrEnabled = false,
             preloadingEnabled = true,
@@ -285,6 +296,7 @@ object UiPrefs {
             liquidActionBarLayeredStyleEnabled = store.decodeBool(KEY_LIQUID_ACTION_BAR_LAYERED_STYLE, true),
             liquidGlassSwitchEnabled = store.decodeBool(KEY_LIQUID_GLASS_SWITCH, false),
             transitionAnimationsEnabled = store.decodeBool(KEY_TRANSITION_ANIMATIONS, true),
+            predictiveBackAnimationsEnabled = store.decodeBool(KEY_PREDICTIVE_BACK_ANIMATIONS, true),
             cardPressFeedbackEnabled = store.decodeBool(KEY_CARD_PRESS_FEEDBACK, false),
             homeIconHdrEnabled = store.decodeBool(KEY_HOME_ICON_HDR, false),
             preloadingEnabled = store.decodeBool(KEY_PRELOADING_ENABLED, true),

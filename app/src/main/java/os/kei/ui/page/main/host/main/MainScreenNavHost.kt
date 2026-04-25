@@ -1,15 +1,22 @@
 package os.kei.ui.page.main.host.main
 
 import android.content.pm.PackageInfo
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
 import os.kei.core.prefs.AppThemeMode
 import os.kei.mcp.server.McpServerManager
 import os.kei.ui.navigation.KeiosRoute
@@ -20,6 +27,7 @@ import os.kei.ui.page.main.host.pager.MainPagerLayout
 import os.kei.ui.page.main.settings.page.SettingsPage
 import os.kei.ui.page.main.student.catalog.page.BaGuideCatalogPage
 import os.kei.ui.page.main.student.page.BaStudentGuidePage
+import os.kei.ui.page.main.widget.motion.LocalPredictiveBackAnimationsEnabled
 import os.kei.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 
 @Composable
@@ -74,6 +82,8 @@ internal fun MainScreenNavHost(
                 onLiquidGlassSwitchChanged = prefsState::updateLiquidGlassSwitchEnabled,
                 transitionAnimationsEnabled = prefsState.transitionAnimationsEnabled,
                 onTransitionAnimationsChanged = prefsState::updateTransitionAnimationsEnabled,
+                predictiveBackAnimationsEnabled = prefsState.predictiveBackAnimationsEnabled,
+                onPredictiveBackAnimationsChanged = prefsState::updatePredictiveBackAnimationsEnabled,
                 cardPressFeedbackEnabled = prefsState.cardPressFeedbackEnabled,
                 onCardPressFeedbackChanged = prefsState::updateCardPressFeedbackEnabled,
                 homeIconHdrEnabled = prefsState.homeIconHdrEnabled,
@@ -139,16 +149,39 @@ internal fun MainScreenNavHost(
             )
         }
     }
+    val predictiveBackPreviewEnabled = prefsState.transitionAnimationsEnabled &&
+        prefsState.predictiveBackAnimationsEnabled
+    val predictivePopTransitionSpec =
+        if (predictiveBackPreviewEnabled) {
+            defaultPredictivePopTransitionSpec<NavKey>()
+        } else {
+            disabledPredictiveBackTransitionSpec<NavKey>()
+        }
     val entries = rememberDecoratedNavEntries(
         backStack = backStack,
         entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
         entryProvider = entryProvider,
     )
-    CompositionLocalProvider(LocalTransitionAnimationsEnabled provides prefsState.transitionAnimationsEnabled) {
+    CompositionLocalProvider(
+        LocalTransitionAnimationsEnabled provides prefsState.transitionAnimationsEnabled,
+        LocalPredictiveBackAnimationsEnabled provides prefsState.predictiveBackAnimationsEnabled
+    ) {
         NavDisplay(
             entries = entries,
             onBack = { navigator.pop() },
+            predictivePopTransitionSpec = predictivePopTransitionSpec,
             modifier = Modifier.fillMaxSize()
         )
+        BackHandler(enabled = !predictiveBackPreviewEnabled && backStack.size > 1) {
+            navigator.pop()
+        }
     }
 }
+
+private fun <T : Any> disabledPredictiveBackTransitionSpec():
+    AnimatedContentTransitionScope<Scene<T>>.(Int) -> ContentTransform = {
+        ContentTransform(
+            targetContentEnter = EnterTransition.None,
+            initialContentExit = ExitTransition.None
+        )
+    }

@@ -13,6 +13,8 @@ import androidx.compose.runtime.setValue
 import os.kei.ui.page.main.student.IMAGE_BACK_GESTURE_CONTENT_FADE_FACTOR
 import os.kei.ui.page.main.student.IMAGE_BACK_GESTURE_SCRIM_FADE_FACTOR
 import os.kei.ui.page.main.student.IMAGE_BACK_GESTURE_TRANSLATION_FACTOR
+import os.kei.ui.page.main.widget.motion.LocalPredictiveBackAnimationsEnabled
+import os.kei.ui.page.main.widget.motion.LocalTransitionAnimationsEnabled
 import kotlinx.coroutines.CancellationException
 
 internal data class GuideFullscreenBackGestureState(
@@ -30,11 +32,13 @@ internal fun rememberGuideFullscreenBackGestureState(
     var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
     var predictiveBackSwipeEdge by remember { mutableIntStateOf(BackEventCompat.EDGE_NONE) }
     var dialogWidthPx by remember { mutableIntStateOf(0) }
+    val predictiveBackAnimationsEnabled = LocalTransitionAnimationsEnabled.current &&
+        LocalPredictiveBackAnimationsEnabled.current
 
     BackHandler(enabled = true) {
         onDismiss()
     }
-    PredictiveBackHandler(enabled = true) { backEvents ->
+    PredictiveBackHandler(enabled = predictiveBackAnimationsEnabled) { backEvents ->
         var dismissedByPredictiveProgress = false
         try {
             backEvents.collect { event ->

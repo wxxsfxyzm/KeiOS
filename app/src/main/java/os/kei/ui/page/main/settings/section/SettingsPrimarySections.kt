@@ -349,11 +349,13 @@ internal fun SettingsAnimationSection(
     enabledCardColor: Color,
     disabledCardColor: Color
 ) {
+    val animationGroupActive = state.transitionAnimationsEnabled ||
+        state.predictiveBackAnimationsEnabled
     SettingsGroupCard(
         header = stringResource(R.string.settings_group_animation_header),
         title = stringResource(R.string.settings_group_animation_title),
         sectionIcon = appLucideTimeIcon(),
-        containerColor = if (state.transitionAnimationsEnabled) enabledCardColor else disabledCardColor
+        containerColor = if (animationGroupActive) enabledCardColor else disabledCardColor
     ) {
         SettingsToggleItem(
             title = stringResource(R.string.settings_transition_animations_title),
@@ -366,6 +368,18 @@ internal fun SettingsAnimationSection(
             onCheckedChange = actions.onTransitionAnimationsChanged,
             infoKey = stringResource(R.string.common_scope),
             infoValue = stringResource(R.string.settings_transition_animations_scope)
+        )
+        SettingsToggleItem(
+            title = stringResource(R.string.settings_predictive_back_animations_title),
+            summary = if (state.predictiveBackAnimationsEnabled) {
+                stringResource(R.string.settings_predictive_back_animations_summary_enabled)
+            } else {
+                stringResource(R.string.settings_predictive_back_animations_summary_disabled)
+            },
+            checked = state.predictiveBackAnimationsEnabled,
+            onCheckedChange = actions.onPredictiveBackAnimationsChanged,
+            infoKey = stringResource(R.string.common_scope),
+            infoValue = stringResource(R.string.settings_predictive_back_animations_scope)
         )
     }
 }

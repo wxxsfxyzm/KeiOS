@@ -42,6 +42,7 @@ internal fun rememberSettingsSectionContractBundle(
     homeIconHdrEnabled: Boolean,
     appThemeMode: AppThemeMode,
     transitionAnimationsEnabled: Boolean,
+    predictiveBackAnimationsEnabled: Boolean,
     liquidActionBarLayeredStyleEnabled: Boolean,
     liquidBottomBarEnabled: Boolean,
     liquidGlassSwitchEnabled: Boolean,
@@ -67,6 +68,7 @@ internal fun rememberSettingsSectionContractBundle(
     onHomeIconHdrChanged: (Boolean) -> Unit,
     onAppThemeModeChanged: (AppThemeMode) -> Unit,
     onTransitionAnimationsChanged: (Boolean) -> Unit,
+    onPredictiveBackAnimationsChanged: (Boolean) -> Unit,
     onLiquidActionBarLayeredStyleChanged: (Boolean) -> Unit,
     onLiquidBottomBarChanged: (Boolean) -> Unit,
     onLiquidGlassSwitchChanged: (Boolean) -> Unit,
@@ -156,14 +158,22 @@ internal fun rememberSettingsSectionContractBundle(
             onThemePopupAnchorBoundsChange = { pageUiState.themePopupAnchorBounds = it }
         )
     }
-    val animationState = remember(transitionAnimationsEnabled) {
+    val animationState = remember(
+        transitionAnimationsEnabled,
+        predictiveBackAnimationsEnabled
+    ) {
         SettingsAnimationSectionState(
-            transitionAnimationsEnabled = transitionAnimationsEnabled
+            transitionAnimationsEnabled = transitionAnimationsEnabled,
+            predictiveBackAnimationsEnabled = predictiveBackAnimationsEnabled
         )
     }
-    val animationActions = remember(onTransitionAnimationsChanged) {
+    val animationActions = remember(
+        onTransitionAnimationsChanged,
+        onPredictiveBackAnimationsChanged
+    ) {
         SettingsAnimationSectionActions(
-            onTransitionAnimationsChanged = onTransitionAnimationsChanged
+            onTransitionAnimationsChanged = onTransitionAnimationsChanged,
+            onPredictiveBackAnimationsChanged = onPredictiveBackAnimationsChanged
         )
     }
     val componentEffectsState = remember(
