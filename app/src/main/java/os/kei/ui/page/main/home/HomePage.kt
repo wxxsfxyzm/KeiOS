@@ -1,15 +1,8 @@
 package os.kei.ui.page.main.home
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
@@ -17,13 +10,9 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -35,27 +24,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Shadow as ComposeTextShadow
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import os.kei.R
+import os.kei.core.ui.effect.background.BgEffectBackground
 import os.kei.ui.page.main.home.model.HomeBaOverview
 import os.kei.ui.page.main.home.model.HomeGitHubOverview
 import os.kei.ui.page.main.home.model.HomeMcpOverview
@@ -67,32 +44,18 @@ import os.kei.ui.page.main.home.state.rememberHomePageHeroMotionState
 import os.kei.ui.page.main.home.state.rememberHomePageOverviewCardState
 import os.kei.ui.page.main.host.pager.MainPageRuntime
 import os.kei.ui.page.main.model.BottomPage
-import os.kei.ui.page.main.widget.glass.GlassIconButton
-import os.kei.ui.page.main.widget.glass.GlassVariant
-import os.kei.ui.page.main.widget.chrome.LiquidActionBar
-import os.kei.ui.page.main.widget.chrome.LiquidActionItem
-import os.kei.ui.page.main.widget.sheet.SheetContentColumn
-import os.kei.ui.page.main.widget.sheet.SheetControlRow
-import os.kei.ui.page.main.widget.sheet.SheetDescriptionText
-import os.kei.ui.page.main.widget.sheet.SheetSectionCard
-import os.kei.ui.page.main.widget.sheet.SheetSectionTitle
-import os.kei.ui.page.main.widget.status.StatusPill
-import os.kei.ui.page.main.widget.status.StatusLabelText
-import os.kei.ui.page.main.os.appLucideCloseIcon
 import os.kei.ui.page.main.os.appLucideInfoIcon
 import os.kei.ui.page.main.os.appLucideLayersIcon
 import os.kei.ui.page.main.os.osLucideSettingsIcon
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberActionBarBackdrop
-import os.kei.core.ui.effect.background.BgEffectBackground
+import os.kei.ui.page.main.widget.chrome.LiquidActionBar
+import os.kei.ui.page.main.widget.chrome.LiquidActionItem
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import top.yukonga.miuix.kmp.basic.Switch
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.blur.isRenderEffectSupported
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberActionBarBackdrop
 
 @Composable
 fun HomePage(
@@ -118,11 +81,11 @@ fun HomePage(
     val shaderSupported = isRuntimeShaderSupported()
     val effectBackgroundEnabled = shaderSupported && runtime.isPageActive
     val dynamicBackgroundEnabled = shaderSupported &&
-        runtime.isDataActive &&
-        !runtime.isPagerScrollInProgress
+            runtime.isDataActive &&
+            !runtime.isPagerScrollInProgress
     val fullBackdropEffectsEnabled = runtime.isPageActive &&
-        !runtime.isPagerScrollInProgress &&
-        !lazyListState.isScrollInProgress
+            !runtime.isPagerScrollInProgress &&
+            !lazyListState.isScrollInProgress
     val surfaceColor = MiuixTheme.colorScheme.surface
     val actionBarBackdrop = rememberActionBarBackdrop {
         drawRect(surfaceColor)
@@ -256,123 +219,133 @@ fun HomePage(
         baApRemainingLine = contentState.baApRemainingLine
     )
 
-    Scaffold(
-        topBar = {
-            SmallTopAppBar(
-                title = "",
-                scrollBehavior = topAppBarScrollBehavior,
-                color = Color.Transparent,
-                titleColor = MiuixTheme.colorScheme.onSurface.copy(alpha = heroMotionState.topBarProgress),
-                actions = {
-                    LiquidActionBar(
-                        backdrop = actionBarBackdrop,
-                        layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
-                        reduceEffectsDuringPagerScroll = runtime.isPagerScrollInProgress,
-                        items = homeActionItems,
-                        selectedIndex = actionBarSelectedIndex,
-                        onInteractionChanged = onActionBarInteractingChanged
-                    )
-                }
-            )
-        }
-    ) { innerPadding ->
-        HomePageControlSheet(
-            show = showBottomPageEditor,
-            actionBarBackdrop = actionBarBackdrop,
-            visibleBottomPages = visibleBottomPages,
-            visibleOverviewCards = visibleOverviewCards,
-            homeSheetTitle = stringResource(R.string.home_sheet_bottom_pages_title),
-            visiblePagesTitle = stringResource(R.string.home_sheet_visible_pages_title),
-            visiblePagesDesc = stringResource(R.string.home_sheet_visible_pages_desc),
-            visibleCardsTitle = contentState.homeVisibleCardsTitle,
-            visibleCardsDesc = contentState.homeVisibleCardsDesc,
-            homeCardMcp = contentState.homeCardMcp,
-            homeCardGitHub = contentState.homeCardGitHub,
-            homeCardBa = contentState.homeCardBa,
-            onDismissRequest = { showBottomPageEditor = false },
-            onBottomPageVisibilityChange = onBottomPageVisibilityChange,
-            onOverviewCardVisibilityChange = ::setHomeOverviewCardVisible
-        )
-
-        val horizontalSafeInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
-        val listContentPadding = PaddingValues(
-            start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-            top = innerPadding.calculateTopPadding() + runtime.contentTopPadding,
-            end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-            bottom = innerPadding.calculateBottomPadding() + runtime.contentBottomPadding + 16.dp
-        )
-        val logoPadding = PaddingValues(
-            top = innerPadding.calculateTopPadding() + runtime.contentTopPadding + 24.dp,
-            start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
-            end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
-        )
-
-        BgEffectBackground(
-            dynamicBackground = dynamicBackgroundEnabled,
-            modifier = Modifier.fillMaxSize(),
-            bgModifier = Modifier,
-            effectBackground = effectBackgroundEnabled,
-            alpha = heroMotionState.bgAlpha,
-        ) {
-            HomePageHero(
-                homeIconHdrEnabled = homeIconHdrEnabled,
-                hdrSweepProgress = heroMotionState.hdrSweepProgress,
-                homeHeaderSinkOffset = heroMotionState.homeHeaderSinkOffset,
-                logoPadding = logoPadding,
-                layoutDirection = layoutDirection,
-                homeAppName = contentState.homeAppName,
-                homeTagline = contentState.homeTagline,
-                appVersionText = contentState.appVersionText,
-                avoidanceProgress = heroMotionState.avoidanceProgress,
-                iconProgress = heroMotionState.iconProgress,
-                titleProgress = heroMotionState.titleProgress,
-                summaryProgress = heroMotionState.summaryProgress,
-                statusPills = overviewCardState.homeHeaderStatusPills,
-                onHeroHeightChanged = heroMotionState.onHeroHeightPxChanged,
-                onIconBottomChanged = heroMotionState.onIconBottomChanged,
-                onTitleBottomChanged = heroMotionState.onTitleBottomChanged,
-                onSummaryBottomChanged = heroMotionState.onSummaryBottomChanged
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                SmallTopAppBar(
+                    title = "",
+                    scrollBehavior = topAppBarScrollBehavior,
+                    color = Color.Transparent,
+                    titleColor = MiuixTheme.colorScheme.onSurface.copy(alpha = heroMotionState.topBarProgress),
+                )
+            }
+        ) { innerPadding ->
+            HomePageControlSheet(
+                show = showBottomPageEditor,
+                actionBarBackdrop = actionBarBackdrop,
+                visibleBottomPages = visibleBottomPages,
+                visibleOverviewCards = visibleOverviewCards,
+                homeSheetTitle = stringResource(R.string.home_sheet_bottom_pages_title),
+                visiblePagesTitle = stringResource(R.string.home_sheet_visible_pages_title),
+                visiblePagesDesc = stringResource(R.string.home_sheet_visible_pages_desc),
+                visibleCardsTitle = contentState.homeVisibleCardsTitle,
+                visibleCardsDesc = contentState.homeVisibleCardsDesc,
+                homeCardMcp = contentState.homeCardMcp,
+                homeCardGitHub = contentState.homeCardGitHub,
+                homeCardBa = contentState.homeCardBa,
+                onDismissRequest = { showBottomPageEditor = false },
+                onBottomPageVisibilityChange = onBottomPageVisibilityChange,
+                onOverviewCardVisibilityChange = ::setHomeOverviewCardVisible
             )
 
-            LazyColumn(
-                state = lazyListState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
-                contentPadding = listContentPadding,
+            val horizontalSafeInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
+            val listContentPadding = PaddingValues(
+                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
+                top = innerPadding.calculateTopPadding() + runtime.contentTopPadding,
+                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
+                bottom = innerPadding.calculateBottomPadding() + runtime.contentBottomPadding + 16.dp
+            )
+            val logoPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding() + runtime.contentTopPadding + 24.dp,
+                start = horizontalSafeInsets.calculateStartPadding(layoutDirection),
+                end = horizontalSafeInsets.calculateEndPadding(layoutDirection),
+            )
+
+            BgEffectBackground(
+                dynamicBackground = dynamicBackgroundEnabled,
+                modifier = Modifier.fillMaxSize(),
+                bgModifier = Modifier,
+                effectBackground = effectBackgroundEnabled,
+                alpha = heroMotionState.bgAlpha,
             ) {
-                item(key = "logo_spacer") {
-                    HomePageHeroSpacer(
-                        logoHeightDp = heroMotionState.logoHeightDp,
-                        logoPadding = logoPadding,
-                        listContentPadding = listContentPadding,
-                        homeHeaderSinkOffset = heroMotionState.homeHeaderSinkOffset,
-                        onLogoHeightPxChanged = heroMotionState.onLogoHeightPxChanged,
-                        onLogoAreaBottomChanged = heroMotionState.onLogoAreaBottomChanged
-                    )
-                }
+                HomePageHero(
+                    homeIconHdrEnabled = homeIconHdrEnabled,
+                    hdrSweepProgress = heroMotionState.hdrSweepProgress,
+                    homeHeaderSinkOffset = heroMotionState.homeHeaderSinkOffset,
+                    logoPadding = logoPadding,
+                    layoutDirection = layoutDirection,
+                    homeAppName = contentState.homeAppName,
+                    homeTagline = contentState.homeTagline,
+                    appVersionText = contentState.appVersionText,
+                    avoidanceProgress = heroMotionState.avoidanceProgress, iconProgress = heroMotionState.iconProgress,
+                    titleProgress = heroMotionState.titleProgress,
+                    summaryProgress = heroMotionState.summaryProgress,
+                    statusPills = overviewCardState.homeHeaderStatusPills,
+                    onHeroHeightChanged = heroMotionState.onHeroHeightPxChanged,
+                    onIconBottomChanged = heroMotionState.onIconBottomChanged,
+                    onTitleBottomChanged = heroMotionState.onTitleBottomChanged,
+                    onSummaryBottomChanged = heroMotionState.onSummaryBottomChanged
+                )
 
-                item(key = "home_content") {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = listContentPadding.calculateBottomPadding())
-                    ) {
-                        HomePageOverviewCards(
-                            visibleOverviewCards = visibleOverviewCards,
-                            homeCardBackdrop = homeCardBackdrop,
-                            blurEnabled = blurEnabled,
-                            homeNa = contentState.homeNa,
-                            homeCardMcp = contentState.homeCardMcp,
-                            mcpStats = overviewCardState.mcpOverviewStats,
-                            homeCardGitHub = contentState.homeCardGitHub,
-                            githubStats = overviewCardState.githubOverviewStats,
-                            homeCardBa = contentState.homeCardBa,
-                            baStats = overviewCardState.baOverviewStats
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+                    contentPadding = listContentPadding,
+                ) {
+                    item(key = "logo_spacer") {
+                        HomePageHeroSpacer(
+                            logoHeightDp = heroMotionState.logoHeightDp,
+                            logoPadding = logoPadding,
+                            listContentPadding = listContentPadding,
+                            homeHeaderSinkOffset = heroMotionState.homeHeaderSinkOffset,
+                            onLogoHeightPxChanged = heroMotionState.onLogoHeightPxChanged,
+                            onLogoAreaBottomChanged = heroMotionState.onLogoAreaBottomChanged
                         )
+                    }
+
+                    item(key = "home_content") {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = listContentPadding.calculateBottomPadding())
+                        ) {
+                            HomePageOverviewCards(
+                                visibleOverviewCards = visibleOverviewCards,
+                                homeCardBackdrop = homeCardBackdrop,
+                                blurEnabled = blurEnabled,
+                                homeNa = contentState.homeNa,
+                                homeCardMcp = contentState.homeCardMcp,
+                                mcpStats = overviewCardState.mcpOverviewStats,
+                                homeCardGitHub = contentState.homeCardGitHub,
+                                githubStats = overviewCardState.githubOverviewStats,
+                                homeCardBa = contentState.homeCardBa,
+                                baStats = overviewCardState.baOverviewStats
+                            )
+                        }
                     }
                 }
             }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(
+                    // Respect system status bar insets and add extra spacing
+                    top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() + 8.dp,
+                    end = WindowInsets.safeDrawing.asPaddingValues().calculateEndPadding(layoutDirection) + 8.dp
+                )
+        ) {
+            LiquidActionBar(
+                backdrop = actionBarBackdrop,
+                layeredStyleEnabled = liquidActionBarLayeredStyleEnabled,
+                reduceEffectsDuringPagerScroll = runtime.isPagerScrollInProgress,
+                items = homeActionItems,
+                selectedIndex = actionBarSelectedIndex,
+                onInteractionChanged = onActionBarInteractingChanged
+            )
         }
     }
 }
