@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.onEach
 import androidx.compose.runtime.snapshotFlow
 
 private const val HOME_HEADER_SINK_PER_HIDDEN_CARD_DP = 22
+private val HOME_HERO_AVOIDANCE_SCROLL_DISTANCE_DP = 30.dp
 
 internal data class HomePageHeroMotionState(
     val scrollProgress: Float,
@@ -37,6 +38,7 @@ internal data class HomePageHeroMotionState(
     val hdrSweepProgress: Float,
     val logoHeightDp: Dp,
     val homeHeaderSinkOffset: Dp,
+    val avoidanceProgress: Float,
     val iconProgress: Float,
     val titleProgress: Float,
     val summaryProgress: Float,
@@ -89,6 +91,9 @@ internal fun rememberHomePageHeroMotionState(
     var titleY by remember { mutableFloatStateOf(0f) }
     var summaryY by remember { mutableFloatStateOf(0f) }
     var initialLogoAreaY by remember { mutableFloatStateOf(0f) }
+    val avoidanceScrollDistancePx = remember(density) {
+        with(density) { HOME_HERO_AVOIDANCE_SCROLL_DISTANCE_DP.toPx() }
+    }
     val transitionAnimationsEnabled = LocalTransitionAnimationsEnabled.current
     val hdrSweepProgress = if (
         homeIconHdrEnabled &&
@@ -115,16 +120,20 @@ internal fun rememberHomePageHeroMotionState(
     var iconProgress by remember { mutableFloatStateOf(0f) }
     var titleProgress by remember { mutableFloatStateOf(0f) }
     var summaryProgress by remember { mutableFloatStateOf(0f) }
+    var avoidanceProgress by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(lazyListState) {
         snapshotFlow { lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset }
             .onEach { (index, offset) ->
                 if (index > 0) {
+                    if (avoidanceProgress != 1f) avoidanceProgress = 1f
                     if (iconProgress != 1f) iconProgress = 1f
                     if (titleProgress != 1f) titleProgress = 1f
                     if (summaryProgress != 1f) summaryProgress = 1f
                     return@onEach
                 }
+                avoidanceProgress = (offset.toFloat() / avoidanceScrollDistancePx.coerceAtLeast(1f))
+                    .coerceIn(0f, 1f)
 
                 if (initialLogoAreaY == 0f && logoAreaY > 0f) {
                     initialLogoAreaY = logoAreaY
@@ -153,6 +162,7 @@ internal fun rememberHomePageHeroMotionState(
         hdrSweepProgress,
         logoHeightDp,
         hiddenOverviewCardCount,
+        avoidanceProgress,
         iconProgress,
         titleProgress,
         summaryProgress
@@ -164,6 +174,7 @@ internal fun rememberHomePageHeroMotionState(
             hdrSweepProgress = hdrSweepProgress,
             logoHeightDp = logoHeightDp,
             homeHeaderSinkOffset = (hiddenOverviewCardCount * HOME_HEADER_SINK_PER_HIDDEN_CARD_DP).dp,
+            avoidanceProgress = avoidanceProgress,
             iconProgress = iconProgress,
             titleProgress = titleProgress,
             summaryProgress = summaryProgress,

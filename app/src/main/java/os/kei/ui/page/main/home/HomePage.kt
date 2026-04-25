@@ -323,6 +323,7 @@ fun HomePage(
                 homeAppName = contentState.homeAppName,
                 homeTagline = contentState.homeTagline,
                 appVersionText = contentState.appVersionText,
+                avoidanceProgress = heroMotionState.avoidanceProgress,
                 iconProgress = heroMotionState.iconProgress,
                 titleProgress = heroMotionState.titleProgress,
                 summaryProgress = heroMotionState.summaryProgress,

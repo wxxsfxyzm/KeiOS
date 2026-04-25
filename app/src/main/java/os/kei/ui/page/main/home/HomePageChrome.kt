@@ -184,6 +184,7 @@ internal fun HomePageHero(
     homeAppName: String,
     homeTagline: String,
     appVersionText: String,
+    avoidanceProgress: Float,
     iconProgress: Float,
     titleProgress: Float,
     summaryProgress: Float,
