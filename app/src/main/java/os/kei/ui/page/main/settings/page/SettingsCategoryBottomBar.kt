@@ -20,9 +20,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composables.icons.lucide.R as LucideR
-import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import os.kei.R
-import os.kei.ui.page.main.widget.chrome.AppChromeTokens
 import os.kei.ui.page.main.widget.chrome.LiquidGlassBottomBar
 import os.kei.ui.page.main.widget.chrome.LiquidGlassBottomBarItem
 import os.kei.ui.page.main.widget.chrome.liquidGlassBottomBarItemContentColor
@@ -42,13 +41,13 @@ internal enum class SettingsCategory {
 internal fun SettingsCategoryBottomBar(
     visible: Boolean,
     navigationBarBottom: Dp,
-    selectedCategory: SettingsCategory,
-    selectedCategoryProvider: () -> SettingsCategory,
-    backdrop: Backdrop,
+    categories: List<SettingsCategory>,
+    selectedPage: Int,
+    selectedPageProvider: () -> Int,
+    backdrop: LayerBackdrop,
     isLiquidEffectEnabled: Boolean,
-    onSelectCategory: (SettingsCategory) -> Unit
+    onSelectCategory: (Int) -> Unit
 ) {
-    val categories = SettingsCategory.entries
     Box(modifier = Modifier.fillMaxWidth()) {
         AnimatedVisibility(
             visible = visible,
@@ -56,14 +55,13 @@ internal fun SettingsCategoryBottomBar(
             exit = appFloatingExit(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val selectedIndex = categories.indexOf(selectedCategory).coerceAtLeast(0)
             val bottomBarModifier = Modifier.padding(
-                horizontal = AppChromeTokens.pageHorizontalPadding,
-                vertical = AppChromeTokens.pageSectionGap + navigationBarBottom
+                horizontal = 12.dp,
+                vertical = 12.dp + navigationBarBottom
             )
             val bottomBarTabs: @Composable RowScope.() -> Unit = {
                 categories.forEachIndexed { index, category ->
-                    val selected = selectedCategory == category
+                    val selected = selectedPage == index
                     val tabColor = liquidGlassBottomBarItemContentColor(index)
                     val tabContent: @Composable ColumnScope.() -> Unit = {
                         Icon(
@@ -90,7 +88,7 @@ internal fun SettingsCategoryBottomBar(
                     LiquidGlassBottomBarItem(
                         selected = selected,
                         tabIndex = index,
-                        onClick = { onSelectCategory(category) },
+                        onClick = { onSelectCategory(index) },
                         modifier = Modifier.defaultMinSize(minWidth = 76.dp),
                         content = tabContent
                     )
@@ -99,11 +97,10 @@ internal fun SettingsCategoryBottomBar(
 
             LiquidGlassBottomBar(
                 modifier = bottomBarModifier,
-                selectedIndex = selectedIndex,
+                selectedIndex = selectedPage,
                 onSelected = { index ->
-                    val nextCategory = categories.getOrNull(index) ?: return@LiquidGlassBottomBar
-                    if (nextCategory != selectedCategoryProvider()) {
-                        onSelectCategory(nextCategory)
+                    if (categories.getOrNull(index) != null && index != selectedPageProvider()) {
+                        onSelectCategory(index)
                     }
                 },
                 backdrop = backdrop,
