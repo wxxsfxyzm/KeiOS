@@ -80,6 +80,19 @@ class GitHubVersionUtilsTest {
     }
 
     @Test
+    fun `release notes version range cannot hide newer release tag`() {
+        val candidates = GitHubVersionUtils.buildVersionCandidates(
+            GitHubVersionCandidateSource.Tag to "v1.2.0",
+            GitHubVersionCandidateSource.Title to "KeiOS v1.2.0",
+            GitHubVersionCandidateSource.Link to "https://github.com/hosizoraru/KeiOS/releases/tag/v1.2.0",
+            GitHubVersionCandidateSource.Content to "这是从 v1.1.0 到 v1.2.0 的功能更新"
+        )
+
+        val compare = GitHubVersionUtils.compareVersionToStructuredCandidates("1.1.0", candidates)
+        assertEquals(-1, compare)
+    }
+
+    @Test
     fun `date prefixed release names still expose semantic version candidate`() {
         val candidates = GitHubVersionUtils.normalizeVersionCandidates("260412_1.22")
         assertTrue("1.22".lowercase() in candidates)

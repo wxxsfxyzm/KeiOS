@@ -316,13 +316,16 @@ object GitHubVersionUtils {
             .flatMap(::normalizeVersionCandidates)
             .distinct()
             .mapNotNull { parseComparableCandidate(it, sourcePriority = 0) }
-        val right = rightCandidates
+        val parsedRight = rightCandidates
             .flatMap { candidate ->
                 normalizeVersionCandidates(candidate.value).mapNotNull { parsed ->
                     parseComparableCandidate(parsed, candidate.source.priority)
                 }
             }
             .distinctBy { it.normalized to it.sourcePriority }
+        val right = parsedRight
+            .filter { it.sourcePriority <= GitHubVersionCandidateSource.Link.priority }
+            .ifEmpty { parsedRight }
 
         if (left.isEmpty() || right.isEmpty()) return null
 

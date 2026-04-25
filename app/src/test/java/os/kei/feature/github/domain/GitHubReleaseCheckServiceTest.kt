@@ -235,6 +235,38 @@ class GitHubReleaseCheckServiceTest {
     }
 
     @Test
+    fun `release notes mentioning previous app version still reports self update`() {
+        val item = trackedApp(preferPreRelease = false)
+        val contentPreview = "这是从 v1.1.0 到 v1.2.0 的功能更新"
+        val stable = signal(
+            tag = "v1.2.0",
+            title = "KeiOS v1.2.0",
+            contentPreview = contentPreview
+        )
+
+        val result = GitHubReleaseCheckService.evaluateSnapshot(
+            item = item,
+            localVersion = "1.1.0",
+            localVersionCode = 10_100_000L,
+            snapshot = snapshot(
+                stable = stable,
+                entries = listOf(
+                    entry(
+                        tag = "v1.2.0",
+                        title = "KeiOS v1.2.0",
+                        contentPreview = contentPreview
+                    ),
+                    entry(tag = "v1.1.0", title = "KeiOS v1.1.0")
+                )
+            )
+        )
+
+        assertEquals(GitHubTrackedReleaseStatus.UpdateAvailable, result.status)
+        assertEquals(true, result.hasUpdate)
+        assertEquals("v1.2.0", result.stableRelease?.rawTag)
+    }
+
+    @Test
     fun `local prerelease newer than both stable and stale prerelease does not surface remote update`() {
         val item = trackedApp(preferPreRelease = false)
         val snapshot = snapshot(
@@ -293,7 +325,8 @@ class GitHubReleaseCheckServiceTest {
     private fun signal(
         tag: String,
         title: String = tag,
-        updatedAtMillis: Long? = null
+        updatedAtMillis: Long? = null,
+        contentPreview: String = ""
     ): GitHubReleaseVersionSignals {
         return GitHubReleaseVersionSignals(
             displayVersion = title,
@@ -303,7 +336,8 @@ class GitHubReleaseCheckServiceTest {
             updatedAtMillis = updatedAtMillis,
             versionCandidates = GitHubVersionUtils.buildVersionCandidates(
                 GitHubVersionCandidateSource.Tag to tag,
-                GitHubVersionCandidateSource.Title to title
+                GitHubVersionCandidateSource.Title to title,
+                GitHubVersionCandidateSource.Content to contentPreview
             ),
             source = GitHubReleaseSignalSource.GitHubApi,
             channel = GitHubVersionUtils.classifyVersionChannel(tag) ?: GitHubReleaseChannel.UNKNOWN
@@ -312,7 +346,8 @@ class GitHubReleaseCheckServiceTest {
 
     private fun entry(
         tag: String,
-        title: String = tag
+        title: String = tag,
+        contentPreview: String = ""
     ): GitHubAtomReleaseEntry {
         val channel = GitHubVersionUtils.classifyVersionChannel(tag) ?: GitHubReleaseChannel.UNKNOWN
         return GitHubAtomReleaseEntry(
@@ -321,7 +356,8 @@ class GitHubReleaseCheckServiceTest {
             link = GitHubVersionUtils.buildReleaseTagUrl("demo", "app", tag),
             versionCandidates = GitHubVersionUtils.buildVersionCandidates(
                 GitHubVersionCandidateSource.Tag to tag,
-                GitHubVersionCandidateSource.Title to title
+                GitHubVersionCandidateSource.Title to title,
+                GitHubVersionCandidateSource.Content to contentPreview
             ),
             channel = channel,
             isLikelyPreRelease = channel.isPreRelease
